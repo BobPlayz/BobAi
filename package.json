@@ -1,0 +1,19 @@
+{
+  "name": "bobai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BobAI - AI platform backend",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {}
+}
