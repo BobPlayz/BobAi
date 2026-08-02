@@ -1,7 +1,9 @@
 export * from "./users.js";
-export * from "./organizations.js";
 export * from "./workspaces.js";
 export * from "./workspaceMembers.js";
+
+export * from "./organizations.js";
+export * from "./organizationMembers.js";
 
 export * from "./conversations.js";
 export * from "./messages.js";
@@ -21,7 +23,6 @@ export * from "./settings.js";
 
 export * from "./apiKeys.js";
 export * from "./sessions.js";
-export * from "./auditLogs.js";
 
 export * from "./tasks.js";
 export * from "./reminders.js";
@@ -31,3 +32,16 @@ export * from "./toolLogs.js";
 
 export * from "./agents.js";
 export * from "./agentRuns.js";
+
+export * from "./auditLogs.js";
+export * from "./usageRecords.js";
+export * from "./notifications.js";
+
+export * from "./integrations.js";
+export * from "./modelProviders.js";
+export * from "./workflows.js";
+export * from "./searchIndex.js";
+export * from "./webhooks.js";
+
+export * from "./billingPlans.js";
+export * from "./subscriptions.js";
