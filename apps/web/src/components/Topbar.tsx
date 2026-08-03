@@ -1,15 +1,13 @@
 export default function Topbar() {
   return (
-    <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
+    <header className="h-14 border-b border-white/10 flex items-center justify-between px-6">
       <div>
-        <h2 className="text-lg font-semibold">new chat</h2>
-        <p className="text-sm text-white/50">
-          localhost • bobai alpha
-        </p>
+        <h2 className="text-sm font-medium text-white">new chat</h2>
       </div>
 
-      <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-white/70">
-        online
+      <div className="flex items-center gap-2 text-xs text-white/45">
+        <span className="h-2 w-2 rounded-full bg-green-400" />
+        localhost • bobai alpha
       </div>
     </header>
   );
