@@ -19,15 +19,39 @@ export default function ChatPage() {
     }
   }, [router]);
 
-  return (
-    <main className="h-screen bg-[#0a0a0a] text-white">
-      <div className="flex h-full">
-        <Sidebar />
+  if (!chat.activeConversation) {
+    return (
+      <main className="flex h-screen items-center justify-center bg-black text-white">
+        <div className="text-white/50">loading bobai...</div>
+      </main>
+    );
+  }
 
-        <section className="flex flex-1 flex-col bg-[#0a0a0a]">
+  return (
+    <main className="h-screen bg-black text-white">
+      <div className="flex h-full">
+        <Sidebar
+          conversations={chat.conversations}
+          activeId={chat.activeId}
+          onSelect={chat.setActiveId}
+          onNewChat={chat.newChat}
+          search={chat.search}
+          setSearch={chat.setSearch}
+          onTogglePin={chat.togglePin}
+          onRename={chat.renameConversation}
+          onDelete={chat.deleteConversation}
+        />
+
+        <section className="flex flex-1 flex-col bg-black">
           <Topbar />
 
-          <ChatWindow messages={chat.messages} loading={chat.loading} />
+          <ChatWindow
+            messages={chat.activeConversation.messages}
+            loading={chat.loading}
+            onPinMessage={chat.togglePinMessage}
+            onDeleteMessage={chat.deleteMessage}
+            onRegenerate={chat.regenerateLastAssistant}
+          />
 
           <ChatInput
             value={chat.input}

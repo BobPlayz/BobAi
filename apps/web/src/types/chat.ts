@@ -1,14 +1,14 @@
-export type Role = "user" | "assistant" | "system";
-
-export interface ChatMessage {
+export type ChatMessage = {
   id: string;
-  role: Role;
+  role: "user" | "assistant";
   content: string;
-  createdAt: string;
-}
+  pinned?: boolean;
+};
 
-export interface Conversation {
+export type Conversation = {
   id: string;
   title: string;
-  updatedAt: string;
-}
+  createdAt: number;
+  pinned: boolean;
+  messages: ChatMessage[];
+};

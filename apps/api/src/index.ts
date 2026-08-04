@@ -1,19 +1,20 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import chatRoutes from "./routes/chat.js";
-dotenv.config();
+import chatRouter from "./routes/chat.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    service: "BobAI API",
+  });
 });
 
-app.use("/v1", chatRoutes);
+app.use("/chat", chatRouter);
 
 const PORT = Number(process.env.PORT) || 3001;
 
