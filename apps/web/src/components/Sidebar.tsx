@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import BobLogo from "@/components/BobLogo";
 import type { Conversation } from "@/types/chat";
@@ -28,7 +27,6 @@ export default function Sidebar({
   onRename,
   onDelete,
 }: Props) {
-  const router = useRouter();
   const [menuId, setMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -91,9 +89,7 @@ export default function Sidebar({
               {editingId === conversation.id ? (
                 <input
                   value={editingTitle}
-                  onChange={(e) =>
-                    setEditingTitle(e.target.value)
-                  }
+                  onChange={(e) => setEditingTitle(e.target.value)}
                   onBlur={finishRename}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") finishRename();
@@ -107,9 +103,7 @@ export default function Sidebar({
               ) : (
                 <div className="flex items-center gap-2">
                   {conversation.pinned && (
-                    <span className="text-xs text-[#d4a62a]">
-                      📌
-                    </span>
+                    <span className="text-xs text-[#d4a62a]">📌</span>
                   )}
                   <span className="truncate text-sm font-medium">
                     {conversation.title}
@@ -120,11 +114,7 @@ export default function Sidebar({
 
             <button
               onClick={() =>
-                setMenuId(
-                  menuId === conversation.id
-                    ? null
-                    : conversation.id
-                )
+                setMenuId(menuId === conversation.id ? null : conversation.id)
               }
               className="mr-2 rounded-lg p-1 text-white/45 opacity-0 transition hover:bg-white/10 hover:text-white group-hover:opacity-100"
             >
@@ -170,31 +160,19 @@ export default function Sidebar({
       </div>
 
       <div className="border-t border-white/10 p-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/settings")}
-            className="flex flex-1 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-white/5"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
-              B
-            </div>
+        <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+            B
+          </div>
 
-            <div className="min-w-0 text-left">
-              <div className="truncate text-sm font-medium text-white">
-                bob
-              </div>
-              <div className="truncate text-xs text-white/45">
-                8th class • building bobai
-              </div>
+          <div className="min-w-0 text-left">
+            <div className="truncate text-sm font-medium text-white">
+              bob
             </div>
-          </button>
-
-          <button
-            onClick={() => router.push("/settings")}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#121212] text-white/70 transition hover:bg-[#181818] hover:text-white"
-          >
-            ⚙
-          </button>
+            <div className="truncate text-xs text-white/45">
+              8th class • building bobai
+            </div>
+          </div>
         </div>
       </div>
     </aside>

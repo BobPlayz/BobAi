@@ -1,12 +1,22 @@
+"use client";
+
 export default function Topbar() {
   return (
-    <div className="flex h-14 items-center justify-between border-b border-white/10 px-6 bg-black">
-      <h1 className="text-[15px] font-semibold text-white">new chat</h1>
+    <header className="border-b border-white/10 bg-black px-6 py-4">
+      <div className="mx-auto flex max-w-4xl items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-white">
+            bobai
+          </h1>
+          <p className="text-xs text-white/40">
+            localhost • alpha
+          </p>
+        </div>
 
-      <div className="flex items-center gap-2 text-xs text-white/55">
-        <div className="h-2 w-2 rounded-full bg-emerald-400" />
-        <span>localhost • bobai alpha</span>
+        <div className="rounded-full border border-white/10 bg-[#121212] px-3 py-1 text-xs text-white/50">
+          local
+        </div>
       </div>
-    </div>
+    </header>
   );
 }

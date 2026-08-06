@@ -1,24 +1,16 @@
 {
   "name": "bobai",
-  "version": "0.1.0",
   "private": true,
-  "description": "BobAI - AI platform backend",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "start": "turbo run start"
-  },
-  "engines": {
-    "node": ">=22.0.0"
+    "web": "npm run dev --workspace=web",
+    "api": "npm run dev --workspace=@bobai/api",
+    "ai": "tsx scripts/start.ts"
   },
   "devDependencies": {
-    "turbo": "^2.5.6",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2",
-    "@types/node": "^24.3.0"
+    "tsx": "^4.20.3"
   }
 }
