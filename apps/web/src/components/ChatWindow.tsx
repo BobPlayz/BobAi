@@ -38,12 +38,13 @@ export default function ChatWindow({
   return (
     <>
       <div className="flex-1 overflow-y-auto bg-black px-6 py-8">
-        <div className="mx-auto flex max-w-4xl flex-col gap-6">
+        <div className="mx-auto flex max-w-4xl flex-col gap-7">
           {pinnedMessages.length > 0 && (
             <div className="rounded-2xl border border-white/10 bg-[#121212] p-3">
               <div className="mb-2 text-xs uppercase tracking-wide text-white/40">
                 pinned messages
               </div>
+
               <div className="space-y-2">
                 {pinnedMessages.map((message) => (
                   <a
@@ -64,10 +65,14 @@ export default function ChatWindow({
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black">
                   <span className="text-xl font-black">B</span>
                 </div>
+
                 <h2 className="mt-6 text-3xl font-semibold text-white">
                   hey bob
                 </h2>
-                <p className="mt-2 text-white/45">ask anything</p>
+
+                <p className="mt-2 text-white/45">
+                  ask anything
+                </p>
               </div>
             </div>
           ) : (
@@ -84,7 +89,9 @@ export default function ChatWindow({
                 <div className="group relative max-w-[82%]">
                   {message.role === "user" ? (
                     <div className="relative rounded-2xl border border-white/10 bg-[#161616] px-4 py-2.5 text-[15px] leading-6 text-white">
-                      <div className="pr-8">{message.content}</div>
+                      <div className="pr-8">
+                        {message.content}
+                      </div>
 
                       <button
                         onClick={() =>
@@ -197,7 +204,9 @@ export default function ChatWindow({
 
           {loading && (
             <div className="flex justify-start">
-              <div className="text-white/45">bobai is thinking...</div>
+              <div className="text-white/45">
+                bobai is thinking...
+              </div>
             </div>
           )}
 

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { generateImages } from "../services/imageService.js";
 
 const router = Router();
 
@@ -11,20 +12,10 @@ router.post("/generate", async (req, res) => {
     });
   }
 
-  // temporary placeholder until we wire ComfyUI / FLUX
-  const seed = encodeURIComponent(prompt.trim());
+  const images = await generateImages(prompt);
 
   return res.json({
-    images: [
-      {
-        url: `https://picsum.photos/seed/${seed}/1024/1024`,
-        prompt,
-      },
-      {
-        url: `https://picsum.photos/seed/${seed}-2/1024/1024`,
-        prompt,
-      },
-    ],
+    images,
   });
 });
 
