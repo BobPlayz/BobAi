@@ -11,6 +11,12 @@
     "ai": "tsx scripts/start.ts"
   },
   "devDependencies": {
+    "@types/multer": "^2.2.0",
     "tsx": "^4.20.3"
+  },
+  "dependencies": {
+    "multer": "^2.2.0",
+    "pdf-parse": "^2.4.5",
+    "tesseract.js": "^7.0.0"
   }
 }

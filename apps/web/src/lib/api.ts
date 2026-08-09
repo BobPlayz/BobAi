@@ -1,56 +1,91 @@
 import type { ChatMessage } from "@/types/chat";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export async function sendMessage(
   messages: ChatMessage[],
   personality = ""
-): Promise<{
-  reply: string;
-  imagePrompt?: string;
-  title?: string;
-}> {
-  const response = await fetch(`${API_BASE}/chat`, {
+) {
+  const cleanMessages = messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  const res = await fetch(`${API}/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      messages: cleanMessages,
       personality,
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`request failed: ${response.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to send message");
   }
 
-  return response.json();
+  return res.json();
 }
 
-export async function generateImage(
-  prompt: string
-): Promise<{
-  images: {
-    url: string;
-    prompt: string;
-  }[];
-}> {
-  const response = await fetch(`${API_BASE}/images/generate`, {
+export async function generateImage(prompt: string) {
+  const res = await fetch(`${API}/images`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({
+      prompt,
+      count: 4,
+      width: 1024,
+      height: 1024,
+    }),
   });
 
-  if (!response.ok) {
-    throw new Error(`image generation failed: ${response.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to generate image");
   }
 
-  return response.json();
+  return res.json();
+}
+
+export async function uploadFile(
+  file: File,
+  onProgress?: (progress: number) => void
+) {
+  const form = new FormData();
+  form.append("file", file);
+
+  return new Promise<{
+    name: string;
+    type: string;
+    text: string;
+  }>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open("POST", `${API}/files/upload`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error(xhr.responseText || "Upload failed"));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error("Upload failed"));
+    };
+
+    xhr.send(form);
+  });
 }

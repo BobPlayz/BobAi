@@ -11,25 +11,25 @@ export async function generateConversationTitle(
   const sample = messages.slice(-8);
 
   const prompt = `
-Generate a very short conversation title (2-5 words).
+generate a very short conversation title.
 
-Rules:
+rules:
+- 2 to 5 words
 - lowercase
 - no quotes
 - no punctuation
 - summarize the actual topic
-- examples:
-  casual greeting
-  cyberpunk wallpaper
-  debugging usechat
-  exam study plan
-  discord bot economy
 
-Conversation:
-${sample
-  .map((m) => `${m.role}: ${m.content}`)
-  .join("\n")}
-`.trim();
+examples:
+casual greeting
+cyberpunk wallpaper
+debugging usechat
+exam study plan
+discord bot economy
+
+conversation:
+${sample.map((m) => `${m.role}: ${m.content}`).join("\n")}
+  `.trim();
 
   try {
     const response = await ollama.chat({
@@ -45,12 +45,12 @@ ${sample
       },
     });
 
-    return (
-      response.message.content
-        .trim()
-        .replace(/["'.!,]/g, "")
-        .slice(0, 40) || "new chat"
-    );
+    const title = response.message.content
+      .trim()
+      .replace(/["'.!,]/g, "")
+      .slice(0, 40);
+
+    return title || "new chat";
   } catch {
     return "new chat";
   }

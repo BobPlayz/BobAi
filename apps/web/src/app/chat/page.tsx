@@ -21,45 +21,47 @@ export default function ChatPage() {
 
   if (!chat.activeConversation) {
     return (
-      <main className="flex h-screen items-center justify-center bg-black text-white">
-        <div className="text-white/50">loading bobai...</div>
+      <main className="flex min-h-screen items-center justify-center bg-background text-text">
+        loading bobai...
       </main>
     );
   }
 
   return (
-    <main className="h-screen bg-black text-white">
-      <div className="flex h-full">
-        <Sidebar
-          conversations={chat.conversations}
-          activeId={chat.activeId}
-          onSelect={chat.setActiveId}
-          onNewChat={chat.newChat}
-          search={chat.search}
-          setSearch={chat.setSearch}
-          onTogglePin={chat.togglePin}
-          onRename={chat.renameConversation}
-          onDelete={chat.deleteConversation}
+    <main className="flex h-screen bg-background text-text">
+      <Sidebar
+        conversations={chat.conversations}
+        activeId={chat.activeId}
+        onSelect={chat.setActiveId}
+        onNewChat={chat.newChat}
+        search={chat.search}
+        setSearch={chat.setSearch}
+        onPin={chat.togglePin}
+        onRename={chat.renameConversation}
+        onDelete={chat.deleteConversation}
+      />
+
+      <section className="flex flex-1 flex-col">
+        <Topbar />
+
+        <ChatWindow
+          messages={chat.activeConversation.messages}
+          loading={chat.loading}
+          onPinMessage={chat.togglePinMessage}
+          onDeleteMessage={chat.deleteMessage}
+          onRegenerate={chat.regenerateLastAssistant}
         />
 
-        <section className="flex flex-1 flex-col bg-black">
-          <Topbar />
-
-          <ChatWindow
-            messages={chat.activeConversation.messages}
-            loading={chat.loading}
-            onPinMessage={chat.togglePinMessage}
-            onDeleteMessage={chat.deleteMessage}
-            onRegenerate={chat.regenerateLastAssistant}
-          />
-
-          <ChatInput
-            value={chat.input}
-            onChange={chat.setInput}
-            onSend={chat.send}
-          />
-        </section>
-      </div>
+        <ChatInput
+          input={chat.input}
+          setInput={chat.setInput}
+          onSend={chat.send}
+          onFiles={chat.handleFiles}
+          disabled={chat.loading}
+          uploadingFiles={chat.uploadingFiles}
+          uploadProgress={chat.uploadProgress}
+        />
+      </section>
     </main>
   );
 }

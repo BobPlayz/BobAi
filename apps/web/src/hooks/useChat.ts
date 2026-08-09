@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { sendMessage, generateImage } from "@/lib/api";
-import type { Conversation, ChatMessage, ChatImage } from "@/types/chat";
+import {
+  sendMessage,
+  generateImage,
+  uploadFile,
+} from "@/lib/api";
+import type {
+  Conversation,
+  ChatMessage,
+  ChatImage,
+  ChatFile,
+} from "@/types/chat";
 
 const STORAGE_KEY = "bobai.conversations.v2";
 const SETTINGS_KEY = "bobai.settings.v1";
-
-interface BobAISettings {
-  personality: string;
-}
 
 function createConversation(): Conversation {
   return {
@@ -21,47 +26,49 @@ function createConversation(): Conversation {
   };
 }
 
-function loadSettings(): BobAISettings {
+function loadSettings() {
   if (typeof window === "undefined") {
     return { personality: "" };
   }
 
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-
-    if (!raw) {
-      return { personality: "" };
-    }
-
-    return JSON.parse(raw) as BobAISettings;
+    return JSON.parse(
+      localStorage.getItem(SETTINGS_KEY) || "{}"
+    );
   } catch {
     return { personality: "" };
   }
 }
 
 export function useChat() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<
+    Conversation[]
+  >([]);
   const [activeId, setActiveId] = useState("");
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
-  const [loadingConversationId, setLoadingConversationId] =
-    useState<string | null>(null);
-  const [settings, setSettings] = useState<BobAISettings>({
-    personality: "",
-  });
+  const [
+    loadingConversationId,
+    setLoadingConversationId,
+  ] = useState<string | null>(null);
+  const [settings, setSettings] =
+    useState(loadSettings);
+
+  const [uploadingFiles, setUploadingFiles] =
+    useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] =
+    useState<Record<string, number>>({});
 
   useEffect(() => {
-    setSettings(loadSettings());
+    const saved = localStorage.getItem(STORAGE_KEY);
 
-    const raw = localStorage.getItem(STORAGE_KEY);
-
-    if (raw) {
+    if (saved) {
       try {
-        const saved = JSON.parse(raw) as Conversation[];
+        const data = JSON.parse(saved) as Conversation[];
 
-        if (saved.length > 0) {
-          setConversations(saved);
-          setActiveId(saved[0].id);
+        if (data.length) {
+          setConversations(data);
+          setActiveId(data[0].id);
           return;
         }
       } catch {}
@@ -73,7 +80,7 @@ export function useChat() {
   }, []);
 
   useEffect(() => {
-    if (conversations.length > 0) {
+    if (conversations.length) {
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify(conversations)
@@ -88,30 +95,45 @@ export function useChat() {
     );
   }, [settings]);
 
-  const activeConversation =
-    conversations.find((c) => c.id === activeId);
+  const activeConversation = conversations.find(
+    (c) => c.id === activeId
+  );
 
   const visibleConversations = useMemo(() => {
-    const filtered = conversations.filter((c) =>
-      c.title.toLowerCase().includes(search.toLowerCase())
-    );
+    return conversations
+      .filter((c) =>
+        c.title
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) {
+          return a.pinned ? -1 : 1;
+        }
 
-    const pinned = filtered
-      .filter((c) => c.pinned)
-      .sort((a, b) => b.createdAt - a.createdAt);
-
-    const regular = filtered
-      .filter((c) => !c.pinned)
-      .sort((a, b) => b.createdAt - a.createdAt);
-
-    return [...pinned, ...regular];
+        return b.createdAt - a.createdAt;
+      });
   }, [conversations, search]);
+
+  function updateConversation(
+    id: string,
+    updater: (c: Conversation) => Conversation
+  ) {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? updater(c) : c))
+    );
+  }
 
   async function send() {
     const text = input.trim();
 
-    if (!text || !activeConversation || loadingConversationId)
+    if (
+      !text ||
+      !activeConversation ||
+      loadingConversationId
+    ) {
       return;
+    }
 
     const conversationId = activeId;
 
@@ -129,20 +151,10 @@ export function useChat() {
       userMessage,
     ];
 
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === conversationId
-          ? {
-              ...c,
-              title:
-                c.messages.length === 0
-                  ? text.slice(0, 32)
-                  : c.title,
-              messages: nextMessages,
-            }
-          : c
-      )
-    );
+    updateConversation(conversationId, (c) => ({
+      ...c,
+      messages: nextMessages,
+    }));
 
     try {
       const result = await sendMessage(
@@ -150,13 +162,14 @@ export function useChat() {
         settings.personality
       );
 
-      // automatic image generation
+      let aiMessage: ChatMessage;
+
       if (result.imagePrompt) {
         const imageResult = await generateImage(
           result.imagePrompt
         );
 
-        const aiMessage: ChatMessage = {
+        aiMessage = {
           id: crypto.randomUUID(),
           role: "assistant",
           content: "",
@@ -168,61 +181,137 @@ export function useChat() {
             })
           ),
         };
-
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === conversationId
-              ? {
-                  ...c,
-                  messages: [...nextMessages, aiMessage],
-                }
-              : c
-          )
-        );
-
-        return;
+      } else {
+        aiMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: result.reply,
+        };
       }
 
-      const aiMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: result.reply,
-      };
+      updateConversation(conversationId, (c) => ({
+        ...c,
+        title: result.title || c.title,
+        messages: [...nextMessages, aiMessage],
+      }));
+    } catch (error) {
+      updateConversation(conversationId, (c) => ({
+        ...c,
+        messages: [
+          ...nextMessages,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content:
+              error instanceof Error
+                ? `backend error: ${error.message}`
+                : "bro the backend just exploded 💀",
+          },
+        ],
+      }));
+    } finally {
+      setLoadingConversationId(null);
+    }
+  }
 
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                messages: [...nextMessages, aiMessage],
-              }
-            : c
-        )
-      );
-    } catch {
-      const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "bro the backend just exploded 💀",
-      };
+  async function handleFiles(files: File[]) {
+    if (!activeConversation || files.length === 0) {
+      return;
+    }
 
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                messages: [...nextMessages, errorMessage],
-              }
-            : c
-        )
-      );
+    setLoadingConversationId(activeId);
+
+    try {
+      for (const file of files) {
+        setUploadingFiles((prev) => [
+          ...prev,
+          file.name,
+        ]);
+
+        setUploadProgress((prev) => ({
+          ...prev,
+          [file.name]: 0,
+        }));
+
+        const result = await uploadFile(
+          file,
+          (progress) => {
+            setUploadProgress((prev) => ({
+              ...prev,
+              [file.name]: progress,
+            }));
+          }
+        );
+
+        const fileData: ChatFile = {
+          id: crypto.randomUUID(),
+          name: result.name,
+          type: result.type,
+          text: result.text,
+        };
+
+        const userMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: "",
+          files: [fileData],
+        };
+
+        const nextMessages = [
+          ...activeConversation.messages,
+          userMessage,
+        ];
+
+        updateConversation(activeId, (c) => ({
+          ...c,
+          messages: nextMessages,
+        }));
+
+        const response = await sendMessage(
+          [
+            ...nextMessages,
+            {
+              id: crypto.randomUUID(),
+              role: "user",
+              content:
+                `file content from ${result.name}:\\n\\n` +
+                result.text,
+            },
+          ],
+          settings.personality
+        );
+
+        const aiMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: response.reply,
+        };
+
+        updateConversation(activeId, (c) => ({
+          ...c,
+          title: response.title || c.title,
+          messages: [...nextMessages, aiMessage],
+        }));
+
+        setUploadingFiles((prev) =>
+          prev.filter((name) => name !== file.name)
+        );
+
+        setUploadProgress((prev) => {
+          const next = { ...prev };
+          delete next[file.name];
+          return next;
+        });
+      }
     } finally {
       setLoadingConversationId(null);
     }
   }
 
   async function regenerateLastAssistant() {
-    if (!activeConversation || loadingConversationId) return;
+    if (!activeConversation || loadingConversationId) {
+      return;
+    }
 
     const messages = activeConversation.messages;
 
@@ -230,7 +319,9 @@ export function useChat() {
       .reverse()
       .find((m) => m.role === "assistant");
 
-    if (!lastAssistant) return;
+    if (!lastAssistant) {
+      return;
+    }
 
     const withoutAssistant = messages.filter(
       (m) => m.id !== lastAssistant.id
@@ -238,13 +329,10 @@ export function useChat() {
 
     setLoadingConversationId(activeId);
 
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeId
-          ? { ...c, messages: withoutAssistant }
-          : c
-      )
-    );
+    updateConversation(activeId, (c) => ({
+      ...c,
+      messages: withoutAssistant,
+    }));
 
     try {
       const result = await sendMessage(
@@ -252,12 +340,14 @@ export function useChat() {
         settings.personality
       );
 
+      let aiMessage: ChatMessage;
+
       if (result.imagePrompt) {
         const imageResult = await generateImage(
           result.imagePrompt
         );
 
-        const aiMessage: ChatMessage = {
+        aiMessage = {
           id: crypto.randomUUID(),
           role: "assistant",
           content: "",
@@ -269,37 +359,19 @@ export function useChat() {
             })
           ),
         };
-
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === activeId
-              ? {
-                  ...c,
-                  messages: [...withoutAssistant, aiMessage],
-                }
-              : c
-          )
-        );
-
-        return;
+      } else {
+        aiMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: result.reply,
+        };
       }
 
-      const aiMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: result.reply,
-      };
-
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === activeId
-            ? {
-                ...c,
-                messages: [...withoutAssistant, aiMessage],
-              }
-            : c
-        )
-      );
+      updateConversation(activeId, (c) => ({
+        ...c,
+        title: result.title || c.title,
+        messages: [...withoutAssistant, aiMessage],
+      }));
     } finally {
       setLoadingConversationId(null);
     }
@@ -314,30 +386,35 @@ export function useChat() {
   }
 
   function togglePin(id: string) {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, pinned: !c.pinned } : c
-      )
-    );
+    updateConversation(id, (c) => ({
+      ...c,
+      pinned: !c.pinned,
+    }));
   }
 
-  function renameConversation(id: string, title: string) {
+  function renameConversation(
+    id: string,
+    title: string
+  ) {
     const next = title.trim();
 
-    if (!next) return;
+    if (!next) {
+      return;
+    }
 
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, title: next } : c
-      )
-    );
+    updateConversation(id, (c) => ({
+      ...c,
+      title: next,
+    }));
   }
 
   function deleteConversation(id: string) {
     setConversations((prev) => {
-      const remaining = prev.filter((c) => c.id !== id);
+      const remaining = prev.filter(
+        (c) => c.id !== id
+      );
 
-      if (remaining.length === 0) {
+      if (!remaining.length) {
         const fresh = createConversation();
         setActiveId(fresh.id);
         return [fresh];
@@ -352,39 +429,23 @@ export function useChat() {
   }
 
   function togglePinMessage(messageId: string) {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeId
-          ? {
-              ...c,
-              messages: c.messages.map((m) =>
-                m.id === messageId
-                  ? { ...m, pinned: !m.pinned }
-                  : m
-              ),
-            }
-          : c
-      )
-    );
+    updateConversation(activeId, (c) => ({
+      ...c,
+      messages: c.messages.map((m) =>
+        m.id === messageId
+          ? { ...m, pinned: !m.pinned }
+          : m
+      ),
+    }));
   }
 
   function deleteMessage(messageId: string) {
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === activeId
-          ? {
-              ...c,
-              messages: c.messages.filter(
-                (m) => m.id !== messageId
-              ),
-            }
-          : c
-      )
-    );
-  }
-
-  function setPersonality(personality: string) {
-    setSettings({ personality });
+    updateConversation(activeId, (c) => ({
+      ...c,
+      messages: c.messages.filter(
+        (m) => m.id !== messageId
+      ),
+    }));
   }
 
   return {
@@ -396,7 +457,11 @@ export function useChat() {
     input,
     setInput,
     send,
-    loading: loadingConversationId === activeId,
+    handleFiles,
+    uploadingFiles,
+    uploadProgress,
+    loading:
+      loadingConversationId === activeId,
     search,
     setSearch,
     togglePin,
@@ -406,6 +471,7 @@ export function useChat() {
     deleteMessage,
     regenerateLastAssistant,
     personality: settings.personality,
-    setPersonality,
+    setPersonality: (personality: string) =>
+      setSettings({ personality }),
   };
 }

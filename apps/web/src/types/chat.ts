@@ -1,25 +1,29 @@
-export type MessageRole = "user" | "assistant";
-
-export interface ChatImage {
+export type ChatImage = {
   id: string;
   url: string;
   prompt: string;
-  width?: number;
-  height?: number;
-}
+};
 
-export interface ChatMessage {
+export type ChatFile = {
   id: string;
-  role: MessageRole;
-  content: string;
-  pinned?: boolean;
-  images?: ChatImage[];
-}
+  name: string;
+  type: string;
+  text: string;
+};
 
-export interface Conversation {
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  images?: ChatImage[];
+  files?: ChatFile[];
+  pinned?: boolean;
+};
+
+export type Conversation = {
   id: string;
   title: string;
   createdAt: number;
   pinned: boolean;
   messages: ChatMessage[];
-}
+};

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import BobLogo from "@/components/BobLogo";
 import type { Conversation } from "@/types/chat";
 
 type Props = {
@@ -11,7 +10,7 @@ type Props = {
   onNewChat: () => void;
   search: string;
   setSearch: (value: string) => void;
-  onTogglePin: (id: string) => void;
+  onPin: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
 };
@@ -23,154 +22,171 @@ export default function Sidebar({
   onNewChat,
   search,
   setSearch,
-  onTogglePin,
+  onPin,
   onRename,
   onDelete,
 }: Props) {
-  const [menuId, setMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
-
-  function finishRename() {
-    if (!editingId) return;
-    const next = editingTitle.trim();
-    if (next) onRename(editingId, next);
-    setEditingId(null);
-    setEditingTitle("");
-  }
+  const [title, setTitle] = useState("");
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-white/10 bg-black">
-      <div className="p-4">
-        <div className="flex items-center gap-3">
-          <BobLogo />
-          <div>
-            <div className="text-xl font-semibold text-white">
-              bobai
+    <aside className="flex w-64 flex-col border-r border-[#232B36] bg-[#0F141A]">
+      <div className="border-b border-[#232B36] p-4">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#171D26]">
+            <span className="text-sm font-black text-[#38BDF8]">B</span>
+          </div>
+
+          <div className="leading-tight">
+            <div className="text-base font-semibold text-[#E5EEF7]">
+              Bob AI
             </div>
-            <div className="text-sm text-white/45">
-              alpha
+
+            <div className="text-xs text-[#94A3B8]">
+              Personal AI workspace
             </div>
           </div>
         </div>
 
         <button
           onClick={onNewChat}
-          className="mt-5 flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#121212] px-3 py-2.5 text-sm text-white/90 transition hover:bg-[#181818]"
+          className="w-full rounded-xl bg-[#38BDF8] px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-[#0EA5E9]"
         >
-          <span className="text-lg">+</span>
-          <span>new chat</span>
+          + New Chat
         </button>
 
-        <div className="mt-4">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="search chats"
-            className="w-full rounded-xl border border-white/10 bg-[#121212] px-3 py-2 text-sm text-white placeholder:text-white/35 outline-none"
-          />
-        </div>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search conversations"
+          className="mt-3 w-full rounded-xl border border-[#232B36] bg-[#141A22] px-3 py-2 text-sm text-[#E5EEF7] outline-none placeholder:text-[#64748B] focus:border-[#38BDF8]"
+        />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
-        {conversations.map((conversation) => (
-          <div
-            key={conversation.id}
-            className="group relative mb-1 flex items-center rounded-xl transition hover:bg-white/5"
-          >
-            <button
-              onClick={() => onSelect(conversation.id)}
-              className={
-                conversation.id === activeId
-                  ? "flex-1 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-left text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                  : "flex-1 rounded-xl px-3 py-2 text-left text-white/80 hover:text-white"
-              }
-            >
-              {editingId === conversation.id ? (
-                <input
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onBlur={finishRename}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") finishRename();
-                    if (e.key === "Escape") {
-                      setEditingId(null);
-                      setEditingTitle("");
-                    }
-                  }}
-                  className="w-full rounded-md border border-white/10 bg-[#161616] px-2 py-1 text-sm text-white outline-none"
-                />
-              ) : (
-                <div className="flex items-center gap-2">
-                  {conversation.pinned && (
-                    <span className="text-xs text-[#d4a62a]">📌</span>
-                  )}
-                  <span className="truncate text-sm font-medium">
-                    {conversation.title}
-                  </span>
-                </div>
-              )}
-            </button>
-
-            <button
-              onClick={() =>
-                setMenuId(menuId === conversation.id ? null : conversation.id)
-              }
-              className="mr-2 rounded-lg p-1 text-white/45 opacity-0 transition hover:bg-white/10 hover:text-white group-hover:opacity-100"
-            >
-              ⋯
-            </button>
-
-            {menuId === conversation.id && (
-              <div className="absolute right-2 top-11 z-20 w-44 rounded-xl border border-white/10 bg-[#121212] py-1 shadow-2xl">
-                <button
-                  onClick={() => {
-                    onTogglePin(conversation.id);
-                    setMenuId(null);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5"
-                >
-                  {conversation.pinned ? "unpin" : "pin"}
-                </button>
-
-                <button
-                  onClick={() => {
-                    setEditingId(conversation.id);
-                    setEditingTitle(conversation.title);
-                    setMenuId(null);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5"
-                >
-                  rename
-                </button>
-
-                <button
-                  onClick={() => {
-                    onDelete(conversation.id);
-                    setMenuId(null);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5"
-                >
-                  delete
-                </button>
+      <div className="flex-1 overflow-y-auto p-3">
+        {conversations.length === 0 ? (
+          <div className="flex h-full items-center justify-center px-4 text-center">
+            <div>
+              <div className="text-sm font-medium text-[#E5EEF7]">
+                No conversations found
               </div>
-            )}
+
+              <div className="mt-1 text-xs text-[#94A3B8]">
+                Try another search or start a new chat.
+              </div>
+            </div>
           </div>
-        ))}
+        ) : (
+          <div className="space-y-1.5">
+            {conversations.map((conversation) => {
+              const active = conversation.id === activeId;
+
+              return (
+                <div
+                  key={conversation.id}
+                  className={
+                    active
+                      ? "rounded-xl border border-[#38BDF8]/30 bg-[#171D26]"
+                      : "rounded-xl border border-transparent hover:border-[#232B36] hover:bg-[#141A22]"
+                  }
+                >
+                  <div
+                    className="cursor-pointer p-3"
+                    onClick={() => onSelect(conversation.id)}
+                  >
+                    {editingId === conversation.id ? (
+                      <input
+                        autoFocus
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onBlur={() => {
+                          onRename(conversation.id, title);
+                          setEditingId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            onRename(conversation.id, title);
+                            setEditingId(null);
+                          }
+                        }}
+                        className="w-full bg-transparent text-sm font-medium text-[#E5EEF7] outline-none"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={
+                            active
+                              ? "h-2 w-2 rounded-full bg-[#38BDF8]"
+                              : "h-2 w-2 rounded-full bg-[#64748B]"
+                          }
+                        />
+
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium text-[#E5EEF7]">
+                            {conversation.title}
+                          </div>
+
+                          <div className="text-[11px] text-[#64748B]">
+                            {new Date(
+                              conversation.createdAt
+                            ).toLocaleDateString()}
+                          </div>
+                        </div>
+
+                        {conversation.pinned && (
+                          <span className="text-xs text-[#38BDF8]">
+                            📌
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 px-3 pb-3">
+                    <button
+                      onClick={() => onPin(conversation.id)}
+                      className="rounded-lg px-2 py-1 text-[11px] text-[#94A3B8] transition hover:bg-[#171D26] hover:text-[#38BDF8]"
+                    >
+                      {conversation.pinned ? "Unpin" : "Pin"}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setEditingId(conversation.id);
+                        setTitle(conversation.title);
+                      }}
+                      className="rounded-lg px-2 py-1 text-[11px] text-[#94A3B8] transition hover:bg-[#171D26] hover:text-[#38BDF8]"
+                    >
+                      Rename
+                    </button>
+
+                    <button
+                      onClick={() => onDelete(conversation.id)}
+                      className="rounded-lg px-2 py-1 text-[11px] text-[#94A3B8] transition hover:bg-[#171D26] hover:text-red-400"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      <div className="border-t border-white/10 p-3">
-        <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+      <div className="border-t border-[#232B36] p-4">
+        <div className="flex items-center gap-3 rounded-xl bg-[#141A22] px-3 py-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0B0F14] text-sm font-semibold text-[#E5EEF7]">
             B
           </div>
 
-          <div className="min-w-0 text-left">
-            <div className="truncate text-sm font-medium text-white">
-              bob
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-[#E5EEF7]">
+              Bob
             </div>
-            <div className="truncate text-xs text-white/45">
-              8th class • building bobai
+
+            <div className="text-xs text-[#94A3B8]">
+              Local profile
             </div>
           </div>
         </div>
