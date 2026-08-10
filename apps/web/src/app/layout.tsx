@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "BobAI",
-  description: "BobAI local assistant",
+  title: "Bob AI",
+  description: "Cinematic AI workspace",
 };
 
 export default function RootLayout({
@@ -13,13 +13,36 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-background text-text antialiased">
-        <div className="relative min-h-screen">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_40%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(96,165,250,0.08),transparent_35%)]" />
-          <div className="relative z-10 min-h-screen">
-            {children}
+      <body>
+        <div className="app-shell relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="beam left-[-12rem] top-24" />
+            <div className="beam left-[-10rem] top-72" />
+            <div className="beam left-[-8rem] bottom-28" />
+
+            <div
+              className="particle left-[18%] top-[72%]"
+              style={{ animationDuration: "9s" }}
+            />
+            <div
+              className="particle left-[34%] top-[82%]"
+              style={{ animationDuration: "11s" }}
+            />
+            <div
+              className="particle left-[58%] top-[76%]"
+              style={{ animationDuration: "13s" }}
+            />
+            <div
+              className="particle left-[74%] top-[84%]"
+              style={{ animationDuration: "10s" }}
+            />
+            <div
+              className="particle left-[88%] top-[68%]"
+              style={{ animationDuration: "12s" }}
+            />
           </div>
+
+          {children}
         </div>
       </body>
     </html>

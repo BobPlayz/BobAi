@@ -2,10 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
-import ChatWindow from "@/components/ChatWindow";
-import ChatInput from "@/components/ChatInput";
+
+import NeuralShell from "@/components/neural/NeuralShell";
+import NeuralSidebar from "@/components/neural/NeuralSidebar";
+import NeuralTopbar from "@/components/neural/NeuralTopbar";
+import NeuralChatStage from "@/components/neural/NeuralChatStage";
+import NeuralComposer from "@/components/neural/NeuralComposer";
+
 import { useChat } from "@/hooks/useChat";
 import { isLoggedIn } from "@/lib/auth";
 
@@ -21,47 +24,49 @@ export default function ChatPage() {
 
   if (!chat.activeConversation) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-text">
-        loading bobai...
-      </main>
+      <div className="flex h-screen items-center justify-center bg-[#02050A]">
+        <div className="text-sm tracking-[0.22em] text-cyan-300/70 uppercase">
+          Initializing Neural Interface
+        </div>
+      </div>
     );
   }
 
   return (
-    <main className="flex h-screen bg-background text-text">
-      <Sidebar
-        conversations={chat.conversations}
-        activeId={chat.activeId}
-        onSelect={chat.setActiveId}
-        onNewChat={chat.newChat}
-        search={chat.search}
-        setSearch={chat.setSearch}
-        onPin={chat.togglePin}
-        onRename={chat.renameConversation}
-        onDelete={chat.deleteConversation}
-      />
-
-      <section className="flex flex-1 flex-col">
-        <Topbar />
-
-        <ChatWindow
+    <div className="app-shell">
+      <NeuralShell
+        sidebar={
+          <NeuralSidebar
+            conversations={chat.conversations}
+            activeId={chat.activeConversation.id}
+            onSelect={chat.selectConversation}
+            onNewChat={chat.createConversation}
+            search={chat.search}
+            setSearch={chat.setSearch}
+            onPin={chat.togglePinConversation}
+            onRename={chat.renameConversation}
+            onDelete={chat.deleteConversation}
+          />
+        }
+        topbar={<NeuralTopbar />}
+        composer={
+          <NeuralComposer
+            input={chat.input}
+            setInput={chat.setInput}
+            onSend={chat.send}
+            onFiles={chat.handleFiles}
+            disabled={chat.loading}
+          />
+        }
+      >
+        <NeuralChatStage
           messages={chat.activeConversation.messages}
           loading={chat.loading}
           onPinMessage={chat.togglePinMessage}
           onDeleteMessage={chat.deleteMessage}
           onRegenerate={chat.regenerateLastAssistant}
         />
-
-        <ChatInput
-          input={chat.input}
-          setInput={chat.setInput}
-          onSend={chat.send}
-          onFiles={chat.handleFiles}
-          disabled={chat.loading}
-          uploadingFiles={chat.uploadingFiles}
-          uploadProgress={chat.uploadProgress}
-        />
-      </section>
-    </main>
+      </NeuralShell>
+    </div>
   );
 }
