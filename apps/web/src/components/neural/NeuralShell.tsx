@@ -5,7 +5,7 @@ import NeuralScene from "./NeuralScene";
 import { SceneEngine } from "./SceneEngine";
 import { ThemeProvider } from "./ThemeProvider";
 
-type NeuralShellProps = {
+type Props = {
   sidebar: ReactNode;
   topbar: ReactNode;
   children: ReactNode;
@@ -17,33 +17,33 @@ export default function NeuralShell({
   topbar,
   children,
   composer,
-}: NeuralShellProps) {
+}: Props) {
   return (
     <ThemeProvider>
       <SceneEngine>
         <div className="relative h-screen w-screen overflow-hidden bg-[#02050A]">
-          {/* 3D scene behind everything */}
           <NeuralScene />
 
-          {/* UI layer */}
-          <div className="relative z-10 flex h-full w-full p-3">
-            <div className="relative flex h-full w-full overflow-hidden rounded-[42px] border border-cyan-400/20 bg-[#05080D]/92 shadow-[0_0_0_1px_rgba(0,217,255,0.08),0_0_60px_rgba(0,217,255,0.18)] backdrop-blur-3xl">
-              {/* Left sidebar */}
-              <div className="w-[308px] border-r border-cyan-400/10 bg-[#04070C]/90">
+          <div className="absolute inset-0 p-2">
+            <div className="relative flex h-full w-full overflow-hidden rounded-[30px] border border-cyan-400/12 bg-[#05080D]/62 shadow-[0_0_0_1px_rgba(0,217,255,0.05),0_40px_120px_rgba(0,0,0,0.55)] backdrop-blur-3xl">
+              <div className="pointer-events-none absolute inset-0 rounded-[30px] border border-white/5" />
+              <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/35 to-transparent" />
+
+              <div className="w-[300px] border-r border-cyan-400/10 bg-[#04070C]/72 backdrop-blur-2xl">
                 {sidebar}
               </div>
 
-              {/* Main area */}
-              <div className="flex flex-1 flex-col bg-[#05080D]/75">
-                <div className="border-b border-cyan-400/10 bg-[#05080D]/85 px-4 pt-3 pb-2">
+              <div className="flex flex-1 flex-col bg-[#05080D]/48">
+                <div className="border-b border-cyan-400/10 bg-[#05080D]/58 px-4 py-3 backdrop-blur-2xl">
                   {topbar}
                 </div>
 
-                <div className="flex-1 overflow-hidden">
+                <div className="relative flex-1 overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,217,255,0.05),transparent_70%)]" />
                   {children}
                 </div>
 
-                <div className="border-t border-cyan-400/10 bg-[#04070C]/85 px-6 pt-4 pb-5">
+                <div className="border-t border-cyan-400/10 bg-[#04070C]/60 px-6 py-4 backdrop-blur-2xl">
                   {composer}
                 </div>
               </div>
