@@ -1,0 +1,55 @@
+# BobAI Autonomous Runner (Phase 1)
+
+## Goal
+
+BobAI should continue working while I am away. It must build one milestone after another, verify each milestone, create a Git checkpoint, and continue automatically.
+
+## Rules
+
+* Read `bobai_agent_rules.md` before every milestone.
+* Read `architecture.md` before every milestone.
+* Read `roadmap.md` before every milestone.
+* Never ask for permission during autonomous mode.
+* Never create todos unless explicitly instructed.
+* Work on exactly one milestone at a time.
+* After each milestone:
+
+  1. Save all files.
+  2. Run build and tests.
+  3. If build fails, attempt automatic fixes up to 3 times.
+  4. If successful, create a Git commit.
+  5. Continue to the next unfinished milestone.
+* If the laptop is restarted, resume from the last completed Git commit and continue with the next milestone.
+
+## Execution Loop
+
+1. Load roadmap.
+2. Find the next unchecked milestone.
+3. Launch Goose with a fully specified implementation prompt.
+4. Wait for Goose to finish.
+5. Run:
+
+   * `npm install` if required
+   * `npm run build`
+   * `npm test` (if available)
+6. If tests fail:
+
+   * Launch Goose with a fix prompt.
+   * Retry up to 3 times.
+7. Commit:
+
+   * `git add .`
+   * `git commit -m "Milestone X complete"`
+8. Repeat until all milestones are complete.
+
+## Output
+
+Maintain `progress.json` with:
+
+* current milestone
+* completed milestones
+* failed milestones
+* last commit hash
+* last successful build time
+
+The runner must continue autonomously until the roadmap is fully completed.
