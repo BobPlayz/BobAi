@@ -3,19 +3,23 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Bob AI",
-  description: "Cinematic AI workspace",
+  description: "Your intelligent AI workspace",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <div className="app-shell relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0">
+        <div id="bobai-root" className="relative min-h-screen overflow-hidden">
+          {/* global ambient environment */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+          >
             <div className="beam left-[-12rem] top-24" />
             <div className="beam left-[-10rem] top-72" />
             <div className="beam left-[-8rem] bottom-28" />
@@ -42,7 +46,10 @@ export default function RootLayout({
             />
           </div>
 
-          {children}
+          {/* persistent bobai application */}
+          <div className="relative z-10 min-h-screen">
+            {children}
+          </div>
         </div>
       </body>
     </html>
