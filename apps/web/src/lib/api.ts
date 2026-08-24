@@ -31,7 +31,7 @@ export async function sendMessage(
 }
 
 export async function generateImage(prompt: string) {
-  const res = await fetch(`${API}/images`, {
+  const res = await fetch(`${API}/images/generate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

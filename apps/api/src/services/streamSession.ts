@@ -10,7 +10,7 @@ export async function streamSession(
   onToken: (token: string) => void
 ): Promise<string> {
   const response = await ollama.chat({
-    model: "qwen2.5:3b",
+    model: process.env.OLLAMA_CHAT_MODEL || "qwen2.5:3b",
     messages,
     stream: true,
   });
