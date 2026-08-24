@@ -5,6 +5,7 @@ import chatRouter from "./routes/chat";
 import imagesRouter from "./routes/images";
 import memoryRouter from "./routes/memory";
 import filesRouter from "./routes/files";
+import agentsRouter from "./routes/agents";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use("/chat", chatRouter);
 app.use("/images", imagesRouter);
 app.use("/memory", memoryRouter);
 app.use("/files", filesRouter);
+app.use("/agents", agentsRouter);
 
 const PORT = Number(process.env.PORT || 3001);
 

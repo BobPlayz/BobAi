@@ -77,7 +77,7 @@ export default function NeuralShell({
             {/* sidebar */}
             <aside
               className={[
-                "relative z-10 hidden w-[280px] shrink-0 border-r md:block lg:w-[300px]",
+                "relative z-10 hidden w-[280px] shrink-0 border-r sm:block lg:w-[300px]",
                 theme === "light"
                   ? "border-black/8 bg-white/60"
                   : "border-cyan-400/10 bg-[#04070C]/70",

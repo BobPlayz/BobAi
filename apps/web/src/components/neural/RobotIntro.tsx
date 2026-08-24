@@ -43,9 +43,9 @@ export default function RobotIntro() {
     if (!group.current) return;
 
     let targetX = 4.4;
-    let targetY = -1.18;
+    const targetY = -1.18;
     let targetScale = 1.25;
-    let targetRotation = Math.PI;
+    const targetRotation = Math.PI;
 
     switch (state) {
       case "robot-enter":

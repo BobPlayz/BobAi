@@ -1,18 +1,10 @@
 "use client";
 
-import { Library, Settings } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
+import PillNav from "@/components/PillNav";
 
 export default function NeuralTopbar() {
   const { theme } = useTheme();
-
-  function openLibrary() {
-    window.dispatchEvent(new CustomEvent("bobai:open-library"));
-  }
-
-  function openSettings() {
-    window.dispatchEvent(new CustomEvent("bobai:open-settings"));
-  }
 
   return (
     <header className="h-[84px] px-4 pt-3 pb-2">
@@ -32,23 +24,7 @@ export default function NeuralTopbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={openLibrary}
-            className="flex h-10 items-center gap-2 rounded-[16px] border border-cyan-400/10 bg-[#081018] px-4 text-sm text-cyan-100 transition hover:border-cyan-300/22"
-          >
-            <Library className="h-4 w-4" />
-            Library
-          </button>
-
-          <button
-            onClick={openSettings}
-            className="flex h-10 items-center gap-2 rounded-[16px] border border-cyan-400/10 bg-[#081018] px-4 text-sm text-cyan-100 transition hover:border-cyan-300/22"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </button>
-        </div>
+        <PillNav items={[{ label: "Chat", href: "/chat" }, { label: "Settings", href: "/settings" }]} />
       </div>
     </header>
   );

@@ -1,0 +1,4 @@
+.gooey-nav { position: relative; display: flex; width: 100%; gap: 4px; padding: 4px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(255,255,255,.035); }
+.gooey-nav button { position: relative; z-index: 1; flex: 1; min-width: 0; border: 0; border-radius: 999px; padding: 9px 4px; background: transparent; color: rgba(238,244,251,.4); font: 600 .68rem ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; transition: color 180ms ease; }
+.gooey-nav button.active { color: #06111a; }
+.gooey-nav-pill { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px - 20px) / 6); border-radius: 999px; background: var(--accent); transform: translateX(calc(var(--active-index) * (100% + 4px))); transition: transform 260ms cubic-bezier(.22,1,.36,1); }

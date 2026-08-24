@@ -166,7 +166,7 @@ export default function Sidebar({
               Delete conversation?
             </h2>
             <p className="mt-2 text-sm text-cyan-300/55">
-              This will permanently delete "{deleteTarget.title}" and remove
+              This will permanently delete &quot;{deleteTarget.title}&quot; and remove
               any memory associated with this conversation.
             </p>
             <div className="mt-6 flex justify-end gap-3">
@@ -285,7 +285,7 @@ function ConversationRow({
   return (
     <div className="relative group">
       <button
-        onClick={() => onClick(conversation.id)}
+        onClick={() => onSelect(conversation.id)}
         className={
           active
             ? "flex h-10 w-full items-center rounded-xl border border-cyan-300/25 bg-[#0A1622] px-3 text-left text-sm text-white shadow-[0_0_14px_rgba(0,217,255,0.12)]"

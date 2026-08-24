@@ -6,9 +6,14 @@ import NeuralSidebar from "@/components/neural/NeuralSidebar";
 import NeuralTopbar from "@/components/neural/NeuralTopbar";
 import NeuralComposer from "@/components/neural/NeuralComposer";
 import { useChat } from "@/hooks/useChat";
+import BorderGlow from "@/components/BorderGlow";
+import ChatWindow from "@/components/ChatWindow";
+import ChatInput from "@/components/ChatInput";
+import { useTheme } from "@/components/neural/ThemeProvider";
 
 export default function ChatPage() {
   const chat = useChat();
+  const { theme } = useTheme();
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -20,6 +25,31 @@ export default function ChatPage() {
 
   function handleSearch(value: string) {
     chat.setSearch(value);
+  }
+
+  if (theme === "legacy") {
+    return (
+      <main className="flex h-screen flex-col bg-background text-text">
+        <ChatWindow
+          messages={chat.activeConversation?.messages || []}
+          loading={chat.loading}
+          onPinMessage={chat.togglePinMessage}
+          onDeleteMessage={chat.deleteMessage}
+          onRegenerate={chat.regenerateLastAssistant}
+        />
+        <ChatInput
+          input={chat.input}
+          setInput={chat.setInput}
+          onSend={chat.send}
+          onFiles={(files) => {
+            if (files) void chat.handleFiles(Array.from(files));
+          }}
+          disabled={chat.loading}
+          uploadingFiles={chat.uploadingFiles}
+          uploadProgress={chat.uploadProgress}
+        />
+      </main>
+    );
   }
 
   return (
@@ -43,12 +73,14 @@ export default function ChatPage() {
           input={chat.input}
           setInput={chat.setInput}
           onSend={chat.send}
-          onFiles={chat.handleFiles}
+          onFiles={(files) => {
+            if (files) void chat.handleFiles(Array.from(files));
+          }}
         />
       }
     >
       <div className="flex h-full justify-center overflow-y-auto px-6 py-8">
-        <div className="w-full max-w-[760px]">
+        <BorderGlow className="w-full max-w-[760px] rounded-[28px]">
           {chat.activeConversation?.messages.length === 0 ? (
             <div className="flex min-h-full items-center justify-center">
               <div className="pb-24 text-center">
@@ -129,7 +161,7 @@ export default function ChatPage() {
               <div ref={endRef} />
             </div>
           )}
-        </div>
+        </BorderGlow>
       </div>
     </NeuralShell>
   );

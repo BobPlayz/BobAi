@@ -21,7 +21,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/chat");
+    router.push("/onboarding");
   }
 
   return (
