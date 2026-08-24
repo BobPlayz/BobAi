@@ -1,0 +1,4 @@
+.border-glow-card { --glow-x: 50%; --glow-y: 50%; position: relative; isolation: isolate; border-radius: inherit; background: var(--card-bg); }
+.border-glow-card::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; padding: 1px; background: radial-gradient(180px circle at var(--glow-x) var(--glow-y), var(--glow-one), transparent 55%), linear-gradient(135deg, rgba(255,255,255,.16), var(--glow-two), rgba(255,255,255,.06)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: .24; transition: opacity 180ms ease; }
+.border-glow-card:hover::before { opacity: 1; }
+.border-glow-inner { position: relative; z-index: 1; border-radius: inherit; }

@@ -14,7 +14,7 @@ export default function SignupPage() {
 
   function handleSignup() {
     signup(username.trim() || "user", email.trim() || "user@local");
-    router.push("/chat");
+    router.push("/onboarding");
   }
 
   return (

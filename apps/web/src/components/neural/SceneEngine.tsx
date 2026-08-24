@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "./ThemeProvider";
 
 export type SceneState =
@@ -27,27 +27,31 @@ export function SceneEngine({
 }) {
   const { theme } = useTheme();
   const [state, setState] = useState<SceneState>("boot");
+  const timersRef = useRef<number[]>([]);
 
   useEffect(() => {
+    timersRef.current.forEach((timer) => window.clearTimeout(timer));
+    timersRef.current = [];
     playIntro();
+    return () => timersRef.current.forEach((timer) => window.clearTimeout(timer));
   }, [theme]);
 
   function playIntro() {
     if (theme === "futuristic") {
       setState("boot");
 
-      setTimeout(() => setState("robot-enter"), 200);
-      setTimeout(() => setState("robot-walk"), 900);
-      setTimeout(() => setState("robot-charge"), 2600);
-      setTimeout(() => setState("robot-dissolve"), 3800);
-      setTimeout(() => setState("interface-online"), 4800);
+      timersRef.current.push(window.setTimeout(() => setState("robot-enter"), 200));
+      timersRef.current.push(window.setTimeout(() => setState("robot-walk"), 900));
+      timersRef.current.push(window.setTimeout(() => setState("robot-charge"), 2600));
+      timersRef.current.push(window.setTimeout(() => setState("robot-dissolve"), 3800));
+      timersRef.current.push(window.setTimeout(() => setState("interface-online"), 4800));
 
       return;
     }
 
     if (theme === "anime") {
       setState("anime-intro");
-      setTimeout(() => setState("interface-online"), 3200);
+      timersRef.current.push(window.setTimeout(() => setState("interface-online"), 3200));
       return;
     }
 

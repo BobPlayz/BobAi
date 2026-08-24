@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import MagicBento, { MagicBentoCard } from "@/components/MagicBento";
+import { useTheme, type BobTheme } from "@/components/neural/ThemeProvider";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
@@ -17,38 +19,26 @@ interface SettingsState {
   personality: string;
   nsfw: boolean;
   memory: boolean;
-  theme: "dark" | "system";
-  accent: "sky";
+  theme: "dark";
+  accent: string;
 }
 
 export default function SettingsPage() {
+  const { theme, setTheme, accent, setAccent } = useTheme();
   const [tab, setTab] = useState<Tab>("personalization");
 
-  const [settings, setSettings] = useState<SettingsState>({
-    personality: "",
-    nsfw: false,
-    memory: true,
-    theme: "dark",
-    accent: "sky",
+  const [settings, setSettings] = useState<SettingsState>(() => {
+    const defaults: SettingsState = { personality: "", nsfw: false, memory: true, theme: "dark", accent: "#38bdf8" };
+    if (typeof window === "undefined") return defaults;
+    try {
+      return { ...defaults, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null") as Partial<SettingsState>) };
+    } catch {
+      return defaults;
+    }
   });
 
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as Partial<SettingsState>;
-
-      setSettings((prev) => ({
-        ...prev,
-        ...parsed,
-      }));
-    } catch {}
-  }, []);
 
   function update<K extends keyof SettingsState>(
     key: K,
@@ -69,6 +59,15 @@ export default function SettingsPage() {
 
     setTimeout(() => setSaved(false), 1500);
   }
+
+  const themeOptions: { id: BobTheme; label: string; detail: string }[] = [
+    { id: "legacy", label: "Legacy", detail: "The original Bob AI workspace" },
+    { id: "futuristic", label: "Futuristic", detail: "Neural interface with robot scene" },
+    { id: "anime", label: "Anime", detail: "Anime-inspired animated workspace" },
+    { id: "glass", label: "Glass", detail: "Translucent, quiet interface" },
+    { id: "light", label: "Light", detail: "Bright workspace for daytime" },
+    { id: "dark", label: "Dark", detail: "Low-light workspace" },
+  ];
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "account", label: "Account" },
@@ -137,6 +136,13 @@ export default function SettingsPage() {
             </Link>
           </div>
 
+          <MagicBento>
+            <MagicBentoCard label="01 / tune" title="Personalize Bob" description="Shape tone, detail, and memory around you." />
+            <MagicBentoCard label="02 / protect" title="Your controls" description="Keep local preferences in your hands." />
+            <MagicBentoCard label="03 / explore" title="More modes" description="New tools and connected workflows are on the way." />
+            <MagicBentoCard label="04 / status" title="Local first" description="Your current profile stays on this device." />
+          </MagicBento>
+
           {tab === "account" && (
             <div className="rounded-3xl border border-[#2A3340] bg-[#10161D] p-6">
               <div className="text-lg font-semibold text-[#E5EEF7]">
@@ -172,12 +178,12 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   update("personality", e.target.value)
                 }
-                placeholder="talk like me, use lowercase, keep replies short, roast me back, don't sound like chatgpt..."
+                placeholder="talk like me, use lowercase, keep replies short, roast me back, do not sound like chatgpt..."
                 className="mt-4 h-56 w-full resize-none rounded-3xl border border-[#2A3340] bg-[#141A22] px-4 py-4 text-[15px] text-[#E5EEF7] outline-none transition-all duration-200 placeholder:text-[#64748B] focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/10"
               />
 
               <div className="mt-3 text-xs text-[#64748B]">
-                This will be injected into Bob AI's system prompt and affect future conversations.
+                This will be injected into Bob AI&apos;s system prompt and affect future conversations.
               </div>
             </div>
           )}
@@ -192,38 +198,21 @@ export default function SettingsPage() {
                   Choose how Bob AI looks on this device.
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => update("theme", "dark")}
-                    className={
-                      settings.theme === "dark"
-                        ? "rounded-2xl border border-[#38BDF8]/30 bg-[#171D26] p-4 text-left transition-all duration-200"
-                        : "rounded-2xl border border-[#2A3340] bg-[#141A22] p-4 text-left transition-all duration-200 hover:border-[#38BDF8]/30"
-                    }
-                  >
-                    <div className="font-medium text-[#E5EEF7]">
-                      Dark
-                    </div>
-                    <div className="mt-1 text-xs text-[#94A3B8]">
-                      Deep charcoal interface
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => update("theme", "system")}
-                    className={
-                      settings.theme === "system"
-                        ? "rounded-2xl border border-[#38BDF8]/30 bg-[#171D26] p-4 text-left transition-all duration-200"
-                        : "rounded-2xl border border-[#2A3340] bg-[#141A22] p-4 text-left transition-all duration-200 hover:border-[#38BDF8]/30"
-                    }
-                  >
-                    <div className="font-medium text-[#E5EEF7]">
-                      System
-                    </div>
-                    <div className="mt-1 text-xs text-[#94A3B8]">
-                      Follow your device theme
-                    </div>
-                  </button>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {themeOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setTheme(option.id)}
+                      className={
+                        theme === option.id
+                          ? "rounded-2xl border border-[#38BDF8]/30 bg-[#171D26] p-4 text-left transition-all duration-200"
+                          : "rounded-2xl border border-[#2A3340] bg-[#141A22] p-4 text-left transition-all duration-200 hover:border-[#38BDF8]/30"
+                      }
+                    >
+                      <div className="font-medium text-[#E5EEF7]">{option.label}</div>
+                      <div className="mt-1 text-xs text-[#94A3B8]">{option.detail}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -237,15 +226,21 @@ export default function SettingsPage() {
 
                 <div className="mt-4 flex items-center gap-3">
                   <button
-                    onClick={() => update("accent", "sky")}
+                    onClick={() => setAccent("#38bdf8")}
                     className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#38BDF8]/40 bg-[#171D26] transition-all duration-200 hover:scale-105"
                   >
                     <span className="h-5 w-5 rounded-full bg-[#38BDF8]" />
                   </button>
 
-                  <div className="text-sm text-[#94A3B8]">
-                    More accent colors are coming soon.
-                  </div>
+                  <label className="text-sm text-[#94A3B8]">
+                    Custom accent
+                    <input
+                      type="color"
+                      value={accent}
+                      onChange={(event) => setAccent(event.target.value)}
+                      className="ml-3 h-8 w-12 cursor-pointer rounded border-0 bg-transparent"
+                    />
+                  </label>
                 </div>
               </div>
             </div>

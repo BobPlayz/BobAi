@@ -89,3 +89,15 @@ export async function uploadFile(
     xhr.send(form);
   });
 }
+
+export async function runCodingAgent(task: string) {
+  const res = await fetch(`${API}/agents/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ task }),
+  });
+
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || "Coding agent failed");
+  return result as { output: string; warnings: string };
+}

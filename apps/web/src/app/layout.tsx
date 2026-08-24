@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/neural/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Bob AI",
@@ -48,7 +49,7 @@ export default function RootLayout({
 
           {/* persistent bobai application */}
           <div className="relative z-10 min-h-screen">
-            {children}
+            <ThemeProvider>{children}</ThemeProvider>
           </div>
         </div>
       </body>

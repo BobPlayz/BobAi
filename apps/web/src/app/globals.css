@@ -29,6 +29,23 @@
   --radius-card: 26px;
 }
 
+html[data-theme="legacy"] {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #f0f1f3;
+  --border: rgba(15, 23, 42, 0.12);
+  --text: #17202a;
+  --muted: rgba(23, 32, 42, 0.55);
+  --accent: #2563eb;
+  color-scheme: light;
+}
+
+html[data-theme="light"] { --bg: #f4f7fb; --surface: rgba(255,255,255,.8); --text: #17202a; --muted: rgba(23,32,42,.55); color-scheme: light; }
+html[data-theme="glass"] { --bg: #cfd9e2; --surface: rgba(255,255,255,.3); --surface-2: rgba(255,255,255,.42); --text: #10202d; --muted: rgba(16,32,45,.58); color-scheme: light; }
+html[data-theme="dark"] { --bg: #05080d; --surface: #0d131b; --surface-2: #111a24; --text: #e8eef5; --muted: rgba(232,238,245,.52); color-scheme: dark; }
+html[data-theme="anime"] { --accent: #f472b6; --accent-2: #a78bfa; }
+
 * {
   box-sizing: border-box;
 }

@@ -14,6 +14,7 @@ import {
   Settings,
   MoreHorizontal,
 } from "lucide-react";
+import BorderGlow from "@/components/BorderGlow";
 
 type Props = {
   conversations: Conversation[];
@@ -182,7 +183,7 @@ export default function NeuralSidebar({
               Delete conversation?
             </h2>
             <p className="mt-2 text-sm text-cyan-300/55">
-              This will permanently delete "{deleteTarget.title}" and remove
+              This will permanently delete &quot;{deleteTarget.title}&quot; and remove
               any memory associated with this conversation.
             </p>
             <div className="mt-6 flex justify-end gap-3">
@@ -300,17 +301,19 @@ function ConversationRow({
 }) {
   return (
     <div className="relative group">
-      <button
-        onClick={() => onSelect(conversation.id)}
-        className={
-          active
-            ? "flex h-10 w-full items-center rounded-xl border border-cyan-300/22 bg-[#0A1622] px-3 text-left text-sm text-white shadow-[0_0_14px_rgba(0,217,255,0.10)]"
-            : "flex h-10 w-full items-center rounded-xl px-3 text-left text-sm text-cyan-100/86 hover:bg-[#09131C] hover:text-white"
-        }
-      >
-        <MessageSquare className="mr-3 h-4 w-4 text-cyan-300/68" />
-        <span className="truncate">{conversation.title}</span>
-      </button>
+      <BorderGlow className="rounded-xl">
+        <button
+          onClick={() => onSelect(conversation.id)}
+          className={
+            active
+              ? "flex h-10 w-full items-center rounded-xl border border-cyan-300/22 bg-[#0A1622] px-3 text-left text-sm text-white shadow-[0_0_14px_rgba(0,217,255,0.10)]"
+              : "flex h-10 w-full items-center rounded-xl px-3 text-left text-sm text-cyan-100/86 hover:bg-[#09131C] hover:text-white"
+          }
+        >
+          <MessageSquare className="mr-3 h-4 w-4 text-cyan-300/68" />
+          <span className="truncate">{conversation.title}</span>
+        </button>
+      </BorderGlow>
 
       <button
         onClick={() =>

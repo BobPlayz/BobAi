@@ -1,4 +1,5 @@
 const SESSION_KEY = "bobai_session";
+const ONBOARDING_KEY = "bobai_onboarding";
 
 export const TEMP_ADMIN = {
   email: "admin@bobai.local",
@@ -40,6 +41,7 @@ export function signup(username: string, email: string) {
 
 export function logout() {
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(ONBOARDING_KEY);
 }
 
 export function getSession() {
@@ -55,4 +57,13 @@ export function getSession() {
 
 export function isLoggedIn() {
   return getSession() !== null;
+}
+
+export function hasCompletedOnboarding() {
+  return localStorage.getItem(ONBOARDING_KEY) === "complete";
+}
+
+export function saveOnboarding(answers: unknown) {
+  localStorage.setItem(ONBOARDING_KEY, "complete");
+  localStorage.setItem("bobai_onboarding_answers", JSON.stringify(answers));
 }
