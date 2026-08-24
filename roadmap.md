@@ -13,6 +13,11 @@ recent implementation log
 - removed five verified unreferenced UI components; legacy components remain because legacy is the default
 - copyright-free recognizable versions of 30 popular anime franchise characters are not available as a safe bundle
 - anime 3d character pack remains blocked until original CC0 assets or explicit redistribution licenses are acquired
+- natural-language coding-task detection now routes qualifying chat requests to the configured coding-agent bridge without slash commands
+- normal Ollama chat remains the fallback for non-coding requests
+- saved memory is now included in normal and streaming Ollama chat context
+- natural-language memory requests are now extracted and persisted by chat
+- streaming is mounted at `/stream`, image generation targets `/images/generate`, and PDF extraction uses the installed `pdf-parse` v2 API
 
 phase 1 — foundation & project architecture
 
@@ -47,7 +52,7 @@ the shared theme foundation, selectable themes, persistent accent customization,
 
 phase 3 — chat + global app state
 
-~35% done
+~45% done
 
  chat page exists
  composer exists
@@ -58,6 +63,7 @@ phase 3 — chat + global app state
  reliable new chat/search/select/pin/rename/delete
  verified autoscroll
  complete chat persistence
+ natural-language intent routing for coding requests
 
 global state and the actual connected sidebar/topbar flow are explicitly listed as next work.
 
@@ -80,7 +86,7 @@ the interfaces/components were planned, but functionality wasn't confirmed.
 
 phase 5 — memory + files
 
-~5% done
+~15% done
 
  conversation memory
  long-term memory
@@ -90,12 +96,14 @@ phase 5 — memory + files
  document understanding
  memory retrieval
  memory controls/privacy
+ memory retrieval into chat context
+ natural-language memory writes
 
 this is basically future work right now, not something i'm gonna bullshit you into calling 50% because we talked about it 💀
 
 phase 6 — models + ai engine
 
-~20% done
+~30% done
 
  basic model/provider groundwork
  Ollama experimentation
@@ -106,6 +114,8 @@ phase 6 — models + ai engine
  streaming
  structured generation
  production reliability
+ configurable Ollama chat model
+ verified API TypeScript build
 
 the coding-agent side specifically still has Ollama EOF/timeouts and unreliable structured output.
 
@@ -126,7 +136,7 @@ emma/vision is only defined/configured conceptually; actual implementation wasn'
 
 phase 8 — autonomous agents / coding agents
 
-~45% done architecturally, ~20% reliable
+~50% done architecturally, ~25% reliable
 
  alex organiser
  ben coder
@@ -146,25 +156,26 @@ phase 8 — autonomous agents / coding agents
  zero-action success protection
  production validation
  integrate into BobAI
+ explicit natural-language handoff from BobAI chat
 
 the architecture exists, but actual autonomous execution was not demonstrated reliably.
 
 phase 9 — complete product integration
 
-~0% done
+~10% done
 
  connect all core systems
  chat ↔ memory
  chat ↔ files
  chat ↔ tools
  chat ↔ models
- chat ↔ agents
+ chat ↔ agents (explicit coding-task handoff is now wired)
  bobai decides when to invoke coding agents
  unified user-facing experience
  permissions/security
  end-to-end workflows
 
-and importantly: coding agents are not supposed to be integrated yet. the explicit plan is to make them trustworthy first, then connect them to BobAI.
+the initial natural-language coding-task handoff is wired, but permissions, user-visible run state, cancellation, audit history, and reliable end-to-end agent execution remain unfinished.
 
 phase 10 — polish, testing & production
 
@@ -199,13 +210,13 @@ roughly, by feature completion rather than lines of code:
 
 phase 1: 85%
 phase 2: 75%
-phase 3: 35%
+phase 3: 45%
 phase 4: 25%
-phase 5: 5%
-phase 6: 20%
+phase 5: 20%
+phase 6: 30%
 phase 7: 5%
-phase 8: 45% architecture / ~20% reliability
-phase 9: 0%
+phase 8: 50% architecture / ~25% reliability
+phase 9: 10%
 phase 10: ~5%
 
 so i'd call bobai overall around ~25–30% complete right now.

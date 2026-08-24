@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  sendMessage,
-  generateImage,
-  uploadFile,
-  runCodingAgent,
-} from "@/lib/api";
+import { sendMessage, generateImage, uploadFile } from "@/lib/api";
 import type {
   Conversation,
   ChatMessage,
@@ -158,16 +153,6 @@ export function useChat() {
     }));
 
     try {
-      if (text.toLowerCase().startsWith("/agent ")) {
-        const result = await runCodingAgent(text.slice(7).trim());
-        updateConversation(conversationId, (c) => ({
-          ...c,
-          title: "coding agent task",
-          messages: [...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: result.output || "The coding agent completed without output." }],
-        }));
-        return;
-      }
-
       const result = await sendMessage(
         nextMessages,
         settings.personality

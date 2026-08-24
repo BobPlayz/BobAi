@@ -1,11 +1,12 @@
 import express from "express";
 import cors from "cors";
 
-import chatRouter from "./routes/chat";
-import imagesRouter from "./routes/images";
-import memoryRouter from "./routes/memory";
-import filesRouter from "./routes/files";
-import agentsRouter from "./routes/agents";
+import chatRouter from "./routes/chat.js";
+import imagesRouter from "./routes/images.js";
+import memoryRouter from "./routes/memory.js";
+import filesRouter from "./routes/files.js";
+import agentsRouter from "./routes/agents.js";
+import streamRouter from "./routes/stream.js";
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/chat", chatRouter);
+app.use("/stream", streamRouter);
 app.use("/images", imagesRouter);
 app.use("/memory", memoryRouter);
 app.use("/files", filesRouter);

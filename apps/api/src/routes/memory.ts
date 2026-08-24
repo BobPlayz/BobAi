@@ -4,7 +4,7 @@ import {
   recall,
   recallAll,
   clearMemory,
-} from "../memory/memory";
+} from "../memory/memory.js";
 
 const router = Router();
 

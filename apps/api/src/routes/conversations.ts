@@ -4,7 +4,7 @@ import {
   getConversation,
   saveConversation,
   deleteConversation,
-} from "../store/conversations";
+} from "../store/conversations.js";
 
 const router = Router();
 

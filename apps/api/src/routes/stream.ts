@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { initSSE } from "../utils/sse.js";
 import { streamSession } from "../services/streamSession.js";
+import { isCodingTask, runCodingAgent } from "../services/codingAgent.js";
+import { memoryAsPrompt } from "../memory/memory.js";
+import { extractMemory } from "../utils/memoryExtractor.js";
 
 const router = Router();
 
@@ -34,7 +37,22 @@ never pretend to remember things outside the current conversation unless memory 
 
 user customization:
 ${personality || "none"}
+
+relevant saved memory:
+${memoryAsPrompt()}
 `.trim();
+
+    const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+    if (latestUserMessage && extractMemory(latestUserMessage.content)) {
+      send("done", { reply: "Got it. I will remember that for future conversations.", memoryStored: true });
+      return res.end();
+    }
+
+    if (latestUserMessage && isCodingTask(latestUserMessage.content) && process.env.BOBAI_CODING_AGENTS_DIR) {
+      const result = await runCodingAgent(latestUserMessage.content);
+      send("done", { reply: result.output || "The coding agent completed without output.", agent: "coding", warnings: result.warnings });
+      return res.end();
+    }
 
     const full = await streamSession(
       [

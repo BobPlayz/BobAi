@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { promises as fs } from "fs";
-import * as pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 const router = Router();
 
@@ -31,8 +31,10 @@ router.post(
 
       if (fileType === "application/pdf") {
         const buffer = await fs.readFile(filePath);
-        const data = await pdfParse.default(buffer);
+        const parser = new PDFParse({ data: buffer });
+        const data = await parser.getText();
         text = data.text || "";
+        await parser.destroy();
       } else if (fileType.startsWith("text/")) {
         text = await fs.readFile(filePath, "utf8");
       } else if (fileType.startsWith("image/")) {
