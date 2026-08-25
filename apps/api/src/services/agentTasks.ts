@@ -1,80 +1,41 @@
 import { randomUUID } from "node:crypto";
 import { runCodingAgent } from "./codingAgent.js";
+import {
+  buildSkillInstruction,
+  getAgentSkill,
+  inferAgentSkills,
+  normalizeAgentMode,
+  type AgentMode,
+  type AgentSkillId,
+} from "./agentSkills.js";
 
-export type AgentTaskKind = "coding" | "automation" | "project";
-
+export type AgentTaskKind = "coding" | "automation" | "project" | "media" | "database";
 export type AgentTaskStatus = "queued" | "running" | "completed" | "failed";
 
 export type AgentTask = {
   id: string;
   kind: AgentTaskKind;
+  mode: AgentMode;
+  skills: AgentSkillId[];
   title: string;
   description: string;
   status: AgentTaskStatus;
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
-  result?: {
-    output: string;
-    warnings: string;
-  };
+  result?: { output: string; warnings: string };
   error?: string;
 };
 
 const tasks = new Map<string, AgentTask>();
 
-const AUTOMATION_PATTERNS = [
-  /\bautomate\b/i,
-  /\bautomation\b/i,
-  /\bautomatically\b/i,
-  /\bset up .* workflow\b/i,
-  /\bworkflow\b/i,
-  /\bschedule\b/i,
-  /\brecurring\b/i,
-];
-
-const PROJECT_PATTERNS = [
-  /\bcreate\s+(bobdb|bob\s*db)\b/i,
-  /\bbuild\s+(bobdb|bob\s*db)\b/i,
-  /\bcreate\s+(bobauth|bob\s*auth)\b/i,
-  /\bcreate\s+(bobstorage|bob\s*storage)\b/i,
-  /\bcreate\s+(bobapi|bob\s*api)\b/i,
-  /\bcreate\s+(bobhs|bob\s*hs)\b/i,
-  /\bproject\b/i,
-  /\barchitecture\b/i,
-];
-
 function classifyTask(text: string): AgentTaskKind {
-  if (AUTOMATION_PATTERNS.some((pattern) => pattern.test(text))) return "automation";
-  if (PROJECT_PATTERNS.some((pattern) => pattern.test(text))) return "project";
+  const skills = inferAgentSkills(text);
+  if (skills.includes("video_generation") || skills.includes("image_generation")) return "media";
+  if (skills.includes("bobdb")) return "database";
+  if (skills.includes("automation")) return "automation";
+  if (/\b(project|architecture|bobauth|bobstorage|bobapi|bobhs)\b/i.test(text)) return "project";
   return "coding";
-}
-
-function buildAgentInstruction(kind: AgentTaskKind, description: string) {
-  if (kind === "automation") {
-    return [
-      "You are executing a BobAI automation task.",
-      "Do not invent external integrations that are not available in the repository.",
-      "Inspect the existing project first.",
-      "Break the requested automation into concrete, verifiable steps.",
-      "Implement the steps that can be completed safely in the configured coding-agent workspace.",
-      "Run relevant checks after changes and report anything that could not be completed.",
-      `Task: ${description}`,
-    ].join("\n\n");
-  }
-
-  if (kind === "project") {
-    return [
-      "You are executing a BobAI project/architecture task.",
-      "Inspect the existing repository and reuse existing architecture before creating new systems.",
-      "Preserve working functionality and avoid duplicate implementations.",
-      "For BobDB, BobAuth, BobStorage, BobAPI, BobHS, or related Bob services, implement only what the repository and task actually require; do not fabricate APIs or dependencies.",
-      "Run relevant checks after changes and report anything that remains incomplete.",
-      `Task: ${description}`,
-    ].join("\n\n");
-  }
-
-  return description;
 }
 
 export function classifyAgentTask(text: string): AgentTaskKind {
@@ -89,15 +50,45 @@ export function listAgentTasks() {
   return [...tasks.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function executeAgentTask(description: string, requestedKind?: AgentTaskKind) {
+function buildInstruction(kind: AgentTaskKind, description: string, skills: AgentSkillId[], mode: AgentMode) {
+  const header = buildSkillInstruction(skills, mode);
+  const taskRules = kind === "automation"
+    ? "Break the automation into concrete, verifiable steps. Implement only configured integrations and verify the result."
+    : kind === "database"
+      ? "Treat BobDB as a separate service. Reuse existing BobAI service boundaries and do not invent an undocumented BobDB API. If BobDB is not configured, implement the integration boundary or project changes without pretending a live operation succeeded."
+      : kind === "media"
+        ? "For media work, use an actually configured provider. Do not fabricate generated media URLs or claim generation succeeded when the provider is unavailable."
+        : "Inspect the existing repository first, preserve working functionality, avoid duplicate implementations, and run relevant checks after changes.";
+
+  return [header, taskRules, `Task: ${description}`].join("\n\n");
+}
+
+export async function executeAgentTask(
+  description: string,
+  requestedKind?: AgentTaskKind,
+  requestedSkills?: AgentSkillId[],
+  requestedMode?: string,
+) {
   const normalized = description.trim();
   if (!normalized) throw new Error("task is required");
   if (normalized.length > 20_000) throw new Error("task cannot exceed 20000 characters");
+
+  const mode = normalizeAgentMode(requestedMode);
+  const inferred = inferAgentSkills(normalized);
+  const skills = [...new Set(requestedSkills?.length ? requestedSkills : inferred)];
+
+  for (const skillId of skills) {
+    const skill = getAgentSkill(skillId);
+    if (!skill) throw new Error(`unknown agent skill: ${skillId}`);
+    if (!skill.available) throw new Error(`agent skill is not configured: ${skillId}`);
+  }
 
   const kind = requestedKind || classifyTask(normalized);
   const task: AgentTask = {
     id: randomUUID(),
     kind,
+    mode,
+    skills,
     title: normalized.slice(0, 120),
     description: normalized,
     status: "queued",
@@ -109,7 +100,7 @@ export async function executeAgentTask(description: string, requestedKind?: Agen
   task.startedAt = new Date().toISOString();
 
   try {
-    const result = await runCodingAgent(buildAgentInstruction(kind, normalized));
+    const result = await runCodingAgent(buildInstruction(kind, normalized, skills, mode));
     task.status = "completed";
     task.completedAt = new Date().toISOString();
     task.result = result;
