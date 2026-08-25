@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { runCodingAgent } from "../services/codingAgent.js";
 import {
   classifyAgentTask,
   executeAgentTask,
@@ -26,10 +25,6 @@ router.get("/tasks/:id", (req, res) => {
 });
 
 router.post("/tasks", async (req, res) => {
-  if (!process.env.BOBAI_CODING_AGENTS_DIR) {
-    return res.status(503).json({ error: "coding agent bridge is not configured" });
-  }
-
   const description = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   const requestedKind = typeof req.body?.kind === "string" ? req.body.kind : undefined;
   const requestedMode = typeof req.body?.mode === "string" ? req.body.mode : undefined;
@@ -65,26 +60,6 @@ router.post("/classify", (req, res) => {
   const text = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   if (!text) return res.status(400).json({ error: "task is required" });
   return res.json({ kind: classifyAgentTask(text) });
-});
-
-router.post("/run", async (req, res) => {
-  if (!process.env.BOBAI_CODING_AGENTS_DIR) {
-    return res.status(503).json({ error: "coding agent bridge is not configured" });
-  }
-
-  const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
-  if (!task) return res.status(400).json({ error: "task is required" });
-
-  try {
-    res.json(await runCodingAgent(task));
-  } catch (error) {
-    const detail = error as { stdout?: string; stderr?: string; message?: string };
-    return res.status(502).json({
-      error: detail.message || "coding agent failed",
-      output: detail.stdout?.trim() || "",
-      warnings: detail.stderr?.trim() || "",
-    });
-  }
 });
 
 export default router;
