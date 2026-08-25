@@ -1,0 +1,30 @@
+name: backend
+
+on:
+  push:
+    paths:
+      - "apps/api/**"
+      - "packages/db/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - "packages/db/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace=@bobai/api
+      - run: npm run db:generate --workspace=@bobai/db
