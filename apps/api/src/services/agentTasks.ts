@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { runCodingAgent } from "./codingAgent.js";
+import { generateImages } from "./mediaGeneration.js";
 import {
   buildSkillInstruction,
   getAgentSkill,
@@ -100,6 +101,14 @@ export async function executeAgentTask(
   task.startedAt = new Date().toISOString();
 
   try {
+    if (kind === "media" && skills.length === 1 && skills[0] === "image_generation") {
+      const images = await generateImages(normalized);
+      task.status = "completed";
+      task.completedAt = new Date().toISOString();
+      task.result = { output: JSON.stringify({ images }), warnings: "" };
+      return task;
+    }
+
     const result = await runCodingAgent(buildInstruction(kind, normalized, skills, mode));
     task.status = "completed";
     task.completedAt = new Date().toISOString();
