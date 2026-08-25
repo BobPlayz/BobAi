@@ -1,33 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { runCodingAgent } from "./codingAgent.js";
 import { generateImages } from "./mediaGeneration.js";
-import {
-  buildSkillInstruction,
-  getAgentSkill,
-  inferAgentSkills,
-  normalizeAgentMode,
-  type AgentMode,
-  type AgentSkillId,
-} from "./agentSkills.js";
+import { persistAgentTask, updatePersistedAgentTask } from "../store/agentTaskDb.js";
+import { buildSkillInstruction, getAgentSkill, inferAgentSkills, normalizeAgentMode, type AgentMode, type AgentSkillId } from "./agentSkills.js";
 
 export type AgentTaskKind = "coding" | "automation" | "project" | "media" | "database";
 export type AgentTaskStatus = "queued" | "running" | "completed" | "failed";
-
-export type AgentTask = {
-  id: string;
-  kind: AgentTaskKind;
-  mode: AgentMode;
-  skills: AgentSkillId[];
-  title: string;
-  description: string;
-  status: AgentTaskStatus;
-  createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
-  result?: { output: string; warnings: string };
-  error?: string;
-};
-
+export type AgentTask = { id: string; kind: AgentTaskKind; mode: AgentMode; skills: AgentSkillId[]; title: string; description: string; status: AgentTaskStatus; createdAt: string; startedAt?: string; completedAt?: string; result?: { output: string; warnings: string }; error?: string };
 const tasks = new Map<string, AgentTask>();
 
 function classifyTask(text: string): AgentTaskKind {
@@ -38,86 +17,59 @@ function classifyTask(text: string): AgentTaskKind {
   if (/\b(project|architecture|bobauth|bobstorage|bobapi|bobhs)\b/i.test(text)) return "project";
   return "coding";
 }
-
-export function classifyAgentTask(text: string): AgentTaskKind {
-  return classifyTask(text.trim());
-}
-
-export function getAgentTask(id: string) {
-  return tasks.get(id);
-}
-
-export function listAgentTasks() {
-  return [...tasks.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
+export function classifyAgentTask(text: string) { return classifyTask(text.trim()); }
+export function getAgentTask(id: string) { return tasks.get(id); }
+export function listAgentTasks() { return [...tasks.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
 
 function buildInstruction(kind: AgentTaskKind, description: string, skills: AgentSkillId[], mode: AgentMode) {
-  const header = buildSkillInstruction(skills, mode);
-  const taskRules = kind === "automation"
+  const rules = kind === "automation"
     ? "Break the automation into concrete, verifiable steps. Implement only configured integrations and verify the result."
     : kind === "database"
-      ? "Treat BobDB as a separate service. Reuse existing BobAI service boundaries and do not invent an undocumented BobDB API. If BobDB is not configured, implement the integration boundary or project changes without pretending a live operation succeeded."
+      ? "Treat BobDB as a separate service. Reuse existing BobAI service boundaries and never invent an undocumented BobDB API."
       : kind === "media"
-        ? "For media work, use an actually configured provider. Do not fabricate generated media URLs or claim generation succeeded when the provider is unavailable."
+        ? "Use only actually configured media providers. Never fabricate generated media URLs or claim generation succeeded when unavailable."
         : "Inspect the existing repository first, preserve working functionality, avoid duplicate implementations, and run relevant checks after changes.";
-
-  return [header, taskRules, `Task: ${description}`].join("\n\n");
+  return [buildSkillInstruction(skills, mode), rules, `Task: ${description}`].join("\n\n");
 }
 
-export async function executeAgentTask(
-  description: string,
-  requestedKind?: AgentTaskKind,
-  requestedSkills?: AgentSkillId[],
-  requestedMode?: string,
-) {
+export async function executeAgentTask(description: string, requestedKind?: AgentTaskKind, requestedSkills?: AgentSkillId[], requestedMode?: string, context?: { workspaceId?: string; createdBy?: string }) {
   const normalized = description.trim();
   if (!normalized) throw new Error("task is required");
   if (normalized.length > 20_000) throw new Error("task cannot exceed 20000 characters");
-
   const mode = normalizeAgentMode(requestedMode);
-  const inferred = inferAgentSkills(normalized);
-  const skills = [...new Set(requestedSkills?.length ? requestedSkills : inferred)];
-
+  const skills = [...new Set(requestedSkills?.length ? requestedSkills : inferAgentSkills(normalized))];
   for (const skillId of skills) {
     const skill = getAgentSkill(skillId);
     if (!skill) throw new Error(`unknown agent skill: ${skillId}`);
     if (!skill.available) throw new Error(`agent skill is not configured: ${skillId}`);
   }
-
   const kind = requestedKind || classifyTask(normalized);
-  const task: AgentTask = {
-    id: randomUUID(),
-    kind,
-    mode,
-    skills,
-    title: normalized.slice(0, 120),
-    description: normalized,
-    status: "queued",
-    createdAt: new Date().toISOString(),
-  };
-
+  const task: AgentTask = { id: randomUUID(), kind, mode, skills, title: normalized.slice(0, 120), description: normalized, status: "queued", createdAt: new Date().toISOString() };
   tasks.set(task.id, task);
+  await persistAgentTask({ id: task.id, workspaceId: context?.workspaceId, createdBy: context?.createdBy, title: task.title, description: task.description, type: task.kind, status: task.status, payload: { mode: task.mode, skills: task.skills } }).catch(() => false);
   task.status = "running";
   task.startedAt = new Date().toISOString();
-
+  await updatePersistedAgentTask({ id: task.id, status: task.status }).catch(() => false);
   try {
     if (kind === "media" && skills.length === 1 && skills[0] === "image_generation") {
       const images = await generateImages(normalized);
       task.status = "completed";
       task.completedAt = new Date().toISOString();
       task.result = { output: JSON.stringify({ images }), warnings: "" };
+      await updatePersistedAgentTask({ id: task.id, status: task.status, result: task.result }).catch(() => false);
       return task;
     }
-
     const result = await runCodingAgent(buildInstruction(kind, normalized, skills, mode));
     task.status = "completed";
     task.completedAt = new Date().toISOString();
     task.result = result;
+    await updatePersistedAgentTask({ id: task.id, status: task.status, result }).catch(() => false);
     return task;
   } catch (error) {
     task.status = "failed";
     task.completedAt = new Date().toISOString();
     task.error = error instanceof Error ? error.message : "agent task failed";
+    await updatePersistedAgentTask({ id: task.id, status: task.status, error: task.error }).catch(() => false);
     throw Object.assign(new Error(task.error), { task });
   }
 }
