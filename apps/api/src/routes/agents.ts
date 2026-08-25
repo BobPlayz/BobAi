@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { runCodingAgent } from "../services/codingAgent.js";
 import {
   classifyAgentTask,
   executeAgentTask,
@@ -10,18 +11,9 @@ import { listAgentSkills, type AgentSkillId } from "../services/agentSkills.js";
 import { listBobServices } from "../services/bobServices.js";
 
 const router = Router();
-
-router.get("/skills", (_req, res) => {
-  return res.json({ skills: listAgentSkills() });
-});
-
-router.get("/services", (_req, res) => {
-  return res.json({ services: listBobServices() });
-});
-
-router.get("/tasks", (_req, res) => {
-  return res.json({ tasks: listAgentTasks() });
-});
+router.get("/skills", (_req, res) => res.json({ skills: listAgentSkills() }));
+router.get("/services", (_req, res) => res.json({ services: listBobServices() }));
+router.get("/tasks", (_req, res) => res.json({ tasks: listAgentTasks() }));
 
 router.get("/tasks/:id", (req, res) => {
   const task = getAgentTask(req.params.id);
@@ -36,28 +28,15 @@ router.post("/tasks", async (req, res) => {
   const requestedSkills = Array.isArray(req.body?.skills)
     ? req.body.skills.filter((value: unknown): value is AgentSkillId => typeof value === "string")
     : undefined;
-
   if (!description) return res.status(400).json({ error: "task is required" });
-
   const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
-  if (requestedKind && !allowedKinds.includes(requestedKind as AgentTaskKind)) {
-    return res.status(400).json({ error: "invalid task kind" });
-  }
-
+  if (requestedKind && !allowedKinds.includes(requestedKind as AgentTaskKind)) return res.status(400).json({ error: "invalid task kind" });
   try {
-    const task = await executeAgentTask(
-      description,
-      requestedKind as AgentTaskKind | undefined,
-      requestedSkills,
-      requestedMode,
-    );
+    const task = await executeAgentTask(description, requestedKind as AgentTaskKind | undefined, requestedSkills, requestedMode);
     return res.status(201).json(task);
   } catch (error) {
     const detail = error as { message?: string; task?: unknown };
-    return res.status(502).json({
-      error: detail.message || "agent task failed",
-      task: detail.task || null,
-    });
+    return res.status(502).json({ error: detail.message || "agent task failed", task: detail.task || null });
   }
 });
 
@@ -65,6 +44,16 @@ router.post("/classify", (req, res) => {
   const text = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   if (!text) return res.status(400).json({ error: "task is required" });
   return res.json({ kind: classifyAgentTask(text) });
+});
+
+router.post("/run", async (req, res) => {
+  const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
+  if (!task) return res.status(400).json({ error: "task is required" });
+  try {
+    return res.json(await runCodingAgent(task));
+  } catch (error) {
+    return res.status(502).json({ error: error instanceof Error ? error.message : "coding agent failed" });
+  }
 });
 
 export default router;
