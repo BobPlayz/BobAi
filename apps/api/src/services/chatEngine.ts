@@ -14,19 +14,33 @@ export type ChatInput = {
   personality?: unknown;
 };
 
+const MAX_MESSAGES = 100;
+const MAX_MESSAGE_LENGTH = 100_000;
+const MAX_PERSONALITY_LENGTH = 10_000;
+
 export function normalizeMessages(input: unknown): ChatMessage[] {
   if (!Array.isArray(input)) return [];
 
   return input.map((message: any) => ({
-    role:
-      message?.role === "assistant" || message?.role === "system"
-        ? message.role
-        : "user",
+    // system messages are server-controlled and are never accepted from clients
+    role: message?.role === "assistant" ? "assistant" : "user",
     content:
       typeof message?.content === "string"
         ? message.content
         : String(message?.content ?? ""),
   }));
+}
+
+export function validateChat(messages: ChatMessage[], personality: string): string | null {
+  if (messages.length === 0) return "messages must contain at least one message";
+  if (messages.length > MAX_MESSAGES) return `messages cannot contain more than ${MAX_MESSAGES} items`;
+  if (messages.some((message) => message.content.length > MAX_MESSAGE_LENGTH)) {
+    return `each message cannot exceed ${MAX_MESSAGE_LENGTH} characters`;
+  }
+  if (personality.length > MAX_PERSONALITY_LENGTH) {
+    return `personality cannot exceed ${MAX_PERSONALITY_LENGTH} characters`;
+  }
+  return null;
 }
 
 export function getLatestUserMessage(messages: ChatMessage[]): ChatMessage | undefined {
@@ -69,6 +83,7 @@ export function prepareChat(input: ChatInput) {
     messages,
     personality,
     latestUserMessage,
+    validationError: validateChat(messages, personality),
     memoryRequest: Boolean(latestUserMessage && extractMemory(latestUserMessage.content)),
     ollamaMessages: [buildSystemPrompt(personality), ...messages],
     title:
