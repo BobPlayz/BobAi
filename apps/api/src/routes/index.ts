@@ -8,13 +8,21 @@ import memoryRouter from "./memory.js";
 import filesRouter from "./files.js";
 import agentsRouter from "./agents.js";
 
-export const apiRouter = Router();
+function buildApiRouter() {
+  const router = Router();
+  router.use("/chat", chatRouter);
+  router.use("/stream", streamRouter);
+  router.use("/conversations", conversationsRouter);
+  router.use("/images", imagesRouter);
+  router.use("/memory", memoryRouter);
+  router.use("/files", filesRouter);
+  router.use("/agents", agentsRouter);
+  return router;
+}
 
+export const apiRouter = Router();
 apiRouter.use(healthRouter);
-apiRouter.use("/chat", chatRouter);
-apiRouter.use("/stream", streamRouter);
-apiRouter.use("/conversations", conversationsRouter);
-apiRouter.use("/images", imagesRouter);
-apiRouter.use("/memory", memoryRouter);
-apiRouter.use("/files", filesRouter);
-apiRouter.use("/agents", agentsRouter);
+apiRouter.use(buildApiRouter());
+
+// Keep the existing unversioned API while restoring the /v1 contract used by clients.
+apiRouter.use("/v1", buildApiRouter());
