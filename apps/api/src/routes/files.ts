@@ -16,34 +16,38 @@ router.post(
   "/upload",
   upload.single("file"),
   async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({
+        error: "No file uploaded",
+      });
+    }
+
+    const filePath = req.file.path;
+    const fileName = req.file.originalname;
+    const fileType = req.file.mimetype;
+
     try {
-      if (!req.file) {
-        return res.status(400).json({
-          error: "No file uploaded",
-        });
-      }
-
-      const filePath = req.file.path;
-      const fileName = req.file.originalname;
-      const fileType = req.file.mimetype;
-
       let text = "";
 
       if (fileType === "application/pdf") {
         const buffer = await fs.readFile(filePath);
         const parser = new PDFParse({ data: buffer });
-        const data = await parser.getText();
-        text = data.text || "";
-        await parser.destroy();
+
+        try {
+          const data = await parser.getText();
+          text = data.text || "";
+        } finally {
+          await parser.destroy();
+        }
       } else if (fileType.startsWith("text/")) {
         text = await fs.readFile(filePath, "utf8");
       } else if (fileType.startsWith("image/")) {
         text = "[image uploaded]";
       } else {
-        text = "[unsupported file type]";
+        return res.status(415).json({
+          error: "Unsupported file type",
+        });
       }
-
-      await fs.unlink(filePath);
 
       return res.json({
         name: fileName,
@@ -51,11 +55,13 @@ router.post(
         text,
       });
     } catch (error) {
-      console.error(error);
+      console.error("FILE PROCESSING ERROR:", error);
 
       return res.status(500).json({
         error: "Failed to process file",
       });
+    } finally {
+      await fs.unlink(filePath).catch(() => undefined);
     }
   }
 );
