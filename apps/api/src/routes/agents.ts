@@ -7,8 +7,13 @@ import {
   listAgentTasks,
   type AgentTaskKind,
 } from "../services/agentTasks.js";
+import { listAgentSkills, type AgentSkillId } from "../services/agentSkills.js";
 
 const router = Router();
+
+router.get("/skills", (_req, res) => {
+  return res.json({ skills: listAgentSkills() });
+});
 
 router.get("/tasks", (_req, res) => {
   return res.json({ tasks: listAgentTasks() });
@@ -22,23 +27,30 @@ router.get("/tasks/:id", (req, res) => {
 
 router.post("/tasks", async (req, res) => {
   if (!process.env.BOBAI_CODING_AGENTS_DIR) {
-    return res.status(503).json({
-      error: "coding agent bridge is not configured",
-    });
+    return res.status(503).json({ error: "coding agent bridge is not configured" });
   }
 
   const description = typeof req.body?.task === "string" ? req.body.task.trim() : "";
   const requestedKind = typeof req.body?.kind === "string" ? req.body.kind : undefined;
+  const requestedMode = typeof req.body?.mode === "string" ? req.body.mode : undefined;
+  const requestedSkills = Array.isArray(req.body?.skills)
+    ? req.body.skills.filter((value: unknown): value is AgentSkillId => typeof value === "string")
+    : undefined;
 
   if (!description) return res.status(400).json({ error: "task is required" });
 
-  const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project"];
+  const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
   if (requestedKind && !allowedKinds.includes(requestedKind as AgentTaskKind)) {
     return res.status(400).json({ error: "invalid task kind" });
   }
 
   try {
-    const task = await executeAgentTask(description, requestedKind as AgentTaskKind | undefined);
+    const task = await executeAgentTask(
+      description,
+      requestedKind as AgentTaskKind | undefined,
+      requestedSkills,
+      requestedMode,
+    );
     return res.status(201).json(task);
   } catch (error) {
     const detail = error as { message?: string; task?: unknown };
@@ -57,16 +69,11 @@ router.post("/classify", (req, res) => {
 
 router.post("/run", async (req, res) => {
   if (!process.env.BOBAI_CODING_AGENTS_DIR) {
-    return res.status(503).json({
-      error: "coding agent bridge is not configured",
-    });
+    return res.status(503).json({ error: "coding agent bridge is not configured" });
   }
 
   const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
-
-  if (!task) {
-    return res.status(400).json({ error: "task is required" });
-  }
+  if (!task) return res.status(400).json({ error: "task is required" });
 
   try {
     res.json(await runCodingAgent(task));
