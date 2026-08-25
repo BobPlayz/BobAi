@@ -7,11 +7,16 @@ import {
   type AgentTaskKind,
 } from "../services/agentTasks.js";
 import { listAgentSkills, type AgentSkillId } from "../services/agentSkills.js";
+import { listBobServices } from "../services/bobServices.js";
 
 const router = Router();
 
 router.get("/skills", (_req, res) => {
   return res.json({ skills: listAgentSkills() });
+});
+
+router.get("/services", (_req, res) => {
+  return res.json({ services: listBobServices() });
 });
 
 router.get("/tasks", (_req, res) => {
