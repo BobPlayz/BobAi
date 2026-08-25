@@ -1,35 +1,19 @@
 import { Router } from "express";
+import { generateImages } from "../services/mediaGeneration.js";
 
 const router = Router();
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 router.post("/generate", async (req, res) => {
-  const { prompt } = req.body as { prompt?: string };
+  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+  if (!prompt) return res.status(400).json({ error: "prompt is required" });
 
-  if (!prompt || !prompt.trim()) {
-    return res.status(400).json({ error: "prompt is required" });
-  }
-
-  const encoded = encodeURIComponent(prompt.trim());
-  const images: { url: string; prompt: string }[] = [];
-
-  // Generate 4 images SEQUENTIALLY to avoid Pollinations queue limits
-  for (let i = 0; i < 4; i++) {
-    images.push({
-      url: `https://image.pollinations.ai/prompt/${encoded}?model=flux&width=1024&height=1024&seed=${Date.now() + i * 9999}&nologo=true`,
-      prompt,
+  try {
+    return res.json({ images: await generateImages(prompt) });
+  } catch (error) {
+    return res.status(502).json({
+      error: error instanceof Error ? error.message : "image generation failed",
     });
-
-    // small delay so Pollinations doesn't reject the next request
-    if (i < 3) {
-      await sleep(1200);
-    }
   }
-
-  return res.json({ images });
 });
 
 export default router;
