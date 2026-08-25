@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import multer from "multer";
 import { promises as fs } from "fs";
 import { PDFParse } from "pdf-parse";
@@ -12,7 +12,7 @@ const upload = multer({
   },
 });
 
-function uploadMiddleware(req: Parameters<typeof router.post>[1], res: Parameters<typeof router.post>[2], next: Parameters<typeof router.post>[3]) {
+function uploadMiddleware(req: Request, res: Response, next: NextFunction) {
   upload.single("file")(req, res, (error) => {
     if (!error) return next();
 
