@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { runCodingAgent } from "./codingAgent.js";
 import { generateImages } from "./mediaGeneration.js";
 import { persistAgentTask, updatePersistedAgentTask } from "../store/agentTaskDb.js";
+import { officeAgentFromTask, updateOfficeAgent } from "./agentOffice.js";
 import { buildSkillInstruction, getAgentSkill, inferAgentSkills, normalizeAgentMode, type AgentMode, type AgentSkillId } from "./agentSkills.js";
 
 export type AgentTaskKind = "coding" | "automation" | "project" | "media" | "database";
@@ -22,13 +23,7 @@ export function getAgentTask(id: string) { return tasks.get(id); }
 export function listAgentTasks() { return [...tasks.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
 
 function buildInstruction(kind: AgentTaskKind, description: string, skills: AgentSkillId[], mode: AgentMode) {
-  const rules = kind === "automation"
-    ? "Break the automation into concrete, verifiable steps. Implement only configured integrations and verify the result."
-    : kind === "database"
-      ? "Treat BobDB as a separate service. Reuse existing BobAI service boundaries and never invent an undocumented BobDB API."
-      : kind === "media"
-        ? "Use only actually configured media providers. Never fabricate generated media URLs or claim generation succeeded when unavailable."
-        : "Inspect the existing repository first, preserve working functionality, avoid duplicate implementations, and run relevant checks after changes.";
+  const rules = kind === "automation" ? "Break the automation into concrete, verifiable steps. Implement only configured integrations and verify the result." : kind === "database" ? "Treat BobDB as a separate service. Reuse existing BobAI service boundaries and never invent an undocumented BobDB API." : kind === "media" ? "Use only actually configured media providers. Never fabricate generated media URLs or claim generation succeeded when unavailable." : "Inspect the existing repository first, preserve working functionality, avoid duplicate implementations, and run relevant checks after changes.";
   return [buildSkillInstruction(skills, mode), rules, `Task: ${description}`].join("\n\n");
 }
 
@@ -47,28 +42,28 @@ export async function executeAgentTask(description: string, requestedKind?: Agen
   const task: AgentTask = { id: randomUUID(), kind, mode, skills, title: normalized.slice(0, 120), description: normalized, status: "queued", createdAt: new Date().toISOString() };
   tasks.set(task.id, task);
   await persistAgentTask({ id: task.id, workspaceId: context?.workspaceId, createdBy: context?.createdBy, title: task.title, description: task.description, type: task.kind, status: task.status, payload: { mode: task.mode, skills: task.skills } }).catch(() => false);
+  const officeAgent = officeAgentFromTask(task);
   task.status = "running";
   task.startedAt = new Date().toISOString();
   await updatePersistedAgentTask({ id: task.id, status: task.status }).catch(() => false);
   try {
     if (kind === "media" && skills.length === 1 && skills[0] === "image_generation") {
+      updateOfficeAgent(officeAgent.id, { status: "creating", location: "media studio", activity: "generating image" });
       const images = await generateImages(normalized);
-      task.status = "completed";
-      task.completedAt = new Date().toISOString();
-      task.result = { output: JSON.stringify({ images }), warnings: "" };
+      task.status = "completed"; task.completedAt = new Date().toISOString(); task.result = { output: JSON.stringify({ images }), warnings: "" };
+      updateOfficeAgent(officeAgent.id, { status: "completed", location: "team board", activity: "task completed" });
       await updatePersistedAgentTask({ id: task.id, status: task.status, result: task.result }).catch(() => false);
       return task;
     }
+    updateOfficeAgent(officeAgent.id, { status: "coding", location: "coding workstation", activity: "working with coding agent" });
     const result = await runCodingAgent(buildInstruction(kind, normalized, skills, mode));
-    task.status = "completed";
-    task.completedAt = new Date().toISOString();
-    task.result = result;
+    task.status = "completed"; task.completedAt = new Date().toISOString(); task.result = result;
+    updateOfficeAgent(officeAgent.id, { status: "completed", location: "team board", activity: "task completed" });
     await updatePersistedAgentTask({ id: task.id, status: task.status, result }).catch(() => false);
     return task;
   } catch (error) {
-    task.status = "failed";
-    task.completedAt = new Date().toISOString();
-    task.error = error instanceof Error ? error.message : "agent task failed";
+    task.status = "failed"; task.completedAt = new Date().toISOString(); task.error = error instanceof Error ? error.message : "agent task failed";
+    updateOfficeAgent(officeAgent.id, { status: "failed", location: "team board", activity: task.error });
     await updatePersistedAgentTask({ id: task.id, status: task.status, error: task.error }).catch(() => false);
     throw Object.assign(new Error(task.error), { task });
   }
