@@ -7,14 +7,8 @@ const router = Router();
 
 router.post("/", async (req, res) => {
   try {
-    const prepared = prepareChat({
-      messages: req.body?.messages,
-      personality: req.body?.personality,
-    });
-
-    if (prepared.validationError) {
-      return res.status(400).json({ error: prepared.validationError });
-    }
+    const prepared = prepareChat({ messages: req.body?.messages, personality: req.body?.personality });
+    if (prepared.validationError) return res.status(400).json({ error: prepared.validationError });
 
     if (prepared.memoryRequest) {
       return res.json({
@@ -25,15 +19,13 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Bob is the only agent that talks to the user. Specialist agents are
-    // background workers and only wake when their work is actually needed.
     if (prepared.latestUserMessage && isCodingTask(prepared.latestUserMessage.content)) {
       const job = queueBackgroundTask({
         description: prepared.latestUserMessage.content,
         mode: req.body?.mode,
         context: {
           workspaceId: typeof req.body?.workspaceId === "string" ? req.body.workspaceId : undefined,
-          createdBy: typeof req.body?.userId === "string" ? req.body.userId : undefined,
+          createdBy: req.user?.id,
         },
       });
 
@@ -47,14 +39,9 @@ router.post("/", async (req, res) => {
     }
 
     const response = await runChat(prepared.ollamaMessages);
-    return res.json({
-      reply: response.message.content,
-      title: prepared.title,
-      agent: "bob",
-      streamReady: true,
-    });
+    return res.json({ reply: response.message.content, title: prepared.title, agent: "bob", streamReady: true });
   } catch (error) {
-    console.error("CHAT ROUTE ERROR:", error);
+    if (process.env.NODE_ENV !== "production") console.error("CHAT ROUTE ERROR:", error);
     return res.status(500).json({ error: "chat failed" });
   }
 });
