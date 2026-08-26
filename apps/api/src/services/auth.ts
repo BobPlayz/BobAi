@@ -1,17 +1,13 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { db } from "@bobai/db";
-import { sessions, users } from "@bobai/db";
-import { eq, and, gt, isNull } from "drizzle-orm";
+import { db, sessions, users } from "@bobai/db";
+import { and, eq, gt, isNull } from "drizzle-orm";
 
 const scrypt = promisify(scryptCallback);
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const KEY_BYTES = 32;
 
-function hashToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
-}
+const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16);
@@ -19,7 +15,8 @@ async function hashPassword(password: string) {
   return `${salt.toString("base64url")}.${derived.toString("base64url")}`;
 }
 
-async function verifyPassword(password: string, stored: string) {
+async function verifyPassword(password: string, stored: string | null) {
+  if (!stored) return false;
   const [saltText, hashText] = stored.split(".");
   if (!saltText || !hashText) return false;
   const salt = Buffer.from(saltText, "base64url");
@@ -28,9 +25,7 @@ async function verifyPassword(password: string, stored: string) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-function token() {
-  return randomBytes(KEY_BYTES).toString("base64url");
-}
+const token = () => randomBytes(32).toString("base64url");
 
 export async function createUser(email: string, username: string, password: string) {
   const passwordHash = await hashPassword(password);
@@ -49,22 +44,15 @@ export async function issueSession(userId: string, metadata?: Record<string, unk
   const accessToken = token();
   const refreshToken = token();
   const now = Date.now();
-  await db.insert(sessions).values({
-    userId,
-    accessTokenHash: hashToken(accessToken),
-    refreshTokenHash: hashToken(refreshToken),
-    expiresAt: new Date(now + REFRESH_TTL_MS),
-    accessExpiresAt: new Date(now + ACCESS_TTL_MS),
-    metadata
-  });
+  await db.insert(sessions).values({ userId, accessTokenHash: hashToken(accessToken), refreshTokenHash: hashToken(refreshToken), accessExpiresAt: new Date(now + ACCESS_TTL_MS), expiresAt: new Date(now + REFRESH_TTL_MS), metadata });
   return { accessToken, refreshToken, expiresIn: ACCESS_TTL_MS / 1000 };
 }
 
 export async function authenticateAccessToken(accessToken: string) {
-  const [session] = await db.select({ session: sessions, user: users }).from(sessions).innerJoin(users, eq(users.id, sessions.userId)).where(and(eq(sessions.accessTokenHash, hashToken(accessToken)), eq(sessions.isActive, true), isNull(sessions.revokedAt), gt(sessions.accessExpiresAt, new Date()))).limit(1);
-  if (!session) return null;
-  await db.update(sessions).set({ lastUsedAt: new Date(), updatedAt: new Date() }).where(eq(sessions.id, session.session.id));
-  return session.user;
+  const [result] = await db.select({ session: sessions, user: users }).from(sessions).innerJoin(users, eq(users.id, sessions.userId)).where(and(eq(sessions.accessTokenHash, hashToken(accessToken)), eq(sessions.isActive, true), isNull(sessions.revokedAt), gt(sessions.accessExpiresAt, new Date()))).limit(1);
+  if (!result) return null;
+  await db.update(sessions).set({ lastUsedAt: new Date(), updatedAt: new Date() }).where(eq(sessions.id, result.session.id));
+  return result.user;
 }
 
 export async function refresh(refreshToken: string) {
