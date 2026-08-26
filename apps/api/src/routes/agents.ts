@@ -7,8 +7,38 @@ import { agentAuth } from "../middleware/agentAuth.js";
 import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQueue.js";
 
 const router = Router();
-router.get("/skills", (_req, res) => res.json({ skills: listAgentSkills() }));
-router.get("/services", (_req, res) => res.json({ services: listBobServices() }));
+const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
+
+type TaskBody = {
+  task?: unknown;
+  kind?: unknown;
+  mode?: unknown;
+  skills?: unknown;
+  workspaceId?: unknown;
+};
+
+function parseTaskBody(body: unknown) {
+  const input = (body && typeof body === "object" ? body : {}) as TaskBody;
+  const description = typeof input.task === "string" ? input.task.trim() : "";
+  const requestedKind = typeof input.kind === "string" ? input.kind : undefined;
+  const requestedMode = typeof input.mode === "string" ? input.mode : undefined;
+  const requestedSkills = Array.isArray(input.skills)
+    ? input.skills.filter((value): value is AgentSkillId => typeof value === "string")
+    : undefined;
+  const workspaceId = typeof input.workspaceId === "string" ? input.workspaceId.trim().slice(0, 200) : undefined;
+  return { description, requestedKind, requestedMode, requestedSkills, workspaceId };
+}
+
+function validateTask(body: unknown) {
+  const parsed = parseTaskBody(body);
+  if (!parsed.description) return { error: "task is required" } as const;
+  if (parsed.description.length > 20_000) return { error: "task cannot exceed 20000 characters" } as const;
+  if (parsed.requestedKind && !allowedKinds.includes(parsed.requestedKind as AgentTaskKind)) return { error: "invalid task kind" } as const;
+  return { value: parsed } as const;
+}
+
+router.get("/skills", agentAuth, (_req, res) => res.json({ skills: listAgentSkills() }));
+router.get("/services", agentAuth, (_req, res) => res.json({ services: listBobServices() }));
 router.get("/tasks", agentAuth, (_req, res) => res.json({ tasks: listAgentTasks() }));
 router.get("/tasks/:id", agentAuth, (req, res) => {
   const task = getAgentTask(req.params.id);
@@ -22,56 +52,45 @@ router.get("/queue/:id", agentAuth, (req, res) => {
   return res.json(job);
 });
 
-function parseTaskBody(body: any) {
-  const description = typeof body?.task === "string" ? body.task.trim() : "";
-  const requestedKind = typeof body?.kind === "string" ? body.kind : undefined;
-  const requestedMode = typeof body?.mode === "string" ? body.mode : undefined;
-  const requestedSkills = Array.isArray(body?.skills) ? body.skills.filter((value: unknown): value is AgentSkillId => typeof value === "string") : undefined;
-  const workspaceId = typeof body?.workspaceId === "string" ? body.workspaceId.slice(0, 200) : undefined;
-  return { description, requestedKind, requestedMode, requestedSkills, workspaceId };
-}
-
 router.post("/tasks", agentAuth, async (req, res) => {
-  const { description, requestedKind, requestedMode, requestedSkills, workspaceId } = parseTaskBody(req.body);
-  const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
-  if (!description) return res.status(400).json({ error: "task is required" });
-  if (description.length > 20_000) return res.status(413).json({ error: "task cannot exceed 20000 characters" });
-  if (requestedKind && !allowedKinds.includes(requestedKind as AgentTaskKind)) return res.status(400).json({ error: "invalid task kind" });
+  const validated = validateTask(req.body);
+  if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
+  const { description, requestedKind, requestedMode, requestedSkills, workspaceId } = validated.value;
   try {
     const task = await executeAgentTask(description, requestedKind as AgentTaskKind | undefined, requestedSkills, requestedMode, { workspaceId });
     return res.status(201).json(task);
   } catch (error) {
-    const detail = error as { message?: string; task?: unknown };
-    return res.status(502).json({ error: detail.message || "agent task failed", task: detail.task || null });
+    const detail = error instanceof Error ? error.message : "agent task failed";
+    return res.status(502).json({ error: detail });
   }
 });
 
 router.post("/tasks/queue", agentAuth, (req, res) => {
-  const { description, requestedKind, requestedMode, requestedSkills, workspaceId } = parseTaskBody(req.body);
-  const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
-  if (!description) return res.status(400).json({ error: "task is required" });
-  if (description.length > 20_000) return res.status(413).json({ error: "task cannot exceed 20000 characters" });
-  if (requestedKind && !allowedKinds.includes(requestedKind as AgentTaskKind)) return res.status(400).json({ error: "invalid task kind" });
+  const validated = validateTask(req.body);
+  if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
+  const { description, requestedKind, requestedMode, requestedSkills, workspaceId } = validated.value;
   try {
     const job = enqueueAgentTask({ description, kind: requestedKind as AgentTaskKind | undefined, skills: requestedSkills, mode: requestedMode, context: { workspaceId } });
-    return res.status(202).json(job);
+    return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt });
   } catch (error) {
     return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" });
   }
 });
 
 router.post("/classify", agentAuth, (req, res) => {
-  const text = typeof req.body?.task === "string" ? req.body.task.trim() : "";
-  if (!text) return res.status(400).json({ error: "task is required" });
-  if (text.length > 20_000) return res.status(413).json({ error: "task cannot exceed 20000 characters" });
-  return res.json({ kind: classifyAgentTask(text) });
+  const validated = validateTask(req.body);
+  if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
+  return res.json({ kind: classifyAgentTask(validated.value.description) });
 });
 
 router.post("/run", agentAuth, async (req, res) => {
-  const task = typeof req.body?.task === "string" ? req.body.task.trim() : "";
-  if (!task) return res.status(400).json({ error: "task is required" });
-  if (task.length > 20_000) return res.status(413).json({ error: "task cannot exceed 20000 characters" });
-  try { return res.json(await runCodingAgent(task)); }
-  catch (error) { return res.status(502).json({ error: error instanceof Error ? error.message : "coding agent failed" }); }
+  const validated = validateTask(req.body);
+  if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
+  try {
+    return res.json(await runCodingAgent(validated.value.description));
+  } catch (error) {
+    return res.status(502).json({ error: error instanceof Error ? error.message : "coding agent failed" });
+  }
 });
+
 export default router;
