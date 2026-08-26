@@ -7,6 +7,7 @@ import imagesRouter from "./images.js";
 import memoryRouter from "./memory.js";
 import filesRouter from "./files.js";
 import agentsRouter from "./agents.js";
+import automationRouter from "./automation.js";
 
 function buildApiRouter() {
   const router = Router();
@@ -17,12 +18,11 @@ function buildApiRouter() {
   router.use("/memory", memoryRouter);
   router.use("/files", filesRouter);
   router.use("/agents", agentsRouter);
+  router.use("/automation", automationRouter);
   return router;
 }
 
 export const apiRouter = Router();
 apiRouter.use(healthRouter);
 apiRouter.use(buildApiRouter());
-
-// Keep the existing unversioned API while restoring the /v1 contract used by clients.
 apiRouter.use("/v1", buildApiRouter());
