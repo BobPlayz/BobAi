@@ -3,14 +3,14 @@ import cors from "cors";
 import { randomUUID } from "node:crypto";
 import { apiRouter } from "./routes/index.js";
 import { rateLimit } from "./middleware/rateLimit.js";
+import { validateProductionConfig } from "./config/validateProduction.js";
 
+validateProductionConfig();
 export const app = express();
 const isProduction = process.env.NODE_ENV === "production";
 const allowedOrigins = (process.env.CORS_ORIGIN || "*").split(",").map((origin) => origin.trim()).filter(Boolean);
 
-if (isProduction && (!allowedOrigins.length || allowedOrigins.includes("*"))) {
-  throw new Error("CORS_ORIGIN must explicitly list allowed origins in production");
-}
+if (isProduction && (!allowedOrigins.length || allowedOrigins.includes("*"))) throw new Error("CORS_ORIGIN must explicitly list allowed origins in production");
 
 app.disable("x-powered-by");
 app.set("trust proxy", process.env.TRUST_PROXY === "true");
@@ -31,12 +31,10 @@ app.use((req, res, next) => {
 });
 app.use(rateLimit);
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb" }));
-
 app.get("/", (_req, res) => res.json({ name: "BobAI API", status: "ok" }));
 app.use(apiRouter);
 app.use((_req, res) => res.status(404).json({ error: "route not found" }));
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("API ERROR:", error);
-  if (res.headersSent) return;
-  return res.status(500).json({ error: isProduction ? "internal server error" : error instanceof Error ? error.message : "internal server error" });
+  if (process.env.NODE_ENV !== "production") console.error("API ERROR:", error);
+  if (!res.headersSent) return res.status(500).json({ error: "internal server error" });
 });
