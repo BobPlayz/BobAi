@@ -8,6 +8,7 @@ import memoryRouter from "./memory.js";
 import filesRouter from "./files.js";
 import agentsRouter from "./agents.js";
 import automationRouter from "./automation.js";
+import agentOfficeRouter from "./agentOffice.js";
 
 function buildApiRouter() {
   const router = Router();
@@ -19,6 +20,7 @@ function buildApiRouter() {
   router.use("/files", filesRouter);
   router.use("/agents", agentsRouter);
   router.use("/automation", automationRouter);
+  router.use("/agent-office", agentOfficeRouter);
   return router;
 }
 
