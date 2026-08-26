@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { healthRouter } from "./health.js";
+import authRouter from "./auth.js";
 import chatRouter from "./chat.js";
 import streamRouter from "./stream.js";
 import conversationsRouter from "./conversations.js";
@@ -26,5 +27,6 @@ function buildApiRouter() {
 
 export const apiRouter = Router();
 apiRouter.use(healthRouter);
+apiRouter.use("/auth", authRouter);
 apiRouter.use(buildApiRouter());
 apiRouter.use("/v1", buildApiRouter());
