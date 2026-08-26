@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { runCodingAgent } from "../services/codingAgent.js";
-import { classifyAgentTask, executeAgentTask, getAgentTask, listAgentTasks, type AgentTaskKind } from "../services/agentTasks.js";
+import { classifyAgentTask, getAgentTask, listAgentTasks, type AgentTaskKind } from "../services/agentTasks.js";
 import { listAgentSkills, type AgentSkillId } from "../services/agentSkills.js";
 import { listBobServices } from "../services/bobServices.js";
 import { agentAuth } from "../middleware/agentAuth.js";
@@ -9,13 +8,7 @@ import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQu
 const router = Router();
 const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
 
-type TaskBody = {
-  task?: unknown;
-  kind?: unknown;
-  mode?: unknown;
-  skills?: unknown;
-  workspaceId?: unknown;
-};
+type TaskBody = { task?: unknown; kind?: unknown; mode?: unknown; skills?: unknown; workspaceId?: unknown };
 
 function parseTaskBody(body: unknown) {
   const input = (body && typeof body === "object" ? body : {}) as TaskBody;
@@ -52,26 +45,15 @@ router.get("/queue/:id", agentAuth, (req, res) => {
   return res.json(job);
 });
 
-router.post("/tasks", agentAuth, async (req, res) => {
-  const validated = validateTask(req.body);
-  if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
-  const { description, requestedKind, requestedMode, requestedSkills, workspaceId } = validated.value;
-  try {
-    const task = await executeAgentTask(description, requestedKind as AgentTaskKind | undefined, requestedSkills, requestedMode, { workspaceId });
-    return res.status(201).json(task);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "agent task failed";
-    return res.status(502).json({ error: detail });
-  }
-});
-
-router.post("/tasks/queue", agentAuth, (req, res) => {
+// Specialist agents are always background workers. They never become a second
+// conversational voice and never execute synchronously through the API.
+router.post("/tasks", agentAuth, (req, res) => {
   const validated = validateTask(req.body);
   if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
   const { description, requestedKind, requestedMode, requestedSkills, workspaceId } = validated.value;
   try {
     const job = enqueueAgentTask({ description, kind: requestedKind as AgentTaskKind | undefined, skills: requestedSkills, mode: requestedMode, context: { workspaceId } });
-    return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt });
+    return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt, agent: "background" });
   } catch (error) {
     return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" });
   }
@@ -83,13 +65,16 @@ router.post("/classify", agentAuth, (req, res) => {
   return res.json({ kind: classifyAgentTask(validated.value.description) });
 });
 
-router.post("/run", agentAuth, async (req, res) => {
+// Kept as a compatibility endpoint, but it now queues instead of executing a
+// coding agent inline. This prevents accidental local resource spikes.
+router.post("/run", agentAuth, (req, res) => {
   const validated = validateTask(req.body);
   if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
   try {
-    return res.json(await runCodingAgent(validated.value.description));
+    const job = enqueueAgentTask({ description: validated.value.description, kind: "coding", mode: validated.value.requestedMode, context: { workspaceId: validated.value.workspaceId } });
+    return res.status(202).json({ id: job.id, status: job.status, agent: "background" });
   } catch (error) {
-    return res.status(502).json({ error: error instanceof Error ? error.message : "coding agent failed" });
+    return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" });
   }
 });
 
