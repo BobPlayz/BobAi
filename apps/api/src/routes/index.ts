@@ -14,6 +14,7 @@ import agentOfficeRouter from "./agentOffice.js";
 
 function buildApiRouter() {
   const router = Router();
+  router.use("/auth", authRouter);
   router.use(requireAuth);
   router.use("/chat", chatRouter);
   router.use("/stream", streamRouter);
@@ -29,6 +30,5 @@ function buildApiRouter() {
 
 export const apiRouter = Router();
 apiRouter.use(healthRouter);
-apiRouter.use("/auth", authRouter);
 apiRouter.use(buildApiRouter());
 apiRouter.use("/v1", buildApiRouter());
