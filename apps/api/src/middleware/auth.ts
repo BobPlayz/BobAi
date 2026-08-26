@@ -24,6 +24,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.user?.role !== "admin") return res.status(403).json({ error: "admin access required" });
+  const allowed = (process.env.BOBAI_ADMIN_EMAILS || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
+  if (allowed.length !== 2 || new Set(allowed).size !== 2 || req.user?.role !== "admin" || !req.user?.email || !allowed.includes(req.user.email.toLowerCase())) {
+    return res.status(403).json({ error: "admin access required" });
+  }
   return next();
 }
