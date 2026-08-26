@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { healthRouter } from "./health.js";
 import authRouter from "./auth.js";
+import adminRouter from "./admin.js";
 import chatRouter from "./chat.js";
 import streamRouter from "./stream.js";
 import conversationsRouter from "./conversations.js";
@@ -16,6 +17,7 @@ function buildApiRouter() {
   const router = Router();
   router.use("/auth", authRouter);
   router.use(requireAuth);
+  router.use("/admin", adminRouter);
   router.use("/chat", chatRouter);
   router.use("/stream", streamRouter);
   router.use("/conversations", conversationsRouter);
