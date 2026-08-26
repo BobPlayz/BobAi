@@ -6,7 +6,6 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 const scrypt = promisify(scryptCallback);
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
 async function hashPassword(password: string) {
@@ -19,9 +18,8 @@ async function verifyPassword(password: string, stored: string | null) {
   if (!stored) return false;
   const [saltText, hashText] = stored.split(".");
   if (!saltText || !hashText) return false;
-  const salt = Buffer.from(saltText, "base64url");
   const expected = Buffer.from(hashText, "base64url");
-  const actual = (await scrypt(password, salt, expected.length)) as Buffer;
+  const actual = (await scrypt(password, Buffer.from(saltText, "base64url"), expected.length)) as Buffer;
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
@@ -29,7 +27,7 @@ const token = () => randomBytes(32).toString("base64url");
 
 export async function createUser(email: string, username: string, password: string) {
   const passwordHash = await hashPassword(password);
-  const [user] = await db.insert(users).values({ email, username, passwordHash }).returning({ id: users.id, email: users.email, username: users.username, displayName: users.displayName });
+  const [user] = await db.insert(users).values({ email, username, passwordHash }).returning({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role });
   if (!user) throw new Error("user creation failed");
   return user;
 }
