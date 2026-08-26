@@ -6,11 +6,7 @@ const TIMEOUT_MS = 5 * 60 * 1_000;
 type CodingAgentJob = {
   id: string;
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
-  result?: {
-    plan?: unknown;
-    executionResults?: string[];
-    review?: string;
-  };
+  result?: { plan?: unknown; executionResults?: string[]; review?: string };
   error?: string;
 };
 
@@ -21,18 +17,27 @@ export function isCodingTask(text: string) {
 function getConfig() {
   const url = (process.env.BOBAI_CODING_AGENT_URL || DEFAULT_URL).replace(/\/$/, "");
   const key = process.env.BOBAI_CODING_AGENT_KEY?.trim();
-
   if (!key || key.length < 32) throw new Error("coding agent bridge is not configured");
-  return { url, key };
+
+  const parsed = new URL(url);
+  if (!parsed.port) parsed.port = "3456";
+  if (!["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) {
+    throw new Error("coding agent bridge must run on localhost");
+  }
+
+  return { url: parsed.toString().replace(/\/$/, ""), key };
 }
 
 async function request<T>(url: string, key: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, ...init?.headers }
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, ...init?.headers },
   });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(typeof body?.error === "string" ? body.error : `coding agent returned ${response.status}`);
+  const body: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string" ? body.error : `coding agent returned ${response.status}`;
+    throw new Error(message);
+  }
   return body as T;
 }
 
@@ -44,7 +49,7 @@ export async function runCodingAgent(task: string) {
   const { url, key } = getConfig();
   const created = await request<{ id: string; status: CodingAgentJob["status"] }>(`${url}/task`, key, {
     method: "POST",
-    body: JSON.stringify({ prompt: normalizedTask })
+    body: JSON.stringify({ prompt: normalizedTask }),
   });
 
   const deadline = Date.now() + TIMEOUT_MS;
@@ -52,10 +57,7 @@ export async function runCodingAgent(task: string) {
     await new Promise((resolve) => setTimeout(resolve, POLL_MS));
     const job = await request<CodingAgentJob>(`${url}/task/${encodeURIComponent(created.id)}`, key);
     if (job.status === "completed") {
-      return {
-        output: JSON.stringify(job.result ?? {}),
-        warnings: typeof job.result?.review === "string" ? job.result.review : ""
-      };
+      return { output: JSON.stringify(job.result ?? {}), warnings: job.result?.review || "" };
     }
     if (job.status === "failed") throw new Error(job.error || "coding agent failed");
     if (job.status === "cancelled") throw new Error("coding agent task was cancelled");
