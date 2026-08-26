@@ -40,9 +40,9 @@ function normalizeImages(inputImages: string[] | undefined) {
   return inputImages.filter((image) => typeof image === "string" && image.trim()).slice(0, MAX_INPUT_IMAGES);
 }
 
-async function localGenerate(path: string, options: MediaOptions, index: number) {
+async function localGenerate(path: string, options: MediaOptions) {
   const config = provider();
-  if (!config) return null;
+  if (!config) return [];
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
   try {
@@ -51,7 +51,6 @@ async function localGenerate(path: string, options: MediaOptions, index: number)
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         prompt: options.prompt,
-        index,
         count: options.count ?? 1,
         inputImages: normalizeImages(options.inputImages),
         width: options.width,
@@ -66,9 +65,9 @@ async function localGenerate(path: string, options: MediaOptions, index: number)
     const body = await response.json() as { url?: unknown; urls?: unknown; data?: Array<{ url?: unknown }> };
     const urls = Array.isArray(body.urls) ? body.urls.filter((url): url is string => typeof url === "string") : [];
     const dataUrls = Array.isArray(body.data) ? body.data.map((item) => item?.url).filter((url): url is string => typeof url === "string") : [];
-    const url = typeof body.url === "string" ? body.url : urls[index] ?? dataUrls[index] ?? urls[0] ?? dataUrls[0] ?? null;
-    if (!url) throw new Error("local media provider returned no media URL");
-    return url;
+    const all = typeof body.url === "string" ? [body.url] : [...urls, ...dataUrls];
+    if (!all.length) throw new Error("local media provider returned no media URL");
+    return all;
   } finally {
     clearTimeout(timer);
   }
@@ -83,15 +82,9 @@ export async function generateImages(prompt: string, count = 4, inputImages?: st
   const local = provider();
 
   if (local) {
-    const batchUrl = await localGenerate(local.imagePath, { prompt: normalized, count: requested, inputImages: inputs }, 0);
-    if (batchUrl && requested === 1) return [{ url: batchUrl, prompt: normalized, index: 0 }];
-
-    const images = await Promise.all(Array.from({ length: requested }, async (_, index) => ({
-      url: await localGenerate(local.imagePath, { prompt: normalized, count: requested, inputImages: inputs }, index),
-      prompt: normalized,
-      index,
-    })));
-    return images.map((image) => ({ ...image, url: image.url! }));
+    const urls = await localGenerate(local.imagePath, { prompt: normalized, count: requested, inputImages: inputs });
+    if (urls.length < requested) throw new Error(`local image provider returned ${urls.length} of ${requested} requested images`);
+    return urls.slice(0, requested).map((url, index) => ({ url, prompt: normalized, index }));
   }
 
   return Promise.all(Array.from({ length: requested }, async (_, index) => ({
@@ -107,6 +100,8 @@ export async function generateVideo(prompt: string, inputImages?: string[]) {
   if (normalized.length > MAX_PROMPT_LENGTH) throw new Error("video prompt is too long");
   const config = provider();
   if (!config) throw new Error("local video generation is not configured; set BOBAI_LOCAL_MEDIA_URL");
-  const url = await localGenerate(config.videoPath, { prompt: normalized, inputImages: normalizeImages(inputImages) }, 0);
+  const urls = await localGenerate(config.videoPath, { prompt: normalized, inputImages: normalizeImages(inputImages) });
+  const url = urls[0];
+  if (!url) throw new Error("local video provider returned no media URL");
   return { url, prompt: normalized };
 }
