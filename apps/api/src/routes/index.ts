@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middleware/auth.js";
 import { healthRouter } from "./health.js";
 import authRouter from "./auth.js";
 import chatRouter from "./chat.js";
@@ -13,6 +14,7 @@ import agentOfficeRouter from "./agentOffice.js";
 
 function buildApiRouter() {
   const router = Router();
+  router.use(requireAuth);
   router.use("/chat", chatRouter);
   router.use("/stream", streamRouter);
   router.use("/conversations", conversationsRouter);
