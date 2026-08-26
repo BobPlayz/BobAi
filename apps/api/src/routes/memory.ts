@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { remember, recall, recallAll, clearMemory } from "../memory/memory.js";
 import { dbRemember, dbRecallAll, dbClearMemory } from "../store/memoryDb.js";
 
 const router = Router();
+
 function context(req: { query: Record<string, unknown>; body?: unknown }) {
   const body = req.body as Record<string, unknown> | undefined;
   const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId : typeof body?.workspaceId === "string" ? body.workspaceId : "";
@@ -12,33 +12,39 @@ function context(req: { query: Record<string, unknown>; body?: unknown }) {
 
 router.get("/", async (req, res) => {
   const ctx = context(req);
-  if (ctx) {
-    const memories = await dbRecallAll(ctx.workspaceId, ctx.userId).catch(() => null);
-    if (memories) return res.json({ memories, persistent: true });
+  if (!ctx) return res.status(401).json({ error: "authenticated user and workspace are required" });
+  try {
+    const memories = await dbRecallAll(ctx.workspaceId, ctx.userId);
+    return res.json({ memories, persistent: true });
+  } catch {
+    return res.status(503).json({ error: "memory storage unavailable" });
   }
-  return res.json({ memories: recallAll(), persistent: false });
 });
 
 router.post("/remember", async (req, res) => {
   const { key, value } = req.body || {};
-  if (typeof key !== "string" || typeof value !== "string" || !key.trim() || !value.trim()) return res.status(400).json({ error: "key and value required" });
-  const ctx = context(req);
-  if (ctx) {
-    const saved = await dbRemember({ workspaceId: ctx.workspaceId, userId: ctx.userId, key: key.trim(), value: value.trim() }).catch(() => false);
-    if (saved) return res.json({ success: true, persistent: true });
+  if (typeof key !== "string" || typeof value !== "string" || !key.trim() || !value.trim() || key.length > 200 || value.length > 20_000) {
+    return res.status(400).json({ error: "valid key and value are required" });
   }
-  remember(key, value);
-  return res.json({ success: true, persistent: false });
+  const ctx = context(req);
+  if (!ctx) return res.status(401).json({ error: "authenticated user and workspace are required" });
+  try {
+    await dbRemember({ workspaceId: ctx.workspaceId, userId: ctx.userId, key: key.trim(), value: value.trim() });
+    return res.json({ success: true, persistent: true });
+  } catch {
+    return res.status(503).json({ error: "memory storage unavailable" });
+  }
 });
 
-router.get("/:key", (req, res) => res.json({ value: recall(req.params.key) }));
 router.delete("/", async (req, res) => {
   const ctx = context(req);
-  if (ctx) {
-    const cleared = await dbClearMemory(ctx.workspaceId, ctx.userId).catch(() => false);
-    if (cleared) return res.json({ success: true, persistent: true });
+  if (!ctx) return res.status(401).json({ error: "authenticated user and workspace are required" });
+  try {
+    await dbClearMemory(ctx.workspaceId, ctx.userId);
+    return res.json({ success: true, persistent: true });
+  } catch {
+    return res.status(503).json({ error: "memory storage unavailable" });
   }
-  clearMemory();
-  return res.json({ success: true, persistent: false });
 });
+
 export default router;
