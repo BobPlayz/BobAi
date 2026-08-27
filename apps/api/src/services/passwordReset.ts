@@ -1,0 +1,47 @@
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
+import { promisify } from "node:util";
+import { and, eq, gt, isNull } from "drizzle-orm";
+import { db, passwordResets, users } from "@bobai/db";
+
+const scrypt = promisify(scryptCallback);
+const TTL_MS = 15 * 60 * 1000;
+const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+const token = () => randomBytes(32).toString("base64url");
+
+async function passwordHash(password: string) {
+  const salt = randomBytes(16);
+  const value = (await scrypt(password, salt, 64, { N: 1 << 15, r: 8, p: 1 })) as Buffer;
+  return `${salt.toString("base64url")}.${value.toString("base64url")}`;
+}
+
+export async function requestPasswordReset(email: string) {
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (!user) return null;
+  await db.update(passwordResets).set({ isActive: false }).where(and(eq(passwordResets.userId, user.id), eq(passwordResets.isActive, true)));
+  const raw = token();
+  await db.insert(passwordResets).values({ userId: user.id, tokenHash: hash(raw), expiresAt: new Date(Date.now() + TTL_MS) });
+  return raw;
+}
+
+export async function resetPassword(rawToken: string, password: string) {
+  const [reset] = await db.select().from(passwordResets).where(and(
+    eq(passwordResets.tokenHash, hash(rawToken)),
+    eq(passwordResets.isActive, true),
+    isNull(passwordResets.usedAt),
+    gt(passwordResets.expiresAt, new Date())
+  )).limit(1);
+  if (!reset) return false;
+  const stored = await passwordHash(password);
+  const [updated] = await db.update(passwordResets).set({ usedAt: new Date(), isActive: false }).where(and(
+    eq(passwordResets.id, reset.id), eq(passwordResets.isActive, true), isNull(passwordResets.usedAt)
+  )).returning({ id: passwordResets.id });
+  if (!updated) return false;
+  await db.update(users).set({ passwordHash: stored, updatedAt: new Date() }).where(eq(users.id, reset.userId));
+  return true;
+}
+
+export const safeTokenEqual = (a: string, b: string) => {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
+};
