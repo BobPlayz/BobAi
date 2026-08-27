@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth";
-import { synthesize, transcribe } from "../services/voice";
+import { requireAuth } from "../middleware/auth.js";
+import { synthesize, transcribe } from "../services/voice.js";
 
 const router = Router();
 router.use(requireAuth);
