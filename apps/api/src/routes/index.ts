@@ -12,6 +12,8 @@ import filesRouter from "./files.js";
 import agentsRouter from "./agents.js";
 import automationRouter from "./automation.js";
 import agentOfficeRouter from "./agentOffice.js";
+import voiceRouter from "./voice.js";
+import musicRouter from "./music.js";
 
 function buildApiRouter() {
   const router = Router();
@@ -27,6 +29,8 @@ function buildApiRouter() {
   router.use("/agents", agentsRouter);
   router.use("/automation", automationRouter);
   router.use("/agent-office", agentOfficeRouter);
+  router.use("/voice", voiceRouter);
+  router.use("/music", musicRouter);
   return router;
 }
 
