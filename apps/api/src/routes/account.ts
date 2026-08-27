@@ -23,16 +23,24 @@ router.post("/password-reset/confirm", async (req, res) => {
   return res.status(204).send();
 });
 
-router.get("/me", requireAuth, async (req, res) => {
+router.use(requireAuth);
+
+router.get("/me", async (req, res) => {
   const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.id, req.user.id)).limit(1);
   return user ? res.json(user) : res.status(404).json({ error: "user not found" });
 });
 
-router.get("/sessions", requireAuth, async (req, res) => res.json({ sessions: await listSessions(req.user.id) }));
-router.delete("/sessions/:id", requireAuth, async (req, res) => res.status(await revokeSession(req.user.id, req.params.id) ? 204 : 404).send());
-router.delete("/sessions", requireAuth, async (req, res) => { await revokeAllSessions(req.user.id); return res.status(204).send(); });
+router.get("/export", async (req, res) => {
+  const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, req.user.id)).limit(1);
+  if (!user) return res.status(404).json({ error: "user not found" });
+  return res.json({ exportedAt: new Date().toISOString(), user, sessions: await listSessions(req.user.id) });
+});
 
-router.delete("/me", requireAuth, async (req, res) => {
+router.get("/sessions", async (req, res) => res.json({ sessions: await listSessions(req.user.id) }));
+router.delete("/sessions/:id", async (req, res) => res.status(await revokeSession(req.user.id, req.params.id) ? 204 : 404).send());
+router.delete("/sessions", async (req, res) => { await revokeAllSessions(req.user.id); return res.status(204).send(); });
+
+router.delete("/me", async (req, res) => {
   await revokeAllSessions(req.user.id);
   await db.update(users).set({ displayName: null, avatarUrl: null, updatedAt: new Date() }).where(eq(users.id, req.user.id));
   return res.status(202).json({ status: "account deactivation requested", note: "permanent deletion requires the configured retention worker" });
