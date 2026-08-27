@@ -33,3 +33,4 @@ export * from "./webhooks.js";
 export * from "./billingPlans.js";
 export * from "./subscriptions.js";
 export * from "./emailOtps.js";
+export * from "./passwordResets.js";
