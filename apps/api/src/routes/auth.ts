@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { createUser, login, refresh, revoke } from "../services/auth.js";
+import { requestEmailOtp, verifyEmailOtp } from "../services/otp.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 router.post("/register", async (req, res) => {
   const { email: address, username, password } = req.body ?? {};
-  if (typeof address !== "string" || !email.test(address) || typeof username !== "string" || !/^[A-Za-z0-9_]{3,32}$/.test(username) || typeof password !== "string" || password.length < 12 || password.length > 128) {
-    return res.status(400).json({ error: "invalid registration details" });
-  }
+  if (typeof address !== "string" || !email.test(address) || typeof username !== "string" || !/^[A-Za-z0-9_]{3,32}$/.test(username) || typeof password !== "string" || password.length < 12 || password.length > 128) return res.status(400).json({ error: "invalid registration details" });
   try {
     const user = await createUser(address.trim().toLowerCase(), username, password);
     return res.status(201).json({ user });
@@ -42,5 +42,30 @@ router.post("/logout", async (req, res) => {
   if (typeof refreshToken === "string" && refreshToken) await revoke(refreshToken);
   return res.status(204).send();
 });
+
+router.post("/otp/request", async (req, res) => {
+  const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  if (!email.test(address)) return res.status(400).json({ error: "invalid email" });
+  try {
+    await requestEmailOtp(address);
+    return res.status(202).json({ message: "if the account exists, a verification code has been sent" });
+  } catch {
+    return res.status(503).json({ error: "verification unavailable" });
+  }
+});
+
+router.post("/otp/verify", async (req, res) => {
+  const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const code = typeof req.body?.code === "string" ? req.body.code : "";
+  if (!email.test(address) || !/^\d{6}$/.test(code)) return res.status(400).json({ error: "invalid verification code" });
+  try {
+    if (!await verifyEmailOtp(address, code)) return res.status(400).json({ error: "invalid or expired verification code" });
+    return res.json({ verified: true });
+  } catch {
+    return res.status(503).json({ error: "verification unavailable" });
+  }
+});
+
+router.get("/status", requireAuth, (req, res) => res.json({ userId: req.user.id }));
 
 export default router;
