@@ -66,6 +66,6 @@ router.post("/otp/verify", async (req, res) => {
   }
 });
 
-router.get("/status", requireAuth, (req, res) => res.json({ userId: req.user.id }));
+router.get("/status", requireAuth, (req, res) => res.json({ userId: req.user!.id }));
 
 export default router;

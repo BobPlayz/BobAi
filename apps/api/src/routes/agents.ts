@@ -7,7 +7,6 @@ import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQu
 
 const router = Router();
 const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
-
 type TaskBody = { task?: unknown; kind?: unknown; mode?: unknown; skills?: unknown; workspaceId?: unknown };
 
 function parseTaskBody(body: unknown) {
@@ -15,9 +14,7 @@ function parseTaskBody(body: unknown) {
   const description = typeof input.task === "string" ? input.task.trim() : "";
   const requestedKind = typeof input.kind === "string" ? input.kind : undefined;
   const requestedMode = typeof input.mode === "string" ? input.mode : undefined;
-  const requestedSkills = Array.isArray(input.skills)
-    ? input.skills.filter((value): value is AgentSkillId => typeof value === "string")
-    : undefined;
+  const requestedSkills = Array.isArray(input.skills) ? input.skills.filter((value): value is AgentSkillId => typeof value === "string") : undefined;
   const workspaceId = typeof input.workspaceId === "string" ? input.workspaceId.trim().slice(0, 200) : undefined;
   return { description, requestedKind, requestedMode, requestedSkills, workspaceId };
 }
@@ -34,19 +31,17 @@ router.get("/skills", agentAuth, (_req, res) => res.json({ skills: listAgentSkil
 router.get("/services", agentAuth, (_req, res) => res.json({ services: listBobServices() }));
 router.get("/tasks", agentAuth, (_req, res) => res.json({ tasks: listAgentTasks() }));
 router.get("/tasks/:id", agentAuth, (req, res) => {
-  const task = getAgentTask(req.params.id);
+  const task = getAgentTask(req.params.id as string);
   if (!task) return res.status(404).json({ error: "agent task not found" });
   return res.json(task);
 });
 router.get("/queue", agentAuth, (_req, res) => res.json({ jobs: listQueueJobs() }));
 router.get("/queue/:id", agentAuth, (req, res) => {
-  const job = getQueueJob(req.params.id);
+  const job = getQueueJob(req.params.id as string);
   if (!job) return res.status(404).json({ error: "queue job not found" });
   return res.json(job);
 });
 
-// Specialist agents are always background workers. They never become a second
-// conversational voice and never execute synchronously through the API.
 router.post("/tasks", agentAuth, (req, res) => {
   const validated = validateTask(req.body);
   if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
@@ -65,8 +60,6 @@ router.post("/classify", agentAuth, (req, res) => {
   return res.json({ kind: classifyAgentTask(validated.value.description) });
 });
 
-// Kept as a compatibility endpoint, but it now queues instead of executing a
-// coding agent inline. This prevents accidental local resource spikes.
 router.post("/run", agentAuth, (req, res) => {
   const validated = validateTask(req.body);
   if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);

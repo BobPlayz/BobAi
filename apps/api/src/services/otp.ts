@@ -16,9 +16,9 @@ let sender: OtpSender | null = null;
 export const setOtpSender = (next: OtpSender | null) => { sender = next; };
 
 export const requestEmailOtp = async (email: string) => {
-  const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (!user) return;
-  const recent = await db.query.emailOtps.findFirst({ where: and(eq(emailOtps.userId, user.id), gt(emailOtps.createdAt, new Date(Date.now() - 60_000))) });
+  const [recent] = await db.select({ id: emailOtps.id }).from(emailOtps).where(and(eq(emailOtps.userId, user.id), gt(emailOtps.createdAt, new Date(Date.now() - 60_000)))).limit(1);
   if (recent) return;
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   await db.insert(emailOtps).values({ userId: user.id, codeHash: hash(code), expiresAt: new Date(Date.now() + TTL_MS) });
@@ -26,9 +26,9 @@ export const requestEmailOtp = async (email: string) => {
 };
 
 export const verifyEmailOtp = async (email: string, code: string) => {
-  const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (!user || !/^\d{6}$/.test(code)) return false;
-  const otp = await db.query.emailOtps.findFirst({ where: and(eq(emailOtps.userId, user.id), isNull(emailOtps.consumedAt), gt(emailOtps.expiresAt, new Date())), orderBy: desc(emailOtps.createdAt) });
+  const [otp] = await db.select().from(emailOtps).where(and(eq(emailOtps.userId, user.id), isNull(emailOtps.consumedAt), gt(emailOtps.expiresAt, new Date()))).orderBy(desc(emailOtps.createdAt)).limit(1);
   if (!otp || otp.attempts >= MAX_ATTEMPTS) return false;
   if (!same(hash(code), otp.codeHash)) {
     await db.update(emailOtps).set({ attempts: otp.attempts + 1 }).where(eq(emailOtps.id, otp.id));
