@@ -1,24 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import NeuralShell from "@/components/neural/NeuralShell";
 import NeuralSidebar from "@/components/neural/NeuralSidebar";
 import NeuralTopbar from "@/components/neural/NeuralTopbar";
 import NeuralComposer from "@/components/neural/NeuralComposer";
-import { useChat } from "@/hooks/useChat";
-import BorderGlow from "@/components/BorderGlow";
 import ChatWindow from "@/components/ChatWindow";
 import ChatInput from "@/components/ChatInput";
+import { useChat } from "@/hooks/useChat";
 import { useTheme } from "@/components/neural/ThemeProvider";
 
 export default function ChatPage() {
   const chat = useChat();
   const { theme } = useTheme();
-  const endRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [chat.activeConversation?.messages.length, chat.loading]);
 
   function handleSearch(value: string) {
     chat.setSearch(value);
@@ -76,29 +69,28 @@ export default function ChatPage() {
         />
       }
     >
-      <div className="flex h-full justify-center overflow-y-auto px-6 py-8">
-        <BorderGlow className="w-full max-w-[760px] rounded-[28px]">
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col px-4 py-6 sm:px-8 sm:py-8">
           {chat.activeConversation?.messages.length === 0 ? (
-            <div className="flex min-h-full items-center justify-center">
-              <div className="pb-24 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/5 shadow-[0_0_40px_rgba(0,217,255,0.12)]">
-                  <span className="text-2xl font-black text-cyan-300">B</span>
+            <div className="flex flex-1 items-center justify-center pb-8">
+              <div className="text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/5 shadow-[0_0_36px_rgba(0,217,255,0.1)]">
+                  <span className="text-xl font-black text-cyan-300">B</span>
                 </div>
-                <h1 className="mt-6 text-[34px] font-semibold tracking-tight text-white">Bob AI</h1>
+                <h1 className="mt-5 text-3xl font-semibold tracking-tight text-white">Bob AI</h1>
                 <p className="mt-2 text-sm text-cyan-100/45">start a conversation</p>
               </div>
             </div>
           ) : (
             <ChatWindow
-              messages={chat.activeConversation?.messages || []}
+              messages={chat.activeConversation.messages}
               loading={chat.loading}
               onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
               onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
               onRegenerate={chat.regenerateLastAssistant}
             />
           )}
-          <div ref={endRef} />
-        </BorderGlow>
+        </div>
       </div>
     </NeuralShell>
   );
