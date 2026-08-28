@@ -12,7 +12,7 @@ Base URL: `/v1`
 
 `POST /auth/logout` revokes a refresh token.
 
-`POST /auth/otp/request` and `POST /auth/otp/verify` handle optional email verification. OTP requests and verification attempts are additionally rate-limited.
+`POST /auth/otp/request` and `POST /auth/otp/verify` handle email verification.
 
 `POST /account/password-reset/request` starts password recovery. `POST /account/password-reset/confirm` consumes a short-lived reset token.
 
@@ -30,19 +30,7 @@ Authorization: Bearer <access-token>
 
 `GET /account/sessions` lists active sessions. `DELETE /account/sessions/:id` revokes one session and `DELETE /account/sessions` revokes all sessions.
 
-`DELETE /account/me` starts account deactivation and revokes all sessions. Permanent deletion remains a deployment/retention-worker responsibility.
-
-## Conversations
-
-`GET /conversations` lists the authenticated user's conversations. `GET /conversations/:id` reads one conversation. `POST /conversations` saves a complete conversation snapshot and `DELETE /conversations/:id` removes it.
-
-A personal workspace is created lazily for accounts that do not already have one, so clients do not need to expose workspace setup just to use normal chat persistence.
-
-## Memory
-
-`GET /memory` reads memories for the authenticated user. `POST /memory/remember` stores an explicit memory and `DELETE /memory` clears the user's memories.
-
-Memory routes never trust a client-supplied user ID; workspace access is checked against the authenticated session. Normal chat also injects stored memories into the model context and stores messages that match BobAI's explicit-memory detector.
+`DELETE /account/me` starts account deactivation and revokes all sessions. Permanent deletion is delegated to the configured retention worker.
 
 ## API keys
 
@@ -54,31 +42,23 @@ POST   /api-keys
 DELETE /api-keys/:id
 ```
 
-Send the workspace UUID in `x-workspace-id` when targeting a specific workspace. The caller must be a workspace member.
+Send the workspace UUID in `x-workspace-id`. The caller must be a workspace member.
 
 ## Authorization
 
 Authenticated users may access only resources owned by them or by a workspace in which they have permission. Never trust a client-supplied user ID. Admin endpoints additionally require the configured admin identity and `admin` role.
 
-## Models
+## Errors and limits
 
-The local model registry currently supports Qwen 2.5 3B, Qwen 2.5 7B, Qwen 2.5 Coder 1.5B, and Qwen 2.5 Coder latest through Ollama. Model selection is capability-aware and falls back to a configured compatible model when possible.
+Errors use JSON with an `error` field. JSON requests are bounded by `JSON_BODY_LIMIT`; rate limits return `429` and `Retry-After` where applicable. Media generation accepts at most four image outputs per request.
 
-## Multimodal and research endpoints
+## Media and creative skills
 
-`POST /vision/analyze` is an authenticated Ollama vision bridge. It accepts `{ image, prompt }` and requires `BOBAI_VISION_MODEL` to be configured.
-
-`POST /research/search` is an authenticated provider-agnostic web-search bridge. It accepts `{ query, options }` and requires `BOBAI_RESEARCH_PROVIDER_URL` to be configured. The provider URL must use HTTPS in production.
-
-Image, video, voice, and music routes use provider abstractions. Providers are activated only when configured. Local media providers are restricted to loopback addresses.
+Image, video, voice, and music routes use provider abstractions. Providers are activated only when configured. Music supports generation/edit/analyze contracts, while local providers can be connected later without changing the public API.
 
 ## Jobs and agents
 
 Long-running agent and media operations are queued. Specialist agents work in the background while Bob remains the user-facing conversational agent. Local concurrency is bounded so idle agents do not continuously consume CPU/GPU resources.
-
-## Errors and limits
-
-Errors use JSON with an `error` field. JSON requests are bounded by `JSON_BODY_LIMIT`; rate limits return `429` and `Retry-After` where applicable. Media generation accepts at most four image outputs per request.
 
 ## Production
 
