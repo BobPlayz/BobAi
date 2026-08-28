@@ -1,4 +1,4 @@
-import { MODEL_REGISTRY, type ModelCapability, type ModelDefinition } from "./modelRegistry.js";
+import { DEFAULT_MODEL_ID, FALLBACK_MODEL_ID, MODEL_REGISTRY, getModelDefinition, type ModelCapability, type ModelDefinition } from "./modelRegistry.js";
 import { ollamaProvider } from "./ollamaProvider.js";
 
 export type ModelSelectionRequest = {
@@ -9,14 +9,28 @@ export type ModelSelectionRequest = {
 
 export type SelectedModel = ModelDefinition & { installed: boolean };
 
-function candidates(request: ModelSelectionRequest): ModelDefinition[] {
-  const requested = request.modelId ? MODEL_REGISTRY.find((model) => model.id === request.modelId) : undefined;
-  if (requested) return [requested, ...MODEL_REGISTRY.filter((model) => model.id !== requested.id)];
+function uniqueModels(models: ModelDefinition[]) {
+  return models.filter((model, index) => models.findIndex((candidate) => candidate.id === model.id) === index);
+}
 
+function candidates(request: ModelSelectionRequest): ModelDefinition[] {
   const capability = request.capability;
-  const fallback = request.fallbackModelId ? MODEL_REGISTRY.find((model) => model.id === request.fallbackModelId) : undefined;
-  const compatible = capability ? MODEL_REGISTRY.filter((model) => model.capabilities.includes(capability)) : [...MODEL_REGISTRY];
-  return fallback && !compatible.some((model) => model.id === fallback.id) ? [...compatible, fallback] : compatible;
+  const compatible = capability
+    ? MODEL_REGISTRY.filter((model) => model.capabilities.includes(capability))
+    : [...MODEL_REGISTRY];
+
+  const requested = request.modelId ? getModelDefinition(request.modelId) : undefined;
+  if (request.modelId && !requested) throw new Error(`unknown model: ${request.modelId}`);
+
+  const fallback = getModelDefinition(request.fallbackModelId || (capability === "chat" ? FALLBACK_MODEL_ID : ""));
+  const defaults = compatible.filter((model) => model.id === DEFAULT_MODEL_ID || model.id === FALLBACK_MODEL_ID);
+
+  return uniqueModels([
+    ...(requested ? [requested] : []),
+    ...defaults,
+    ...compatible,
+    ...(fallback ? [fallback] : []),
+  ]);
 }
 
 export async function selectModel(request: ModelSelectionRequest = {}): Promise<SelectedModel> {
