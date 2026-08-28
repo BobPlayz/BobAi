@@ -12,6 +12,7 @@ router.post("/", async (req, res) => {
     const prepared = prepareChat({
       messages: req.body?.messages,
       personality: req.body?.personality,
+      modelId: req.body?.modelId,
     });
 
     if (prepared.validationError) {
@@ -21,7 +22,7 @@ router.post("/", async (req, res) => {
 
     if (prepared.memoryRequest) {
       send("done", {
-        reply: "Got it. I will remember that for future conversations.",
+        reply: "got it. i will remember that for future conversations.",
         title: prepared.title,
         memoryStored: true,
       });
@@ -35,7 +36,7 @@ router.post("/", async (req, res) => {
     ) {
       const result = await runCodingAgent(prepared.latestUserMessage.content);
       send("done", {
-        reply: result.output || "The coding agent completed without output.",
+        reply: result.output || "the coding agent completed without output.",
         title: prepared.title,
         agent: "coding",
         warnings: result.warnings,
@@ -45,11 +46,12 @@ router.post("/", async (req, res) => {
 
     const full = await runStream(prepared.ollamaMessages, (token) => {
       send("token", { token });
-    });
+    }, prepared.modelId);
 
     send("done", {
       reply: full,
       title: prepared.title,
+      model: prepared.modelId || process.env.OLLAMA_DEFAULT_MODEL || "qwen2.5:3b",
     });
     return res.end();
   } catch (error) {
