@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { getPendingVerificationEmail, requestOtp, verifyOtp } from "@/lib/auth";
 import BobLogo from "@/components/BobLogo";
 
+const emailPattern = /^\S+@\S+\.\S+$/;
+
 export default function VerifyOtpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -15,20 +17,24 @@ export default function VerifyOtpPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const queryEmail = params.get("email")?.trim().toLowerCase() || "";
-    const sent = params.get("sent");
-    const pendingEmail = getPendingVerificationEmail();
-    const initialEmail = queryEmail || pendingEmail;
-
-    setEmail(initialEmail);
-
-    if (sent === "1" && initialEmail) {
-      setMessage(`verification code sent to ${initialEmail}`);
-    } else if (sent === "0") {
-      setMessage("account created, but the verification email could not be sent. check your email or resend the code");
-    }
+    const queryEmail = new URLSearchParams(window.location.search).get("email")?.trim().toLowerCase() || "";
+    setEmail(queryEmail || getPendingVerificationEmail());
   }, []);
+
+  async function handleSendCode() {
+    setError("");
+    setMessage("");
+    const cleanEmail = email.trim().toLowerCase();
+    if (!emailPattern.test(cleanEmail)) {
+      setError("enter a valid email address first");
+      return;
+    }
+
+    setLoading(true);
+    const ok = await requestOtp(cleanEmail);
+    setLoading(false);
+    setMessage(ok ? `verification code sent to ${cleanEmail}` : "verification email could not be sent right now");
+  }
 
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,7 +42,7 @@ export default function VerifyOtpPage() {
     setMessage("");
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+    if (!emailPattern.test(cleanEmail)) {
       setError("enter a valid email address");
       return;
     }
@@ -54,24 +60,8 @@ export default function VerifyOtpPage() {
       return;
     }
 
-    router.push(`/login?email=${encodeURIComponent(cleanEmail)}`);
-  }
-
-  async function handleResend() {
-    setError("");
-    setMessage("");
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
-      setError("enter a valid email address first");
-      return;
-    }
-
-    setLoading(true);
-    const ok = await requestOtp(cleanEmail);
-    setLoading(false);
-
-    setMessage(ok ? `verification code sent to ${cleanEmail}` : "verification email could not be sent right now");
+    setMessage("email verified");
+    router.push("/onboarding");
   }
 
   return (
@@ -86,46 +76,28 @@ export default function VerifyOtpPage() {
         </div>
 
         <h2 className="text-4xl font-black tracking-tight">verify email</h2>
-        <p className="mt-2 text-white/60">enter the 6-digit code from your email</p>
+        <p className="mt-2 text-white/60">optional email verification for your BobAI account</p>
 
         <form onSubmit={handleVerify} className="mt-8 space-y-4">
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value.toLowerCase())}
-            type="email"
-            placeholder="email"
-            autoComplete="email"
-            required
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35"
-          />
-          <input
-            value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            placeholder="6-digit code"
-            maxLength={6}
-            required
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-2xl tracking-[0.4em] outline-none transition focus:border-white/25 placeholder:text-white/35"
-          />
+          <input value={email} onChange={(event) => setEmail(event.target.value.toLowerCase())} type="email" placeholder="email" autoComplete="email" required className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35" />
+
+          <button type="button" onClick={() => void handleSendCode()} disabled={loading} className="w-full rounded-2xl border border-white/15 bg-white/5 py-3 font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50">
+            {loading ? "sending..." : "send verification code"}
+          </button>
+
+          <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" maxLength={6} className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-2xl tracking-[0.4em] outline-none transition focus:border-white/25 placeholder:text-white/35" />
 
           {error && <p className="text-sm text-red-400">{error}</p>}
           {message && <p className="text-sm text-white/60">{message}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-white py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "checking..." : "verify"}
+          <button type="submit" disabled={loading || code.length !== 6} className="w-full rounded-2xl bg-white py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">
+            {loading ? "checking..." : "verify email"}
           </button>
         </form>
 
         <div className="mt-6 flex items-center justify-between text-sm text-white/50">
           <Link href="/login" className="hover:text-white">back to login</Link>
-          <button type="button" onClick={() => void handleResend()} disabled={loading} className="hover:text-white disabled:opacity-50">
-            resend code
-          </button>
+          <Link href="/signup" className="hover:text-white">create account</Link>
         </div>
       </div>
     </main>
