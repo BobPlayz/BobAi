@@ -3,28 +3,24 @@ import { spawn, ChildProcess } from "child_process";
 const OLLAMA_PATH = `${process.env.LOCALAPPDATA}\\Programs\\Ollama\\ollama.exe`;
 
 async function isOllamaRunning(): Promise<boolean> {
-  try {
-    return (await fetch("http://127.0.0.1:11434/api/version")).ok;
-  } catch {
-    return false;
-  }
+  try { return (await fetch("http://127.0.0.1:11434/api/version")).ok; } catch { return false; }
 }
 
 async function waitForOllama(timeoutMs = 15000): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (await isOllamaRunning()) return true;
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
   return false;
 }
 
-function run(name: string, command: string, args: string[]): ChildProcess {
+function run(name: string, script: "api" | "web"): ChildProcess {
   console.log(`[${name}] starting...`);
-  return spawn(command, args, {
-    stdio: "inherit",
-    shell: process.platform === "win32",
-  });
+  if (process.platform === "win32") {
+    return spawn("cmd.exe", ["/d", "/s", "/c", `npm run ${script}`], { stdio: "inherit" });
+  }
+  return spawn("npm", ["run", script], { stdio: "inherit" });
 }
 
 async function main() {
@@ -39,9 +35,8 @@ async function main() {
     console.log("[OLLAMA] ready");
   }
 
-  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-  const api = run("API", npm, ["run", "api"]);
-  const web = run("WEB", npm, ["run", "web"]);
+  const api = run("API", "api");
+  const web = run("WEB", "web");
 
   function shutdown() {
     console.log("\n[BobAI] shutting down...");
@@ -54,7 +49,7 @@ async function main() {
   process.on("SIGTERM", shutdown);
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((error) => {
+  console.error(error);
   process.exit(1);
 });
