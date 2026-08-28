@@ -26,11 +26,14 @@ router.post("/login", async (req, res) => {
   if (typeof address !== "string" || typeof password !== "string") return res.status(400).json({ error: "invalid credentials" });
   try {
     const normalizedEmail = address.trim().toLowerCase();
-    const [user] = await db.select({ id: users.id, emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.email, normalizedEmail)).limit(1);
+    const [user] = await db.select({ emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.email, normalizedEmail)).limit(1);
     if (!user) return res.status(401).json({ error: "invalid email or password" });
+    if (!user.emailVerifiedAt) {
+      await requestEmailOtp(normalizedEmail);
+      return res.status(403).json({ error: "email verification required", verificationRequired: true, email: normalizedEmail });
+    }
     const session = await login(normalizedEmail, password, { userAgent: req.get("user-agent") });
     if (!session) return res.status(401).json({ error: "invalid email or password" });
-    if (!user.emailVerifiedAt) return res.status(403).json({ error: "email verification required", verificationRequired: true, email: normalizedEmail });
     return res.json(session);
   } catch {
     return res.status(401).json({ error: "invalid email or password" });
