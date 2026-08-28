@@ -31,9 +31,13 @@ export default function VerifyOtpPage() {
     }
 
     setLoading(true);
-    const ok = await requestOtp(cleanEmail);
+    const result = await requestOtp(cleanEmail);
     setLoading(false);
-    setMessage(ok ? `verification code sent to ${cleanEmail}` : "verification email could not be sent right now");
+    if (!result.ok) {
+      setError(result.error || "verification email could not be sent right now");
+      return;
+    }
+    setMessage(`verification code sent to ${cleanEmail}`);
   }
 
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
@@ -52,11 +56,11 @@ export default function VerifyOtpPage() {
     }
 
     setLoading(true);
-    const ok = await verifyOtp(cleanEmail, code);
+    const result = await verifyOtp(cleanEmail, code);
     setLoading(false);
 
-    if (!ok) {
-      setError("invalid or expired verification code");
+    if (!result.ok) {
+      setError(result.error || "invalid or expired verification code");
       return;
     }
 
