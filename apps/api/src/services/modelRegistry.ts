@@ -1,5 +1,12 @@
 export type ModelCapability = "chat" | "reasoning" | "coding" | "fast" | "vision";
-export type ModelDefinition = { id: string; provider: "ollama"; model: string; capabilities: ModelCapability[]; description: string; visionReady: boolean };
+export type ModelDefinition = {
+  id: string;
+  provider: "ollama";
+  model: string;
+  capabilities: ModelCapability[];
+  description: string;
+  visionReady: boolean;
+};
 
 export const MODEL_REGISTRY: ModelDefinition[] = [
   { id: "qwen-3b", provider: "ollama", model: "qwen2.5:3b", capabilities: ["chat", "reasoning", "fast"], description: "fast general-purpose local chat and reasoning", visionReady: false },
@@ -15,6 +22,19 @@ export const AGENT_REGISTRY: Record<BobAgentId, { id: BobAgentId; name: string; 
   ryan: { id: "ryan", name: "Ryan", role: "reviewer", modelId: "qwen-3b", model: process.env.OLLAMA_RYAN_MODEL || "qwen2.5:3b" },
 };
 
-export const VISION_ARCHITECTURE = { provider: "ollama", configuredModelEnv: "BOBAI_VISION_MODEL", installedModelRequired: true, status: "prepared-not-installed" as const };
-export function getModelDefinition(id: string) { return MODEL_REGISTRY.find((model) => model.id === id); }
-export function getAgentDefinition(id: BobAgentId) { return AGENT_REGISTRY[id]; }
+export const DEFAULT_MODEL_ID = "qwen-3b";
+export const FALLBACK_MODEL_ID = "qwen-7b";
+export const VISION_ARCHITECTURE = {
+  provider: "ollama",
+  configuredModelEnv: "BOBAI_VISION_MODEL",
+  installedModelRequired: true,
+  status: "prepared-not-installed" as const,
+};
+
+export function getModelDefinition(id: string) {
+  return MODEL_REGISTRY.find((model) => model.id === id);
+}
+
+export function getAgentDefinition(id: BobAgentId) {
+  return AGENT_REGISTRY[id];
+}
