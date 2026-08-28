@@ -3,6 +3,8 @@ const ONBOARDING_KEY = "bobai_onboarding";
 const PENDING_EMAIL_KEY = "bobai_pending_verification_email";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+type ApiError = { error?: string };
+
 export type Session = {
   accessToken: string;
   refreshToken: string;
@@ -12,19 +14,24 @@ export type Session = {
   username?: string;
 };
 
-export async function login(email: string, password: string): Promise<{ ok: boolean }> {
+async function readJson<T>(response: Response): Promise<T> {
+  return (await response.json().catch(() => ({}))) as T;
+}
+
+export async function login(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch(`${API}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    if (!res.ok) return { ok: false };
-    const session = (await res.json()) as Session;
-    setSession(session);
+    const data = await readJson<Session & ApiError>(res);
+    if (!res.ok) return { ok: false, error: data.error || "invalid email or password" };
+    if (typeof data.accessToken !== "string" || typeof data.refreshToken !== "string") return { ok: false, error: "invalid session from backend" };
+    setSession(data);
     return { ok: true };
   } catch {
-    return { ok: false };
+    return { ok: false, error: "backend unavailable" };
   }
 }
 
@@ -35,8 +42,9 @@ export async function register(username: string, email: string, password: string
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, email, password }),
     });
-    const data = (await res.json().catch(() => ({}))) as Session & { error?: string };
+    const data = await readJson<Session & ApiError>(res);
     if (!res.ok) return { ok: false, error: data.error || "account could not be created" };
+    if (typeof data.accessToken !== "string" || typeof data.refreshToken !== "string") return { ok: false, error: "invalid session from backend" };
     setSession(data);
     return { ok: true };
   } catch {
@@ -44,31 +52,35 @@ export async function register(username: string, email: string, password: string
   }
 }
 
-export async function requestOtp(email: string): Promise<boolean> {
+export async function requestOtp(email: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch(`${API}/auth/otp/request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
-    return res.ok;
+    const data = await readJson<{ message?: string } & ApiError>(res);
+    if (!res.ok) return { ok: false, error: data.error || "verification email could not be sent right now" };
+    localStorage.setItem(PENDING_EMAIL_KEY, email.trim().toLowerCase());
+    return { ok: true };
   } catch {
-    return false;
+    return { ok: false, error: "backend unavailable" };
   }
 }
 
-export async function verifyOtp(email: string, code: string): Promise<boolean> {
+export async function verifyOtp(email: string, code: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch(`${API}/auth/otp/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, code }),
     });
-    if (!res.ok) return false;
+    const data = await readJson<{ verified?: boolean } & ApiError>(res);
+    if (!res.ok) return { ok: false, error: data.error || "invalid or expired verification code" };
     localStorage.removeItem(PENDING_EMAIL_KEY);
-    return true;
+    return { ok: data.verified === true };
   } catch {
-    return false;
+    return { ok: false, error: "backend unavailable" };
   }
 }
 
@@ -125,7 +137,11 @@ export async function refreshSession(): Promise<Session | null> {
       clearSession();
       return null;
     }
-    const session = (await res.json()) as Session;
+    const session = await readJson<Session>(res);
+    if (typeof session.accessToken !== "string" || typeof session.refreshToken !== "string") {
+      clearSession();
+      return null;
+    }
     setSession(session);
     return session;
   } catch {
