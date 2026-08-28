@@ -17,6 +17,8 @@ import agentOfficeRouter from "./agentOffice.js";
 import voiceRouter from "./voice.js";
 import musicRouter from "./music.js";
 import modelAgentsRouter from "./modelAgents.js";
+import visionRouter from "./vision.js";
+import researchRouter from "./research.js";
 
 function buildApiRouter() {
   const router = Router();
@@ -36,6 +38,8 @@ function buildApiRouter() {
   router.use("/agent-office", agentOfficeRouter);
   router.use("/voice", voiceRouter);
   router.use("/music", musicRouter);
+  router.use("/vision", visionRouter);
+  router.use("/research", researchRouter);
   router.use("/model-agents", modelAgentsRouter);
   return router;
 }
