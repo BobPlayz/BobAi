@@ -21,7 +21,10 @@ async function waitForOllama(timeoutMs = 15000): Promise<boolean> {
 
 function run(name: string, command: string, args: string[]): ChildProcess {
   console.log(`[${name}] starting...`);
-  return spawn(command, args, { stdio: "inherit", shell: false });
+  return spawn(command, args, {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
 }
 
 async function main() {
