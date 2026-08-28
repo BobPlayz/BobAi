@@ -12,11 +12,10 @@ export default function HomePage() {
       <ChatWindow
         messages={chat.activeConversation?.messages || []}
         loading={chat.loading}
-        onPinMessage={chat.togglePinMessage}
-        onDeleteMessage={chat.deleteMessage}
+        onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
+        onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
         onRegenerate={chat.regenerateLastAssistant}
       />
-
       <ChatInput
         input={chat.input}
         setInput={chat.setInput}
