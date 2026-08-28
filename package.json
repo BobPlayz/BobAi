@@ -6,6 +6,7 @@
     "web": "npm run dev --workspace=web",
     "api": "npm run dev --workspace=@bobai/api",
     "ai": "tsx scripts/start.ts",
+    "db:push": "npm run db:push --workspace=@bobai/db",
     "build": "npm run build --workspace=@bobai/api && npm run build --workspace=web",
     "test": "npm run test:security --workspace=@bobai/api",
     "audit": "npm audit --workspaces --include-workspace-root"
