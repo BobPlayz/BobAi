@@ -7,7 +7,11 @@ const router = Router();
 
 router.post("/", async (req, res) => {
   try {
-    const prepared = prepareChat({ messages: req.body?.messages, personality: req.body?.personality });
+    const prepared = prepareChat({
+      messages: req.body?.messages,
+      personality: req.body?.personality,
+      modelId: req.body?.modelId,
+    });
     if (prepared.validationError) return res.status(400).json({ error: prepared.validationError });
 
     if (prepared.memoryRequest) {
@@ -38,11 +42,17 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const response = await runChat(prepared.ollamaMessages);
-    return res.json({ reply: response.message.content, title: prepared.title, agent: "bob", streamReady: true });
+    const response = await runChat(prepared.ollamaMessages, prepared.modelId);
+    return res.json({
+      reply: response.message.content,
+      title: prepared.title,
+      agent: "bob",
+      model: prepared.modelId || process.env.OLLAMA_DEFAULT_MODEL || "qwen2.5:3b",
+      streamReady: true,
+    });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("CHAT ROUTE ERROR:", error);
-    return res.status(500).json({ error: "chat failed" });
+    return res.status(500).json({ error: error instanceof Error ? error.message : "chat failed" });
   }
 });
 
