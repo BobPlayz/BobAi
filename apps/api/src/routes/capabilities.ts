@@ -33,15 +33,16 @@ router.post("/:capability", async (req, res) => {
   const capability = req.params.capability as ProviderCapability;
   if (!supported.has(capability)) return res.status(404).json({ error: "capability not found" });
 
-  const body = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+  const body = req.body && typeof req.body === "object" && !Array.isArray(req.body)
+    ? req.body as Record<string, unknown>
+    : {};
+
   try {
     const result = await executeProviderCapability(capability, body);
     return res.json({ capability, result });
   } catch (error) {
-    return res.status(503).json({
-      error: error instanceof Error ? error.message : "capability provider unavailable",
-      capability,
-    });
+    if (process.env.NODE_ENV !== "production") console.error(`capability ${capability} failed`, error);
+    return res.status(503).json({ error: "capability provider unavailable", capability });
   }
 });
 
