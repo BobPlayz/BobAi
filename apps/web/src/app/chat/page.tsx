@@ -42,6 +42,9 @@ export default function ChatPage() {
     );
   }
 
+  const activeConversation = chat.activeConversation;
+  const hasMessages = Boolean(activeConversation?.messages.length);
+
   return (
     <NeuralShell
       sidebar={
@@ -71,7 +74,7 @@ export default function ChatPage() {
     >
       <div className="h-full overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-[900px] flex-col px-4 py-6 sm:px-8 sm:py-8">
-          {chat.activeConversation?.messages.length === 0 ? (
+          {!activeConversation || !hasMessages ? (
             <div className="flex flex-1 items-center justify-center pb-8">
               <div className="text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/5 shadow-[0_0_36px_rgba(0,217,255,0.1)]">
@@ -83,7 +86,7 @@ export default function ChatPage() {
             </div>
           ) : (
             <ChatWindow
-              messages={chat.activeConversation.messages}
+              messages={activeConversation.messages}
               loading={chat.loading}
               onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
               onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
