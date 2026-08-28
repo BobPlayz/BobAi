@@ -13,7 +13,7 @@ function workspace(req: Parameters<typeof requireAuth>[0]) {
 router.get("/", async (req, res) => {
   const id = workspace(req);
   if (!id) return res.status(400).json({ error: "x-workspace-id required" });
-  const keys = await listApiKeys(req.user.id, id);
+  const keys = await listApiKeys(req.user!.id, id);
   return keys ? res.json({ keys }) : res.status(403).json({ error: "workspace access denied" });
 });
 
@@ -23,14 +23,14 @@ router.post("/", async (req, res) => {
   if (!id || typeof name !== "string" || name.trim().length < 1 || name.length > 80) return res.status(400).json({ error: "invalid api key request" });
   const expiry = expiresAt ? new Date(expiresAt) : undefined;
   if (expiry && Number.isNaN(expiry.getTime())) return res.status(400).json({ error: "invalid expiry" });
-  const key = await createApiKey(req.user.id, id, name.trim(), permissions, expiry);
+  const key = await createApiKey(req.user!.id, id, name.trim(), permissions, expiry);
   return key ? res.status(201).json(key) : res.status(403).json({ error: "workspace access denied" });
 });
 
 router.delete("/:id", async (req, res) => {
   const id = workspace(req);
   if (!id) return res.status(400).json({ error: "x-workspace-id required" });
-  return res.status(await revokeApiKey(req.user.id, id, req.params.id) ? 204 : 404).send();
+  return res.status(await revokeApiKey(req.user!.id, id, req.params.id as string) ? 204 : 404).send();
 });
 
 export default router;
