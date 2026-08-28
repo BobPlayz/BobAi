@@ -52,25 +52,29 @@ function getProviderConfig(capability: ProviderCapability) {
   if (!config) throw new Error(`unsupported provider capability: ${capability}`);
 
   const raw = process.env[config.env]?.trim();
-  if (!raw) throw new Error(`${capability} provider is not configured; set ${config.env}`);
+  if (!raw) throw new Error(`${capability} provider is not configured`);
 
-  const url = new URL(raw);
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`${capability} provider URL is invalid`);
+  }
+
   const developmentLoopback = process.env.NODE_ENV !== "production" && url.protocol === "http:" && isLoopback(url.hostname);
   if (url.protocol !== "https:" && !developmentLoopback) {
-    throw new Error(`${config.env} must use HTTPS outside local development`);
+    throw new Error(`${capability} provider must use HTTPS outside local development`);
   }
 
   return { ...config, url, key: config.keyEnv ? process.env[config.keyEnv]?.trim() : undefined };
 }
 
 export function listProviderCapabilities() {
-  return PROVIDERS.map(({ capability, env, keyEnv, description }) => ({
+  return PROVIDERS.map(({ capability, description, env, keyEnv }) => ({
     capability,
-    env,
-    keyEnv,
     description,
     configured: Boolean(process.env[env]?.trim()),
-    authenticated: Boolean(process.env[keyEnv || ""]?.trim()),
+    authenticated: Boolean(keyEnv && process.env[keyEnv]?.trim()),
   }));
 }
 
@@ -79,7 +83,10 @@ export async function executeProviderCapability(
   input: Record<string, unknown>,
 ) {
   const config = getProviderConfig(capability);
-  const timeoutMs = Math.min(Math.max(Number(process.env.BOBAI_PROVIDER_TIMEOUT_MS || 120_000), 5_000), 300_000);
+  const timeoutValue = Number(process.env.BOBAI_PROVIDER_TIMEOUT_MS || 120_000);
+  const timeoutMs = Number.isFinite(timeoutValue)
+    ? Math.min(Math.max(timeoutValue, 5_000), 300_000)
+    : 120_000;
   const controller = new AbortController();
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (config.key) headers.authorization = `Bearer ${config.key}`;
@@ -92,6 +99,11 @@ export async function executeProviderCapability(
       body: JSON.stringify({ capability, ...input }),
       signal: controller.signal,
     });
+
+    const contentLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > 10 * 1024 * 1024) {
+      throw new Error("provider response exceeds the 10 MB limit");
+    }
 
     const text = await response.text();
     if (text.length > 10 * 1024 * 1024) throw new Error("provider response exceeds the 10 MB limit");
