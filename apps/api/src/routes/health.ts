@@ -4,13 +4,17 @@ import { ollamaProvider } from "../services/ollamaProvider.js";
 export const healthRouter = Router();
 
 async function checkDatabase() {
-  if (!process.env.DATABASE_URL) return false;
+  if (!process.env.DATABASE_URL) return { reachable: false, schemaReady: false };
   try {
     const { db } = await import("@bobai/db");
-    await db.execute("select 1");
-    return true;
+    const result = await db.execute("select to_regclass('public.users') as users_table, to_regclass('public.email_otps') as email_otps_table");
+    const row = result[0] as { users_table: string | null; email_otps_table: string | null } | undefined;
+    return {
+      reachable: true,
+      schemaReady: Boolean(row?.users_table && row?.email_otps_table)
+    };
   } catch {
-    return false;
+    return { reachable: false, schemaReady: false };
   }
 }
 
@@ -22,7 +26,8 @@ healthRouter.get("/ready", async (_req, res) => {
   const [database, ollama] = await Promise.all([checkDatabase(), ollamaProvider.registryStatus()]);
   const checks = {
     databaseConfigured: Boolean(process.env.DATABASE_URL),
-    databaseReachable: database,
+    databaseReachable: database.reachable,
+    databaseSchemaReady: database.schemaReady,
     ollamaConfigured: Boolean(process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || process.env.OLLAMA_URL),
     ollamaReachable: ollama.connected,
     ollamaBaseUrl: ollama.baseUrl,
@@ -30,6 +35,6 @@ healthRouter.get("/ready", async (_req, res) => {
     codingAgentsConfigured: Boolean(process.env.BOBAI_CODING_AGENTS_DIR),
     videoProviderConfigured: Boolean(process.env.BOBAI_VIDEO_PROVIDER_URL),
   };
-  const ready = ollama.connected && (!checks.databaseConfigured || database);
+  const ready = ollama.connected && (!checks.databaseConfigured || (database.reachable && database.schemaReady));
   return res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "degraded", checks });
 });
