@@ -2,43 +2,28 @@ import { extractMemory } from "../utils/memoryExtractor.js";
 import { selectModel } from "./modelRouter.js";
 
 export type ChatRole = "system" | "user" | "assistant";
-
-export type ChatMessage = {
-  role: ChatRole;
-  content: string;
-};
-
-export type ChatInput = {
-  messages: unknown;
-  personality?: unknown;
-  modelId?: unknown;
-};
+export type ChatMessage = { role: ChatRole; content: string };
+export type ChatInput = { messages: unknown; personality?: unknown; modelId?: unknown; memoryContext?: string[] };
 
 const MAX_MESSAGES = 100;
 const MAX_MESSAGE_LENGTH = 100_000;
 const MAX_PERSONALITY_LENGTH = 10_000;
+const MAX_MEMORIES = 20;
+const MAX_MEMORY_LENGTH = 2_000;
 
 export function normalizeMessages(input: unknown): ChatMessage[] {
   if (!Array.isArray(input)) return [];
-
   return input.map((message: unknown) => {
     const value = message as { role?: unknown; content?: unknown } | null;
-    return {
-      role: value?.role === "assistant" ? "assistant" : "user",
-      content: typeof value?.content === "string" ? value.content : String(value?.content ?? ""),
-    };
+    return { role: value?.role === "assistant" ? "assistant" : "user", content: typeof value?.content === "string" ? value.content : String(value?.content ?? "") };
   });
 }
 
 export function validateChat(messages: ChatMessage[], personality: string): string | null {
   if (messages.length === 0) return "messages must contain at least one message";
   if (messages.length > MAX_MESSAGES) return `messages cannot contain more than ${MAX_MESSAGES} items`;
-  if (messages.some((message) => message.content.length > MAX_MESSAGE_LENGTH)) {
-    return `each message cannot exceed ${MAX_MESSAGE_LENGTH} characters`;
-  }
-  if (personality.length > MAX_PERSONALITY_LENGTH) {
-    return `personality cannot exceed ${MAX_PERSONALITY_LENGTH} characters`;
-  }
+  if (messages.some((message) => message.content.length > MAX_MESSAGE_LENGTH)) return `each message cannot exceed ${MAX_MESSAGE_LENGTH} characters`;
+  if (personality.length > MAX_PERSONALITY_LENGTH) return `personality cannot exceed ${MAX_PERSONALITY_LENGTH} characters`;
   return null;
 }
 
@@ -46,9 +31,7 @@ export function getLatestUserMessage(messages: ChatMessage[]): ChatMessage | und
   return [...messages].reverse().find((message) => message.role === "user");
 }
 
-export function getPersonality(input: unknown): string {
-  return typeof input === "string" ? input.trim() : "";
-}
+export function getPersonality(input: unknown): string { return typeof input === "string" ? input.trim() : ""; }
 
 export function getRequestedModelId(input: unknown): string | undefined {
   if (typeof input !== "string") return undefined;
@@ -56,10 +39,12 @@ export function getRequestedModelId(input: unknown): string | undefined {
   return value || undefined;
 }
 
-export function buildSystemPrompt(personality: string): ChatMessage {
+export function buildSystemPrompt(personality: string, memoryContext: string[] = []): ChatMessage {
+  const memories = memoryContext.filter((memory) => typeof memory === "string" && memory.trim()).slice(0, MAX_MEMORIES).map((memory) => memory.trim().slice(0, MAX_MEMORY_LENGTH));
+  const memoryBlock = memories.length ? memories.map((memory, index) => `${index + 1}. ${memory}`).join("\n") : "none";
   return {
     role: "system",
-    content: `you are bobai.\n\ndefault language: english unless the user explicitly changes language.\n\ntalk naturally, casually, and like a real person.\nkeep grammar relaxed.\navoid sounding like a textbook.\nadapt to the user's writing style over time.\n\nnever randomly switch languages.\nnever claim to remember information that is not present in the supplied conversation or memory context.\n\nuser customization:\n${personality || "none"}\n\nsaved memory is handled by the memory service and is intentionally not read from a local fallback store.`,
+    content: `you are bobai.\n\ndefault language: english unless the user explicitly changes language.\n\ntalk naturally, casually, and like a real person.\nkeep grammar relaxed.\navoid sounding like a textbook.\nadapt to the user's writing style over time.\n\nnever randomly switch languages.\nnever claim to remember information that is not present in the supplied conversation or memory context.\n\nuser customization:\n${personality || "none"}\n\nlong-term memory supplied by the memory service:\n${memoryBlock}\n\nuse memory only when it is relevant to the current request.`,
   };
 }
 
@@ -68,7 +53,7 @@ export function prepareChat(input: ChatInput) {
   const personality = getPersonality(input.personality);
   const modelId = getRequestedModelId(input.modelId);
   const latestUserMessage = getLatestUserMessage(messages);
-
+  const memoryContext = Array.isArray(input.memoryContext) ? input.memoryContext : [];
   return {
     messages,
     personality,
@@ -76,7 +61,7 @@ export function prepareChat(input: ChatInput) {
     latestUserMessage,
     validationError: validateChat(messages, personality),
     memoryRequest: Boolean(latestUserMessage && extractMemory(latestUserMessage.content)),
-    ollamaMessages: [buildSystemPrompt(personality), ...messages],
+    ollamaMessages: [buildSystemPrompt(personality, memoryContext), ...messages],
     title: latestUserMessage?.content?.slice(0, 32) || messages[0]?.content?.slice(0, 32) || "new chat",
   };
 }
@@ -84,26 +69,15 @@ export function prepareChat(input: ChatInput) {
 export async function runChat(messages: ChatMessage[], modelId?: string) {
   const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "qwen-3b" });
   return selected.provider === "ollama"
-    ? await import("ollama").then(({ default: ollama }) => ollama.chat({
-        model: selected.model,
-        messages,
-        options: { temperature: 0.9, top_p: 0.9 },
-      }))
+    ? await import("ollama").then(({ default: ollama }) => ollama.chat({ model: selected.model, messages, options: { temperature: 0.9, top_p: 0.9 } }))
     : (() => { throw new Error(`unsupported model provider: ${selected.provider}`); })();
 }
 
 export async function runStream(messages: ChatMessage[], onToken: (token: string) => void, modelId?: string): Promise<string> {
   const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "qwen-3b" });
   if (selected.provider !== "ollama") throw new Error(`unsupported model provider: ${selected.provider}`);
-
   const { default: ollama } = await import("ollama");
-  const response = await ollama.chat({
-    model: selected.model,
-    messages,
-    stream: true,
-    options: { temperature: 0.9, top_p: 0.9 },
-  });
-
+  const response = await ollama.chat({ model: selected.model, messages, stream: true, options: { temperature: 0.9, top_p: 0.9 } });
   let full = "";
   for await (const chunk of response) {
     const token = chunk.message.content;
