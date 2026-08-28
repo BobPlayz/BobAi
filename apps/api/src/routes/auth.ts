@@ -6,15 +6,34 @@ import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const username = /^[A-Za-z0-9_]{3,32}$/;
+const authBuckets = new Map<string, { startedAt: number; count: number }>();
+const AUTH_WINDOW_MS = 15 * 60_000;
+const AUTH_MAX_ATTEMPTS = 10;
+
+function limited(req: { ip?: string }, key: string) {
+  const now = Date.now();
+  const bucketKey = `${req.ip || "unknown"}:${key}`;
+  const current = authBuckets.get(bucketKey);
+  if (!current || now - current.startedAt >= AUTH_WINDOW_MS) {
+    authBuckets.set(bucketKey, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > AUTH_MAX_ATTEMPTS;
+}
+
+function cleanupAuthBuckets() {
+  const cutoff = Date.now() - AUTH_WINDOW_MS;
+  for (const [key, bucket] of authBuckets) if (bucket.startedAt < cutoff) authBuckets.delete(key);
+}
+setInterval(cleanupAuthBuckets, AUTH_WINDOW_MS).unref();
 
 router.post("/register", async (req, res) => {
   const { email: address, username: name, password } = req.body ?? {};
   const normalizedEmail = typeof address === "string" ? address.trim().toLowerCase() : "";
   const normalizedUsername = typeof name === "string" ? name.trim() : "";
-
-  if (!email.test(normalizedEmail) || !username.test(normalizedUsername) || typeof password !== "string" || password.length < 12 || password.length > 128) {
-    return res.status(400).json({ error: "invalid registration details" });
-  }
+  if (!email.test(normalizedEmail) || !username.test(normalizedUsername) || typeof password !== "string" || password.length < 12 || password.length > 128) return res.status(400).json({ error: "invalid registration details" });
+  if (limited(req, "register")) return res.status(429).json({ error: "too many registration attempts", retryAfterSeconds: 900 });
 
   try {
     const user = await createUser(normalizedEmail, normalizedUsername, password);
@@ -27,21 +46,23 @@ router.post("/register", async (req, res) => {
       if (databaseError.constraint?.includes("username")) return res.status(409).json({ error: "that username is already taken" });
       return res.status(409).json({ error: "an account with these details already exists" });
     }
-    console.error("[AUTH] registration failed", error);
+    if (process.env.NODE_ENV !== "production") console.error("[AUTH] registration failed", error);
     return res.status(503).json({ error: "account service unavailable" });
   }
 });
 
 router.post("/login", async (req, res) => {
   const { email: address, password } = req.body ?? {};
+  const normalizedEmail = typeof address === "string" ? address.trim().toLowerCase() : "";
   if (typeof address !== "string" || typeof password !== "string") return res.status(400).json({ error: "invalid credentials" });
+  if (limited(req, `login:${normalizedEmail.slice(0, 254)}`)) return res.status(429).json({ error: "too many login attempts", retryAfterSeconds: 900 });
 
   try {
-    const session = await login(address.trim().toLowerCase(), password, { userAgent: req.get("user-agent") });
+    const session = await login(normalizedEmail, password, { userAgent: req.get("user-agent") });
     if (!session) return res.status(401).json({ error: "invalid email or password" });
     return res.json(session);
   } catch (error) {
-    console.error("[AUTH] login failed", error);
+    if (process.env.NODE_ENV !== "production") console.error("[AUTH] login failed", error);
     return res.status(503).json({ error: "authentication service unavailable" });
   }
 });
@@ -63,11 +84,12 @@ router.post("/logout", async (req, res) => {
 router.post("/otp/request", async (req, res) => {
   const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   if (!email.test(address)) return res.status(400).json({ error: "invalid email" });
+  if (limited(req, `otp-request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many verification requests", retryAfterSeconds: 900 });
   try {
     await requestEmailOtp(address);
     return res.status(202).json({ message: "if the account exists, a verification code has been sent" });
   } catch (error) {
-    console.error("[AUTH] otp delivery failed", error);
+    if (process.env.NODE_ENV !== "production") console.error("[AUTH] otp delivery failed", error);
     return res.status(503).json({ error: "verification email could not be sent right now" });
   }
 });
@@ -76,11 +98,12 @@ router.post("/otp/verify", async (req, res) => {
   const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const code = typeof req.body?.code === "string" ? req.body.code : "";
   if (!email.test(address) || !/^\d{6}$/.test(code)) return res.status(400).json({ error: "invalid verification code" });
+  if (limited(req, `otp-verify:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many verification attempts", retryAfterSeconds: 900 });
   try {
     if (!await verifyEmailOtp(address, code)) return res.status(400).json({ error: "invalid or expired verification code" });
     return res.json({ verified: true });
   } catch (error) {
-    console.error("[AUTH] otp verification failed", error);
+    if (process.env.NODE_ENV !== "production") console.error("[AUTH] otp verification failed", error);
     return res.status(503).json({ error: "verification unavailable" });
   }
 });
