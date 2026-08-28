@@ -1,27 +1,32 @@
 🧠 bobai — 10 phase roadmap
 
-last updated: 2026-08-24
+last updated: 2026-08-28
 
 recent implementation log
 
-- legacy is now the default experience for new and existing users without a saved theme
-- theme provider now supports legacy, futuristic, anime, glass, light, and dark modes
-- accent color customization persists locally and updates the shared UI token
-- futuristic robot intro remains the available 3d intro and now cancels cleanly on theme changes
-- onboarding is routed after login/signup and persists its answers locally
-- React Bits-inspired Stepper, BorderGlow, GooeyNav, PillNav, and MagicBento integrations are active
-- removed five verified unreferenced UI components; legacy components remain because legacy is the default
-- copyright-free recognizable versions of 30 popular anime franchise characters are not available as a safe bundle
-- anime 3d character pack remains blocked until original CC0 assets or explicit redistribution licenses are acquired
-- natural-language coding-task detection now routes qualifying chat requests to the configured coding-agent bridge without slash commands
+- legacy remains the default experience for users without a saved theme
+- theme provider supports legacy, futuristic, anime, glass, light, and dark modes
+- accent color customization persists locally
+- futuristic robot intro remains the available 3d intro and cancels cleanly on theme changes
+- onboarding is routed after login/signup and persists locally
+- React Bits-inspired UI integrations are active
+- natural-language coding-task detection routes qualifying chat requests to the configured coding-agent bridge
 - normal Ollama chat remains the fallback for non-coding requests
-- saved memory is now included in normal and streaming Ollama chat context
-- natural-language memory requests are now extracted and persisted by chat
+- memory extraction and persistence are wired into chat
 - streaming is mounted at `/stream`, image generation targets `/images/generate`, and PDF extraction uses the installed `pdf-parse` v2 API
+- local model registry now defines qwen 3b, qwen 7b, coder 1.5b, and coder latest with capability metadata
+- Ollama provider now performs health checks, installed-model discovery, availability checks, request timeouts, and provider health tracking
+- centralized model routing is wired into normal and streaming chat with capability-safe fallback selection
+- Alex, Ben, and Ryan model routing is explicit: Alex → qwen 3b, Ben → coder latest, Ryan → qwen 3b
+- vision remains architecture-ready but is not reported as installed without a configured vision model
+- coding orchestration provides Alex → Ben → Ryan planning/coding/review flow with internal messages, task status, and review retries
+- `/model-agents/models`, `/model-agents/agents`, and orchestration endpoints expose the configured model/agent architecture behind agent authentication
+- `.env.example` and `apps/api/.env.example` document local Ollama/model configuration without real secrets
+- `/ready` now reports real Ollama readiness and the registered models detected on the machine
 
 phase 1 — foundation & project architecture
 
-~85% done
+~90% done
 
  monorepo structure
  api project
@@ -29,8 +34,12 @@ phase 1 — foundation & project architecture
  typescript setup
  basic api communication
  postgres/drizzle/pgvector groundwork
- final production architecture
- complete shared state architecture
+ production architecture foundation
+ shared state groundwork
+ security integration tests
+
+remaining: complete end-to-end production state architecture and deployment setup
+
 phase 2 — cinematic neural ui
 
 ~75% done
@@ -40,7 +49,6 @@ phase 2 — cinematic neural ui
  topbar
  composer
  theme provider
- four theme identifiers
  glass/neural visual direction
  robot/scene prototype
  final reference-accurate proportions
@@ -48,176 +56,132 @@ phase 2 — cinematic neural ui
  complete theme visuals
  every visible control functional
 
-the shared theme foundation, selectable themes, persistent accent customization, and intro lifecycle are implemented. final reference-accurate styling and licensed anime assets remain.
+shared theme foundation and selectable themes are implemented. final reference-accurate styling and licensed anime assets remain.
 
 phase 3 — chat + global app state
 
-~45% done
+~50% done
 
- chat page exists
- composer exists
- basic chat/api flow existed
- conversation-management callbacks exist
- centralized global state
+ chat page
+ composer
+ connected chat/api flow
+ conversation-management callbacks
  active conversation state
- reliable new chat/search/select/pin/rename/delete
- verified autoscroll
- complete chat persistence
- natural-language intent routing for coding requests
+ new chat/search/select/pin/rename/delete
+ natural-language coding intent routing
+ model selection hook in chat API
+ streaming model routing
 
-global state and the actual connected sidebar/topbar flow are explicitly listed as next work.
+remaining: full server-backed conversation persistence, verified autoscroll, and complete global state integration
 
 phase 4 — library, settings & personalization
 
 ~25% done
 
- fully functional library
- file management
+ library interface
+ file management groundwork
  settings interface
- model settings
+ model settings groundwork
  personality settings
- sfw personality cards
- personality actually changes chat behavior
- persistent preferences
- theme selector with six modes
+ theme selector
  persistent accent customization
 
-the interfaces/components were planned, but functionality wasn't confirmed.
+remaining: confirm and wire every interface end-to-end
 
 phase 5 — memory + files
 
-~15% done
+~20% done
 
- conversation memory
- long-term memory
- semantic/vector memory
+ conversation memory groundwork
+ long-term memory groundwork
+ semantic/vector schema
  file uploads
- file analysis
- document understanding
- memory retrieval
- memory controls/privacy
- memory retrieval into chat context
+ file analysis groundwork
+ memory retrieval service groundwork
  natural-language memory writes
 
-this is basically future work right now, not something i'm gonna bullshit you into calling 50% because we talked about it 💀
+remaining: robust retrieval, embeddings, controls/privacy, and complete file/document pipeline
 
 phase 6 — models + ai engine
 
-~30% done
+~55% done
 
- basic model/provider groundwork
- Ollama experimentation
- local model configuration in coding-agent subsystem
- proper provider abstraction
- reliable model selection
- cloud/local fallback
+ model registry
+ capability metadata
+ Ollama provider
+ connection/health check
+ installed-model discovery
+ model availability
+ centralized model selection
+ capability-safe fallback
+ configurable default/fallback models
  streaming
- structured generation
- production reliability
- configurable Ollama chat model
- verified API TypeScript build
+ provider health tracking
 
-the coding-agent side specifically still has Ollama EOF/timeouts and unreliable structured output.
+remaining: cloud providers, embeddings, structured generation, production reliability, and laptop verification of all local models
 
 phase 7 — tools + web + multimodal
 
 ~5% done
 
- web search
- browser/tool execution
+ web search groundwork
  image generation
- vision
- voice input
- voice output
- tool permissions
- tool orchestration
+ vision architecture
+ voice groundwork
+ tool permissions groundwork
 
-emma/vision is only defined/configured conceptually; actual implementation wasn't confirmed.
+vision is intentionally not marked installed without a real configured vision model.
 
 phase 8 — autonomous agents / coding agents
 
-~50% done architecturally, ~25% reliable
+~55% done architecturally, laptop reliability still unverified
 
- alex organiser
+ alex planner
  ben coder
  ryan reviewer
  agent interfaces
- conversation logging
- filesystem actions
- workspace inspection
- orchestration loop
+ task/status tracking
+ internal agent messages
+ Alex → Ben → Ryan orchestration
+ review loop
  retry infrastructure
- checkpoint/rollback hooks
- reliable planning
- reliable coding
- reliable reviewing
- genuine agent-to-agent communication
- emma vision agent
- zero-action success protection
- production validation
- integrate into BobAI
- explicit natural-language handoff from BobAI chat
+ coding-agent bridge
+ workspace inspection architecture
 
-the architecture exists, but actual autonomous execution was not demonstrated reliably.
+remaining: real filesystem execution, checkpoints/rollback, reliable structured output, and end-to-end laptop execution
 
 phase 9 — complete product integration
 
-~10% done
+~20% done
 
- connect all core systems
- chat ↔ memory
- chat ↔ files
- chat ↔ tools
  chat ↔ models
- chat ↔ agents (explicit coding-task handoff is now wired)
- bobai decides when to invoke coding agents
- unified user-facing experience
- permissions/security
- end-to-end workflows
+ chat ↔ agents
+ natural-language coding handoff
+ model/agent inspection endpoints
+ readiness reporting
 
-the initial natural-language coding-task handoff is wired, but permissions, user-visible run state, cancellation, audit history, and reliable end-to-end agent execution remain unfinished.
+remaining: chat ↔ memory/files/tools, user-visible agent run state, cancellation, audit history, permissions, and complete end-to-end workflows
 
 phase 10 — polish, testing & production
 
-~0–5% done
+~5% done
 
- full end-to-end testing
- performance optimization
- error handling
- security hardening
- production database setup
- deployment
- monitoring
- mobile/desktop clients
- api for external clients
- final ui polish
- production validation
+ security integration tests
+ build validation
+ production config validation
 
- no final production hosting configuration was established, and the handoff explicitly says production validation is still incomplete.
+remaining: local runtime pass, all model verification, Neon/database configuration, real agent execution, full end-to-end testing, performance, deployment, monitoring, mobile/desktop clients, and final UI polish
 
-theme and asset decisions
+current local verification sequence
 
-- default: legacy, intentionally plain and low-distraction
-- optional: futuristic/neural with the existing animated robot scene
-- optional: anime theme shell is ready, but its 3d character requires an original or explicitly redistributable asset
-- optional: glass, light, and dark themes use the shared token system
-- planned: acquire or commission 30 anime-style original characters with rights for web embedding, modification, and redistribution as part of BobAI
-- do not download or bundle fan-made models of Naruto, Goku, Luffy, or other recognizable franchise characters without explicit rights
-
-📊 overall status rn
-
-roughly, by feature completion rather than lines of code:
-
-phase 1: 85%
-phase 2: 75%
-phase 3: 45%
-phase 4: 25%
-phase 5: 20%
-phase 6: 30%
-phase 7: 5%
-phase 8: 50% architecture / ~25% reliability
-phase 9: 10%
-phase 10: ~5%
-
-so i'd call bobai overall around ~25–30% complete right now.
+1. pull the latest main
+2. install dependencies
+3. configure the local `.env`
+4. verify Ollama and all four registered models
+5. configure Neon/PostgreSQL
+6. configure the coding-agent workspace/key locally
+7. run the agents against real files
+8. run build
+9. run tests
+10. run the complete local runtime pass
 
