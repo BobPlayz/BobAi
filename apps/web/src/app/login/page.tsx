@@ -11,19 +11,23 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const value = new URLSearchParams(window.location.search).get("email");
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get("email");
     if (value) setEmail(value);
+    if (params.get("created") === "1") setMessage("account created — you can log in now");
   }, []);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setMessage("");
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
       setError("enter a valid email address");
       return;
     }
@@ -37,11 +41,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (!result.ok) {
-      if (result.verificationRequired) {
-        router.push(`/verify-otp?email=${encodeURIComponent(cleanEmail)}`);
-        return;
-      }
-      setError("invalid credentials or backend unavailable");
+      setError("invalid email or password");
       return;
     }
 
@@ -60,40 +60,21 @@ export default function LoginPage() {
         </div>
 
         <h2 className="text-4xl font-black tracking-tight">welcome back</h2>
-        <p className="mt-2 text-white/60">log in to connect this client to your BobAI session</p>
+        <p className="mt-2 text-white/60">log in to your BobAI account</p>
 
         <form onSubmit={handleLogin} className="mt-8 space-y-4">
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35"
-          />
-          <input
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
-            autoComplete="current-password"
-            placeholder="password"
-            required
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35"
-          />
+          <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="email" type="email" autoComplete="email" required className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35" />
+          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password" placeholder="password" required className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35" />
+          {message && <p className="text-sm text-white/60">{message}</p>}
           {error && <p className="text-sm text-red-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-white py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading} className="w-full rounded-2xl bg-white py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">
             {loading ? "logging in..." : "log in"}
           </button>
         </form>
 
         <div className="mt-6 flex items-center justify-between text-sm text-white/50">
           <Link href="/signup" className="hover:text-white">create account</Link>
-          <Link href="/verify-otp" className="hover:text-white">verify email</Link>
+          <Link href={`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`} className="hover:text-white">verify email</Link>
         </div>
       </div>
     </main>
