@@ -8,6 +8,8 @@ const STORAGE_KEY = "bobai.conversations.v2";
 const SETTINGS_KEY = "bobai.settings.v1";
 type GeneratedImage = { url: string; prompt?: string };
 
+type ImageResponse = { images: GeneratedImage[] };
+
 function createConversation(): Conversation {
   return { id: crypto.randomUUID(), title: "new chat", createdAt: Date.now(), pinned: false, messages: [] };
 }
@@ -71,7 +73,7 @@ export function useChat() {
     try {
       const result = await sendMessage(nextMessages, settings.personality);
       const aiMessage = result.imagePrompt
-        ? imageMessage((await generateImage(result.imagePrompt)) as { images: GeneratedImage[] }.images)
+        ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images)
         : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply };
       updateConversation(conversationId, (c) => ({ ...c, title: result.title || c.title, messages: [...nextMessages, aiMessage] }));
     } catch (error) {
@@ -110,7 +112,7 @@ export function useChat() {
     try {
       const result = await sendMessage(withoutAssistant, settings.personality);
       const aiMessage = result.imagePrompt
-        ? imageMessage((await generateImage(result.imagePrompt)) as { images: GeneratedImage[] }.images)
+        ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images)
         : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply };
       updateConversation(activeId, (c) => ({ ...c, title: result.title || c.title, messages: [...withoutAssistant, aiMessage] }));
     } finally { setLoadingConversationId(null); }
@@ -118,22 +120,51 @@ export function useChat() {
 
   function newChat() { const convo = createConversation(); setConversations((prev) => [convo, ...prev]); setActiveId(convo.id); setInput(""); }
   function togglePin(id: string) { updateConversation(id, (c) => ({ ...c, pinned: !c.pinned })); }
-  function renameConversation(id: string, title: string) { const next = title.trim(); if (next) updateConversation(id, (c) => ({ ...c, title: next })); }
+
+  function togglePinMessage(conversationId: string, messageId: string) {
+    updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) }));
+  }
+
+  function deleteMessage(conversationId: string, messageId: string) {
+    updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.filter((m) => m.id !== messageId) }));
+  }
+
+  function renameConversation(id: string, title: string) {
+    const next = title.trim();
+    if (next) updateConversation(id, (c) => ({ ...c, title: next.slice(0, 200) }));
+  }
+
   function deleteConversation(id: string) {
     setConversations((prev) => {
-      const remaining = prev.filter((c) => c.id !== id);
-      if (!remaining.length) { const fresh = createConversation(); setActiveId(fresh.id); return [fresh]; }
-      if (activeId === id) setActiveId(remaining[0].id);
-      return remaining;
+      const next = prev.filter((c) => c.id !== id);
+      if (id === activeId) setActiveId(next[0]?.id || "");
+      return next;
     });
   }
-  function togglePinMessage(messageId: string) { updateConversation(activeId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) })); }
-  function deleteMessage(messageId: string) { updateConversation(activeId, (c) => ({ ...c, messages: c.messages.filter((m) => m.id !== messageId) })); }
 
   return {
-    conversations: visibleConversations, activeConversation, activeId, setActiveId, newChat, input, setInput, send, handleFiles,
-    uploadingFiles, uploadProgress, loading: loadingConversationId === activeId, search, setSearch, togglePin, renameConversation,
-    deleteConversation, togglePinMessage, deleteMessage, regenerateLastAssistant, personality: settings.personality,
-    setPersonality: (personality: string) => setSettings({ personality }),
+    conversations,
+    visibleConversations,
+    activeConversation,
+    activeId,
+    setActiveId,
+    input,
+    setInput,
+    search,
+    setSearch,
+    loading: Boolean(loadingConversationId),
+    uploadingFiles,
+    uploadProgress,
+    settings,
+    setSettings,
+    send,
+    handleFiles,
+    regenerateLastAssistant,
+    newChat,
+    togglePin,
+    togglePinMessage,
+    deleteMessage,
+    renameConversation,
+    deleteConversation,
   };
 }
