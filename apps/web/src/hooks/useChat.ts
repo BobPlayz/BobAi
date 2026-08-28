@@ -11,6 +11,7 @@ import type {
 
 const STORAGE_KEY = "bobai.conversations.v2";
 const SETTINGS_KEY = "bobai.settings.v1";
+type GeneratedImage = { url: string; prompt?: string };
 
 function createConversation(): Conversation {
   return {
@@ -163,14 +164,14 @@ export function useChat() {
       if (result.imagePrompt) {
         const imageResult = await generateImage(
           result.imagePrompt
-        );
+        ) as { images: GeneratedImage[] };
 
         aiMessage = {
           id: crypto.randomUUID(),
           role: "assistant",
           content: "",
           images: imageResult.images.map(
-            (img): ChatImage => ({
+            (img: GeneratedImage): ChatImage => ({
               id: crypto.randomUUID(),
               url: img.url,
               prompt: img.prompt,
@@ -341,14 +342,14 @@ export function useChat() {
       if (result.imagePrompt) {
         const imageResult = await generateImage(
           result.imagePrompt
-        );
+        ) as { images: GeneratedImage[] };
 
         aiMessage = {
           id: crypto.randomUUID(),
           role: "assistant",
           content: "",
           images: imageResult.images.map(
-            (img): ChatImage => ({
+            (img: GeneratedImage): ChatImage => ({
               id: crypto.randomUUID(),
               url: img.url,
               prompt: img.prompt,
