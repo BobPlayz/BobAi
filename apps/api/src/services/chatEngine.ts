@@ -1,5 +1,5 @@
-import ollama from "ollama";
 import { extractMemory } from "../utils/memoryExtractor.js";
+import { selectModel } from "./modelRouter.js";
 
 export type ChatRole = "system" | "user" | "assistant";
 
@@ -11,6 +11,7 @@ export type ChatMessage = {
 export type ChatInput = {
   messages: unknown;
   personality?: unknown;
+  modelId?: unknown;
 };
 
 const MAX_MESSAGES = 100;
@@ -49,36 +50,29 @@ export function getPersonality(input: unknown): string {
   return typeof input === "string" ? input.trim() : "";
 }
 
+export function getRequestedModelId(input: unknown): string | undefined {
+  if (typeof input !== "string") return undefined;
+  const value = input.trim();
+  return value || undefined;
+}
+
 export function buildSystemPrompt(personality: string): ChatMessage {
   return {
     role: "system",
-    content: `you are bobai.
-
-default language: english unless the user explicitly changes language.
-
-talk naturally, casually, and like a real person.
-keep grammar relaxed.
-avoid sounding like a textbook.
-adapt to the user's writing style over time.
-
-never randomly switch languages.
-never claim to remember information that is not present in the supplied conversation or memory context.
-
-user customization:
-${personality || "none"}
-
-saved memory is handled by the memory service and is intentionally not read from a local fallback store.`,
+    content: `you are bobai.\n\ndefault language: english unless the user explicitly changes language.\n\ntalk naturally, casually, and like a real person.\nkeep grammar relaxed.\navoid sounding like a textbook.\nadapt to the user's writing style over time.\n\nnever randomly switch languages.\nnever claim to remember information that is not present in the supplied conversation or memory context.\n\nuser customization:\n${personality || "none"}\n\nsaved memory is handled by the memory service and is intentionally not read from a local fallback store.`,
   };
 }
 
 export function prepareChat(input: ChatInput) {
   const messages = normalizeMessages(input.messages);
   const personality = getPersonality(input.personality);
+  const modelId = getRequestedModelId(input.modelId);
   const latestUserMessage = getLatestUserMessage(messages);
 
   return {
     messages,
     personality,
+    modelId,
     latestUserMessage,
     validationError: validateChat(messages, personality),
     memoryRequest: Boolean(latestUserMessage && extractMemory(latestUserMessage.content)),
@@ -87,17 +81,24 @@ export function prepareChat(input: ChatInput) {
   };
 }
 
-export async function runChat(messages: ChatMessage[]) {
-  return ollama.chat({
-    model: process.env.OLLAMA_CHAT_MODEL || "qwen2.5:3b",
-    messages,
-    options: { temperature: 0.9, top_p: 0.9 },
-  });
+export async function runChat(messages: ChatMessage[], modelId?: string) {
+  const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "qwen-3b" });
+  return selected.provider === "ollama"
+    ? await import("ollama").then(({ default: ollama }) => ollama.chat({
+        model: selected.model,
+        messages,
+        options: { temperature: 0.9, top_p: 0.9 },
+      }))
+    : (() => { throw new Error(`unsupported model provider: ${selected.provider}`); })();
 }
 
-export async function runStream(messages: ChatMessage[], onToken: (token: string) => void): Promise<string> {
+export async function runStream(messages: ChatMessage[], onToken: (token: string) => void, modelId?: string): Promise<string> {
+  const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "qwen-3b" });
+  if (selected.provider !== "ollama") throw new Error(`unsupported model provider: ${selected.provider}`);
+
+  const { default: ollama } = await import("ollama");
   const response = await ollama.chat({
-    model: process.env.OLLAMA_CHAT_MODEL || "qwen2.5:3b",
+    model: selected.model,
     messages,
     stream: true,
     options: { temperature: 0.9, top_p: 0.9 },
