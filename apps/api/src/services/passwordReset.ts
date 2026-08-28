@@ -1,16 +1,16 @@
 import { createHash, randomBytes, scrypt as scryptCallback } from "node:crypto";
-import { promisify } from "node:util";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, passwordResets, sessions, users } from "@bobai/db";
 
-const scrypt = promisify(scryptCallback);
+const scrypt = (password: string, salt: Buffer, keylen: number, options: { N: number; r: number; p: number }) => new Promise<Buffer>((resolve, reject) => scryptCallback(password, salt, keylen, options, (error, derived) => error ? reject(error) : resolve(derived as Buffer)));
 const TTL_MS = 15 * 60 * 1000;
+const SCRYPT = { N: 1 << 15, r: 8, p: 1 };
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const token = () => randomBytes(32).toString("base64url");
 
 async function passwordHash(password: string) {
   const salt = randomBytes(16);
-  const value = (await scrypt(password, salt, 64, { N: 1 << 15, r: 8, p: 1 })) as Buffer;
+  const value = await scrypt(password, salt, 64, SCRYPT);
   return `${salt.toString("base64url")}.${value.toString("base64url")}`;
 }
 

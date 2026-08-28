@@ -1,30 +1,38 @@
 import { Router } from "express";
-import { listConversations, getConversation, saveConversation, deleteConversation } from "../store/conversations.js";
+import { and, eq } from "drizzle-orm";
+import { db, workspaceMembers } from "@bobai/db";
+import { requireAuth } from "../middleware/auth.js";
 import { dbDeleteConversation, dbGetConversation, dbListConversations, dbSaveConversation } from "../store/conversationDb.js";
 
 const router = Router();
+router.use(requireAuth);
 
 type RequestContext = { userId: string; workspaceId: string };
 
-function dbContext(req: { query: Record<string, unknown>; body?: unknown }): RequestContext | null {
+function workspaceId(req: { query: Record<string, unknown>; body?: unknown }) {
   const body = req.body as Record<string, unknown> | undefined;
-  const userId = typeof req.query.userId === "string" ? req.query.userId : typeof body?.userId === "string" ? body.userId : "";
-  const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId : typeof body?.workspaceId === "string" ? body.workspaceId : "";
-  return userId && workspaceId ? { userId, workspaceId } : null;
+  const value = typeof req.query.workspaceId === "string" ? req.query.workspaceId : typeof body?.workspaceId === "string" ? body.workspaceId : "";
+  return /^[0-9a-f-]{36}$/i.test(value) ? value : "";
 }
 
-function requireContext(req: Parameters<typeof dbContext>[0], res: Parameters<Router["get"]>[1]) {
-  const context = dbContext(req);
-  if (!context) {
-    res.status(401).json({ error: "authenticated user and workspace context are required" });
+async function requireContext(req: Parameters<typeof workspaceId>[0], res: Parameters<Router["get"]>[1]): Promise<RequestContext | null> {
+  const id = workspaceId(req);
+  if (!id) {
+    res.status(400).json({ error: "workspace context is required" });
     return null;
   }
-  return context;
+  const userId = (req as typeof req & { user: { id: string } }).user.id;
+  const [member] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, id), eq(workspaceMembers.userId, userId))).limit(1);
+  if (!member) {
+    res.status(403).json({ error: "workspace access denied" });
+    return null;
+  }
+  return { userId, workspaceId: id };
 }
 
 router.get("/", async (req, res) => {
   try {
-    const context = requireContext(req, res);
+    const context = await requireContext(req, res);
     if (!context) return;
     const conversations = await dbListConversations(context.userId, context.workspaceId);
     if (!conversations) return res.status(503).json({ error: "persistent storage unavailable" });
@@ -36,9 +44,9 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const context = requireContext(req, res);
+    const context = await requireContext(req, res);
     if (!context) return;
-    const conversation = await dbGetConversation(req.params.id, context.userId, context.workspaceId);
+    const conversation = await dbGetConversation(req.params.id as string, context.userId, context.workspaceId);
     if (!conversation) return res.status(404).json({ error: "conversation not found" });
     return res.json(conversation);
   } catch {
@@ -48,11 +56,9 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", async (req, res) => {
   const conversation = req.body as Record<string, unknown>;
-  if (typeof conversation?.id !== "string" || typeof conversation?.title !== "string" || !Array.isArray(conversation?.messages)) {
-    return res.status(400).json({ error: "id, title, and messages are required" });
-  }
+  if (typeof conversation?.id !== "string" || typeof conversation?.title !== "string" || !Array.isArray(conversation?.messages)) return res.status(400).json({ error: "id, title, and messages are required" });
   try {
-    const context = requireContext(req, res);
+    const context = await requireContext(req, res);
     if (!context) return;
     const saved = await dbSaveConversation({
       id: conversation.id,
@@ -70,9 +76,9 @@ router.post("/", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
-    const context = requireContext(req, res);
+    const context = await requireContext(req, res);
     if (!context) return;
-    const deleted = await dbDeleteConversation(req.params.id, context.userId, context.workspaceId);
+    const deleted = await dbDeleteConversation(req.params.id as string, context.userId, context.workspaceId);
     if (!deleted) return res.status(404).json({ error: "conversation not found" });
     return res.json({ success: true, persistent: true });
   } catch {
