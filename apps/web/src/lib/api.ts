@@ -4,7 +4,8 @@ const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export async function sendMessage(
   messages: ChatMessage[],
-  personality = ""
+  personality = "",
+  modelId?: string,
 ) {
   const cleanMessages = messages.map((m) => ({
     role: m.role,
@@ -19,6 +20,7 @@ export async function sendMessage(
     body: JSON.stringify({
       messages: cleanMessages,
       personality,
+      ...(modelId ? { modelId } : {}),
     }),
   });
 
