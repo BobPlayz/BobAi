@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BobLogo from "@/components/BobLogo";
-import { register, requestOtp } from "@/lib/auth";
+import { register } from "@/lib/auth";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernamePattern = /^[A-Za-z0-9_]{3,32}$/;
@@ -43,16 +43,14 @@ export default function SignupPage() {
 
     setLoading(true);
     const result = await register(cleanUsername, cleanEmail, password);
+    setLoading(false);
 
     if (!result.ok) {
-      setLoading(false);
       setError(result.error || "account could not be created");
       return;
     }
 
-    const sent = await requestOtp(cleanEmail);
-    setLoading(false);
-    router.push(`/verify-otp?email=${encodeURIComponent(cleanEmail)}&sent=${sent ? "1" : "0"}`);
+    router.push("/onboarding");
   }
 
   return (
@@ -67,55 +65,23 @@ export default function SignupPage() {
         </div>
 
         <h2 className="text-4xl font-black tracking-tight">create account</h2>
-        <p className="mt-2 text-white/60">create your BobAI account and verify your email</p>
+        <p className="mt-2 text-white/60">create your BobAI account</p>
 
         <form onSubmit={handleSignup} className="mt-8 space-y-4">
-          <input
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="username"
-            autoComplete="username"
-            minLength={3}
-            maxLength={32}
-            required
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35"
-          />
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            placeholder="email"
-            autoComplete="email"
-            required
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35"
-          />
-          <input
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
-            placeholder="password (12+ characters)"
-            autoComplete="new-password"
-            minLength={12}
-            maxLength={128}
-            required
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35"
-          />
+          <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="username" autoComplete="username" minLength={3} maxLength={32} required className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35" />
+          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="email" autoComplete="email" required className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35" />
+          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="password (12+ characters)" autoComplete="new-password" minLength={12} maxLength={128} required className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition focus:border-white/25 placeholder:text-white/35" />
 
-          <p className="text-xs text-white/40">your email will be used to send a 6-digit verification code</p>
           {error && <p className="text-sm text-red-400">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-white py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading} className="w-full rounded-2xl bg-white py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50">
             {loading ? "creating..." : "create account"}
           </button>
         </form>
 
         <div className="mt-6 flex items-center justify-between text-sm text-white/50">
           <Link href="/login" className="hover:text-white">already have an account?</Link>
-          <Link href="/verify-otp" className="hover:text-white">verify with otp</Link>
+          <Link href={`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`} className="hover:text-white">verify email</Link>
         </div>
       </div>
     </main>
