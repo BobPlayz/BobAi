@@ -1,14 +1,14 @@
 {
   "name": "bobai",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "web": "npm run dev --workspace=web",
     "api": "npm run dev --workspace=@bobai/api",
-    "ai": "tsx scripts/start.ts"
+    "ai": "tsx scripts/start.ts",
+    "build": "npm run build --workspace=@bobai/api && npm run build --workspace=web",
+    "test": "npm run test:security --workspace=@bobai/api",
+    "audit": "npm audit --workspaces --include-workspace-root"
   },
   "devDependencies": {
     "@types/multer": "^2.2.0",
