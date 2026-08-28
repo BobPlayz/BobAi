@@ -5,7 +5,9 @@ import { db, sessions, users } from "@bobai/db";
 const scrypt = (password: string, salt: Buffer, keylen: number, options: Parameters<typeof scryptCallback>[3]) => new Promise<Buffer>((resolve, reject) => scryptCallback(password, salt, keylen, options, (error, derived) => error ? reject(error) : resolve(derived as Buffer)));
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const SCRYPT = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+// Keep password hashing within the memory budget of small development machines
+// while still using a memory-hard password KDF.
+const SCRYPT = { N: 1 << 14, r: 8, p: 1, maxmem: 32 * 1024 * 1024 };
 const hashToken = (value: string) => createHash("sha256").update(value).digest("hex");
 const token = () => randomBytes(32).toString("base64url");
 

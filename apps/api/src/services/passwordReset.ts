@@ -2,9 +2,9 @@ import { createHash, randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db, passwordResets, sessions, users } from "@bobai/db";
 
-const scrypt = (password: string, salt: Buffer, keylen: number, options: { N: number; r: number; p: number }) => new Promise<Buffer>((resolve, reject) => scryptCallback(password, salt, keylen, options, (error, derived) => error ? reject(error) : resolve(derived as Buffer)));
+const scrypt = (password: string, salt: Buffer, keylen: number, options: { N: number; r: number; p: number; maxmem: number }) => new Promise<Buffer>((resolve, reject) => scryptCallback(password, salt, keylen, options, (error, derived) => error ? reject(error) : resolve(derived as Buffer)));
 const TTL_MS = 15 * 60 * 1000;
-const SCRYPT = { N: 1 << 15, r: 8, p: 1 };
+const SCRYPT = { N: 1 << 14, r: 8, p: 1, maxmem: 32 * 1024 * 1024 };
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const token = () => randomBytes(32).toString("base64url");
 
