@@ -1,21 +1,23 @@
 import { Router } from "express";
-import { createUser, login, refresh, revoke } from "../services/auth.js";
+import { createUser, issueSession, login, refresh, revoke } from "../services/auth.js";
 import { requestEmailOtp, verifyEmailOtp } from "../services/otp.js";
 import { requireAuth } from "../middleware/auth.js";
-import { db, users } from "@bobai/db";
-import { eq } from "drizzle-orm";
 
 const router = Router();
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const username = /^[A-Za-z0-9_]{3,32}$/;
 
 router.post("/register", async (req, res) => {
-  const { email: address, username, password } = req.body ?? {};
-  if (typeof address !== "string" || !email.test(address) || typeof username !== "string" || !/^[A-Za-z0-9_]{3,32}$/.test(username) || typeof password !== "string" || password.length < 12 || password.length > 128) return res.status(400).json({ error: "invalid registration details" });
+  const { email: address, username: name, password } = req.body ?? {};
+  if (typeof address !== "string" || !email.test(address.trim()) || typeof name !== "string" || !username.test(name) || typeof password !== "string" || password.length < 12 || password.length > 128) {
+    return res.status(400).json({ error: "invalid registration details" });
+  }
+
   try {
     const normalizedEmail = address.trim().toLowerCase();
-    const user = await createUser(normalizedEmail, username, password);
-    await requestEmailOtp(normalizedEmail);
-    return res.status(201).json({ user, verificationRequired: true });
+    const user = await createUser(normalizedEmail, name, password);
+    const session = await issueSession(user.id, { userAgent: req.get("user-agent") });
+    return res.status(201).json({ ...session, user });
   } catch {
     return res.status(409).json({ error: "account could not be created" });
   }
@@ -24,15 +26,9 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email: address, password } = req.body ?? {};
   if (typeof address !== "string" || typeof password !== "string") return res.status(400).json({ error: "invalid credentials" });
+
   try {
-    const normalizedEmail = address.trim().toLowerCase();
-    const [user] = await db.select({ emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.email, normalizedEmail)).limit(1);
-    if (!user) return res.status(401).json({ error: "invalid email or password" });
-    if (!user.emailVerifiedAt) {
-      await requestEmailOtp(normalizedEmail);
-      return res.status(403).json({ error: "email verification required", verificationRequired: true, email: normalizedEmail });
-    }
-    const session = await login(normalizedEmail, password, { userAgent: req.get("user-agent") });
+    const session = await login(address.trim().toLowerCase(), password, { userAgent: req.get("user-agent") });
     if (!session) return res.status(401).json({ error: "invalid email or password" });
     return res.json(session);
   } catch {
