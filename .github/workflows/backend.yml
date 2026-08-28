@@ -1,23 +1,25 @@
-name: backend
+name: ci
 
 on:
   push:
     paths:
-      - "apps/api/**"
-      - "packages/db/**"
+      - "apps/**"
+      - "packages/**"
       - "package.json"
       - "package-lock.json"
-      - ".github/workflows/backend.yml"
+      - "tsconfig.base.json"
+      - ".github/workflows/**"
   pull_request:
     paths:
-      - "apps/api/**"
-      - "packages/db/**"
+      - "apps/**"
+      - "packages/**"
       - "package.json"
       - "package-lock.json"
-      - ".github/workflows/backend.yml"
+      - "tsconfig.base.json"
+      - ".github/workflows/**"
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,5 +28,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build --workspace=@bobai/api
+      - run: npm run build
+      - run: npm test
       - run: npm run db:generate --workspace=@bobai/db
