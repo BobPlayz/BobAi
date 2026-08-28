@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getPendingVerificationEmail, requestOtp, verifyOtp } from "@/lib/auth";
@@ -30,7 +30,7 @@ export default function VerifyOtpPage() {
     }
   }, []);
 
-  async function handleVerify(event: React.FormEvent<HTMLFormElement>) {
+  async function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setMessage("");
