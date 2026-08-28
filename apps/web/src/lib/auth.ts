@@ -1,5 +1,6 @@
 const SESSION_KEY = "bobai_session";
 const ONBOARDING_KEY = "bobai_onboarding";
+const PENDING_EMAIL_KEY = "bobai_pending_verification_email";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export type Session = {
@@ -11,25 +12,74 @@ export type Session = {
   username?: string;
 };
 
-export async function login(email: string, password: string): Promise<boolean> {
+export async function login(email: string, password: string): Promise<{ ok: boolean; verificationRequired?: boolean }> {
   try {
     const res = await fetch(`${API}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    if (!res.ok) return false;
-    const session = (await res.json()) as Session;
+    const data = (await res.json().catch(() => ({}))) as { verificationRequired?: boolean; email?: string };
+    if (res.status === 403 && data.verificationRequired) {
+      localStorage.setItem(PENDING_EMAIL_KEY, data.email || email);
+      return { ok: false, verificationRequired: true };
+    }
+    if (!res.ok) return { ok: false };
+    const session = data as Session;
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export async function register(username: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) return { ok: false, error: data.error || "account could not be created" };
+    localStorage.setItem(PENDING_EMAIL_KEY, email);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "backend unavailable" };
+  }
+}
+
+export async function requestOtp(email: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/auth/otp/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyOtp(email: string, code: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/auth/otp/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+    if (!res.ok) return false;
+    localStorage.removeItem(PENDING_EMAIL_KEY);
     return true;
   } catch {
     return false;
   }
 }
 
-export function signup(username: string, email: string) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username, email, role: "user" }));
-  return true;
+export function getPendingVerificationEmail() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(PENDING_EMAIL_KEY) || "";
 }
 
 export function logout() {
