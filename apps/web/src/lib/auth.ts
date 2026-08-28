@@ -12,21 +12,16 @@ export type Session = {
   username?: string;
 };
 
-export async function login(email: string, password: string): Promise<{ ok: boolean; verificationRequired?: boolean }> {
+export async function login(email: string, password: string): Promise<{ ok: boolean }> {
   try {
     const res = await fetch(`${API}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    const data = (await res.json().catch(() => ({}))) as { verificationRequired?: boolean; email?: string };
-    if (res.status === 403 && data.verificationRequired) {
-      localStorage.setItem(PENDING_EMAIL_KEY, data.email || email);
-      return { ok: false, verificationRequired: true };
-    }
     if (!res.ok) return { ok: false };
-    const session = data as Session;
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    const session = (await res.json()) as Session;
+    setSession(session);
     return { ok: true };
   } catch {
     return { ok: false };
@@ -40,9 +35,9 @@ export async function register(username: string, email: string, password: string
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, email, password }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    const data = (await res.json().catch(() => ({}))) as Session & { error?: string };
     if (!res.ok) return { ok: false, error: data.error || "account could not be created" };
-    localStorage.setItem(PENDING_EMAIL_KEY, email);
+    setSession(data);
     return { ok: true };
   } catch {
     return { ok: false, error: "backend unavailable" };
@@ -86,6 +81,7 @@ export function logout() {
   const session = getSession();
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(ONBOARDING_KEY);
+  localStorage.removeItem(PENDING_EMAIL_KEY);
   if (session?.refreshToken) {
     void fetch(`${API}/auth/logout`, {
       method: "POST",
