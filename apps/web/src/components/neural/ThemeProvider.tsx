@@ -25,9 +25,7 @@ const THEMES: BobTheme[] = ["legacy", "dark", "light", "futuristic", "anime", "g
 const isTheme = (value: string | null): value is BobTheme => value !== null && THEMES.includes(value as BobTheme);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Keep the first render deterministic on both server and client. Browser storage
-  // is read only after hydration so persisted themes cannot change the SSR tree.
-  const [theme, setThemeState] = useState<BobTheme>("legacy");
+  const [theme, setThemeState] = useState<BobTheme>("dark");
   const [accent, setAccentState] = useState("#38bdf8");
 
   useEffect(() => {
