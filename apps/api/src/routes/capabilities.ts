@@ -33,12 +33,12 @@ router.post("/:capability", async (req, res) => {
   const capability = req.params.capability as ProviderCapability;
   if (!supported.has(capability)) return res.status(404).json({ error: "capability not found" });
 
-  const body = req.body && typeof req.body === "object" && !Array.isArray(req.body)
-    ? req.body as Record<string, unknown>
-    : {};
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "request body must be a JSON object" });
+  }
 
   try {
-    const result = await executeProviderCapability(capability, body);
+    const result = await executeProviderCapability(capability, req.body as Record<string, unknown>);
     return res.json({ capability, result });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error(`capability ${capability} failed`, error);
