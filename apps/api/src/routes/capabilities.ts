@@ -4,6 +4,8 @@ import {
   listProviderCapabilities,
   type ProviderCapability,
 } from "../services/capabilityProviders.js";
+import { ensurePersonalWorkspace } from "../services/workspace.js";
+import { createCapabilityJob, getActiveCapabilityJob, getPersistedCapabilityJob } from "../services/capabilityJobs.js";
 
 const router = Router();
 
@@ -27,18 +29,45 @@ const supported = new Set<ProviderCapability>([
   "sketch_to_ui",
 ]);
 
+const isSupported = (value: string): value is ProviderCapability => supported.has(value as ProviderCapability);
+
+function isObjectBody(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 router.get("/", (_req, res) => res.json({ capabilities: listProviderCapabilities() }));
 
-router.post("/:capability", async (req, res) => {
-  const capability = req.params.capability as ProviderCapability;
-  if (!supported.has(capability)) return res.status(404).json({ error: "capability not found" });
+router.get("/jobs/:id", async (req, res) => {
+  const id = req.params.id;
+  const active = getActiveCapabilityJob(id, req.user!.id);
+  if (active) return res.json({ job: active });
+  const persisted = await getPersistedCapabilityJob(id, req.user!.id);
+  if (!persisted) return res.status(404).json({ error: "capability job not found" });
+  return res.json({ job: persisted });
+});
 
-  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
-    return res.status(400).json({ error: "request body must be a JSON object" });
-  }
+router.post("/:capability/jobs", async (req, res) => {
+  const capability = req.params.capability;
+  if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
+  if (!isObjectBody(req.body)) return res.status(400).json({ error: "request body must be a JSON object" });
 
   try {
-    const result = await executeProviderCapability(capability, req.body as Record<string, unknown>);
+    const workspace = await ensurePersonalWorkspace(req.user!.id);
+    const job = await createCapabilityJob(capability, req.body, { workspaceId: workspace.id, createdBy: req.user!.id });
+    return res.status(202).json({ job });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error(`capability job ${capability} failed`, error);
+    return res.status(503).json({ error: "capability job could not be created", capability });
+  }
+});
+
+router.post("/:capability", async (req, res) => {
+  const capability = req.params.capability;
+  if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
+  if (!isObjectBody(req.body)) return res.status(400).json({ error: "request body must be a JSON object" });
+
+  try {
+    const result = await executeProviderCapability(capability, req.body);
     return res.json({ capability, result });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error(`capability ${capability} failed`, error);
