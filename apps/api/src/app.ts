@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { apiRouter } from "./routes/index.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { securityLog } from "./middleware/securityLog.js";
+import { validateRequestBody } from "./middleware/requestValidation.js";
 import { validateProductionConfig } from "./config/validateProduction.js";
 
 validateProductionConfig();
@@ -35,6 +36,7 @@ app.use((req, res, next) => {
 app.use(securityLog);
 app.use(rateLimit);
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb" }));
+app.use(validateRequestBody);
 app.get("/", (_req, res) => res.json({ name: "BobAI API", status: "ok" }));
 app.use(apiRouter);
 app.use((_req, res) => res.status(404).json({ error: "route not found" }));
