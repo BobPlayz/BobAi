@@ -21,6 +21,7 @@ import visionRouter from "./vision.js";
 import researchRouter from "./research.js";
 import skillsRouter from "./skills.js";
 import capabilitiesRouter from "./capabilities.js";
+import toolsRouter from "./tools.js";
 
 function buildApiRouter() {
   const router = Router();
@@ -45,6 +46,7 @@ function buildApiRouter() {
   router.use("/skills", skillsRouter);
   router.use("/capabilities", capabilitiesRouter);
   router.use("/model-agents", modelAgentsRouter);
+  router.use("/tools", toolsRouter);
   return router;
 }
 
