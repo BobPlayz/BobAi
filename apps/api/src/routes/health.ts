@@ -20,6 +20,10 @@ healthRouter.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "bobai-api", version: "0.1.0" });
 });
 
+healthRouter.get("/live", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 healthRouter.get("/ready", async (_req, res) => {
   const [database, ollama] = await Promise.all([checkDatabase(), ollamaProvider.registryStatus()]);
   const configuredCapabilities = listProviderCapabilities().filter(({ configured }) => configured).length;
