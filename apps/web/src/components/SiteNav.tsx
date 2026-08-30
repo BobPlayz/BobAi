@@ -6,6 +6,8 @@ const links = [
   ["FAQ", "/faq"],
   ["Contact", "/contact"],
   ["Waitlist", "/waitlist"],
+  ["Privacy", "/privacy"],
+  ["Terms", "/terms"],
 ] as const;
 
 export default function SiteNav() {
@@ -17,7 +19,7 @@ export default function SiteNav() {
           <span>Bob AI</span>
         </Link>
         <div className="hidden items-center gap-1 sm:flex">
-          {links.slice(1, 5).map(([label, href]) => (
+          {links.slice(1).map(([label, href]) => (
             <Link key={href} href={href} className="rounded-xl px-3 py-2 text-sm text-white/65 hover:bg-white/8 hover:text-white">{label}</Link>
           ))}
         </div>
