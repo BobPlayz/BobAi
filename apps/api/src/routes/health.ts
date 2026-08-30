@@ -22,17 +22,15 @@ healthRouter.get("/health", (_req, res) => {
 
 healthRouter.get("/ready", async (_req, res) => {
   const [database, ollama] = await Promise.all([checkDatabase(), ollamaProvider.registryStatus()]);
-  const capabilityStatus = listProviderCapabilities();
+  const configuredCapabilities = listProviderCapabilities().filter(({ configured }) => configured).length;
   const checks = {
     databaseConfigured: Boolean(process.env.DATABASE_URL),
     databaseReachable: database.reachable,
     databaseSchemaReady: database.schemaReady,
     ollamaConfigured: Boolean(process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || process.env.OLLAMA_URL),
     ollamaReachable: ollama.connected,
-    ollamaBaseUrl: ollama.baseUrl,
-    installedModels: ollama.models.filter((model) => model.installed).map((model) => model.model),
     codingAgentsConfigured: Boolean(process.env.BOBAI_CODING_AGENTS_DIR),
-    capabilities: capabilityStatus.map(({ capability, configured, authenticated }) => ({ capability, configured, authenticated })),
+    configuredCapabilities,
   };
   const ready = ollama.connected && (!checks.databaseConfigured || (database.reachable && database.schemaReady));
   return res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "degraded", checks });
