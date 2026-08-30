@@ -7,9 +7,12 @@
     "api": "npm run dev --workspace=@bobai/api",
     "ai": "tsx scripts/start.ts",
     "db:push": "npm run db:push --workspace=@bobai/db",
+    "db:generate": "npm run db:generate --workspace=@bobai/db",
+    "db:migrate": "npm run db:migrate --workspace=@bobai/db",
     "build": "npm run build --workspace=@bobai/api && npm run build --workspace=web",
     "test": "npm run test:security --workspace=@bobai/api",
-    "audit": "npm audit --workspaces --include-workspace-root"
+    "audit": "npm audit --workspaces --include-workspace-root",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "devDependencies": {
     "@types/multer": "^2.2.0",
