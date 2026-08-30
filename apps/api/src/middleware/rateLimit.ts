@@ -7,19 +7,23 @@ const windowMs = Math.max(1_000, Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_
 const maxRequests = Math.max(1, Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 120);
 const maxBuckets = 10_000;
 
+function pruneExpired(now: number) {
+  for (const [key, bucket] of buckets) {
+    if (now - bucket.startedAt >= windowMs) buckets.delete(key);
+  }
+}
+
+const cleanupTimer = setInterval(() => pruneExpired(Date.now()), windowMs);
+cleanupTimer.unref();
+
 export function rateLimit(req: Request, res: Response, next: NextFunction) {
   const key = req.ip || req.socket.remoteAddress || "unknown";
   const now = Date.now();
   const current = buckets.get(key);
 
   if (!current || now - current.startedAt >= windowMs) {
-    if (buckets.size >= maxBuckets) {
-      for (const [bucketKey, bucket] of buckets) {
-        if (now - bucket.startedAt >= windowMs) buckets.delete(bucketKey);
-        if (buckets.size < maxBuckets) break;
-      }
-      if (buckets.size >= maxBuckets) return res.status(429).json({ error: "rate limit exceeded" });
-    }
+    if (buckets.size >= maxBuckets) pruneExpired(now);
+    if (buckets.size >= maxBuckets) return res.status(429).json({ error: "rate limit exceeded" });
     buckets.set(key, { startedAt: now, count: 1 });
     return next();
   }
