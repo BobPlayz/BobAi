@@ -1,0 +1,10 @@
+CREATE INDEX IF NOT EXISTS conversations_user_workspace_updated_idx ON conversations (user_id, workspace_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS messages_conversation_created_idx ON messages (conversation_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS memories_user_workspace_updated_idx ON memories (user_id, workspace_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS uploads_workspace_created_idx ON uploads (workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS sessions_user_active_idx ON sessions (user_id, is_active, expires_at);
+CREATE INDEX IF NOT EXISTS usage_records_user_created_idx ON usage_records (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS audit_logs_user_created_idx ON audit_logs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS tasks_workspace_status_schedule_idx ON tasks (workspace_id, status, scheduled_for);
+CREATE INDEX IF NOT EXISTS notifications_user_read_created_idx ON notifications (user_id, is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS webhooks_workspace_enabled_idx ON webhooks (workspace_id, is_enabled);
