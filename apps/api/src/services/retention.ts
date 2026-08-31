@@ -1,4 +1,4 @@
-import { and, lt, or, eq } from "drizzle-orm";
+import { and, lt, or, eq, isNotNull } from "drizzle-orm";
 import { db, emailOtps, passwordResets, sessions } from "@bobai/db";
 
 const OTP_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -15,7 +15,7 @@ export async function runRetentionCleanup(now = new Date()) {
     db.delete(passwordResets).where(lt(passwordResets.createdAt, resetCutoff)).returning({ id: passwordResets.id }),
     db.delete(sessions).where(and(
       lt(sessions.createdAt, sessionCutoff),
-      or(eq(sessions.isActive, false), eq(sessions.revokedAt, sessions.revokedAt))
+      or(eq(sessions.isActive, false), isNotNull(sessions.revokedAt))
     )).returning({ id: sessions.id }),
   ]);
 
