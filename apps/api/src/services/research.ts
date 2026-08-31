@@ -19,7 +19,25 @@ function getTimeoutMs() {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function webSearch(query: string, options: Record<string, unknown> = {}) {
+export type ResearchSource = { title: string; url: string; snippet?: string; publishedAt?: string };
+export type ResearchResult = { query: string; sources: ResearchSource[]; providerData?: unknown };
+
+function normalizeSources(body: unknown): ResearchSource[] {
+  const candidate = body && typeof body === "object" ? (body as Record<string, unknown>).results ?? (body as Record<string, unknown>).sources : undefined;
+  if (!Array.isArray(candidate)) return [];
+  const seen = new Set<string>();
+  const sources: ResearchSource[] = [];
+  for (const item of candidate) {
+    if (!item || typeof item !== "object") continue;
+    const value = item as Record<string, unknown>;
+    const url = typeof value.url === "string" ? value.url.trim() : typeof value.link === "string" ? value.link.trim() : "";
+    if (!url) continue;
+    try { const parsed = new URL(url); if (!["http:", "https:"].includes(parsed.protocol)) continue; const canonical = parsed.toString(); if (seen.has(canonical)) continue; seen.add(canonical); sources.push({ title: typeof value.title === "string" ? value.title.slice(0, 500) : canonical, url: canonical, snippet: typeof value.snippet === "string" ? value.snippet.slice(0, 3000) : typeof value.description === "string" ? value.description.slice(0, 3000) : undefined, publishedAt: typeof value.publishedAt === "string" ? value.publishedAt : undefined }); } catch { /* ignore malformed provider URLs */ }
+  }
+  return sources.slice(0, 50);
+}
+
+export async function webSearch(query: string, options: Record<string, unknown> = {}): Promise<ResearchResult> {
   const normalized = query.trim();
   if (!normalized) throw new Error("search query is required");
   if (normalized.length > MAX_QUERY_LENGTH) throw new Error("search query is too long");
@@ -37,21 +55,11 @@ export async function webSearch(query: string, options: Record<string, unknown> 
       if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) throw new Error("web search response exceeds the 10 MB limit");
       const text = await response.text();
       if (text.length > MAX_RESPONSE_BYTES) throw new Error("web search response exceeds the 10 MB limit");
-      if (!response.ok) {
-        if (attempt < MAX_RETRIES && (response.status === 408 || response.status === 429 || response.status >= 500)) {
-          await sleep(250 * 2 ** attempt);
-          continue;
-        }
-        throw new Error(`web search provider returned ${response.status}`);
-      }
+      if (!response.ok) { if (attempt < MAX_RETRIES && (response.status === 408 || response.status === 429 || response.status >= 500)) { await sleep(250 * 2 ** attempt); continue; } throw new Error(`web search provider returned ${response.status}`); }
       let body: unknown = {};
-      if (text.trim()) {
-        try { body = JSON.parse(text); } catch { body = { data: text }; }
-      }
-      return body;
-    } finally {
-      clearTimeout(timer);
-    }
+      if (text.trim()) { try { body = JSON.parse(text); } catch { body = { data: text }; } }
+      return { query: normalized, sources: normalizeSources(body), providerData: body };
+    } finally { clearTimeout(timer); }
   }
   throw new Error("web search provider unavailable");
 }
