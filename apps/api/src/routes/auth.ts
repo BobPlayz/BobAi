@@ -14,10 +14,10 @@ const ACCESS_COOKIE = "bobai_access";
 function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = authBuckets.get(bucketKey); if (!current || now - current.startedAt >= AUTH_WINDOW_MS) { authBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > AUTH_MAX_ATTEMPTS; }
 function cleanupAuthBuckets() { const cutoff = Date.now() - AUTH_WINDOW_MS; for (const [key, bucket] of authBuckets) if (bucket.startedAt < cutoff) authBuckets.delete(key); }
 setInterval(cleanupAuthBuckets, AUTH_WINDOW_MS).unref();
-function cookieOptions(maxAge: number) { return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/", maxAge }; }
+function cookieOptions(maxAge: number) { return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/", maxAge }; }
 function readCookie(req: { header(name: string): string | undefined }, name: string) { const header = req.header("cookie") || ""; const item = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`)); return item ? decodeURIComponent(item.slice(name.length + 1)) : ""; }
 function setSessionCookies(res: { cookie(name: string, value: string, options: object): void }, session: { accessToken: string; refreshToken: string }) { res.cookie(ACCESS_COOKIE, session.accessToken, cookieOptions(15 * 60 * 1000)); res.cookie(REFRESH_COOKIE, session.refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000)); }
-function clearSessionCookies(res: { clearCookie(name: string, options?: object): void }) { const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" }; res.clearCookie(ACCESS_COOKIE, options); res.clearCookie(REFRESH_COOKIE, options); }
+function clearSessionCookies(res: { clearCookie(name: string, options?: object): void }) { const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/" }; res.clearCookie(ACCESS_COOKIE, options); res.clearCookie(REFRESH_COOKIE, options); }
 
 router.post("/register", async (req, res) => {
   const { email: address, username: name, password } = req.body ?? {};
@@ -25,11 +25,34 @@ router.post("/register", async (req, res) => {
   const normalizedUsername = typeof name === "string" ? name.trim() : "";
   if (!email.test(normalizedEmail) || !username.test(normalizedUsername) || typeof password !== "string" || password.length < 12 || password.length > 128) return res.status(400).json({ error: "invalid registration details" });
   if (limited(req, "register")) return res.status(429).json({ error: "too many registration attempts", retryAfterSeconds: 900 });
-  try { const user = await createUser(normalizedEmail, normalizedUsername, password); const session = await issueSession(user.id, { userAgent: req.get("user-agent") }); setSessionCookies(res, session); return res.status(201).json({ accessToken: session.accessToken, expiresIn: session.expiresIn, user }); }
-  catch (error) { const databaseError = error as { code?: string; constraint?: string }; if (databaseError.code === "PASSWORD_POLICY") return res.status(400).json({ error: error instanceof Error ? error.message : "password does not meet security requirements" }); if (databaseError.code === "23505") { if (databaseError.constraint?.includes("email")) return res.status(409).json({ error: "an account with this email already exists" }); if (databaseError.constraint?.includes("username")) return res.status(409).json({ error: "that username is already taken" }); return res.status(409).json({ error: "an account with these details already exists" }); } if (process.env.NODE_ENV !== "production") console.error("[AUTH] registration failed", error); return res.status(503).json({ error: "account service unavailable" }); }
+  try {
+    const user = await createUser(normalizedEmail, normalizedUsername, password);
+    try { await requestEmailOtp(normalizedEmail); } catch { /* verification can be requested again from the verification page */ }
+    return res.status(201).json({ requiresVerification: true, user });
+  } catch (error) {
+    const databaseError = error as { code?: string; constraint?: string };
+    if (databaseError.code === "PASSWORD_POLICY") return res.status(400).json({ error: error instanceof Error ? error.message : "password does not meet security requirements" });
+    if (databaseError.code === "23505") { if (databaseError.constraint?.includes("email")) return res.status(409).json({ error: "an account with this email already exists" }); if (databaseError.constraint?.includes("username")) return res.status(409).json({ error: "that username is already taken" }); return res.status(409).json({ error: "an account with these details already exists" }); }
+    if (process.env.NODE_ENV !== "production") console.error("[AUTH] registration failed", error);
+    return res.status(503).json({ error: "account service unavailable" });
+  }
 });
 
-router.post("/login", async (req, res) => { const { email: address, password } = req.body ?? {}; const normalizedEmail = typeof address === "string" ? address.trim().toLowerCase() : ""; if (typeof address !== "string" || typeof password !== "string") return res.status(400).json({ error: "invalid credentials" }); if (limited(req, `login:${normalizedEmail.slice(0, 254)}`)) return res.status(429).json({ error: "too many login attempts", retryAfterSeconds: 900 }); try { const session = await login(normalizedEmail, password, { userAgent: req.get("user-agent") }); if (!session) return res.status(401).json({ error: "invalid email or password" }); setSessionCookies(res, session); return res.json({ accessToken: session.accessToken, expiresIn: session.expiresIn }); } catch (error) { if (process.env.NODE_ENV !== "production") console.error("[AUTH] login failed", error); return res.status(503).json({ error: "authentication service unavailable" }); } });
+router.post("/login", async (req, res) => {
+  const { email: address, password } = req.body ?? {};
+  const normalizedEmail = typeof address === "string" ? address.trim().toLowerCase() : "";
+  if (typeof address !== "string" || typeof password !== "string") return res.status(400).json({ error: "invalid credentials" });
+  if (limited(req, `login:${normalizedEmail.slice(0, 254)}`)) return res.status(429).json({ error: "too many login attempts", retryAfterSeconds: 900 });
+  try {
+    const session = await login(normalizedEmail, password, { userAgent: req.get("user-agent") });
+    if (!session) return res.status(401).json({ error: "invalid email or password" });
+    const user = await import("@bobai/db").then(async ({ db, users }) => { const { eq } = await import("drizzle-orm"); const [row] = await db.select({ emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.email, normalizedEmail)).limit(1); return row; });
+    if (!user?.emailVerifiedAt) return res.status(403).json({ error: "verify your email before logging in" });
+    setSessionCookies(res, session);
+    return res.json({ accessToken: session.accessToken, expiresIn: session.expiresIn });
+  } catch (error) { if (process.env.NODE_ENV !== "production") console.error("[AUTH] login failed", error); return res.status(503).json({ error: "authentication service unavailable" }); }
+});
+
 router.post("/refresh", async (req, res) => { const refreshToken = readCookie(req, REFRESH_COOKIE); if (!refreshToken) return res.status(401).json({ error: "refresh token required" }); const session = await refresh(refreshToken); if (!session) { clearSessionCookies(res); return res.status(401).json({ error: "invalid or expired session" }); } setSessionCookies(res, session); return res.json({ accessToken: session.accessToken, expiresIn: session.expiresIn }); });
 router.post("/logout", async (req, res) => { const refreshToken = readCookie(req, REFRESH_COOKIE); if (refreshToken) await revoke(refreshToken); clearSessionCookies(res); return res.status(204).send(); });
 router.post("/otp/request", async (req, res) => { const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : ""; if (!email.test(address)) return res.status(400).json({ error: "invalid email" }); if (limited(req, `otp-request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many verification requests", retryAfterSeconds: 900 }); try { await requestEmailOtp(address); return res.status(202).json({ message: "if the account exists, a verification code has been sent" }); } catch (error) { if (process.env.NODE_ENV !== "production") console.error("[AUTH] otp delivery failed", error); return res.status(503).json({ error: "verification email could not be sent right now" }); } });
