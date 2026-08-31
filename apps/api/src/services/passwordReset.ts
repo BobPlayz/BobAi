@@ -12,17 +12,18 @@ const token = () => randomBytes(32).toString("base64url");
 async function passwordHash(password: string) { const salt = randomBytes(16); const value = await scrypt(password, salt, 64, SCRYPT); return `${salt.toString("base64url")}.${value.toString("base64url")}`; }
 
 export async function requestPasswordReset(email: string) {
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  const [user] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.email, email)).limit(1);
   if (!user) return null;
   await db.update(passwordResets).set({ isActive: false }).where(and(eq(passwordResets.userId, user.id), eq(passwordResets.isActive, true)));
   const raw = token();
   await db.insert(passwordResets).values({ userId: user.id, tokenHash: hash(raw), expiresAt: new Date(Date.now() + TTL_MS) });
-  return raw;
+  return { email: user.email, token: raw };
 }
 
 export async function resetPassword(rawToken: string, password: string) {
   const policyError = await enforcePasswordPolicy(password);
   if (policyError) return { ok: false as const, error: policyError };
+  if (typeof rawToken !== "string" || rawToken.length < 32 || rawToken.length > 128) return { ok: false as const, error: "invalid or expired reset token" };
   const [reset] = await db.select().from(passwordResets).where(and(eq(passwordResets.tokenHash, hash(rawToken)), eq(passwordResets.isActive, true), isNull(passwordResets.usedAt), gt(passwordResets.expiresAt, new Date()))).limit(1);
   if (!reset) return { ok: false as const, error: "invalid or expired reset token" };
   const stored = await passwordHash(password);
