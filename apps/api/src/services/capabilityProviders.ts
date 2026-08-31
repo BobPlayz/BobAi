@@ -1,3 +1,5 @@
+import { providerAvailable, recordProviderFailure, recordProviderSuccess } from "./providerHealth.js";
+
 export type ProviderCapability =
   | "image_upscale" | "background_removal" | "object_removal" | "image_editing"
   | "video_generation" | "image_to_video" | "talking_image" | "talking_avatar"
@@ -21,9 +23,10 @@ const PROVIDERS: ProviderConfig[] = [
   { capability: "meeting_transcription", env: "BOBAI_VOICE_PROVIDER_URL", keyEnv: "BOBAI_VOICE_PROVIDER_KEY", description: "Transcribe meetings with timestamps when supported." },
   { capability: "music_generation", env: "BOBAI_MUSIC_PROVIDER_URL", keyEnv: "BOBAI_MUSIC_PROVIDER_KEY", description: "Generate or edit music." },
   { capability: "music_discovery", env: "BOBAI_MUSIC_PROVIDER_URL", keyEnv: "BOBAI_MUSIC_PROVIDER_KEY", description: "Discover and organize music." },
-  { capability: "diagram_generation", env: "BOBAI_DESIGN_PROVIDER_URL", keyEnv: "BOBAI_DESIGN_PROVIDER_KEY", description: "Turn ideas into diagrams and visual specifications." },
+  { capability: "diagram_generation", env: "BOBAI_DESIGN_PROVIDER_URL", keyEnv: "BOBAI_DESIGN_PROVIDER_KEY", description: "Turn structured ideas into diagrams and visual specifications." },
   { capability: "sketch_to_ui", env: "BOBAI_DESIGN_PROVIDER_URL", keyEnv: "BOBAI_DESIGN_PROVIDER_KEY", description: "Turn sketches or screenshots into UI specifications." },
 ];
+const PROVIDER_ID = "capability-provider";
 const isLoopback = (hostname: string) => ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname.toLowerCase());
 function getProviderConfig(capability: ProviderCapability) {
   const config = PROVIDERS.find((item) => item.capability === capability);
@@ -40,6 +43,7 @@ export function listProviderCapabilities() { return PROVIDERS.map(({ capability,
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function executeProviderCapability(capability: ProviderCapability, input: Record<string, unknown>) {
   const config = getProviderConfig(capability);
+  if (!providerAvailable(PROVIDER_ID)) throw new Error("capability provider is temporarily unavailable");
   const configuredTimeout = Number(process.env.BOBAI_PROVIDER_TIMEOUT_MS || 120_000);
   const timeoutMs = Number.isFinite(configuredTimeout) ? Math.min(Math.max(configuredTimeout, 5_000), 300_000) : 120_000;
   const maxRetries = Math.min(Math.max(Number(process.env.BOBAI_PROVIDER_RETRIES || 2), 0), 3);
@@ -55,11 +59,16 @@ export async function executeProviderCapability(capability: ProviderCapability, 
       const text = await response.text();
       if (text.length > 10 * 1024 * 1024) throw new Error("provider response exceeds the 10 MB limit");
       if (!response.ok) {
-        if (attempt < maxRetries && (response.status === 408 || response.status === 429 || response.status >= 500)) { await sleep(250 * 2 ** attempt); continue; }
+        if (attempt < maxRetries && (response.status === 408 || response.status === 429 || response.status >= 500)) { recordProviderFailure(PROVIDER_ID); await sleep(250 * 2 ** attempt); continue; }
+        recordProviderFailure(PROVIDER_ID);
         throw new Error(`provider returned ${response.status}`);
       }
+      recordProviderSuccess(PROVIDER_ID);
       if (!text.trim()) return {};
       try { return JSON.parse(text) as unknown; } catch { return { data: text }; }
+    } catch (error) {
+      if (attempt >= maxRetries) recordProviderFailure(PROVIDER_ID);
+      throw error;
     } finally { clearTimeout(timer); }
   }
   throw new Error("provider unavailable");
