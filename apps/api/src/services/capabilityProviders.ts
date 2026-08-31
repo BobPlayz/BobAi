@@ -41,6 +41,7 @@ function getProviderConfig(capability: ProviderCapability) {
 }
 export function listProviderCapabilities() { return PROVIDERS.map(({ capability, description, env, keyEnv }) => ({ capability, description, configured: Boolean(process.env[env]?.trim()), authenticated: Boolean(keyEnv && process.env[keyEnv]?.trim()) })); }
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const isRetryableError = (error: unknown) => error instanceof DOMException && error.name === "AbortError" || error instanceof TypeError;
 export async function executeProviderCapability(capability: ProviderCapability, input: Record<string, unknown>) {
   const config = getProviderConfig(capability);
   if (!providerAvailable(PROVIDER_ID)) throw new Error("capability provider is temporarily unavailable");
@@ -67,7 +68,8 @@ export async function executeProviderCapability(capability: ProviderCapability, 
       if (!text.trim()) return {};
       try { return JSON.parse(text) as unknown; } catch { return { data: text }; }
     } catch (error) {
-      if (attempt >= maxRetries) recordProviderFailure(PROVIDER_ID);
+      if (attempt < maxRetries && isRetryableError(error)) { recordProviderFailure(PROVIDER_ID); await sleep(250 * 2 ** attempt); continue; }
+      recordProviderFailure(PROVIDER_ID);
       throw error;
     } finally { clearTimeout(timer); }
   }
