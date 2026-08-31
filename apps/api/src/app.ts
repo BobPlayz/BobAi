@@ -18,7 +18,7 @@ app.disable("x-powered-by");
 const trustProxy = process.env.TRUST_PROXY === "true";
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
 app.set("trust proxy", trustProxy ? trustProxyHops : false);
-app.use(cors({ origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key"] }));
+app.use(cors({ origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key"] }));
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
