@@ -27,8 +27,11 @@ router.post("/password-reset/confirm", async (req, res) => {
   const { token, password: nextPassword } = req.body ?? {};
   if (typeof token !== "string" || token.length < 32 || !password(nextPassword)) return res.status(400).json({ error: "invalid reset request" });
   if (limited(req, "confirm")) return res.status(429).json({ error: "too many password reset attempts", retryAfterSeconds: 900 });
-  try { if (!await resetPassword(token, nextPassword)) return res.status(400).json({ error: "invalid or expired reset token" }); return res.status(204).send(); }
-  catch { return res.status(503).json({ error: "password reset service unavailable" }); }
+  try {
+    const result = await resetPassword(token, nextPassword);
+    if (!result.ok) return res.status(result.error === "invalid or expired reset token" ? 400 : 400).json({ error: result.error });
+    return res.status(204).send();
+  } catch { return res.status(503).json({ error: "password reset service unavailable" }); }
 });
 
 router.use(requireAuth);
