@@ -10,6 +10,7 @@
     "db:generate": "npm run db:generate --workspace=@bobai/db",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:migrate:drizzle": "npm run db:migrate --workspace=@bobai/db",
+    "db:backup": "tsx scripts/db-backup.ts",
     "build": "npm run build --workspace=@bobai/api && npm run build --workspace=web",
     "test": "npm run test:security --workspace=@bobai/api",
     "audit": "npm audit --workspaces --include-workspace-root",
