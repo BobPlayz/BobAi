@@ -1,72 +1,24 @@
 const ONBOARDING_KEY = "bobai_onboarding";
 const PENDING_EMAIL_KEY = "bobai_pending_verification_email";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
 type ApiError = { error?: string };
-
-export type Session = { accessToken: string; expiresIn: number; email?: string; role?: string; username?: string };
+export type Session = { accessToken: ""; expiresIn: number; email?: string; role?: string; username?: string };
 let session: Session | null = null;
-
 async function readJson<T>(response: Response): Promise<T> { return (await response.json().catch(() => ({}))) as T; }
-
 async function authenticate(path: string, body: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${API}${path}`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const data = await readJson<Session & ApiError>(res);
-    if (!res.ok) return { ok: false, error: data.error || "authentication failed" };
-    if (typeof data.expiresIn !== "number") return { ok: false, error: "invalid session from backend" };
-    session = data;
-    return { ok: true };
-  } catch { return { ok: false, error: "backend unavailable" }; }
+  try { const res = await fetch(`${API}${path}`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const data = await readJson<{ expiresIn?: number } & ApiError>(res); if (!res.ok) return { ok: false, error: data.error || "authentication failed" }; if (typeof data.expiresIn !== "number") return { ok: false, error: "invalid session from backend" }; session = { accessToken: "", expiresIn: data.expiresIn }; return { ok: true }; }
+  catch { return { ok: false, error: "backend unavailable" }; }
 }
-
 export const login = (email: string, password: string) => authenticate("/auth/login", { email, password });
 export const register = (username: string, email: string, password: string) => authenticate("/auth/register", { username, email, password });
-
-export async function requestOtp(email: string): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${API}/auth/otp/request`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
-    const data = await readJson<{ message?: string } & ApiError>(res);
-    if (!res.ok) return { ok: false, error: data.error || "verification email could not be sent right now" };
-    localStorage.setItem(PENDING_EMAIL_KEY, email.trim().toLowerCase());
-    return { ok: true };
-  } catch { return { ok: false, error: "backend unavailable" }; }
-}
-
-export async function verifyOtp(email: string, code: string): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${API}/auth/otp/verify`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code }) });
-    const data = await readJson<{ verified?: boolean } & ApiError>(res);
-    if (!res.ok) return { ok: false, error: data.error || "invalid or expired verification code" };
-    localStorage.removeItem(PENDING_EMAIL_KEY);
-    return { ok: data.verified === true };
-  } catch { return { ok: false, error: "backend unavailable" }; }
-}
-
+export async function requestOtp(email: string): Promise<{ ok: boolean; error?: string }> { try { const res = await fetch(`${API}/auth/otp/request`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }); const data = await readJson<{ message?: string } & ApiError>(res); if (!res.ok) return { ok: false, error: data.error || "verification email could not be sent right now" }; localStorage.setItem(PENDING_EMAIL_KEY, email.trim().toLowerCase()); return { ok: true }; } catch { return { ok: false, error: "backend unavailable" }; } }
+export async function verifyOtp(email: string, code: string): Promise<{ ok: boolean; error?: string }> { try { const res = await fetch(`${API}/auth/otp/verify`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code }) }); const data = await readJson<{ verified?: boolean } & ApiError>(res); if (!res.ok) return { ok: false, error: data.error || "invalid or expired verification code" }; localStorage.removeItem(PENDING_EMAIL_KEY); return { ok: data.verified === true }; } catch { return { ok: false, error: "backend unavailable" }; } }
 export function getPendingVerificationEmail() { if (typeof window === "undefined") return ""; return localStorage.getItem(PENDING_EMAIL_KEY) || ""; }
-
-export function logout() {
-  session = null;
-  localStorage.removeItem(ONBOARDING_KEY);
-  localStorage.removeItem(PENDING_EMAIL_KEY);
-  void fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => undefined);
-}
-
+export function logout() { session = null; localStorage.removeItem(ONBOARDING_KEY); localStorage.removeItem(PENDING_EMAIL_KEY); void fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => undefined); }
 export function getSession(): Session | null { return session; }
 export function setSession(next: Session) { session = next; }
 export function clearSession() { session = null; }
-
-export async function refreshSession(): Promise<Session | null> {
-  try {
-    const res = await fetch(`${API}/auth/refresh`, { method: "POST", credentials: "include" });
-    if (!res.ok) { clearSession(); return null; }
-    const next = await readJson<Session>(res);
-    if (typeof next.expiresIn !== "number") { clearSession(); return null; }
-    session = next;
-    return next;
-  } catch { return null; }
-}
-
+export async function refreshSession(): Promise<Session | null> { try { const res = await fetch(`${API}/auth/refresh`, { method: "POST", credentials: "include" }); if (!res.ok) { clearSession(); return null; } const next = await readJson<{ expiresIn?: number }>(res); if (typeof next.expiresIn !== "number") { clearSession(); return null; } session = { accessToken: "", expiresIn: next.expiresIn }; return session; } catch { return null; } }
 export function isLoggedIn() { return session !== null; }
 export function hasCompletedOnboarding() { if (typeof window === "undefined") return false; return localStorage.getItem(ONBOARDING_KEY) === "complete"; }
 export function saveOnboarding(answers: unknown) { localStorage.setItem(ONBOARDING_KEY, "complete"); localStorage.setItem("bobai_onboarding_answers", JSON.stringify(answers)); }
