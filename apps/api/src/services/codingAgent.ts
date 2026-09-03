@@ -2,6 +2,7 @@ const DEFAULT_URL = "http://127.0.0.1:3456";
 const MAX_TASK_LENGTH = 20_000;
 const POLL_MS = 1_000;
 const TIMEOUT_MS = 5 * 60 * 1_000;
+const REQUEST_TIMEOUT_MS = 15_000;
 
 type CodingAgentJob = {
   id: string;
@@ -21,7 +22,7 @@ function getConfig() {
 
   const parsed = new URL(url);
   if (!parsed.port) parsed.port = "3456";
-  if (!["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) {
+  if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname.toLowerCase())) {
     throw new Error("coding agent bridge must run on localhost");
   }
 
@@ -29,16 +30,23 @@ function getConfig() {
 }
 
 async function request<T>(url: string, key: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, ...init?.headers },
-  });
-  const body: unknown = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string" ? body.error : `coding agent returned ${response.status}`;
-    throw new Error(message);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      ...init,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, ...init?.headers },
+      signal: controller.signal,
+    });
+    const body: unknown = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string" ? body.error : `coding agent returned ${response.status}`;
+      throw new Error(message);
+    }
+    return body as T;
+  } finally {
+    clearTimeout(timer);
   }
-  return body as T;
 }
 
 export async function runCodingAgent(task: string) {
@@ -51,6 +59,7 @@ export async function runCodingAgent(task: string) {
     method: "POST",
     body: JSON.stringify({ prompt: normalizedTask }),
   });
+  if (!created.id) throw new Error("coding agent returned an invalid task id");
 
   const deadline = Date.now() + TIMEOUT_MS;
   while (Date.now() < deadline) {
