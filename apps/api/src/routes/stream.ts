@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
     }
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("STREAM ROUTE ERROR:", error);
-    if (!res.writableEnded) { send("error", { message: error instanceof Error ? error.message : "stream failed" }); res.end(); }
+    if (!res.writableEnded) { send("error", { message: process.env.NODE_ENV === "production" ? "stream failed" : error instanceof Error ? error.message : "stream failed" }); res.end(); }
   }
 });
 
