@@ -5,6 +5,7 @@
   "scripts": {
     "web": "npm run dev --workspace=web",
     "api": "npm run dev --workspace=@bobai/api",
+    "bobredis": "tsx scripts/bobredis/index.ts",
     "ai": "tsx scripts/start.ts",
     "db:push": "npm run db:push --workspace=@bobai/db",
     "db:generate": "npm run db:generate --workspace=@bobai/db",
