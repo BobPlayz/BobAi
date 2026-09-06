@@ -1,12 +1,15 @@
 import "dotenv/config";
 import { app } from "./app.js";
 import { configureOtpDelivery } from "./services/otpDelivery.js";
-import { startRetentionWorker } from "./services/retention.js";
+import { runRetentionCleanup, startRetentionWorker } from "./services/retention.js";
 
 const PORT = Number(process.env.PORT || 3001);
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 configureOtpDelivery();
+void runRetentionCleanup().catch((error) => {
+  if (process.env.NODE_ENV !== "production") console.warn("initial retention cleanup failed", error);
+});
 const retentionWorker = startRetentionWorker();
 
 const server = app.listen(PORT, () => {
