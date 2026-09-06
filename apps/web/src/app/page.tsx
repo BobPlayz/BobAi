@@ -2,6 +2,7 @@
 
 import ChatWindow from "@/components/ChatWindow";
 import ChatInput from "@/components/ChatInput";
+import AssistantHub from "@/components/AssistantHub";
 import { useChat } from "@/hooks/useChat";
 
 export default function HomePage() {
@@ -9,6 +10,7 @@ export default function HomePage() {
 
   return (
     <main className="flex h-screen flex-col bg-background text-text">
+      <AssistantHub personality={chat.settings.personality} onPersonalityChange={(value) => chat.setSettings((current) => ({ ...current, personality: value }))} />
       <ChatWindow
         messages={chat.activeConversation?.messages || []}
         loading={chat.loading}
