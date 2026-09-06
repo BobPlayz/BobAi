@@ -1,8 +1,10 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import multer from "multer";
 import { promises as fs } from "node:fs";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { PDFParse } from "pdf-parse";
+import { db, uploads } from "@bobai/db";
+import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -44,7 +46,24 @@ router.post("/upload", uploadMiddleware, async (req, res) => {
     }
 
     if (text.length > MAX_EXTRACTED_TEXT) return res.status(413).json({ error: "extracted document text exceeds the 5 MB limit" });
-    return res.json({ name: safeName(file.originalname), type: mimetype, size: file.size, checksum, text });
+
+    const workspace = await ensurePersonalWorkspace(req.user!.id);
+    const id = randomUUID();
+    await db.insert(uploads).values({
+      id,
+      workspaceId: workspace.id,
+      uploadedBy: req.user!.id,
+      storageKey: `extracted/${workspace.id}/${id}`,
+      originalName: safeName(file.originalname),
+      mimeType: mimetype,
+      size: file.size,
+      checksum,
+      storageProvider: "database-extracted-text",
+      metadata: { source: "upload", originalSize: file.size },
+      extractedText: text,
+    });
+
+    return res.json({ id, name: safeName(file.originalname), type: mimetype, size: file.size, checksum, text });
   } catch {
     return res.status(500).json({ error: "failed to process file" });
   } finally {
