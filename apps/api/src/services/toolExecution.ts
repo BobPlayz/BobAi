@@ -25,12 +25,16 @@ export async function prepareToolExecution(toolId: string, context: ToolExecutio
   const workspaceId = context.workspaceId.trim();
   if (!workspaceId) return { status: "unauthorized", tool };
 
-  const [membership] = await db
-    .select({ id: workspaceMembers.id })
-    .from(workspaceMembers)
-    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, context.userId)))
-    .limit(1);
-  if (!membership) return { status: "unauthorized", tool };
+  try {
+    const [membership] = await db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, context.userId)))
+      .limit(1);
+    if (!membership) return { status: "unauthorized", tool };
+  } catch {
+    return { status: "unavailable", tool, reason: "authorization service is unavailable" };
+  }
 
   if (tool.requiresUserApproval && !context.approved) return { status: "approval_required", tool };
 
