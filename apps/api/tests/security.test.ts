@@ -7,6 +7,8 @@ async function main() {
   process.env.DATABASE_URL ||= "postgres://test:test@127.0.0.1:1/test";
 
   const { app } = await import("../src/app.js");
+  const { parseToolResult } = await import("../src/services/structuredResult.js");
+  const { getTool } = await import("../src/services/toolRegistry.js");
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const { port } = server.address() as AddressInfo;
@@ -48,6 +50,20 @@ async function main() {
     const body = await response.json();
     assert.equal(body.error, "authentication required");
     assert.equal("stack" in body, false);
+  });
+
+  test("structured tool results are validated at runtime", () => {
+    assert.deepEqual(parseToolResult({ ok: true, data: { value: 1 } })?.ok, true);
+    assert.equal(parseToolResult({ ok: true, error: { code: "bad", message: "should not be present" } }), null);
+    assert.equal(parseToolResult({ ok: false }), null);
+    assert.equal(parseToolResult({ ok: false, error: { code: "bad", message: "nope", retryable: "yes" } }), null);
+  });
+
+  test("external write-capable tools require approval", () => {
+    assert.equal(getTool("image")?.requiresUserApproval, true);
+    assert.equal(getTool("music")?.requiresUserApproval, true);
+    assert.equal(getTool("diagrams")?.requiresUserApproval, true);
+    assert.equal(getTool("sketch-to-ui")?.requiresUserApproval, true);
   });
 }
 
