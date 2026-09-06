@@ -6,7 +6,6 @@ import { createArtifact, createProject, deepResearch, listProjects, runCodingAge
 type Project = { id: string; name: string; description?: string | null; settings?: unknown };
 type Mode = "research" | "study" | "create" | "voice" | "agent";
 type Props = { personality: string; onPersonalityChange: (value: string) => void };
-
 type QuizItem = { question: string; options: string[]; answer: string; explanation: string };
 
 export default function AssistantHub({ personality, onPersonalityChange }: Props) {
@@ -65,19 +64,21 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
 
   async function run() {
     const text = query.trim(); if (!text || busy) return;
+    const projectContext = projectInstructions.trim() ? `\n\nActive project instructions:\n${projectInstructions.trim().slice(0, 12_000)}` : "";
+    const task = `${text}${projectContext}`;
     setBusy(true); clearResults();
     try {
       if (mode === "research") {
-        const result = await deepResearch(text);
+        const result = await deepResearch(task);
         setOutput(`${result.synthesis}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => `[${index + 1}] ${source.title} — ${source.url}`).join("\n")}`);
         setArtifact(result.synthesis);
       } else if (mode === "study") {
-        const result = await studyPack(text, "medium");
+        const result = await studyPack(task, "medium");
         setQuiz(result.quiz);
         setOutput(`${result.title}\n\n${result.summary}\n\nKey points:\n${result.keyPoints.map((item) => `• ${item}`).join("\n")}\n\nFlashcards:\n${result.flashcards.map((card) => `Q: ${card.question}\nA: ${card.answer}`).join("\n\n")}`);
       } else if (mode === "create") setArtifact(await createArtifact(text, personality));
       else if (mode === "voice") { speak(text); setOutput("speaking…"); }
-      else { const result = await runCodingAgent(text); setOutput(result.output + (result.warnings ? `\n\nWarnings:\n${result.warnings}` : "")); }
+      else { const result = await runCodingAgent(task); setOutput(result.output + (result.warnings ? `\n\nWarnings:\n${result.warnings}` : "")); }
     } catch (error) { setOutput(error instanceof Error ? error.message : "that operation failed"); }
     finally { setBusy(false); }
   }
@@ -98,7 +99,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
           <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="what should Bob do?" className="min-h-20 w-full resize-y rounded-xl border border-[#2A3340] bg-[#141A22] p-3 text-sm text-[#E5EEF7] outline-none placeholder:text-[#64748B] focus:border-[#38BDF8]" />
           <div className="mt-2 flex justify-end"><button onClick={run} disabled={busy || !query.trim()} className="rounded-xl bg-[#38BDF8] px-4 py-2 text-sm font-semibold text-[#061018] disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Working…" : "Run"}</button></div>
           {artifact && <div className="mt-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3"><div className="mb-2 flex items-center justify-between"><span className="text-xs font-semibold text-[#94A3B8]">Editable artifact</span><button onClick={() => navigator.clipboard?.writeText(artifact)} className="rounded-lg border border-[#2A3340] px-2 py-1 text-xs text-[#94A3B8]">Copy</button></div><textarea value={artifact} onChange={(event) => setArtifact(event.target.value)} className="min-h-72 w-full resize-y rounded-lg border border-[#2A3340] bg-[#10161D] p-3 font-mono text-xs leading-5 text-[#CBD5E1] outline-none focus:border-[#38BDF8]" /><button onClick={() => speak(artifact)} className="mt-2 rounded-lg border border-[#2A3340] px-3 py-2 text-xs text-[#94A3B8]">🔊 Read aloud</button></div>}
-          {quiz.length > 0 && <div className="mt-3 space-y-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-4 text-sm text-[#CBD5E1]"><div className="font-semibold text-[#E5EEF7]">Interactive quiz</div>{quiz.map((item, index) => { const selected = quizAnswers[index]; const correct = selected === item.answer; const selectedIndex = item.options.indexOf(selected); return <div key={index} className="rounded-lg border border-[#2A3340] p-3"><div>{index + 1}. {item.question}</div><div className="mt-2 grid gap-1">{item.options.map((option, optionIndex) => <button key={optionIndex} onClick={() => setQuizAnswers((answers) => ({ ...answers, [index]: option }))} className={`rounded-lg px-2 py-1 text-left text-xs ${quizAnswers[index] === option ? "bg-[#38BDF8]/15 text-[#E5EEF7]" : "bg-[#141A22] text-[#94A3B8]"}`}>{option}</button>)}</div>{selected !== undefined && <div className={`mt-2 text-xs ${correct ? "text-green-400" : "text-red-400"}`}>{correct ? `✓ Correct${item.explanation ? ` — ${item.explanation}` : ""}` : `✗ Correct answer: ${item.answer}`}{selectedIndex < 0 ? "" : ""}</div>}</div>; })}</div>}
+          {quiz.length > 0 && <div className="mt-3 space-y-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-4 text-sm text-[#CBD5E1]"><div className="font-semibold text-[#E5EEF7]">Interactive quiz</div>{quiz.map((item, index) => { const selected = quizAnswers[index]; const correct = selected === item.answer; return <div key={index} className="rounded-lg border border-[#2A3340] p-3"><div>{index + 1}. {item.question}</div><div className="mt-2 grid gap-1">{item.options.map((option) => <button key={option} onClick={() => setQuizAnswers((answers) => ({ ...answers, [index]: option }))} className={`rounded-lg px-2 py-1 text-left text-xs ${quizAnswers[index] === option ? "bg-[#38BDF8]/15 text-[#E5EEF7]" : "bg-[#141A22] text-[#94A3B8]"}`}>{option}</button>)}</div>{selected !== undefined && <div className={`mt-2 text-xs ${correct ? "text-green-400" : "text-red-400"}`}>{correct ? `✓ Correct${item.explanation ? ` — ${item.explanation}` : ""}` : `✗ Correct answer: ${item.answer}`}</div>}</div>; })}</div>}
           {output && <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3 text-xs leading-5 text-[#CBD5E1]">{output}</pre>}
         </div>
 
