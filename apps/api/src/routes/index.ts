@@ -25,6 +25,7 @@ import mcpRouter from "./mcp.js";
 import skillsRouter from "./skills.js";
 import capabilitiesRouter from "./capabilities.js";
 import toolsRouter from "./tools.js";
+import projectsRouter from "./projects.js";
 
 function buildApiRouter() {
   const router = Router();
@@ -53,6 +54,7 @@ function buildApiRouter() {
   router.use("/capabilities", capabilitiesRouter);
   router.use("/model-agents", modelAgentsRouter);
   router.use("/tools", toolsRouter);
+  router.use("/projects", projectsRouter);
   return router;
 }
 
