@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export type DbConversationMessage = {
   id: string;
@@ -64,6 +64,10 @@ export async function dbSaveConversation(input: {
   const { conversations, messages } = database;
 
   await database.db.transaction(async (tx) => {
+    // Serialize saves for the same conversation so concurrent requests cannot
+    // both pass the ownership check and then overwrite each other's messages.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${input.id}))`);
+
     const existing = await tx.select({ userId: conversations.userId, workspaceId: conversations.workspaceId })
       .from(conversations).where(eq(conversations.id, input.id)).limit(1);
     if (existing[0] && (existing[0].userId !== input.userId || existing[0].workspaceId !== input.workspaceId)) {
