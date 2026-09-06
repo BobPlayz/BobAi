@@ -23,8 +23,8 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
 
   useEffect(() => { void listProjects().then((items) => { setProjects(items); if (items[0]) selectProject(items[0]); }).catch(() => undefined); }, []);
-  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.assistant.controls") || "{}"); if (typeof saved.memory === "boolean") setMemory(saved.memory); } catch {} }, []);
-  useEffect(() => { localStorage.setItem("bobai.assistant.controls", JSON.stringify({ memory })); }, [memory]);
+  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof saved.memory === "boolean") setMemory(saved.memory); } catch {} }, []);
+  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); localStorage.setItem("bobai.settings.v1", JSON.stringify({ ...saved, memory })); } catch { localStorage.setItem("bobai.settings.v1", JSON.stringify({ memory })); } }, [memory]);
 
   function selectProject(project: Project) {
     setProjectId(project.id); setProjectName(project.name);
@@ -67,8 +67,8 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     try {
       if (mode === "research") {
         const result = await deepResearch(text);
-        setOutput(`${result.synthesis}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => `[${index + 1}] ${source.title} — ${source.url}`).join("\n")}`);
-        setArtifact(result.synthesis);
+        setOutput(`${result.answer}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => `[${index + 1}] ${source.title} — ${source.url}`).join("\n")}`);
+        setArtifact(result.answer);
       } else if (mode === "study") {
         const result = await studyPack(text, "medium");
         setQuiz(result.quiz);
