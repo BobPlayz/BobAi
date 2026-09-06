@@ -21,45 +21,58 @@ function cleanQuery(value: unknown): string {
   return query;
 }
 
+function isPrivateHostname(hostname: string) {
+  const host = hostname.toLowerCase().replace(/[\[\]]/g, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host === "::1" || host === "0.0.0.0") return true;
+  const parts = host.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [a, b] = parts;
+  return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || a === 0;
+}
+
+function safeSourceUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || isPrivateHostname(url.hostname)) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 function makeSubqueries(query: string): string[] {
-  return [
-    query,
-    `${query} key facts evidence`,
-    `${query} latest developments`,
-    `${query} competing perspectives`,
-  ].slice(0, MAX_SUBQUERIES);
+  return [query, `${query} key facts evidence`, `${query} latest developments`, `${query} competing perspectives`].slice(0, MAX_SUBQUERIES);
 }
 
 function dedupeSources(sourceLists: ResearchSource[][]): ResearchSource[] {
   const seen = new Set<string>();
   const output: ResearchSource[] = [];
   for (const source of sourceLists.flat()) {
-    try {
-      const canonical = new URL(source.url);
-      canonical.hash = "";
-      const key = canonical.toString();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      output.push({ ...source, url: key });
-    } catch {
-      continue;
-    }
+    const parsed = safeSourceUrl(source.url);
+    if (!parsed) continue;
+    parsed.hash = "";
+    const key = parsed.toString();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push({ ...source, url: key });
     if (output.length >= MAX_SOURCES) break;
   }
   return output;
 }
 
 async function fetchEvidence(source: ResearchSource): Promise<{ url: string; title: string; excerpt: string } | null> {
+  const safeUrl = safeSourceUrl(source.url);
+  if (!safeUrl) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
   try {
-    const response = await fetch(source.url, { signal: controller.signal, redirect: "error" });
+    const response = await fetch(safeUrl, { signal: controller.signal, redirect: "error" });
     if (!response.ok) return null;
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html") && !contentType.includes("text/plain")) return null;
     const text = (await response.text()).replace(/\s+/g, " ").trim();
     if (!text) return null;
-    return { url: source.url, title: source.title, excerpt: text.slice(0, MAX_SOURCE_TEXT) };
+    return { url: safeUrl.toString(), title: source.title, excerpt: text.slice(0, MAX_SOURCE_TEXT) };
   } catch {
     return null;
   } finally {
@@ -68,32 +81,16 @@ async function fetchEvidence(source: ResearchSource): Promise<{ url: string; tit
 }
 
 async function synthesize(query: string, evidence: Array<{ url: string; title: string; excerpt: string }>): Promise<string> {
-  if (!evidence.length) {
-    return `Research completed for "${query}", but the configured search provider did not expose readable source text. Use the returned source links for verification.`;
-  }
-
-  const material = evidence
-    .map((item, index) => `[${index + 1}] ${item.title}\nURL: ${item.url}\n${item.excerpt.slice(0, 7_000)}`)
-    .join("\n\n")
-    .slice(0, MAX_SYNTHESIS_INPUT);
-
+  if (!evidence.length) return `Research completed for "${query}", but the configured search provider did not expose readable source text. Use the returned source links for verification.`;
+  const material = evidence.map((item, index) => `[${index + 1}] ${item.title}\nURL: ${item.url}\n${item.excerpt.slice(0, 7_000)}`).join("\n\n").slice(0, MAX_SYNTHESIS_INPUT);
   try {
     const response = await runChat([
-      {
-        role: "system",
-        content: "You are BobAI's research synthesizer. Produce a concise, accurate research report from the supplied source material. Separate established facts from uncertainty or disagreement. Never invent citations or facts. Cite claims inline using [1], [2], etc., matching the supplied source numbers. End with a short Sources section listing only the source numbers actually used. Use headings and useful bullet points where appropriate.",
-      },
-      {
-        role: "user",
-        content: `Research question: ${query}\n\nSource material:\n${material}`,
-      },
+      { role: "system", content: "You are BobAI's research synthesizer. Produce a concise, accurate research report from the supplied source material. Separate established facts from uncertainty or disagreement. Never invent citations or facts. Cite claims inline using [1], [2], etc., matching the supplied source numbers. End with a short Sources section listing only the source numbers actually used. Use headings and useful bullet points where appropriate." },
+      { role: "user", content: `Research question: ${query}\n\nSource material:\n${material}` },
     ]);
     const content = response.message?.content?.trim();
     if (content) return content;
-  } catch {
-    // Keep research useful if the configured local model is unavailable.
-  }
-
+  } catch {}
   return evidence.slice(0, 10).map((item, index) => `[${index + 1}] ${item.title}\n${item.excerpt.slice(0, 900)}\nSource: ${item.url}`).join("\n\n");
 }
 
