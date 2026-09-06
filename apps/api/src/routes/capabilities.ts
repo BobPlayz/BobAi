@@ -18,18 +18,15 @@ const approvals = new Map<string, { userId: string; capability: ProviderCapabili
 const APPROVAL_TTL_MS = 60_000;
 const isSupported = (value: string): value is ProviderCapability => supported.has(value as ProviderCapability);
 function isObjectBody(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
-function validateCapabilityInput(capability: ProviderCapability, body: Record<string, unknown>) {
-  if (capability === "face_swap" && body.consent !== true) return "explicit consent is required for face-swap operations";
-  return null;
-}
+function validateCapabilityInput(capability: ProviderCapability, body: Record<string, unknown>) { if (capability === "face_swap" && body.consent !== true) return "explicit consent is required for face-swap operations"; return null; }
 function consumeApproval(userId: string, capability: ProviderCapability, token: unknown) {
   if (!approvalRequired.has(capability)) return true;
   if (typeof token !== "string") return false;
   const approval = approvals.get(token);
   if (!approval || approval.userId !== userId || approval.capability !== capability || approval.expiresAt <= Date.now()) { approvals.delete(token); return false; }
-  approvals.delete(token);
-  return true;
+  approvals.delete(token); return true;
 }
+function providerInput(body: Record<string, unknown>) { const { approvalToken: _approvalToken, ...input } = body; return input; }
 setInterval(() => { const now = Date.now(); for (const [token, approval] of approvals) if (approval.expiresAt <= now) approvals.delete(token); }, APPROVAL_TTL_MS).unref();
 
 router.get("/", (_req, res) => res.json({ capabilities: listProviderCapabilities() }));
@@ -57,7 +54,7 @@ router.post("/:capability/jobs", async (req, res) => {
   if (!consumeApproval(req.user!.id, capability, req.body.approvalToken)) return res.status(409).json({ error: "user approval is required" });
   try {
     const workspace = await ensurePersonalWorkspace(req.user!.id);
-    const job = await createCapabilityJob(capability, req.body, { workspaceId: workspace.id, createdBy: req.user!.id });
+    const job = await createCapabilityJob(capability, providerInput(req.body), { workspaceId: workspace.id, createdBy: req.user!.id });
     return res.status(202).json({ job });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error(`capability job ${capability} failed`, error);
@@ -72,7 +69,7 @@ router.post("/:capability", async (req, res) => {
   if (validationError) return res.status(400).json({ error: validationError });
   if (!consumeApproval(req.user!.id, capability, req.body.approvalToken)) return res.status(409).json({ error: "user approval is required" });
   try {
-    const result = await executeProviderCapability(capability, req.body);
+    const result = await executeProviderCapability(capability, providerInput(req.body));
     return res.json({ capability, result });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error(`capability ${capability} failed`, error);
