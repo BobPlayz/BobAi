@@ -3,10 +3,15 @@ import { classifyAgentTask, getAgentTask, listAgentTasks, type AgentTaskKind } f
 import { listAgentSkills, type AgentSkillId } from "../services/agentSkills.js";
 import { listBobServices } from "../services/bobServices.js";
 import { agentAuth } from "../middleware/agentAuth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQueue.js";
 
 const router = Router();
 const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
+const userBuckets = new Map<string, { startedAt: number; count: number }>();
+const USER_WINDOW_MS = 60_000;
+const USER_MAX_REQUESTS = 5;
+
 type TaskBody = { task?: unknown; kind?: unknown; mode?: unknown; skills?: unknown; workspaceId?: unknown };
 
 function parseTaskBody(body: unknown) {
@@ -26,6 +31,23 @@ function validateTask(body: unknown) {
   if (parsed.requestedKind && !allowedKinds.includes(parsed.requestedKind as AgentTaskKind)) return { error: "invalid task kind" } as const;
   return { value: parsed } as const;
 }
+
+function userLimited(userId: string) {
+  const now = Date.now();
+  const current = userBuckets.get(userId);
+  if (!current || now - current.startedAt >= USER_WINDOW_MS) {
+    userBuckets.set(userId, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > USER_MAX_REQUESTS;
+}
+
+const cleanup = setInterval(() => {
+  const cutoff = Date.now() - USER_WINDOW_MS;
+  for (const [key, bucket] of userBuckets) if (bucket.startedAt < cutoff) userBuckets.delete(key);
+}, USER_WINDOW_MS);
+cleanup.unref();
 
 router.get("/skills", agentAuth, (_req, res) => res.json({ skills: listAgentSkills() }));
 router.get("/services", agentAuth, (_req, res) => res.json({ services: listBobServices() }));
@@ -69,6 +91,31 @@ router.post("/run", agentAuth, (req, res) => {
   } catch (error) {
     return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" });
   }
+});
+
+router.post("/user/run", requireAuth, (req, res) => {
+  if (userLimited(req.user!.id)) return res.status(429).json({ error: "too many agent requests", retryAfterSeconds: 60 });
+  const validated = validateTask(req.body);
+  if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
+  try {
+    const job = enqueueAgentTask({
+      description: validated.value.description,
+      kind: validated.value.requestedKind as AgentTaskKind | undefined,
+      skills: validated.value.requestedSkills,
+      mode: validated.value.requestedMode,
+      context: { workspaceId: validated.value.workspaceId, createdBy: req.user!.id },
+    });
+    return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt, agent: "background" });
+  } catch (error) {
+    return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" });
+  }
+});
+
+router.get("/user/queue/:id", requireAuth, (req, res) => {
+  const job = getQueueJob(req.params.id as string);
+  if (!job) return res.status(404).json({ error: "agent job not found" });
+  if (job.context?.createdBy !== req.user!.id) return res.status(404).json({ error: "agent job not found" });
+  return res.json({ id: job.id, status: job.status, createdAt: job.createdAt, result: job.result, error: job.error });
 });
 
 export default router;
