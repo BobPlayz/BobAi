@@ -21,6 +21,7 @@ import visionRouter from "./vision.js";
 import researchRouter from "./research.js";
 import deepResearchRouter from "./deepResearch.js";
 import studyRouter from "./study.js";
+import mcpRouter from "./mcp.js";
 import skillsRouter from "./skills.js";
 import capabilitiesRouter from "./capabilities.js";
 import toolsRouter from "./tools.js";
@@ -47,6 +48,7 @@ function buildApiRouter() {
   router.use("/research", researchRouter);
   router.use("/deep-research", deepResearchRouter);
   router.use("/study", studyRouter);
+  router.use("/mcp", mcpRouter);
   router.use("/skills", skillsRouter);
   router.use("/capabilities", capabilitiesRouter);
   router.use("/model-agents", modelAgentsRouter);
