@@ -9,6 +9,8 @@ async function main() {
   const { app } = await import("../src/app.js");
   const { parseToolResult } = await import("../src/services/structuredResult.js");
   const { getTool } = await import("../src/services/toolRegistry.js");
+  const { isSensitiveMemory } = await import("../src/store/memoryDb.js");
+  const { prepareChat } = await import("../src/services/chatEngine.js");
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const { port } = server.address() as AddressInfo;
@@ -64,6 +66,18 @@ async function main() {
     assert.equal(getTool("music")?.requiresUserApproval, true);
     assert.equal(getTool("diagrams")?.requiresUserApproval, true);
     assert.equal(getTool("sketch-to-ui")?.requiresUserApproval, true);
+  });
+
+  test("memory rejects secrets but permits normal preferences", () => {
+    assert.equal(isSensitiveMemory("remember my password is abc123"), true);
+    assert.equal(isSensitiveMemory("remember that I prefer concise answers"), false);
+  });
+
+  test("chat context stays bounded while preserving the system prompt", () => {
+    const prepared = prepareChat({ messages: Array.from({ length: 100 }, (_, index) => ({ role: index % 2 ? "assistant" : "user", content: "x".repeat(2_000) })), personality: "be helpful" });
+    assert.equal(prepared.validationError, null);
+    assert.equal(prepared.ollamaMessages[0].role, "system");
+    assert.ok(prepared.ollamaMessages.reduce((total, message) => total + message.content.length, 0) <= 120_000);
   });
 }
 
