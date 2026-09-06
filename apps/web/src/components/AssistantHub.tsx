@@ -7,6 +7,8 @@ type Project = { id: string; name: string; description?: string | null; settings
 type Mode = "research" | "study" | "create" | "voice" | "agent";
 type Props = { personality: string; onPersonalityChange: (value: string) => void };
 
+type QuizItem = { question: string; options: string[]; answer: string; explanation: string };
+
 export default function AssistantHub({ personality, onPersonalityChange }: Props) {
   const [mode, setMode] = useState<Mode>("research");
   const [query, setQuery] = useState("");
@@ -19,12 +21,12 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
   const [projectName, setProjectName] = useState("");
   const [projectInstructions, setProjectInstructions] = useState("");
   const [artifact, setArtifact] = useState("");
-  const [quiz, setQuiz] = useState<Array<{ question: string; options: string[]; answer: number }>>([]);
-  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+  const [quiz, setQuiz] = useState<QuizItem[]>([]);
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({});
 
   useEffect(() => { void listProjects().then((items) => { setProjects(items); if (items[0]) selectProject(items[0]); }).catch(() => undefined); }, []);
   useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof saved.memory === "boolean") setMemory(saved.memory); } catch {} }, []);
-  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); localStorage.setItem("bobai.settings.v1", JSON.stringify({ ...saved, memory })); } catch { localStorage.setItem("bobai.settings.v1", JSON.stringify({ memory })); } }, [memory]);
+  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); localStorage.setItem("bobai.settings.v1", JSON.stringify({ ...saved, memory, projectContext: projectId ? { id: projectId, name: projectName, instructions: projectInstructions } : undefined })); } catch { localStorage.setItem("bobai.settings.v1", JSON.stringify({ memory })); } }, [memory, projectId, projectName, projectInstructions]);
 
   function selectProject(project: Project) {
     setProjectId(project.id); setProjectName(project.name);
@@ -67,8 +69,8 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     try {
       if (mode === "research") {
         const result = await deepResearch(text);
-        setOutput(`${result.answer}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => `[${index + 1}] ${source.title} — ${source.url}`).join("\n")}`);
-        setArtifact(result.answer);
+        setOutput(`${result.synthesis}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => `[${index + 1}] ${source.title} — ${source.url}`).join("\n")}`);
+        setArtifact(result.synthesis);
       } else if (mode === "study") {
         const result = await studyPack(text, "medium");
         setQuiz(result.quiz);
@@ -96,7 +98,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
           <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="what should Bob do?" className="min-h-20 w-full resize-y rounded-xl border border-[#2A3340] bg-[#141A22] p-3 text-sm text-[#E5EEF7] outline-none placeholder:text-[#64748B] focus:border-[#38BDF8]" />
           <div className="mt-2 flex justify-end"><button onClick={run} disabled={busy || !query.trim()} className="rounded-xl bg-[#38BDF8] px-4 py-2 text-sm font-semibold text-[#061018] disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Working…" : "Run"}</button></div>
           {artifact && <div className="mt-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3"><div className="mb-2 flex items-center justify-between"><span className="text-xs font-semibold text-[#94A3B8]">Editable artifact</span><button onClick={() => navigator.clipboard?.writeText(artifact)} className="rounded-lg border border-[#2A3340] px-2 py-1 text-xs text-[#94A3B8]">Copy</button></div><textarea value={artifact} onChange={(event) => setArtifact(event.target.value)} className="min-h-72 w-full resize-y rounded-lg border border-[#2A3340] bg-[#10161D] p-3 font-mono text-xs leading-5 text-[#CBD5E1] outline-none focus:border-[#38BDF8]" /><button onClick={() => speak(artifact)} className="mt-2 rounded-lg border border-[#2A3340] px-3 py-2 text-xs text-[#94A3B8]">🔊 Read aloud</button></div>}
-          {quiz.length > 0 && <div className="mt-3 space-y-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-4 text-sm text-[#CBD5E1]"><div className="font-semibold text-[#E5EEF7]">Interactive quiz</div>{quiz.map((item, index) => <div key={index} className="rounded-lg border border-[#2A3340] p-3"><div>{index + 1}. {item.question}</div><div className="mt-2 grid gap-1">{item.options.map((option, optionIndex) => <button key={optionIndex} onClick={() => setQuizAnswers((answers) => ({ ...answers, [index]: optionIndex }))} className={`rounded-lg px-2 py-1 text-left text-xs ${quizAnswers[index] === optionIndex ? "bg-[#38BDF8]/15 text-[#E5EEF7]" : "bg-[#141A22] text-[#94A3B8]"}`}>{option}</button>)}</div>{quizAnswers[index] !== undefined && <div className={`mt-2 text-xs ${quizAnswers[index] === item.answer ? "text-green-400" : "text-red-400"}`}>{quizAnswers[index] === item.answer ? "✓ Correct" : `✗ Correct answer: ${item.options[item.answer]}`}</div>}</div>)}</div>}
+          {quiz.length > 0 && <div className="mt-3 space-y-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-4 text-sm text-[#CBD5E1]"><div className="font-semibold text-[#E5EEF7]">Interactive quiz</div>{quiz.map((item, index) => { const selected = quizAnswers[index]; const correct = selected === item.answer; const selectedIndex = item.options.indexOf(selected); return <div key={index} className="rounded-lg border border-[#2A3340] p-3"><div>{index + 1}. {item.question}</div><div className="mt-2 grid gap-1">{item.options.map((option, optionIndex) => <button key={optionIndex} onClick={() => setQuizAnswers((answers) => ({ ...answers, [index]: option }))} className={`rounded-lg px-2 py-1 text-left text-xs ${quizAnswers[index] === option ? "bg-[#38BDF8]/15 text-[#E5EEF7]" : "bg-[#141A22] text-[#94A3B8]"}`}>{option}</button>)}</div>{selected !== undefined && <div className={`mt-2 text-xs ${correct ? "text-green-400" : "text-red-400"}`}>{correct ? `✓ Correct${item.explanation ? ` — ${item.explanation}` : ""}` : `✗ Correct answer: ${item.answer}`}{selectedIndex < 0 ? "" : ""}</div>}</div>; })}</div>}
           {output && <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3 text-xs leading-5 text-[#CBD5E1]">{output}</pre>}
         </div>
 
