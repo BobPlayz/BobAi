@@ -12,14 +12,21 @@ export async function runRetentionCleanup(now = new Date()) {
   const sessionCutoff = new Date(now.getTime() - SESSION_RETENTION_MS);
   const accountCutoff = new Date(now.getTime() - ACCOUNT_DELETION_GRACE_MS);
 
-  const [otps, resets, sessionsDeleted, accountsDeleted] = await Promise.all([
+  const [otps, resets, sessionsDeleted] = await Promise.all([
     db.delete(emailOtps).where(lt(emailOtps.createdAt, otpCutoff)).returning({ id: emailOtps.id }),
     db.delete(passwordResets).where(lt(passwordResets.createdAt, resetCutoff)).returning({ id: passwordResets.id }),
     db.delete(sessions).where(and(lt(sessions.createdAt, sessionCutoff), or(eq(sessions.isActive, false), isNotNull(sessions.revokedAt)))).returning({ id: sessions.id }),
-    db.delete(users).where(and(isNotNull(users.deletedAt), lt(users.deletedAt, accountCutoff))).returning({ id: users.id }),
   ]);
 
-  return { otpRows: otps.length, passwordResetRows: resets.length, sessionRows: sessionsDeleted.length, accountRows: accountsDeleted.length };
+  let accountsDeleted = 0;
+  try {
+    const deleted = await db.delete(users).where(and(isNotNull(users.deletedAt), lt(users.deletedAt, accountCutoff))).returning({ id: users.id });
+    accountsDeleted = deleted.length;
+  } catch {
+    // Older databases can start before migration 0005; skip account cleanup until it exists.
+  }
+
+  return { otpRows: otps.length, passwordResetRows: resets.length, sessionRows: sessionsDeleted.length, accountRows: accountsDeleted };
 }
 
 export function startRetentionWorker(intervalMs = 60 * 60 * 1000) {
