@@ -33,9 +33,7 @@ export async function sendMessage(messages: ChatMessage[], personality = "", mod
         const instructions = typeof settings.projectContext.instructions === "string" ? settings.projectContext.instructions : "";
         if (instructions.trim()) projectContext = `\nActive project: ${name || "untitled"}\nProject instructions:\n${instructions.slice(0, 12_000)}`;
       }
-    } catch {
-      if (typeof effectiveMemory !== "boolean") effectiveMemory = true;
-    }
+    } catch { if (typeof effectiveMemory !== "boolean") effectiveMemory = true; }
   }
   if (typeof effectiveMemory !== "boolean") effectiveMemory = true;
   const res = await request("/chat", { method: "POST", body: JSON.stringify({ messages: cleanMessages, personality: `${personality}${projectContext}`, memoryEnabled: effectiveMemory, ...(modelId ? { modelId } : {}) }) });
@@ -46,30 +44,10 @@ export async function listConversations(): Promise<Conversation[]> { const res =
 export async function saveConversation(conversation: Conversation) { const res = await request("/conversations", { method: "POST", body: JSON.stringify({ id: conversation.id, title: conversation.title, messages: conversation.messages.map((message) => ({ id: message.id, role: message.role, content: message.content, status: "completed", attachments: { ...(message.images?.length ? { images: message.images } : {}), ...(message.files?.length ? { files: message.files } : {}), ...(message.pinned ? { pinned: true } : {}) } })) }) }); if (!res.ok) throw new Error((await res.text()) || "Failed to save conversation"); }
 export async function deleteConversation(conversationId: string) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}`, { method: "DELETE" }); if (!res.ok && res.status !== 404) throw new Error((await res.text()) || "Failed to delete conversation"); }
 export async function generateImage(prompt: string) { const res = await request("/images/generate", { method: "POST", body: JSON.stringify({ prompt, count: 4, width: 1024, height: 1024 }) }); if (!res.ok) throw new Error((await res.text()) || "Failed to generate image"); return res.json(); }
-export async function uploadFile(file: File, onProgress?: (progress: number) => void) { const form = new FormData(); form.append("file", file); const session = getSession(); return new Promise<{ id?: string; name: string; type: string; text: string }>((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open("POST", `${API}/files/upload`); xhr.withCredentials = true; if (session?.accessToken) xhr.setRequestHeader("Authorization", `Bearer ${session.accessToken}`); xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); }; xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { try { resolve(JSON.parse(xhr.responseText)); } catch { reject(new Error("Invalid upload response")); } } else reject(new Error(xhr.responseText || "Upload failed")); }; xhr.onerror = () => reject(new Error("Upload failed")); xhr.send(form); }); }
+export async function uploadFile(file: File, onProgress?: (progress: number) => void) { const form = new FormData(); form.append("file", file); const session = getSession(); return new Promise<{ id?: string; name: string; type: string; text: string }>((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open("POST", `${API}/files/upload"); xhr.withCredentials = true; if (session?.accessToken) xhr.setRequestHeader("Authorization", `Bearer ${session.accessToken}`); xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); }; xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { try { resolve(JSON.parse(xhr.responseText)); } catch { reject(new Error("Invalid upload response")); } } else reject(new Error(xhr.responseText || "Upload failed")); }; xhr.onerror = () => reject(new Error("Upload failed")); xhr.send(form); }); }
+export async function searchFiles(query: string) { const res = await request("/files/search", { method: "POST", body: JSON.stringify({ query }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || "File search failed"); return data as { results: Array<{ id: string; name: string; type: string; excerpt: string; createdAt: string }> }; }
 
-export async function runCodingAgent(task: string): Promise<{ output: string; warnings: string }> {
-  const res = await request("/agents/user/run", { method: "POST", body: JSON.stringify({ task, kind: "coding" }) });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Coding agent failed");
-  const jobId = typeof data.id === "string" ? data.id : "";
-  if (!jobId) throw new Error("Coding agent returned no job id");
-  const deadline = Date.now() + 5 * 60_000;
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 750));
-    const statusRes = await request(`/agents/user/queue/${encodeURIComponent(jobId)}`);
-    const status = await statusRes.json();
-    if (!statusRes.ok) throw new Error(status.error || "Coding agent status unavailable");
-    if (status.status === "completed") {
-      const taskResult = status.result as { result?: { output?: string; warnings?: string } } | null;
-      const result = taskResult?.result;
-      return { output: typeof result?.output === "string" ? result.output : JSON.stringify(result ?? ""), warnings: typeof result?.warnings === "string" ? result.warnings : "" };
-    }
-    if (status.status === "failed") throw new Error(status.error || "Coding agent failed");
-  }
-  throw new Error("Coding agent timed out");
-}
-
+export async function runCodingAgent(task: string): Promise<{ output: string; warnings: string }> { const res = await request("/agents/user/run", { method: "POST", body: JSON.stringify({ task, kind: "coding" }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || "Coding agent failed"); const jobId = typeof data.id === "string" ? data.id : ""; if (!jobId) throw new Error("Coding agent returned no job id"); const deadline = Date.now() + 5 * 60_000; while (Date.now() < deadline) { await new Promise((resolve) => setTimeout(resolve, 750)); const statusRes = await request(`/agents/user/queue/${encodeURIComponent(jobId)}`); const status = await statusRes.json(); if (!statusRes.ok) throw new Error(status.error || "Coding agent status unavailable"); if (status.status === "completed") { const taskResult = status.result as { result?: { output?: string; warnings?: string } } | null; const result = taskResult?.result; return { output: typeof result?.output === "string" ? result.output : JSON.stringify(result ?? ""), warnings: typeof result?.warnings === "string" ? result.warnings : "" }; } if (status.status === "failed") throw new Error(status.error || "Coding agent failed"); } throw new Error("Coding agent timed out"); }
 export type DeepResearchResult = { query: string; sources: Array<{ id: number; title: string; url: string }>; evidence: Array<{ url: string; title: string; excerpt: string }>; synthesis: string; mode?: string };
 export async function deepResearch(query: string): Promise<DeepResearchResult> { const res = await request("/deep-research", { method: "POST", body: JSON.stringify({ query }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || "Deep Research failed"); return data as DeepResearchResult; }
 export type StudyPack = { title: string; summary: string; keyPoints: string[]; flashcards: Array<{ question: string; answer: string }>; quiz: Array<{ question: string; options: string[]; answer: string; explanation: string }>; weakAreas: string[] };
