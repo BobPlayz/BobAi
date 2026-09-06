@@ -1,3 +1,5 @@
+import { and, eq } from "drizzle-orm";
+import { db, workspaceMembers } from "@bobai/db";
 import { getTool, type BobTool } from "./toolRegistry.js";
 
 export type ToolExecutionContext = {
@@ -9,15 +11,27 @@ export type ToolExecutionContext = {
 export type ToolExecutionResult =
   | { status: "ready"; tool: BobTool }
   | { status: "approval_required"; tool: BobTool }
+  | { status: "unauthorized"; tool: BobTool }
   | { status: "unavailable"; tool: BobTool; reason: string };
 
 /**
  * Central execution gate. Concrete providers must be attached here instead of
  * letting arbitrary model output invoke URLs, shells, filesystems, or secrets.
  */
-export function prepareToolExecution(toolId: string, context: ToolExecutionContext): ToolExecutionResult {
+export async function prepareToolExecution(toolId: string, context: ToolExecutionContext): Promise<ToolExecutionResult> {
   const tool = getTool(toolId);
   if (!tool) throw new Error("tool not found");
+
+  const workspaceId = context.workspaceId.trim();
+  if (!workspaceId) return { status: "unauthorized", tool };
+
+  const [membership] = await db
+    .select({ id: workspaceMembers.id })
+    .from(workspaceMembers)
+    .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, context.userId)))
+    .limit(1);
+  if (!membership) return { status: "unauthorized", tool };
+
   if (tool.requiresUserApproval && !context.approved) return { status: "approval_required", tool };
 
   const configured = providerConfigured(tool.id);
