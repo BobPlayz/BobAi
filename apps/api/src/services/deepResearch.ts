@@ -1,8 +1,10 @@
 import { webSearch, type ResearchSource } from "./research.js";
+import { runChat } from "./chatEngine.js";
 
 const MAX_SUBQUERIES = 6;
 const MAX_SOURCES = 24;
 const MAX_SOURCE_TEXT = 12_000;
+const MAX_SYNTHESIS_INPUT = 90_000;
 const DEFAULT_TIMEOUT_MS = 45_000;
 
 export type DeepResearchResult = {
@@ -65,10 +67,34 @@ async function fetchEvidence(source: ResearchSource): Promise<{ url: string; tit
   }
 }
 
-function buildSynthesis(query: string, evidence: Array<{ url: string; title: string; excerpt: string }>): string {
-  if (!evidence.length) return `Research completed for "${query}", but the configured search provider did not expose readable source text. Use the returned source links for verification.`;
-  const lines = evidence.slice(0, 10).map((item, index) => `${index + 1}. ${item.title}\n${item.excerpt.slice(0, 900)}\nSource: ${item.url}`);
-  return `Research brief for: ${query}\n\n${lines.join("\n\n")}`;
+async function synthesize(query: string, evidence: Array<{ url: string; title: string; excerpt: string }>): Promise<string> {
+  if (!evidence.length) {
+    return `Research completed for "${query}", but the configured search provider did not expose readable source text. Use the returned source links for verification.`;
+  }
+
+  const material = evidence
+    .map((item, index) => `[${index + 1}] ${item.title}\nURL: ${item.url}\n${item.excerpt.slice(0, 7_000)}`)
+    .join("\n\n")
+    .slice(0, MAX_SYNTHESIS_INPUT);
+
+  try {
+    const response = await runChat([
+      {
+        role: "system",
+        content: "You are BobAI's research synthesizer. Produce a concise, accurate research report from the supplied source material. Separate established facts from uncertainty or disagreement. Never invent citations or facts. Cite claims inline using [1], [2], etc., matching the supplied source numbers. End with a short Sources section listing only the source numbers actually used. Use headings and useful bullet points where appropriate.",
+      },
+      {
+        role: "user",
+        content: `Research question: ${query}\n\nSource material:\n${material}`,
+      },
+    ]);
+    const content = response.message?.content?.trim();
+    if (content) return content;
+  } catch {
+    // Keep research useful if the configured local model is unavailable.
+  }
+
+  return evidence.slice(0, 10).map((item, index) => `[${index + 1}] ${item.title}\n${item.excerpt.slice(0, 900)}\nSource: ${item.url}`).join("\n\n");
 }
 
 export async function deepResearch(input: unknown): Promise<DeepResearchResult> {
@@ -76,5 +102,5 @@ export async function deepResearch(input: unknown): Promise<DeepResearchResult> 
   const results = await Promise.all(makeSubqueries(query).map((subquery) => webSearch(subquery)));
   const sources = dedupeSources(results.map((result) => result.sources));
   const evidence = (await Promise.all(sources.slice(0, 12).map(fetchEvidence))).filter(Boolean) as Array<{ url: string; title: string; excerpt: string }>;
-  return { query, sources, evidence, synthesis: buildSynthesis(query, evidence) };
+  return { query, sources, evidence, synthesis: await synthesize(query, evidence) };
 }
