@@ -6,6 +6,8 @@ export type McpTool = { name: string; description?: string; inputSchema?: unknow
 const MAX_SERVERS = 20;
 const MAX_TOOLS_PER_SERVER = 100;
 const REQUEST_TIMEOUT_MS = 15_000;
+const APPROVAL_TTL_MS = 5 * 60_000;
+const approvals = new Map<string, { userId: string; serverId: string; toolName: string; expiresAt: number }>();
 
 function configuredServers(): McpServerConfig[] {
   const raw = process.env.BOBAI_MCP_SERVERS?.trim();
@@ -35,12 +37,7 @@ async function call(server: McpServerConfig, method: string, params: Record<stri
   try {
     const response = await fetch(server.url, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "MCP-Protocol-Version": "2026-07-28",
-        "Mcp-Method": method,
-        "Mcp-Name": method,
-      },
+      headers: { "content-type": "application/json", "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": method, "Mcp-Name": method },
       body: JSON.stringify({ jsonrpc: "2.0", id: randomUUID(), method, params }),
       signal: controller.signal,
       redirect: "error",
@@ -49,6 +46,8 @@ async function call(server: McpServerConfig, method: string, params: Record<stri
     return await response.json() as Record<string, unknown>;
   } finally { clearTimeout(timer); }
 }
+
+function findServer(serverId: string) { return configuredServers().find((server) => server.id === serverId); }
 
 export function listConfiguredMcpServers(): McpServerConfig[] { return configuredServers().map((server) => ({ ...server })); }
 
@@ -63,17 +62,28 @@ export async function discoverMcpTools(): Promise<McpTool[]> {
         if (!item || typeof item !== "object") continue;
         const value = item as Record<string, unknown>;
         if (typeof value.name !== "string" || !value.name.trim()) continue;
-        tools.push({
-          name: value.name.trim(),
-          description: typeof value.description === "string" ? value.description.slice(0, 2_000) : undefined,
-          inputSchema: value.inputSchema,
-          serverId: server.id,
-          serverName: server.name,
-        });
+        tools.push({ name: value.name.trim(), description: typeof value.description === "string" ? value.description.slice(0, 2_000) : undefined, inputSchema: value.inputSchema, serverId: server.id, serverName: server.name });
       }
-    } catch {
-      // One unavailable MCP server must not hide tools from other servers.
-    }
+    } catch { /* isolate unavailable servers */ }
   }
   return tools;
+}
+
+export function createMcpApproval(input: { userId: string; serverId: string; toolName: string }) {
+  if (!findServer(input.serverId)) throw new Error("MCP server unavailable");
+  if (!input.toolName || input.toolName.length > 200) throw new Error("invalid MCP tool");
+  const token = randomUUID();
+  approvals.set(token, { ...input, expiresAt: Date.now() + APPROVAL_TTL_MS });
+  return { token, expiresAt: Date.now() + APPROVAL_TTL_MS };
+}
+
+export async function executeApprovedMcpTool(input: { userId: string; approvalToken: string; serverId: string; toolName: string; arguments?: unknown }) {
+  const approval = approvals.get(input.approvalToken);
+  approvals.delete(input.approvalToken);
+  if (!approval || approval.expiresAt < Date.now() || approval.userId !== input.userId || approval.serverId !== input.serverId || approval.toolName !== input.toolName) throw new Error("MCP approval required");
+  const server = findServer(input.serverId);
+  if (!server) throw new Error("MCP server unavailable");
+  const response = await call(server, "tools/call", { name: input.toolName, arguments: input.arguments && typeof input.arguments === "object" ? input.arguments : {} });
+  if (response.error) throw new Error("MCP tool execution failed");
+  return response.result ?? null;
 }
