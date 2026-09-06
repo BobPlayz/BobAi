@@ -3,7 +3,7 @@ import { Router } from "express";
 import { prepareChat, runChat } from "../services/chatEngine.js";
 import { queueBackgroundTask } from "../services/agentCoordinator.js";
 import { isCodingTask } from "../services/codingAgent.js";
-import { dbRecallAll, dbRemember } from "../store/memoryDb.js";
+import { dbRecallAll, dbRemember, isSensitiveMemory } from "../store/memoryDb.js";
 import { dbSaveConversation } from "../store/conversationDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
@@ -32,6 +32,7 @@ router.post("/", async (req, res) => {
 
     if (prepared.memoryRequest && prepared.latestUserMessage) {
       if (!memoryEnabled) return res.json({ reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, agent: "bob" });
+      if (isSensitiveMemory(prepared.latestUserMessage.content)) return res.json({ reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, agent: "bob" });
       const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() });
       if (!stored) return res.status(503).json({ error: "memory storage unavailable" });
       return res.json({ reply: "got it. i will remember that for future conversations.", title: prepared.title, memoryStored: true, agent: "bob" });
