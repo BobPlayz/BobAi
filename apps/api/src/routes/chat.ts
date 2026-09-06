@@ -4,7 +4,7 @@ import { prepareChat, runChat } from "../services/chatEngine.js";
 import { queueBackgroundTask } from "../services/agentCoordinator.js";
 import { isCodingTask } from "../services/codingAgent.js";
 import { dbRecallAll, dbRemember } from "../store/memoryDb.js";
-import { dbGetConversation, dbSaveConversation } from "../store/conversationDb.js";
+import { dbSaveConversation } from "../store/conversationDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
@@ -93,7 +93,7 @@ router.post("/", async (req, res) => {
     });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("CHAT ROUTE ERROR:", error);
-    return res.status(500).json({ error: error instanceof Error ? error.message : "chat failed" });
+    return res.status(500).json({ error: process.env.NODE_ENV === "production" ? "chat failed" : error instanceof Error ? error.message : "chat failed" });
   }
 });
 
