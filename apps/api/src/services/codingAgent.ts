@@ -6,7 +6,7 @@ const POLL_MS = 1_000;
 const TIMEOUT_MS = 5 * 60 * 1_000;
 const REQUEST_TIMEOUT_MS = 15_000;
 
- type CodingAgentJob = {
+type CodingAgentJob = {
   id: string;
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
   result?: { plan?: unknown; executionResults?: string[]; review?: string };
