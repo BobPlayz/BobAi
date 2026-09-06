@@ -8,6 +8,18 @@ import { dbSaveConversation } from "../store/conversationDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
+const STOP_WORDS = new Set(["the", "and", "that", "this", "with", "from", "what", "when", "where", "how", "why", "for", "are", "you", "about", "can", "could", "would", "please"]);
+
+function relevantMemories(memories: Array<{ key: string; value: string }> | null, query: string) {
+  if (!memories?.length) return [];
+  const terms = query.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 2 && !STOP_WORDS.has(term));
+  if (!terms.length) return memories.slice(0, 8).map((memory) => `${memory.key}: ${memory.value}`);
+  return memories.map((memory) => {
+    const text = `${memory.key} ${memory.value}`.toLowerCase();
+    const score = terms.reduce((total, term) => total + (text.includes(term) ? 1 : 0), 0);
+    return { memory, score };
+  }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 12).map((item) => `${item.memory.key}: ${item.memory.value}`);
+}
 
 router.post("/", async (req, res) => {
   const { send } = initSSE(res);
@@ -15,17 +27,20 @@ router.post("/", async (req, res) => {
 
   try {
     const workspace = await ensurePersonalWorkspace(req.user!.id);
-    const memories = await dbRecallAll(workspace.id, req.user!.id);
+    const memoryEnabled = req.body?.memoryEnabled !== false;
+    const latestText = Array.isArray(req.body?.messages) ? [...req.body.messages].reverse().find((message: any) => message?.role === "user")?.content || "" : "";
+    const memories = memoryEnabled ? await dbRecallAll(workspace.id, req.user!.id) : [];
     const prepared = prepareChat({
       messages: req.body?.messages,
       personality: req.body?.personality,
       modelId: req.body?.modelId,
-      memoryContext: memories?.map((memory) => `${memory.key}: ${memory.value}`) || [],
+      memoryContext: relevantMemories(memories, typeof latestText === "string" ? latestText : ""),
     });
 
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
 
     if (prepared.memoryRequest && prepared.latestUserMessage) {
+      if (!memoryEnabled) { send("done", { reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); }
       const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() });
       if (!stored) { send("error", { message: "memory storage unavailable" }); return res.end(); }
       send("done", { reply: "got it. i will remember that for future conversations.", title: prepared.title, memoryStored: true, conversationId });
