@@ -22,9 +22,9 @@ function cleanQuery(value: unknown): string {
 function makeSubqueries(query: string): string[] {
   return [
     query,
-    `${query} key facts evidence",
-    `${query} latest developments",
-    `${query} competing perspectives",
+    `${query} key facts evidence`,
+    `${query} latest developments`,
+    `${query} competing perspectives`,
   ].slice(0, MAX_SUBQUERIES);
 }
 
