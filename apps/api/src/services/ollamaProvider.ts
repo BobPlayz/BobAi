@@ -4,6 +4,8 @@ import { recordProviderFailure, recordProviderSuccess } from "./providerHealth.j
 const DEFAULT_BASE_URL = "http://127.0.0.1:11434";
 const DEFAULT_TIMEOUT_MS = 120_000;
 const PROVIDER_ID = "ollama";
+const MIN_TIMEOUT_MS = 5_000;
+const MAX_TIMEOUT_MS = 300_000;
 
 export type OllamaInstalledModel = {
   name: string;
@@ -18,13 +20,31 @@ export type OllamaHealth = {
   error?: string;
 };
 
+function isLoopback(hostname: string) {
+  return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname.toLowerCase());
+}
+
+function normalizeBaseUrl(value: string) {
+  const raw = value.trim().replace(/\/$/, "");
+  let parsed: URL;
+  try { parsed = new URL(raw); } catch { throw new Error("ollama base URL is invalid"); }
+  const localDevelopment = process.env.NODE_ENV !== "production" && parsed.protocol === "http:" && isLoopback(parsed.hostname);
+  if (parsed.protocol !== "https:" && !localDevelopment) throw new Error("ollama base URL must use HTTPS outside local development");
+  if (process.env.NODE_ENV === "production" && !isLoopback(parsed.hostname)) throw new Error("production Ollama must run on the local loopback interface");
+  return parsed.toString().replace(/\/$/, "");
+}
+
+function normalizeTimeout(value: number) {
+  return Number.isFinite(value) ? Math.min(Math.max(value, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
+}
+
 export class OllamaProvider {
   readonly baseUrl: string;
   readonly timeoutMs: number;
 
   constructor(baseUrl = process.env.OLLAMA_BASE_URL || DEFAULT_BASE_URL, timeoutMs = Number(process.env.OLLAMA_REQUEST_TIMEOUT_MS || DEFAULT_TIMEOUT_MS)) {
-    this.baseUrl = baseUrl.replace(/\/$/, "");
-    this.timeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS;
+    this.baseUrl = normalizeBaseUrl(baseUrl);
+    this.timeoutMs = normalizeTimeout(timeoutMs);
   }
 
   private async request(url: string, init?: RequestInit) {
@@ -45,7 +65,7 @@ export class OllamaProvider {
       return { connected: true, baseUrl: this.baseUrl };
     } catch (error) {
       recordProviderFailure(PROVIDER_ID);
-      return { connected: false, baseUrl: this.baseUrl, error: error instanceof Error ? error.message : String(error) };
+      return { connected: false, baseUrl: this.baseUrl, error: process.env.NODE_ENV === "production" ? "ollama unavailable" : error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -82,7 +102,7 @@ export class OllamaProvider {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ model: selected.model, prompt, ...(system ? { system } : {}), stream: false }),
       });
-      if (!response.ok) throw new Error(`ollama generation failed with ${response.status}: ${(await response.text()).slice(0, 500)}`);
+      if (!response.ok) throw new Error(`ollama generation failed with ${response.status}`);
       const data = (await response.json()) as { response?: string };
       recordProviderSuccess(PROVIDER_ID);
       return data.response || "";
