@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { and, eq } from "drizzle-orm";
 import { db, workspaceMembers } from "@bobai/db";
-import { dbRemember, dbRecallAll, dbClearMemory } from "../store/memoryDb.js";
+import { dbRemember, dbRecallAll, dbClearMemory, isSensitiveMemory } from "../store/memoryDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
@@ -17,6 +17,6 @@ async function context(req: AuthenticatedRequest) {
   return member ? { workspaceId: requested, userId } : null;
 }
 router.get("/", async (req, res) => { try { const ctx = await context(req as AuthenticatedRequest); if (!ctx) return res.status(403).json({ error: "workspace access denied" }); const memories = await dbRecallAll(ctx.workspaceId, ctx.userId); if (!memories) return res.status(503).json({ error: "memory storage unavailable" }); return res.json({ memories, persistent: true, workspaceId: ctx.workspaceId }); } catch { return res.status(503).json({ error: "memory storage unavailable" }); } });
-router.post("/remember", async (req, res) => { const { key, value } = req.body || {}; if (typeof key !== "string" || typeof value !== "string" || !key.trim() || !value.trim() || key.length > 200 || value.length > 20_000) return res.status(400).json({ error: "valid key and value are required" }); try { const ctx = await context(req as AuthenticatedRequest); if (!ctx) return res.status(403).json({ error: "workspace access denied" }); if (!await dbRemember({ workspaceId: ctx.workspaceId, userId: ctx.userId, key: key.trim(), value: value.trim() })) return res.status(503).json({ error: "memory storage unavailable" }); return res.json({ success: true, persistent: true, workspaceId: ctx.workspaceId }); } catch { return res.status(503).json({ error: "memory storage unavailable" }); } });
+router.post("/remember", async (req, res) => { const { key, value } = req.body || {}; if (typeof key !== "string" || typeof value !== "string" || !key.trim() || !value.trim() || key.length > 200 || value.length > 20_000) return res.status(400).json({ error: "valid key and value are required" }); if (isSensitiveMemory(value)) return res.status(400).json({ error: "sensitive secrets cannot be stored in memory" }); try { const ctx = await context(req as AuthenticatedRequest); if (!ctx) return res.status(403).json({ error: "workspace access denied" }); if (!await dbRemember({ workspaceId: ctx.workspaceId, userId: ctx.userId, key: key.trim(), value: value.trim() })) return res.status(503).json({ error: "memory storage unavailable" }); return res.json({ success: true, persistent: true, workspaceId: ctx.workspaceId }); } catch { return res.status(503).json({ error: "memory storage unavailable" }); } });
 router.delete("/", async (req, res) => { try { const ctx = await context(req as AuthenticatedRequest); if (!ctx) return res.status(403).json({ error: "workspace access denied" }); if (!await dbClearMemory(ctx.workspaceId, ctx.userId)) return res.status(503).json({ error: "memory storage unavailable" }); return res.json({ success: true, persistent: true }); } catch { return res.status(503).json({ error: "memory storage unavailable" }); } });
 export default router;
