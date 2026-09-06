@@ -10,7 +10,7 @@ export default function HomePage() {
 
   return (
     <main className="flex h-screen flex-col bg-background text-text">
-      <AssistantHub personality={chat.settings.personality} onPersonalityChange={(value) => chat.setSettings((current) => ({ ...current, personality: value }))} />
+      <AssistantHub personality={chat.settings.personality} onPersonalityChange={(value: string) => chat.setSettings((current) => ({ ...current, personality: value }))} />
       <ChatWindow
         messages={chat.activeConversation?.messages || []}
         loading={chat.loading}
