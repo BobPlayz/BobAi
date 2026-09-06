@@ -3,6 +3,7 @@ import multer from "multer";
 import { promises as fs } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { PDFParse } from "pdf-parse";
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { db, uploads } from "@bobai/db";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
@@ -23,52 +24,56 @@ function isPdf(buffer: Buffer) { return buffer.subarray(0, 5).toString("ascii") 
 function isSupportedTextType(mimetype: string) { return /^text\/(plain|markdown|csv|html|css|javascript|xml)$/i.test(mimetype); }
 function safeName(name: string) { return name.replace(/[\u0000-\u001f\u007f\\/:*?"<>|]/g, "_").slice(0, 255); }
 
+router.get("/", async (req, res) => {
+  try {
+    const workspace = await ensurePersonalWorkspace(req.user!.id);
+    const query = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 200) : "";
+    const rows = query
+      ? await db.select({ id: uploads.id, name: uploads.originalName, type: uploads.mimeType, size: uploads.size, checksum: uploads.checksum, createdAt: uploads.createdAt }).from(uploads).where(and(eq(uploads.workspaceId, workspace.id), eq(uploads.uploadedBy, req.user!.id), ilike(uploads.originalName, `%${query}%`))).orderBy(desc(uploads.createdAt)).limit(50)
+      : await db.select({ id: uploads.id, name: uploads.originalName, type: uploads.mimeType, size: uploads.size, checksum: uploads.checksum, createdAt: uploads.createdAt }).from(uploads).where(and(eq(uploads.workspaceId, workspace.id), eq(uploads.uploadedBy, req.user!.id))).orderBy(desc(uploads.createdAt)).limit(50);
+    return res.json({ files: rows });
+  } catch { return res.status(503).json({ error: "file storage unavailable" }); }
+});
+
+router.post("/search", async (req, res) => {
+  const query = typeof req.body?.query === "string" ? req.body.query.trim().slice(0, 200) : "";
+  if (!query) return res.status(400).json({ error: "search query is required" });
+  try {
+    const workspace = await ensurePersonalWorkspace(req.user!.id);
+    const rows = await db.select({ id: uploads.id, name: uploads.originalName, type: uploads.mimeType, text: uploads.extractedText, createdAt: uploads.createdAt }).from(uploads).where(and(eq(uploads.workspaceId, workspace.id), eq(uploads.uploadedBy, req.user!.id), ilike(uploads.extractedText, `%${query}%`))).orderBy(desc(uploads.createdAt)).limit(20);
+    return res.json({ results: rows.map((row) => {
+      const text = row.text || "";
+      const lower = text.toLowerCase();
+      const index = lower.indexOf(query.toLowerCase());
+      const start = Math.max(0, index - 500);
+      return { id: row.id, name: row.name, type: row.type, excerpt: text.slice(start, start + 1_500), createdAt: row.createdAt };
+    }) });
+  } catch { return res.status(503).json({ error: "file search unavailable" }); }
+});
+
 router.post("/upload", uploadMiddleware, async (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: "no file uploaded" });
-
   try {
     const buffer = await fs.readFile(file.path);
     const { mimetype } = file;
     const checksum = createHash("sha256").update(buffer).digest("hex");
     let text = "";
-
     if (mimetype === "application/pdf") {
       if (!isPdf(buffer)) return res.status(415).json({ error: "file content does not match PDF type" });
       const parser = new PDFParse({ data: buffer });
       try { text = (await parser.getText()).text || ""; } finally { await parser.destroy(); }
-    } else if (isSupportedTextType(mimetype)) {
-      text = buffer.toString("utf8");
-    } else if (/^image\/(png|jpeg|webp|gif)$/i.test(mimetype)) {
-      text = "[image uploaded]";
-    } else {
-      return res.status(415).json({ error: "unsupported file type" });
-    }
+    } else if (isSupportedTextType(mimetype)) text = buffer.toString("utf8");
+    else if (/^image\/(png|jpeg|webp|gif)$/i.test(mimetype)) text = "[image uploaded]";
+    else return res.status(415).json({ error: "unsupported file type" });
 
     if (text.length > MAX_EXTRACTED_TEXT) return res.status(413).json({ error: "extracted document text exceeds the 5 MB limit" });
-
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     const id = randomUUID();
-    await db.insert(uploads).values({
-      id,
-      workspaceId: workspace.id,
-      uploadedBy: req.user!.id,
-      storageKey: `extracted/${workspace.id}/${id}`,
-      originalName: safeName(file.originalname),
-      mimeType: mimetype,
-      size: file.size,
-      checksum,
-      storageProvider: "database-extracted-text",
-      metadata: { source: "upload", originalSize: file.size },
-      extractedText: text,
-    });
-
+    await db.insert(uploads).values({ id, workspaceId: workspace.id, uploadedBy: req.user!.id, storageKey: `extracted/${workspace.id}/${id}`, originalName: safeName(file.originalname), mimeType: mimetype, size: file.size, checksum, storageProvider: "database-extracted-text", metadata: { source: "upload", originalSize: file.size }, extractedText: text });
     return res.json({ id, name: safeName(file.originalname), type: mimetype, size: file.size, checksum, text });
-  } catch {
-    return res.status(500).json({ error: "failed to process file" });
-  } finally {
-    await fs.unlink(file.path).catch(() => undefined);
-  }
+  } catch { return res.status(500).json({ error: "failed to process file" }); }
+  finally { await fs.unlink(file.path).catch(() => undefined); }
 });
 
 export default router;
