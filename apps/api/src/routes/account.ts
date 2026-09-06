@@ -29,7 +29,7 @@ router.post("/password-reset/confirm", async (req, res) => {
   if (limited(req, "confirm")) return res.status(429).json({ error: "too many password reset attempts", retryAfterSeconds: 900 });
   try {
     const result = await resetPassword(token, nextPassword);
-    if (!result.ok) return res.status(result.error === "invalid or expired reset token" ? 400 : 400).json({ error: result.error });
+    if (!result.ok) return res.status(400).json({ error: result.error });
     return res.status(204).send();
   } catch { return res.status(503).json({ error: "password reset service unavailable" }); }
 });
@@ -40,5 +40,11 @@ router.get("/export", async (req, res) => { const [user] = await db.select({ id:
 router.get("/sessions", async (req, res) => res.json({ sessions: await listSessions(req.user!.id) }));
 router.delete("/sessions/:id", async (req, res) => res.status(await revokeSession(req.user!.id, req.params.id as string) ? 204 : 404).send());
 router.delete("/sessions", async (req, res) => { await revokeAllSessions(req.user!.id); return res.status(204).send(); });
-router.delete("/me", async (req, res) => { await revokeAllSessions(req.user!.id); await db.update(users).set({ displayName: null, avatarUrl: null, updatedAt: new Date() }).where(eq(users.id, req.user!.id)); return res.status(202).json({ status: "account deactivation requested", note: "permanent deletion requires the configured retention worker" }); });
+router.delete("/me", async (req, res) => {
+  const now = new Date();
+  await revokeAllSessions(req.user!.id);
+  const [user] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt });
+  if (!user) return res.status(404).json({ error: "user not found" });
+  return res.status(202).json({ status: "account deletion scheduled", deletedAt: user.deletedAt, permanentDeletionAfterDays: 30 });
+});
 export default router;
