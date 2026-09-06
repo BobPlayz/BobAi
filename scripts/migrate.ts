@@ -6,16 +6,22 @@ import postgres from "postgres";
 
 async function migrationAlreadySatisfied(sql: ReturnType<typeof postgres>, id: string) {
   if (id.startsWith("0001_")) {
+    const [tables] = await sql`
+      SELECT
+        to_regclass('public.users') IS NOT NULL AS users,
+        to_regclass('public.sessions') IS NOT NULL AS sessions
+    `;
+    if (!tables?.users || !tables?.sessions) return false;
+
     const [row] = await sql`
       SELECT
         EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'password_hash') AS password_hash,
         EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sessions' AND column_name = 'access_token_hash') AS access_token_hash,
         EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sessions' AND column_name = 'access_expires_at') AS access_expires_at,
         EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'sessions_access_token_hash_unique') AS access_index,
-        EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'sessions_refresh_token_hash_unique') AS refresh_index,
-        NOT EXISTS (SELECT 1 FROM sessions WHERE access_expires_at IS NULL) AS access_values_ready
+        EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'sessions_refresh_token_hash_unique') AS refresh_index
     `;
-    return Boolean(row?.password_hash && row?.access_token_hash && row?.access_expires_at && row?.access_index && row?.refresh_index && row?.access_values_ready);
+    return Boolean(row?.password_hash && row?.access_token_hash && row?.access_expires_at && row?.access_index && row?.refresh_index);
   }
 
   if (id.startsWith("0002_")) {
