@@ -20,7 +20,7 @@ function getTimeoutMs() {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type ResearchSource = { title: string; url: string; snippet?: string; publishedAt?: string };
-export type ResearchResult = { query: string; sources: ResearchSource[]; providerData?: unknown };
+export type ResearchResult = { query: string; sources: ResearchSource[] };
 
 function normalizeSources(body: unknown): ResearchSource[] {
   const candidate = body && typeof body === "object" ? (body as Record<string, unknown>).results ?? (body as Record<string, unknown>).sources : undefined;
@@ -58,7 +58,7 @@ export async function webSearch(query: string, options: Record<string, unknown> 
       if (!response.ok) { if (attempt < MAX_RETRIES && (response.status === 408 || response.status === 429 || response.status >= 500)) { await sleep(250 * 2 ** attempt); continue; } throw new Error(`web search provider returned ${response.status}`); }
       let body: unknown = {};
       if (text.trim()) { try { body = JSON.parse(text); } catch { body = { data: text }; } }
-      return { query: normalized, sources: normalizeSources(body), providerData: body };
+      return { query: normalized, sources: normalizeSources(body) };
     } finally { clearTimeout(timer); }
   }
   throw new Error("web search provider unavailable");
