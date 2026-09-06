@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 export type McpServerConfig = { id: string; name: string; url: string };
 export type McpTool = { name: string; description?: string; inputSchema?: unknown; serverId: string; serverName: string };
 
@@ -37,9 +39,9 @@ async function call(server: McpServerConfig, method: string, params: Record<stri
         "content-type": "application/json",
         "MCP-Protocol-Version": "2026-07-28",
         "Mcp-Method": method,
-        "Mcp-Name": method === "tools/list" ? "tools/list" : method,
+        "Mcp-Name": method,
       },
-      body: JSON.stringify({ jsonrpc: "2.0", id: crypto.randomUUID(), method, params }),
+      body: JSON.stringify({ jsonrpc: "2.0", id: randomUUID(), method, params }),
       signal: controller.signal,
       redirect: "error",
     });
