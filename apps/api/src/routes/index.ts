@@ -52,5 +52,6 @@ function buildApiRouter() {
 
 export const apiRouter = Router();
 apiRouter.use(healthRouter);
+apiRouter.use("/v1", healthRouter);
 apiRouter.use(buildApiRouter());
 apiRouter.use("/v1", buildApiRouter());
