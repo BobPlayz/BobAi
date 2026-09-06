@@ -2,7 +2,7 @@ import { webSearch, type ResearchSource } from "./research.js";
 import { runChat } from "./chatEngine.js";
 
 const MAX_SUBQUERIES = 6;
-const MAX_SOURCES = 24;
+const DEFAULT_MAX_SOURCES = 24;
 const MAX_SOURCE_TEXT = 12_000;
 const MAX_SYNTHESIS_INPUT = 90_000;
 const DEFAULT_TIMEOUT_MS = 45_000;
@@ -19,6 +19,11 @@ function cleanQuery(value: unknown): string {
   if (!query) throw new Error("research query is required");
   if (query.length > 2_000) throw new Error("research query is too long");
   return query;
+}
+
+function maxSources() {
+  const configured = Number(process.env.BOBAI_DEEP_RESEARCH_MAX_SOURCES || DEFAULT_MAX_SOURCES);
+  return Number.isFinite(configured) ? Math.min(Math.max(Math.floor(configured), 4), 50) : DEFAULT_MAX_SOURCES;
 }
 
 function isPrivateHostname(hostname: string) {
@@ -45,9 +50,7 @@ function makeSubqueries(query: string): string[] {
 }
 
 function sanitizeSourceText(text: string, isHtml: boolean) {
-  const cleaned = isHtml
-    ? text.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<noscript[\s\S]*?<\/noscript>/gi, " ").replace(/<[^>]+>/g, " ")
-    : text;
+  const cleaned = isHtml ? text.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<noscript[\s\S]*?<\/noscript>/gi, " ").replace(/<[^>]+>/g, " ") : text;
   return cleaned.replace(/\s+/g, " ").trim();
 }
 
@@ -62,7 +65,7 @@ function dedupeSources(sourceLists: ResearchSource[][]): ResearchSource[] {
     if (seen.has(key)) continue;
     seen.add(key);
     output.push({ ...source, url: key });
-    if (output.length >= MAX_SOURCES) break;
+    if (output.length >= maxSources()) break;
   }
   return output;
 }
@@ -106,6 +109,6 @@ export async function deepResearch(input: unknown): Promise<DeepResearchResult> 
   const query = cleanQuery(input);
   const results = await Promise.all(makeSubqueries(query).map((subquery) => webSearch(subquery)));
   const sources = dedupeSources(results.map((result) => result.sources));
-  const evidence = (await Promise.all(sources.slice(0, 12).map(fetchEvidence))).filter(Boolean) as Array<{ url: string; title: string; excerpt: string }>;
+  const evidence = (await Promise.all(sources.slice(0, Math.min(12, maxSources())).map(fetchEvidence))).filter(Boolean) as Array<{ url: string; title: string; excerpt: string }>;
   return { query, sources, evidence, synthesis: await synthesize(query, evidence) };
 }
