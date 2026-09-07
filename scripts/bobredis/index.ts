@@ -55,20 +55,24 @@ async function execute(socket: net.Socket, command: string[]): Promise<Buffer> {
   } catch (err) { return error(err instanceof Error ? err.message : "ERR command failed"); }
 }
 
-await store.load();
-setInterval(() => store.size(), 30_000).unref();
+async function main(): Promise<void> {
+  await store.load();
+  setInterval(() => store.size(), 30_000).unref();
 
-const server = net.createServer((socket) => {
-  socket.setNoDelay(true); if (!PASSWORD) authenticated.add(socket);
-  let buffer = Buffer.alloc(0);
-  socket.on("data", async (chunk) => {
-    buffer = Buffer.concat([buffer, chunk]);
-    if (buffer.length > MAX_REQUEST) { socket.write(error("ERR request too large")); socket.destroy(); return; }
-    while (buffer.length) { const parsed = parseResp(buffer); if (!parsed.command) break; buffer = parsed.rest; socket.write(await execute(socket, parsed.command)); }
+  const server = net.createServer((socket) => {
+    socket.setNoDelay(true); if (!PASSWORD) authenticated.add(socket);
+    let buffer = Buffer.alloc(0);
+    socket.on("data", async (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      if (buffer.length > MAX_REQUEST) { socket.write(error("ERR request too large")); socket.destroy(); return; }
+      while (buffer.length) { const parsed = parseResp(buffer); if (!parsed.command) break; buffer = parsed.rest; socket.write(await execute(socket, parsed.command)); }
+    });
+    socket.on("close", () => { const set = clientSubscriptions.get(socket); if (set) for (const channel of set) subscribers.get(channel)?.delete(socket); });
   });
-  socket.on("close", () => { const set = clientSubscriptions.get(socket); if (set) for (const channel of set) subscribers.get(channel)?.delete(socket); });
-});
 
-server.listen(PORT, HOST, () => console.log(`BobRedis listening on ${HOST}:${PORT}`));
-process.once("SIGTERM", () => server.close());
-process.once("SIGINT", () => server.close());
+  server.listen(PORT, HOST, () => console.log(`BobRedis listening on ${HOST}:${PORT}`));
+  process.once("SIGTERM", () => server.close());
+  process.once("SIGINT", () => server.close());
+}
+
+void main().catch((error) => { console.error("BobRedis failed to start:", error); process.exitCode = 1; });
