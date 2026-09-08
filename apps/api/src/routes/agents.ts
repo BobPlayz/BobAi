@@ -5,6 +5,7 @@ import { listBobServices } from "../services/bobServices.js";
 import { agentAuth } from "../middleware/agentAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQueue.js";
+import { resolveUserWorkspace } from "../services/workspace.js";
 
 const router = Router();
 const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
@@ -93,19 +94,23 @@ router.post("/run", agentAuth, (req, res) => {
   }
 });
 
-router.post("/user/run", requireAuth, (req, res) => {
+router.post("/user/run", requireAuth, async (req, res) => {
   if (userLimited(req.user!.id)) return res.status(429).json({ error: "too many agent requests", retryAfterSeconds: 60 });
   const validated = validateTask(req.body);
   if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
+
   try {
+    const workspace = await resolveUserWorkspace(req.user!.id, validated.value.workspaceId);
+    if (!workspace) return res.status(403).json({ error: "workspace access denied" });
+
     const job = enqueueAgentTask({
       description: validated.value.description,
       kind: validated.value.requestedKind as AgentTaskKind | undefined,
       skills: validated.value.requestedSkills,
       mode: validated.value.requestedMode,
-      context: { workspaceId: validated.value.workspaceId, createdBy: req.user!.id },
+      context: { workspaceId: workspace.id, createdBy: req.user!.id },
     });
-    return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt, agent: "background" });
+    return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt, agent: "background", workspaceId: workspace.id });
   } catch (error) {
     return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" });
   }
@@ -113,9 +118,8 @@ router.post("/user/run", requireAuth, (req, res) => {
 
 router.get("/user/queue/:id", requireAuth, (req, res) => {
   const job = getQueueJob(req.params.id as string);
-  if (!job) return res.status(404).json({ error: "agent job not found" });
-  if (job.context?.createdBy !== req.user!.id) return res.status(404).json({ error: "agent job not found" });
-  return res.json({ id: job.id, status: job.status, createdAt: job.createdAt, result: job.result, error: job.error });
+  if (!job || job.context?.createdBy !== req.user!.id) return res.status(404).json({ error: "agent job not found" });
+  return res.json({ id: job.id, status: job.status, createdAt: job.createdAt, result: job.result, error: job.error, workspaceId: job.context?.workspaceId });
 });
 
 export default router;
