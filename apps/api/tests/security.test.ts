@@ -28,6 +28,11 @@ async function main() {
     assert.ok([401, 403].includes(response.status));
   });
 
+  test("malformed session cookies fail closed instead of throwing", async () => {
+    const response = await fetch(`${base}/v1/conversations`, { headers: { cookie: "bobai_access=%E0%A4%A" } });
+    assert.equal(response.status, 401);
+  });
+
   test("security headers and request ids are present", async () => {
     const response = await fetch(`${base}/`);
     assert.equal(response.status, 200);
