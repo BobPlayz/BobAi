@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, lt } from "drizzle-orm";
 import { db, sessions } from "@bobai/db";
 
 export async function revokeAllSessions(userId: string) {
@@ -26,4 +26,8 @@ export async function revokeSession(userId: string, sessionId: string) {
     eq(sessions.id, sessionId), eq(sessions.userId, userId), eq(sessions.isActive, true), isNull(sessions.revokedAt)
   )).returning({ id: sessions.id });
   return Boolean(session);
+}
+
+export async function cleanupExpiredSessions() {
+  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
 }
