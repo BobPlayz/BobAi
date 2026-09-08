@@ -5,6 +5,7 @@ const MAX_IMAGES = 3;
 const MAX_IMAGE_BASE64 = 2_000_000;
 const MAX_PROMPT = 6_000;
 const MAX_PIXELS = 4_000_000;
+const MAX_UNIQUE_COLORS = 100_000;
 const MAX_MODEL_REPORT = 4_000;
 
 type Rgb = { r: number; g: number; b: number };
@@ -70,6 +71,7 @@ function readPng(buffer: Buffer): VioletImageReport | null {
 
   const previous = Buffer.alloc(rowBytes);
   const colors = new Map<string, number>();
+  let histogramOverflow = false;
   for (let y = 0; y < height; y += 1) {
     const rowStart = y * (rowBytes + 1);
     const filter = inflated[rowStart];
@@ -91,15 +93,21 @@ function readPng(buffer: Buffer): VioletImageReport | null {
         row[x] = (value + predictor) & 255;
       } else return null;
     }
-    for (let x = 0; x < width; x += 1) {
-      const i = x * channels;
-      if (channels === 4 && row[i + 3] < 32) continue;
-      const key = hex({ r: row[i], g: row[i + 1], b: row[i + 2] });
-      colors.set(key, (colors.get(key) || 0) + 1);
+    if (!histogramOverflow) {
+      for (let x = 0; x < width; x += 1) {
+        const i = x * channels;
+        if (channels === 4 && row[i + 3] < 32) continue;
+        const key = hex({ r: row[i], g: row[i + 1], b: row[i + 2] });
+        if (!colors.has(key) && colors.size >= MAX_UNIQUE_COLORS) {
+          histogramOverflow = true;
+          break;
+        }
+        colors.set(key, (colors.get(key) || 0) + 1);
+      }
     }
     row.copy(previous);
   }
-  const dominantColors = [...colors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([color, pixels]) => ({ hex: color, pixels }));
+  const dominantColors = histogramOverflow ? undefined : [...colors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([color, pixels]) => ({ hex: color, pixels }));
   return { index: 0, mimeType: "image/png", bytes: buffer.length, width, height, dominantColors, pixelAnalysis: "exact-png" };
 }
 
