@@ -21,8 +21,8 @@ router.post("/analyze", async (req, res) => {
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("VISION ROUTE ERROR:", error);
     const message = error instanceof Error ? error.message : "vision analysis failed";
-    const status = /not configured|is required|too long|exceeds/i.test(message) ? 400 : 502;
-    return res.status(status).json({ error: message });
+    const clientError = /is required|must be|too long|exceeds/i.test(message);
+    return res.status(clientError ? 400 : 502).json({ error: clientError ? message : "vision analysis unavailable" });
   }
 });
 
