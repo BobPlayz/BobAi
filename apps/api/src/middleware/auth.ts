@@ -12,7 +12,12 @@ declare global {
 function readCookie(req: Request, name: string) {
   const header = req.header("cookie") || "";
   const item = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
-  return item ? decodeURIComponent(item.slice(name.length + 1)) : "";
+  if (!item) return "";
+  try {
+    return decodeURIComponent(item.slice(name.length + 1));
+  } catch {
+    return "";
+  }
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
