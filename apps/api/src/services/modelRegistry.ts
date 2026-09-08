@@ -13,6 +13,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
   { id: "qwen-7b", provider: "ollama", model: "qwen2.5:7b", capabilities: ["chat", "reasoning"], description: "stronger local reasoning and general chat", visionReady: false },
   { id: "coder-1.5b", provider: "ollama", model: "qwen2.5-coder:1.5b", capabilities: ["coding", "fast"], description: "lightweight local coding model", visionReady: false },
   { id: "coder-latest", provider: "ollama", model: "qwen2.5-coder:latest", capabilities: ["coding", "reasoning"], description: "strong local coding model", visionReady: false },
+  { id: "vision", provider: "ollama", model: process.env.BOBAI_VISION_MODEL || "", capabilities: ["vision"], description: "configured visual-analysis model used by Violet", visionReady: true },
 ];
 
 export type BobAgentId = "bob" | "alex" | "ben" | "ryan" | "violet";
