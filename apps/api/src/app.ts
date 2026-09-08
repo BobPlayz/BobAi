@@ -45,7 +45,6 @@ app.use(validateRequestBody);
 
 app.use((req, res, next) => {
   if (!isProduction || !["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
-  if (req.path.endsWith("/auth/refresh") || req.path.endsWith("/auth/logout")) return next();
   const hasSessionCookie = /(?:^|;)\s*bobai_(?:access|refresh)=/.test(req.header("cookie") || "");
   if (!hasSessionCookie) return next();
   const origin = req.header("origin");
