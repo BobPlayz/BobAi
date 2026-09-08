@@ -2,6 +2,8 @@ import { parseToolResult } from "./structuredResult.js";
 
 const DEFAULT_URL = "http://127.0.0.1:3456";
 const MAX_TASK_LENGTH = 20_000;
+const MAX_RESULT_ITEMS = 200;
+const MAX_RESULT_BYTES = 2 * 1024 * 1024;
 const POLL_MS = 1_000;
 const TIMEOUT_MS = 5 * 60 * 1_000;
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -43,10 +45,11 @@ async function request<T>(url: string, key: string, init?: RequestInit): Promise
       ...init,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, ...init?.headers },
       signal: controller.signal,
+      redirect: "error",
     });
     const body: unknown = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string" ? body.error : `coding agent returned ${response.status}`;
+      const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string" ? body.error.slice(0, 4_000) : `coding agent returned ${response.status}`;
       throw new Error(message);
     }
     return body as T;
@@ -59,8 +62,10 @@ function normalizeCompletedResult(result: unknown) {
   if (!result || typeof result !== "object" || Array.isArray(result)) throw new Error("coding agent returned an invalid result");
   const value = result as Record<string, unknown>;
   if (value.plan !== undefined && typeof value.plan !== "string" && (typeof value.plan !== "object" || value.plan === null)) throw new Error("coding agent returned an invalid plan");
-  if (value.executionResults !== undefined && (!Array.isArray(value.executionResults) || value.executionResults.some((item) => typeof item !== "string" || item.length > 20_000))) throw new Error("coding agent returned invalid execution results");
+  if (value.executionResults !== undefined && (!Array.isArray(value.executionResults) || value.executionResults.length > MAX_RESULT_ITEMS || value.executionResults.some((item) => typeof item !== "string" || item.length > 20_000))) throw new Error("coding agent returned invalid execution results");
   if (value.review !== undefined && (typeof value.review !== "string" || value.review.length > 20_000)) throw new Error("coding agent returned an invalid review");
+  const encoded = JSON.stringify(value);
+  if (encoded.length > MAX_RESULT_BYTES) throw new Error("coding agent result exceeds the 2 MB limit");
   return value;
 }
 
