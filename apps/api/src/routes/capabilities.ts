@@ -3,6 +3,7 @@ import { Router } from "express";
 import { executeProviderCapability, listProviderCapabilities, type ProviderCapability } from "../services/capabilityProviders.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 import { createCapabilityJob, getActiveCapabilityJob, getPersistedCapabilityJob } from "../services/capabilityJobs.js";
+import { createUserRateLimit } from "../middleware/rateLimit.js";
 
 const router = Router();
 const supported = new Set<ProviderCapability>([
@@ -16,9 +17,12 @@ const approvalRequired = new Set<ProviderCapability>([
 ]);
 const approvals = new Map<string, { userId: string; capability: ProviderCapability; expiresAt: number }>();
 const APPROVAL_TTL_MS = 60_000;
+const MAX_APPROVALS = 10_000;
+const expensiveLimit = createUserRateLimit(20, 60_000);
 const isSupported = (value: string): value is ProviderCapability => supported.has(value as ProviderCapability);
 function isObjectBody(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 function validateCapabilityInput(capability: ProviderCapability, body: Record<string, unknown>) { if (capability === "face_swap" && body.consent !== true) return "explicit consent is required for face-swap operations"; return null; }
+function pruneApprovals(now = Date.now()) { for (const [token, approval] of approvals) if (approval.expiresAt <= now) approvals.delete(token); }
 function consumeApproval(userId: string, capability: ProviderCapability, token: unknown) {
   if (!approvalRequired.has(capability)) return true;
   if (typeof token !== "string") return false;
@@ -27,13 +31,15 @@ function consumeApproval(userId: string, capability: ProviderCapability, token: 
   approvals.delete(token); return true;
 }
 function providerInput(body: Record<string, unknown>) { const { approvalToken: _approvalToken, ...input } = body; return input; }
-setInterval(() => { const now = Date.now(); for (const [token, approval] of approvals) if (approval.expiresAt <= now) approvals.delete(token); }, APPROVAL_TTL_MS).unref();
+setInterval(() => pruneApprovals(), APPROVAL_TTL_MS).unref();
 
 router.get("/", (_req, res) => res.json({ capabilities: listProviderCapabilities() }));
-router.post("/:capability/approve", (req, res) => {
+router.post("/:capability/approve", expensiveLimit, (req, res) => {
   const capability = req.params.capability;
   if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
   if (!approvalRequired.has(capability)) return res.json({ approvalRequired: false });
+  pruneApprovals();
+  if (approvals.size >= MAX_APPROVALS) return res.status(429).json({ error: "approval service is busy" });
   const token = randomUUID();
   approvals.set(token, { userId: req.user!.id, capability, expiresAt: Date.now() + APPROVAL_TTL_MS });
   return res.json({ approvalRequired: true, approvalToken: token, expiresInSeconds: APPROVAL_TTL_MS / 1000 });
@@ -45,7 +51,7 @@ router.get("/jobs/:id", async (req, res) => {
   if (!persisted) return res.status(404).json({ error: "capability job not found" });
   return res.json({ job: persisted });
 });
-router.post("/:capability/jobs", async (req, res) => {
+router.post("/:capability/jobs", expensiveLimit, async (req, res) => {
   const capability = req.params.capability;
   if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
   if (!isObjectBody(req.body)) return res.status(400).json({ error: "request body must be a JSON object" });
@@ -61,7 +67,7 @@ router.post("/:capability/jobs", async (req, res) => {
     return res.status(503).json({ error: "capability job could not be created", capability });
   }
 });
-router.post("/:capability", async (req, res) => {
+router.post("/:capability", expensiveLimit, async (req, res) => {
   const capability = req.params.capability;
   if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
   if (!isObjectBody(req.body)) return res.status(400).json({ error: "request body must be a JSON object" });
