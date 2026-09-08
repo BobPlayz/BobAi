@@ -25,17 +25,24 @@ healthRouter.get("/live", (_req, res) => {
 });
 
 healthRouter.get("/ready", async (_req, res) => {
-  const [database, ollama] = await Promise.all([checkDatabase(), ollamaProvider.registryStatus()]);
+  const databaseConfigured = Boolean(process.env.DATABASE_URL);
+  const ollamaConfigured = Boolean(process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || process.env.OLLAMA_URL);
+  const [database, ollama] = await Promise.all([
+    checkDatabase(),
+    ollamaConfigured ? ollamaProvider.registryStatus() : Promise.resolve({ connected: false }),
+  ]);
   const configuredCapabilities = listProviderCapabilities().filter(({ configured }) => configured).length;
+  const databaseReady = databaseConfigured && database.reachable && database.schemaReady;
+  const ollamaReady = !ollamaConfigured || ollama.connected;
+  const ready = databaseReady && ollamaReady;
   const checks = {
-    databaseConfigured: Boolean(process.env.DATABASE_URL),
+    databaseConfigured,
     databaseReachable: database.reachable,
     databaseSchemaReady: database.schemaReady,
-    ollamaConfigured: Boolean(process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || process.env.OLLAMA_URL),
+    ollamaConfigured,
     ollamaReachable: ollama.connected,
     codingAgentsConfigured: Boolean(process.env.BOBAI_CODING_AGENTS_DIR),
     configuredCapabilities,
   };
-  const ready = ollama.connected && (!checks.databaseConfigured || (database.reachable && database.schemaReady));
   return res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "degraded", checks });
 });
