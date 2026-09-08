@@ -36,3 +36,36 @@ export function rateLimit(req: Request, res: Response, next: NextFunction) {
 
   return next();
 }
+
+export function createUserRateLimit(maxRequests: number, durationMs: number) {
+  const buckets = new Map<string, Bucket>();
+  const window = Math.max(1_000, durationMs);
+  const max = Math.max(1, maxRequests);
+  const maxEntries = 10_000;
+  const timer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, bucket] of buckets) if (now - bucket.startedAt >= window) buckets.delete(key);
+  }, window);
+  timer.unref();
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "authentication required" });
+    const now = Date.now();
+    const current = buckets.get(userId);
+    if (!current || now - current.startedAt >= window) {
+      if (buckets.size >= maxEntries) {
+        for (const [key, bucket] of buckets) if (now - bucket.startedAt >= window) buckets.delete(key);
+        if (buckets.size >= maxEntries) return res.status(429).json({ error: "rate limit exceeded" });
+      }
+      buckets.set(userId, { startedAt: now, count: 1 });
+      return next();
+    }
+    if (++current.count > max) {
+      const retryAfter = Math.max(1, Math.ceil((window - (now - current.startedAt)) / 1_000));
+      res.setHeader("retry-after", retryAfter);
+      return res.status(429).json({ error: "rate limit exceeded", retryAfter });
+    }
+    return next();
+  };
+}
