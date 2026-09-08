@@ -1,7 +1,8 @@
-import { and, eq } from "drizzle-orm";
-import { randomBytes } from "node:crypto";
-import { db, workspaceMembers } from "@bobai/db";
+import { and, eq, gt, isNull } from "drizzle-orm";
+import { createHash, randomBytes } from "node:crypto";
+import { db, toolApprovals, workspaceMembers } from "@bobai/db";
 import { getTool, type BobTool } from "./toolRegistry.js";
+import { recordAudit } from "./audit.js";
 
 export type ToolExecutionContext = { userId: string; workspaceId: string; approvalToken?: string };
 export type ToolExecutionResult =
@@ -10,29 +11,46 @@ export type ToolExecutionResult =
   | { status: "unauthorized"; tool: BobTool }
   | { status: "unavailable"; tool: BobTool; reason: string };
 
-type ApprovalGrant = { userId: string; workspaceId: string; toolId: string; expiresAt: number };
-const approvals = new Map<string, ApprovalGrant>();
 const APPROVAL_TTL_MS = 2 * 60_000;
-function cleanupApprovals() { const now = Date.now(); for (const [token, grant] of approvals) if (grant.expiresAt <= now) approvals.delete(token); }
-setInterval(cleanupApprovals, 30_000).unref();
+const hashApprovalToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
 export async function issueToolApproval(toolId: string, userId: string, workspaceId: string) {
   const tool = getTool(toolId);
   if (!tool || !tool.requiresUserApproval) return null;
   const [membership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId))).limit(1);
   if (!membership) return null;
-  cleanupApprovals();
   const token = randomBytes(32).toString("base64url");
-  approvals.set(token, { userId, workspaceId, toolId, expiresAt: Date.now() + APPROVAL_TTL_MS });
+  const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS);
+  await db.insert(toolApprovals).values({
+    userId,
+    workspaceId,
+    kind: "tool",
+    toolId: tool.id,
+    targetName: tool.name,
+    tokenHash: hashApprovalToken(token),
+    expiresAt,
+  });
+  await recordAudit({ action: "tool_approval_issued", resourceType: "tool_approval", userId, workspaceId, metadata: { toolId: tool.id } });
   return { token, expiresIn: APPROVAL_TTL_MS / 1000 };
 }
 
-function consumeApproval(token: string | undefined, toolId: string, userId: string, workspaceId: string) {
+async function consumeApproval(token: string | undefined, toolId: string, userId: string, workspaceId: string) {
   if (!token) return false;
-  const grant = approvals.get(token);
-  if (!grant || grant.expiresAt <= Date.now() || grant.toolId !== toolId || grant.userId !== userId || grant.workspaceId !== workspaceId) return false;
-  approvals.delete(token);
-  return true;
+  const now = new Date();
+  const [grant] = await db.update(toolApprovals)
+    .set({ consumedAt: now })
+    .where(and(
+      eq(toolApprovals.tokenHash, hashApprovalToken(token)),
+      eq(toolApprovals.kind, "tool"),
+      eq(toolApprovals.userId, userId),
+      eq(toolApprovals.workspaceId, workspaceId),
+      eq(toolApprovals.toolId, toolId),
+      isNull(toolApprovals.consumedAt),
+      gt(toolApprovals.expiresAt, now),
+    ))
+    .returning({ id: toolApprovals.id });
+  if (grant) await recordAudit({ action: "tool_approval_consumed", resourceType: "tool_approval", resourceId: grant.id, userId, workspaceId, metadata: { toolId } });
+  return Boolean(grant);
 }
 
 export async function prepareToolExecution(toolId: string, context: ToolExecutionContext): Promise<ToolExecutionResult> {
@@ -44,7 +62,7 @@ export async function prepareToolExecution(toolId: string, context: ToolExecutio
     const [membership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, context.userId))).limit(1);
     if (!membership) return { status: "unauthorized", tool };
   } catch { return { status: "unavailable", tool, reason: "authorization service is unavailable" }; }
-  if (tool.requiresUserApproval && !consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool };
+  if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool };
   if (!providerConfigured(tool.id)) return { status: "unavailable", tool, reason: "provider is not configured" };
   return { status: "ready", tool };
 }
