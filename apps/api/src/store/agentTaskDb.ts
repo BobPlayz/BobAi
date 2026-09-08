@@ -75,6 +75,28 @@ export async function updatePersistedAgentTask(input: {
   return true;
 }
 
+export async function getPersistedAgentTask(id: string, userId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [task] = await db.select({
+    id: tasks.id,
+    workspaceId: tasks.workspaceId,
+    createdBy: tasks.createdBy,
+    title: tasks.title,
+    description: tasks.description,
+    type: tasks.type,
+    status: tasks.status,
+    payload: tasks.payload,
+    result: tasks.result,
+    metadata: tasks.metadata,
+    createdAt: tasks.createdAt,
+    startedAt: tasks.startedAt,
+    completedAt: tasks.completedAt,
+    failedAt: tasks.failedAt,
+  }).from(tasks).where(and(eq(tasks.id, id), eq(tasks.createdBy, userId))).limit(1);
+  return task ?? null;
+}
+
 export async function markInterruptedAgentTasks() {
   const db = await getDb();
   if (!db) return false;
