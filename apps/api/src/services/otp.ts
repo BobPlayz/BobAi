@@ -1,5 +1,5 @@
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt } from "drizzle-orm";
 import { db, emailOtps, users } from "@bobai/db";
 
 const TTL_MS = 10 * 60_000;
@@ -55,3 +55,7 @@ export const verifyEmailOtp = async (email: string, code: string) => {
   });
   return true;
 };
+
+export async function cleanupExpiredOtps() {
+  await db.delete(emailOtps).where(lt(emailOtps.expiresAt, new Date()));
+}
