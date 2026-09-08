@@ -18,6 +18,9 @@
 - [x] SEO metadata, sitemap, robots, Open Graph metadata and favicon
 - [x] waitlist page UI
 - [x] cookie/analytics consent UI
+- [x] public Privacy Policy page
+- [x] public Terms of Service page
+- [x] required Terms acceptance at signup, recorded with the accepted terms version
 - [x] about page
 - [x] contact page UI
 - [x] favicon configured from the existing Bob AI icon
@@ -49,11 +52,14 @@
 - [ ] durable production object storage
 - [ ] production AI/media provider configuration
 - [ ] fresh empty-database bootstrap verification from a tracked baseline migration
+- [ ] production coding-agent sandbox with real isolation and resource limits
+- [ ] child-data/parental-consent workflow where required by the launch jurisdictions
+- [ ] final legal review and operator/contact/provider/retention details in the public policies
 
 ## before launch
 
 1. Pull the latest `main` and run the local smoke test, security tests, database migration check and production build.
-2. Manually test signup, OTP verification, login, MFA login when enabled, logout, password reset, password change, sessions and chat in a browser.
+2. Manually test signup, Terms acceptance, OTP verification, login, MFA login when enabled, logout, password reset, password change, sessions and chat in a browser.
 3. Configure `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_SITE_DOMAIN` for the real domain.
 4. Configure Resend and the real contact destination before accepting real email/contact traffic.
 5. Connect the waitlist form to a real persistence/provider endpoint before accepting real signups.
@@ -61,5 +67,6 @@
 7. Configure the production inference/media providers and durable object storage.
 8. Deploy the web and API over HTTPS, then test authentication and chat from another device/network.
 9. Complete the production authorization/RLS review and integration tests.
-10. Add genuine reviews and the approved real team photo only if they are actually available.
-11. Schedule `npm run account:delete` as a protected operational job and perform the final production load, backup/restore, monitoring and failure-mode checks.
+10. Complete the jurisdiction-specific privacy/terms review, including operator identity, contacts, provider inventory, retention schedule and any child-data consent requirements.
+11. Add genuine reviews and the approved real team photo only if they are actually available.
+12. Schedule `npm run account:delete` as a protected operational job and perform the final production load, backup/restore, monitoring and failure-mode checks.
