@@ -15,11 +15,13 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
   { id: "coder-latest", provider: "ollama", model: "qwen2.5-coder:latest", capabilities: ["coding", "reasoning"], description: "strong local coding model", visionReady: false },
 ];
 
-export type BobAgentId = "alex" | "ben" | "ryan";
-export const AGENT_REGISTRY: Record<BobAgentId, { id: BobAgentId; name: string; role: string; modelId: string; model: string }> = {
+export type BobAgentId = "bob" | "alex" | "ben" | "ryan" | "violet";
+export const AGENT_REGISTRY: Record<BobAgentId, { id: BobAgentId; name: string; role: string; modelId?: string; model?: string; manager?: boolean }> = {
+  bob: { id: "bob", name: "Bob", role: "manager", manager: true },
   alex: { id: "alex", name: "Alex", role: "planner", modelId: "qwen-3b", model: process.env.OLLAMA_ALEX_MODEL || "qwen2.5:3b" },
   ben: { id: "ben", name: "Ben", role: "coder", modelId: "coder-latest", model: process.env.OLLAMA_BEN_MODEL || "qwen2.5-coder:latest" },
   ryan: { id: "ryan", name: "Ryan", role: "reviewer", modelId: "qwen-3b", model: process.env.OLLAMA_RYAN_MODEL || "qwen2.5:3b" },
+  violet: { id: "violet", name: "Violet", role: "visual coding specialist", modelId: "vision", model: process.env.BOBAI_VISION_MODEL },
 };
 
 export const DEFAULT_MODEL_ID = "qwen-3b";
