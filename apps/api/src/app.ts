@@ -6,6 +6,7 @@ import { rateLimit } from "./middleware/rateLimit.js";
 import { securityLog } from "./middleware/securityLog.js";
 import { validateRequestBody } from "./middleware/requestValidation.js";
 import { validateProductionConfig } from "./config/validateProduction.js";
+import { startMaintenance } from "./services/maintenance.js";
 
 validateProductionConfig();
 export const app = express();
@@ -42,6 +43,7 @@ app.use(securityLog);
 app.use(rateLimit);
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb" }));
 app.use(validateRequestBody);
+startMaintenance();
 
 app.use((req, res, next) => {
   if (!isProduction || !["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
