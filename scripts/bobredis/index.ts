@@ -2,12 +2,17 @@ import net from "node:net";
 import { BobRedisStore } from "./store.js";
 import { array, bulk, error, integer, parseResp, simple } from "./protocol.js";
 
-const HOST = process.env.BOBREDIS_HOST || "0.0.0.0";
+const HOST = process.env.BOBREDIS_HOST || "127.0.0.1";
 const PORT = Number(process.env.BOBREDIS_PORT || 6380);
 const PASSWORD = process.env.BOBREDIS_PASSWORD || "";
 const AOF_PATH = process.env.BOBREDIS_AOF || "./data/bobredis.aof";
 const MAX_MEMORY = Math.min(Number(process.env.BOBREDIS_MAX_MEMORY_BYTES || 256 * 1024 * 1024), 1024 * 1024 * 1024);
 const MAX_REQUEST = 2 * 1024 * 1024;
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+const normalizedHost = HOST.toLowerCase().replace(/^\[|\]$/g, "");
+if (!LOOPBACK_HOSTS.has(normalizedHost) && PASSWORD.length < 32) {
+  throw new Error("BOBREDIS_PASSWORD must be at least 32 characters when BobRedis listens beyond loopback");
+}
 const store = new BobRedisStore(AOF_PATH, MAX_MEMORY);
 const authenticated = new WeakSet<net.Socket>();
 const subscribers = new Map<string, Set<net.Socket>>();
