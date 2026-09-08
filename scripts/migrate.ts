@@ -80,6 +80,13 @@ async function migrationAlreadySatisfied(sql: ReturnType<typeof postgres>, id: s
     return Boolean(row?.table_exists && row?.user_index);
   }
 
+  if (id.startsWith("0007_personal_workspace_unique")) {
+    const [row] = await sql`
+      SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'workspaces_personal_owner_unique') AS personal_index
+    `;
+    return Boolean(row?.personal_index);
+  }
+
   return false;
 }
 
