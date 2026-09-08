@@ -4,15 +4,14 @@ import { listAgentSkills, type AgentSkillId } from "../services/agentSkills.js";
 import { listBobServices } from "../services/bobServices.js";
 import { agentAuth } from "../middleware/agentAuth.js";
 import { requireAuth } from "../middleware/auth.js";
+import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQueue.js";
 import { resolveUserWorkspace } from "../services/workspace.js";
 import { getPersistedAgentTask } from "../store/agentTaskDb.js";
 
 const router = Router();
 const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
-const userBuckets = new Map<string, { startedAt: number; count: number }>();
-const USER_WINDOW_MS = 60_000;
-const USER_MAX_REQUESTS = 5;
+const userLimit = createUserRateLimit(5, 60_000);
 
 type TaskBody = { task?: unknown; kind?: unknown; mode?: unknown; skills?: unknown; workspaceId?: unknown };
 
@@ -33,23 +32,6 @@ function validateTask(body: unknown) {
   if (parsed.requestedKind && !allowedKinds.includes(parsed.requestedKind as AgentTaskKind)) return { error: "invalid task kind" } as const;
   return { value: parsed } as const;
 }
-
-function userLimited(userId: string) {
-  const now = Date.now();
-  const current = userBuckets.get(userId);
-  if (!current || now - current.startedAt >= USER_WINDOW_MS) {
-    userBuckets.set(userId, { startedAt: now, count: 1 });
-    return false;
-  }
-  current.count += 1;
-  return current.count > USER_MAX_REQUESTS;
-}
-
-const cleanup = setInterval(() => {
-  const cutoff = Date.now() - USER_WINDOW_MS;
-  for (const [key, bucket] of userBuckets) if (bucket.startedAt < cutoff) userBuckets.delete(key);
-}, USER_WINDOW_MS);
-cleanup.unref();
 
 router.get("/skills", agentAuth, (_req, res) => res.json({ skills: listAgentSkills() }));
 router.get("/services", agentAuth, (_req, res) => res.json({ services: listBobServices() }));
@@ -95,8 +77,7 @@ router.post("/run", agentAuth, (req, res) => {
   }
 });
 
-router.post("/user/run", requireAuth, async (req, res) => {
-  if (userLimited(req.user!.id)) return res.status(429).json({ error: "too many agent requests", retryAfterSeconds: 60 });
+router.post("/user/run", requireAuth, userLimit, async (req, res) => {
   const validated = validateTask(req.body);
   if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
 
@@ -128,16 +109,7 @@ router.get("/user/queue/:id", requireAuth, async (req, res) => {
     const task = await getPersistedAgentTask(req.params.id as string, req.user!.id);
     if (!task) return res.status(404).json({ error: "agent job not found" });
     const metadata = task.metadata && typeof task.metadata === "object" ? task.metadata as Record<string, unknown> : {};
-    return res.json({
-      id: task.id,
-      status: task.status,
-      createdAt: task.createdAt,
-      startedAt: task.startedAt,
-      completedAt: task.completedAt,
-      result: task.result,
-      error: typeof metadata.error === "string" ? metadata.error : undefined,
-      workspaceId: task.workspaceId,
-    });
+    return res.json({ id: task.id, status: task.status, createdAt: task.createdAt, startedAt: task.startedAt, completedAt: task.completedAt, result: task.result, error: typeof metadata.error === "string" ? metadata.error : undefined, workspaceId: task.workspaceId });
   } catch {
     return res.status(503).json({ error: "agent task storage unavailable" });
   }
