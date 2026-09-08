@@ -4,4 +4,6 @@ dist/
 .env.local
 .DS_Store
 coverage/
+.lighthouseci/
+graphify-out/
 .vscode/settings.json
