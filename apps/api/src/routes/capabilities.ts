@@ -31,11 +31,12 @@ function consumeApproval(userId: string, capability: ProviderCapability, token: 
   approvals.delete(token); return true;
 }
 function providerInput(body: Record<string, unknown>) { const { approvalToken: _approvalToken, ...input } = body; return input; }
+function routeParam(value: string | string[] | undefined) { return typeof value === "string" ? value : ""; }
 setInterval(() => pruneApprovals(), APPROVAL_TTL_MS).unref();
 
 router.get("/", (_req, res) => res.json({ capabilities: listProviderCapabilities() }));
 router.post("/:capability/approve", expensiveLimit, (req, res) => {
-  const capability = req.params.capability;
+  const capability = routeParam(req.params.capability);
   if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
   if (!approvalRequired.has(capability)) return res.json({ approvalRequired: false });
   pruneApprovals();
@@ -45,14 +46,15 @@ router.post("/:capability/approve", expensiveLimit, (req, res) => {
   return res.json({ approvalRequired: true, approvalToken: token, expiresInSeconds: APPROVAL_TTL_MS / 1000 });
 });
 router.get("/jobs/:id", async (req, res) => {
-  const active = getActiveCapabilityJob(req.params.id, req.user!.id);
+  const id = routeParam(req.params.id);
+  const active = getActiveCapabilityJob(id, req.user!.id);
   if (active) return res.json({ job: active });
-  const persisted = await getPersistedCapabilityJob(req.params.id, req.user!.id);
+  const persisted = await getPersistedCapabilityJob(id, req.user!.id);
   if (!persisted) return res.status(404).json({ error: "capability job not found" });
   return res.json({ job: persisted });
 });
 router.post("/:capability/jobs", expensiveLimit, async (req, res) => {
-  const capability = req.params.capability;
+  const capability = routeParam(req.params.capability);
   if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
   if (!isObjectBody(req.body)) return res.status(400).json({ error: "request body must be a JSON object" });
   const validationError = validateCapabilityInput(capability, req.body);
@@ -68,7 +70,7 @@ router.post("/:capability/jobs", expensiveLimit, async (req, res) => {
   }
 });
 router.post("/:capability", expensiveLimit, async (req, res) => {
-  const capability = req.params.capability;
+  const capability = routeParam(req.params.capability);
   if (!isSupported(capability)) return res.status(404).json({ error: "capability not found" });
   if (!isObjectBody(req.body)) return res.status(400).json({ error: "request body must be a JSON object" });
   const validationError = validateCapabilityInput(capability, req.body);
