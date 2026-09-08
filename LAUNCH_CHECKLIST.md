@@ -42,9 +42,9 @@
 - [x] refresh/logout CSRF protection
 - [x] scoped per-user limits for expensive vision, voice and image operations
 - [x] expired auth/session/approval cleanup worker
+- [x] TOTP MFA enrollment, encrypted secret storage, login challenge and step-up disable flow
+- [x] permanent account-deletion worker with a 30-day retention window; shared-workspace owners are held for explicit ownership resolution
 - [ ] distributed rate limiting for multi-instance production
-- [ ] complete account deletion/retention workflow
-- [ ] TOTP/passkey MFA
 - [ ] production RLS authorization audit and integration tests
 - [ ] durable production object storage
 - [ ] production AI/media provider configuration
@@ -53,7 +53,7 @@
 ## before launch
 
 1. Pull the latest `main` and run the local smoke test, security tests, database migration check and production build.
-2. Manually test signup, OTP verification, login, logout, password reset, password change, sessions and chat in a browser.
+2. Manually test signup, OTP verification, login, MFA login when enabled, logout, password reset, password change, sessions and chat in a browser.
 3. Configure `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_SITE_DOMAIN` for the real domain.
 4. Configure Resend and the real contact destination before accepting real email/contact traffic.
 5. Connect the waitlist form to a real persistence/provider endpoint before accepting real signups.
@@ -62,4 +62,4 @@
 8. Deploy the web and API over HTTPS, then test authentication and chat from another device/network.
 9. Complete the production authorization/RLS review and integration tests.
 10. Add genuine reviews and the approved real team photo only if they are actually available.
-11. Perform the final production load, backup/restore, monitoring and failure-mode checks.
+11. Schedule `npm run account:delete` as a protected operational job and perform the final production load, backup/restore, monitoring and failure-mode checks.
