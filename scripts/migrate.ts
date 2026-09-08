@@ -64,6 +64,22 @@ async function migrationAlreadySatisfied(sql: ReturnType<typeof postgres>, id: s
     return Number(row?.count ?? 0) === 10;
   }
 
+  if (id.startsWith("0005_account_deletion")) {
+    const [row] = await sql`
+      SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'deleted_at') AS deleted_at
+    `;
+    return Boolean(row?.deleted_at);
+  }
+
+  if (id.startsWith("0006_tool_approvals")) {
+    const [row] = await sql`
+      SELECT
+        to_regclass('public.tool_approvals') IS NOT NULL AS table_exists,
+        EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'tool_approvals_user_active_idx') AS user_index
+    `;
+    return Boolean(row?.table_exists && row?.user_index);
+  }
+
   return false;
 }
 
