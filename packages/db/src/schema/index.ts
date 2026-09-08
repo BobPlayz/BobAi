@@ -20,6 +20,7 @@ export * from "./tasks.js";
 export * from "./reminders.js";
 export * from "./tools.js";
 export * from "./toolLogs.js";
+export * from "./toolApprovals.js";
 export * from "./agents.js";
 export * from "./agentRuns.js";
 export * from "./auditLogs.js";
