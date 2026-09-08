@@ -11,7 +11,7 @@ function limited(req: { ip?: string }, key: string) { const now = Date.now(); co
 function cleanupAuthBuckets() { const cutoff = Date.now() - AUTH_WINDOW_MS; for (const [key, bucket] of authBuckets) if (bucket.startedAt < cutoff) authBuckets.delete(key); }
 setInterval(cleanupAuthBuckets, AUTH_WINDOW_MS).unref();
 function cookieOptions(maxAge: number) { return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/", maxAge }; }
-function readCookie(req: { header(name: string): string | undefined }, name: string) { const header = req.header("cookie") || ""; const item = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`)); return item ? decodeURIComponent(item.slice(name.length + 1)) : ""; }
+function readCookie(req: { header(name: string): string | undefined }, name: string) { const header = req.header("cookie") || ""; const item = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`)); if (!item) return ""; try { return decodeURIComponent(item.slice(name.length + 1)); } catch { return ""; } }
 function setSessionCookies(res: { cookie(name: string, value: string, options: object): void }, session: { accessToken: string; refreshToken: string }) { res.cookie(ACCESS_COOKIE, session.accessToken, cookieOptions(15 * 60 * 1000)); res.cookie(REFRESH_COOKIE, session.refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000)); }
 function clearSessionCookies(res: { clearCookie(name: string, options?: object): void }) { const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/" }; res.clearCookie(ACCESS_COOKIE, options); res.clearCookie(REFRESH_COOKIE, options); }
 
