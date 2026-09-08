@@ -27,8 +27,9 @@ export default function CookieConsent() {
 
   return (
     <aside className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-w-xl rounded-2xl border border-white/10 bg-slate-950/90 p-4 shadow-2xl backdrop-blur-xl" aria-label="Analytics consent">
-      <p className="text-sm leading-6 text-white/70">Bob AI can use privacy-conscious analytics to understand how the site is used. No analytics are loaded unless you allow them.</p>
-      <div className="mt-3 flex gap-2">
+      <p className="text-sm leading-6 text-white/70">Bob AI uses strictly necessary authentication cookies to keep you signed in. Optional privacy-conscious analytics are separate and are never loaded unless you allow them.</p>
+      <div className="mt-2 text-xs text-white/45">Read the <a href="/privacy" className="text-cyan-300 hover:text-cyan-200">Privacy Policy</a> before choosing.</div>
+      <div className="mt-3 flex flex-wrap gap-2">
         <button onClick={() => choose("accepted")} className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950">Allow analytics</button>
         <button onClick={() => choose("declined")} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/70 hover:text-white">No thanks</button>
       </div>
