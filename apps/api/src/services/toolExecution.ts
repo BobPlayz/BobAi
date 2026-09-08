@@ -56,7 +56,7 @@ function providerConfigured(toolId: string): boolean {
   switch (toolId) {
     case "research": return Boolean(process.env.BOBAI_RESEARCH_PROVIDER_URL);
     case "browser": return Boolean(process.env.BOBAI_BROWSER_PROVIDER_URL);
-    case "coding": return Boolean(process.env.BOBAI_CODING_AGENT_KEY && process.env.BOBAI_CODING_AGENTS_DIR);
+    case "coding": return Boolean(process.env.BOBAI_CODING_AGENT_KEY && process.env.BOBAI_CODING_AGENT_URL && (process.env.NODE_ENV !== "production" || process.env.BOBAI_CODING_AGENT_SANDBOX_ATTESTED === "true"));
     case "website-test": return Boolean(process.env.BOBAI_BROWSER_PROVIDER_URL);
     case "voice": return Boolean(process.env.BOBAI_VOICE_PROVIDER_URL);
     case "image": return Boolean(process.env.BOBAI_IMAGE_PROVIDER_URL);
