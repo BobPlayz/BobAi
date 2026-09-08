@@ -92,8 +92,10 @@ void recoverPersistedJobs();
 
 async function drain() {
   while (running < concurrency) {
-    const job = queue.find((candidate) => candidate.status === "queued");
-    if (!job) return;
+    const index = queue.findIndex((candidate) => candidate.status === "queued");
+    if (index === -1) return;
+    const [job] = queue.splice(index, 1);
+    if (!job || job.status !== "queued") continue;
     job.status = "running";
     job.attempts += 1;
     running += 1;
