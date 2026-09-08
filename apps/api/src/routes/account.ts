@@ -60,7 +60,7 @@ router.delete("/me", async (req, res) => {
   if (!await verifyCurrentPassword(req.user!.id, currentPassword)) return res.status(401).json({ error: "current password is incorrect" });
   const now = new Date();
   await revokeAllSessions(req.user!.id);
-  const [user] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, isActive: false, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt });
+  const [user] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt });
   if (!user) return res.status(404).json({ error: "user not found" });
   await recordAudit({ action: "account_deletion_requested", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id });
   return res.status(202).json({ status: "account deletion scheduled", deletedAt: user.deletedAt, permanentDeletionAfterDays: 30 });
