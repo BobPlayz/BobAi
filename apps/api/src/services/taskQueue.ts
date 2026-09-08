@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { executeAgentTask, type AgentTaskKind } from "./agentTasks.js";
 import type { AgentSkillId } from "./agentSkills.js";
-import { listRecoverableAgentTasks } from "../store/agentTaskDb.js";
+import { listRecoverableAgentTasks, markInterruptedAgentTasks } from "../store/agentTaskDb.js";
 
 export type QueueJob = {
   id: string;
@@ -54,6 +54,10 @@ async function recoverPersistedJobs() {
   if (recoveryStarted) return;
   recoveryStarted = true;
   try {
+    // A running task has no durable lease tying it to this process. Replaying
+    // it after a restart could duplicate external side effects, so fail it
+    // closed and only recover work that was durably queued.
+    await markInterruptedAgentTasks();
     const persisted = await listRecoverableAgentTasks();
     for (const task of persisted) {
       if (!task.description || jobs.has(task.id)) continue;
@@ -74,23 +78,23 @@ async function recoverPersistedJobs() {
         skills,
         mode,
         context: { workspaceId: task.workspaceId, createdBy: task.createdBy ?? undefined },
-        attempts: 1,
+        attempts: 0,
         status: "queued",
         createdAt: task.createdAt.toISOString(),
       };
       jobs.set(job.id, job);
       queue.push(job);
     }
-    if (persisted.length) void drain();
   } catch {
     // Database outages must not prevent the API from starting. The durable
     // queue will be retried on the next process restart.
   }
 }
 
-void recoverPersistedJobs();
+const recoveryPromise = recoverPersistedJobs();
 
 async function drain() {
+  await recoveryPromise;
   while (running < concurrency) {
     const index = queue.findIndex((candidate) => candidate.status === "queued");
     if (index === -1) return;
