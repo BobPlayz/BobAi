@@ -4,6 +4,7 @@ import { analyzeImage } from "./vision.js";
 const MAX_IMAGES = 3;
 const MAX_IMAGE_BASE64 = 2_000_000;
 const MAX_PROMPT = 6_000;
+const MAX_PIXELS = 4_000_000;
 
 type Rgb = { r: number; g: number; b: number };
 export type VioletImageReport = {
@@ -58,11 +59,17 @@ function readPng(buffer: Buffer): VioletImageReport | null {
     } else if (type === "IEND") break;
     offset = end + 4;
   }
-  if (!width || !height || bitDepth !== 8 || ![2, 6].includes(colorType) || interlace !== 0 || !idat.length) return null;
+  if (!width || !height || width * height > MAX_PIXELS || bitDepth !== 8 || ![2, 6].includes(colorType) || interlace !== 0 || !idat.length) return null;
   const channels = colorType === 6 ? 4 : 3;
   const rowBytes = width * channels;
-  const inflated = inflateSync(Buffer.concat(idat));
   const expected = height * (rowBytes + 1);
+  if (!Number.isSafeInteger(expected) || expected > MAX_PIXELS * 4 + MAX_PIXELS) return null;
+  let inflated: Buffer;
+  try {
+    inflated = inflateSync(Buffer.concat(idat), { maxOutputLength: expected });
+  } catch {
+    return null;
+  }
   if (inflated.length < expected) return null;
 
   const previous = Buffer.alloc(rowBytes);
