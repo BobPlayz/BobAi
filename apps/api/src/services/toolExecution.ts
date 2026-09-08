@@ -43,8 +43,8 @@ export async function prepareToolExecution(toolId: string, context: ToolExecutio
     const [membership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, context.userId))).limit(1);
     if (!membership) return { status: "unauthorized", tool };
   } catch { return { status: "unavailable", tool, reason: "authorization service is unavailable" }; }
-  if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool };
   if (!providerConfigured(tool.id)) return { status: "unavailable", tool, reason: "provider is not configured" };
+  if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool };
   return { status: "ready", tool };
 }
 
