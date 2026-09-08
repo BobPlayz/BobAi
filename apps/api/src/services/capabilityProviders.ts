@@ -54,7 +54,7 @@ export async function executeProviderCapability(capability: ProviderCapability, 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(config.url, { method: "POST", headers, body: JSON.stringify({ capability, ...input }), signal: controller.signal });
+      const response = await fetch(config.url, { method: "POST", headers, body: JSON.stringify({ capability, ...input }), signal: controller.signal, redirect: "error" });
       const contentLength = Number(response.headers.get("content-length"));
       if (Number.isFinite(contentLength) && contentLength > 10 * 1024 * 1024) throw new Error("provider response exceeds the 10 MB limit");
       const text = await response.text();
