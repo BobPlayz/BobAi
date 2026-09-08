@@ -22,6 +22,10 @@ function getConfig() {
   const key = process.env.BOBAI_CODING_AGENT_KEY?.trim();
   if (!key || key.length < 32) throw new Error("coding agent bridge is not configured");
 
+  if (process.env.NODE_ENV === "production" && process.env.BOBAI_CODING_AGENT_SANDBOX_ATTESTED !== "true") {
+    throw new Error("coding agent sandbox is not production-attested");
+  }
+
   const parsed = new URL(url);
   if (!parsed.port) parsed.port = "3456";
   if (!["localhost", "127.0.0.1", "::1", "[::1]"].includes(parsed.hostname.toLowerCase())) {
