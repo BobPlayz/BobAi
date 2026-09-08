@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { db, toolApprovals, workspaceMembers } from "@bobai/db";
 import { getTool, type BobTool } from "./toolRegistry.js";
@@ -21,15 +21,7 @@ export async function issueToolApproval(toolId: string, userId: string, workspac
   if (!membership) return null;
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS);
-  await db.insert(toolApprovals).values({
-    userId,
-    workspaceId,
-    kind: "tool",
-    toolId: tool.id,
-    targetName: tool.name,
-    tokenHash: hashApprovalToken(token),
-    expiresAt,
-  });
+  await db.insert(toolApprovals).values({ userId, workspaceId, kind: "tool", toolId: tool.id, targetName: tool.name, tokenHash: hashApprovalToken(token), expiresAt });
   await recordAudit({ action: "tool_approval_issued", resourceType: "tool_approval", userId, workspaceId, metadata: { toolId: tool.id } });
   return { token, expiresIn: APPROVAL_TTL_MS / 1000 };
 }
@@ -37,18 +29,7 @@ export async function issueToolApproval(toolId: string, userId: string, workspac
 async function consumeApproval(token: string | undefined, toolId: string, userId: string, workspaceId: string) {
   if (!token) return false;
   const now = new Date();
-  const [grant] = await db.update(toolApprovals)
-    .set({ consumedAt: now })
-    .where(and(
-      eq(toolApprovals.tokenHash, hashApprovalToken(token)),
-      eq(toolApprovals.kind, "tool"),
-      eq(toolApprovals.userId, userId),
-      eq(toolApprovals.workspaceId, workspaceId),
-      eq(toolApprovals.toolId, toolId),
-      isNull(toolApprovals.consumedAt),
-      gt(toolApprovals.expiresAt, now),
-    ))
-    .returning({ id: toolApprovals.id });
+  const [grant] = await db.update(toolApprovals).set({ consumedAt: now }).where(and(eq(toolApprovals.tokenHash, hashApprovalToken(token)), eq(toolApprovals.kind, "tool"), eq(toolApprovals.userId, userId), eq(toolApprovals.workspaceId, workspaceId), eq(toolApprovals.toolId, toolId), isNull(toolApprovals.consumedAt), gt(toolApprovals.expiresAt, now))).returning({ id: toolApprovals.id });
   if (grant) await recordAudit({ action: "tool_approval_consumed", resourceType: "tool_approval", resourceId: grant.id, userId, workspaceId, metadata: { toolId } });
   return Boolean(grant);
 }
@@ -65,6 +46,10 @@ export async function prepareToolExecution(toolId: string, context: ToolExecutio
   if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool };
   if (!providerConfigured(tool.id)) return { status: "unavailable", tool, reason: "provider is not configured" };
   return { status: "ready", tool };
+}
+
+export async function cleanupExpiredToolApprovals() {
+  await db.delete(toolApprovals).where(lt(toolApprovals.expiresAt, new Date()));
 }
 
 function providerConfigured(toolId: string): boolean {
