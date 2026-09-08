@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { users } from "./users.js";
 
 export const workspaces = pgTable("workspaces", {
@@ -9,4 +10,6 @@ export const workspaces = pgTable("workspaces", {
   name: text("name").notNull(),
   type: text("type").notNull().default("personal"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  personalOwnerUnique: uniqueIndex("workspaces_personal_owner_unique").on(table.ownerId).where(sql`${table.type} = 'personal'`),
+}));
