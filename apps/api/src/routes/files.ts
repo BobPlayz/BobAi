@@ -10,7 +10,7 @@ import { ensurePersonalWorkspace } from "../services/workspace.js";
 const router = Router();
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_EXTRACTED_TEXT = 5 * 1024 * 1024;
-const upload = multer({ dest: "uploads/", limits: { fileSize: MAX_FILE_SIZE } });
+const upload = multer({ dest: "uploads/", limits: { fileSize: MAX_FILE_SIZE, fields: 8, fieldSize: 16 * 1024, parts: 10, headerPairs: 100 } });
 
 function uploadMiddleware(req: Request, res: Response, next: NextFunction) {
   upload.single("file")(req, res, (error) => {
