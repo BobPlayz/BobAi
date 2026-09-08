@@ -30,6 +30,7 @@
 - [x] workspace authorization before tool preparation
 - [x] fail-closed behavior when workspace authorization is unavailable
 - [x] approval gates for coding, browser, website testing, voice, automation, video, image, music, diagrams and sketch-to-UI tools
+- [x] durable, hashed, single-use tool/MCP approval records with expiry
 - [x] runtime validation of structured tool-result envelopes
 - [x] coding-agent result/status validation
 - [x] conversation-save serialization against same-conversation races
@@ -37,6 +38,10 @@
 - [x] public `/health` and `/v1/health` smoke checks
 - [x] security test suite baseline
 - [x] production build baseline
+- [x] reauthentication for password changes and account deletion
+- [x] refresh/logout CSRF protection
+- [x] scoped per-user limits for expensive vision, voice and image operations
+- [x] expired auth/session/approval cleanup worker
 - [ ] distributed rate limiting for multi-instance production
 - [ ] complete account deletion/retention workflow
 - [ ] TOTP/passkey MFA
@@ -48,7 +53,7 @@
 ## before launch
 
 1. Pull the latest `main` and run the local smoke test, security tests, database migration check and production build.
-2. Manually test signup, OTP verification, login, logout, password reset, sessions and chat in a browser.
+2. Manually test signup, OTP verification, login, logout, password reset, password change, sessions and chat in a browser.
 3. Configure `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_SITE_DOMAIN` for the real domain.
 4. Configure Resend and the real contact destination before accepting real email/contact traffic.
 5. Connect the waitlist form to a real persistence/provider endpoint before accepting real signups.
