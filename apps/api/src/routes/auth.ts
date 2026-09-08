@@ -1,15 +1,15 @@
 import { Router } from "express";
 import { createUser, issueSession, login, refresh, revoke } from "../services/auth.js";
 import { requestEmailOtp, verifyEmailOtp } from "../services/otp.js";
-import { requestPasswordReset, resetPassword } from "../services/passwordReset.js";
+import { resetPassword, requestPasswordReset } from "../services/passwordReset.js";
 import { sendPasswordResetEmail } from "../services/email.js";
 import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; const username = /^[A-Za-z0-9_]{3,32}$/;
-const authBuckets = new Map<string, { startedAt: number; count: number }>(); const AUTH_WINDOW_MS = 15 * 60_000; const AUTH_MAX_ATTEMPTS = 10; const REFRESH_COOKIE = "bobai_refresh"; const ACCESS_COOKIE = "bobai_access";
-function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = authBuckets.get(bucketKey); if (!current || now - current.startedAt >= AUTH_WINDOW_MS) { authBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > AUTH_MAX_ATTEMPTS; }
-function cleanupAuthBuckets() { const cutoff = Date.now() - AUTH_WINDOW_MS; for (const [key, bucket] of authBuckets) if (bucket.startedAt < cutoff) authBuckets.delete(key); }
-setInterval(cleanupAuthBuckets, AUTH_WINDOW_MS).unref();
+const authBuckets = new Map<string, { startedAt: number; count: number }>(); const AUTH_WINDOW_MS = 15 * 60_000; const AUTH_MAX_ATTEMPTS = 10; const MAX_AUTH_BUCKETS = 10_000; const REFRESH_COOKIE = "bobai_refresh"; const ACCESS_COOKIE = "bobai_access";
+function pruneAuthBuckets(now = Date.now()) { const cutoff = now - AUTH_WINDOW_MS; for (const [key, bucket] of authBuckets) if (bucket.startedAt < cutoff) authBuckets.delete(key); }
+function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = authBuckets.get(bucketKey); if (!current || now - current.startedAt >= AUTH_WINDOW_MS) { if (authBuckets.size >= MAX_AUTH_BUCKETS) pruneAuthBuckets(now); if (authBuckets.size >= MAX_AUTH_BUCKETS) return true; authBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > AUTH_MAX_ATTEMPTS; }
+setInterval(() => pruneAuthBuckets(), AUTH_WINDOW_MS).unref();
 function cookieOptions(maxAge: number) { return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/", maxAge }; }
 function readCookie(req: { header(name: string): string | undefined }, name: string) { const header = req.header("cookie") || ""; const item = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`)); if (!item) return ""; try { return decodeURIComponent(item.slice(name.length + 1)); } catch { return ""; } }
 function setSessionCookies(res: { cookie(name: string, value: string, options: object): void }, session: { accessToken: string; refreshToken: string }) { res.cookie(ACCESS_COOKIE, session.accessToken, cookieOptions(15 * 60 * 1000)); res.cookie(REFRESH_COOKIE, session.refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000)); }
