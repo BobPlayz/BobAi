@@ -12,7 +12,6 @@ type MediaOptions = {
   seed?: number;
 };
 
-const DEFAULT_IMAGE_PROVIDER = "https://image.pollinations.ai/prompt";
 const MAX_INPUT_IMAGES = 4;
 const MAX_PROMPT_LENGTH = 8000;
 
@@ -25,7 +24,8 @@ function provider(): LocalMediaProvider | null {
   const baseUrl = process.env.BOBAI_LOCAL_MEDIA_URL?.trim();
   if (!baseUrl) return null;
   const url = new URL(baseUrl);
-  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("BOBAI_LOCAL_MEDIA_URL must use HTTP or HTTPS");
+  const developmentLoopback = process.env.NODE_ENV !== "production" && url.protocol === "http:" && isLoopback(url.hostname);
+  if (url.protocol !== "https:" && !developmentLoopback) throw new Error("BOBAI_LOCAL_MEDIA_URL must use HTTPS outside local development");
   if (!isLoopback(url.hostname)) throw new Error("BOBAI_LOCAL_MEDIA_URL must point to localhost or a loopback address");
   return {
     baseUrl: url.origin,
@@ -42,7 +42,7 @@ function normalizeImages(inputImages: string[] | undefined) {
 
 async function localGenerate(path: string, options: MediaOptions) {
   const config = provider();
-  if (!config) return [];
+  if (!config) throw new Error("media generation provider is not configured");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
   try {
@@ -60,14 +60,17 @@ async function localGenerate(path: string, options: MediaOptions) {
         seed: options.seed,
       }),
       signal: controller.signal,
+      redirect: "error",
     });
     if (!response.ok) throw new Error(`local media provider returned ${response.status}`);
+    const contentLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > 10 * 1024 * 1024) throw new Error("local media provider response exceeds the 10 MB limit");
     const body = await response.json() as { url?: unknown; urls?: unknown; data?: Array<{ url?: unknown }> };
     const urls = Array.isArray(body.urls) ? body.urls.filter((url): url is string => typeof url === "string") : [];
     const dataUrls = Array.isArray(body.data) ? body.data.map((item) => item?.url).filter((url): url is string => typeof url === "string") : [];
     const all = typeof body.url === "string" ? [body.url] : [...urls, ...dataUrls];
     if (!all.length) throw new Error("local media provider returned no media URL");
-    return all;
+    return all.slice(0, 4);
   } finally {
     clearTimeout(timer);
   }
@@ -79,28 +82,16 @@ export async function generateImages(prompt: string, count = 4, inputImages?: st
   if (normalized.length > MAX_PROMPT_LENGTH) throw new Error("image prompt is too long");
   const requested = Math.max(1, Math.min(4, Math.floor(count)));
   const inputs = normalizeImages(inputImages);
-  const local = provider();
-
-  if (local) {
-    const urls = await localGenerate(local.imagePath, { prompt: normalized, count: requested, inputImages: inputs });
-    if (urls.length < requested) throw new Error(`local image provider returned ${urls.length} of ${requested} requested images`);
-    return urls.slice(0, requested).map((url, index) => ({ url, prompt: normalized, index }));
-  }
-
-  return Promise.all(Array.from({ length: requested }, async (_, index) => ({
-    url: `${DEFAULT_IMAGE_PROVIDER}/${encodeURIComponent(normalized)}?model=flux&width=1024&height=1024&seed=${Date.now() + index * 9999}&nologo=true`,
-    prompt: normalized,
-    index,
-  })));
+  const urls = await localGenerate(process.env.BOBAI_LOCAL_IMAGE_PATH?.trim() || "/generate/image", { prompt: normalized, count: requested, inputImages: inputs });
+  if (urls.length < requested) throw new Error(`local image provider returned ${urls.length} of ${requested} requested images`);
+  return urls.slice(0, requested).map((url, index) => ({ url, prompt: normalized, index }));
 }
 
 export async function generateVideo(prompt: string, inputImages?: string[]) {
   const normalized = prompt.trim();
   if (!normalized) throw new Error("video prompt is required");
   if (normalized.length > MAX_PROMPT_LENGTH) throw new Error("video prompt is too long");
-  const config = provider();
-  if (!config) throw new Error("local video generation is not configured; set BOBAI_LOCAL_MEDIA_URL");
-  const urls = await localGenerate(config.videoPath, { prompt: normalized, inputImages: normalizeImages(inputImages) });
+  const urls = await localGenerate(process.env.BOBAI_LOCAL_VIDEO_PATH?.trim() || "/generate/video", { prompt: normalized, inputImages: normalizeImages(inputImages) });
   const url = urls[0];
   if (!url) throw new Error("local video provider returned no media URL");
   return { url, prompt: normalized };
