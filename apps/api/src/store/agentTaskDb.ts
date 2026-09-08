@@ -75,6 +75,22 @@ export async function updatePersistedAgentTask(input: {
   return true;
 }
 
+export async function markInterruptedAgentTasks() {
+  const db = await getDb();
+  if (!db) return false;
+  const now = new Date();
+  await db.update(tasks).set({
+    status: "failed",
+    failedAt: now,
+    updatedAt: now,
+    metadata: { error: "agent worker restarted before the task completed" },
+  }).where(and(
+    inArray(tasks.type, ["coding", "automation", "project", "media", "database"]),
+    eq(tasks.status, "running"),
+  ));
+  return true;
+}
+
 export async function listRecoverableAgentTasks() {
   const db = await getDb();
   if (!db) return [];
@@ -93,6 +109,6 @@ export async function listRecoverableAgentTasks() {
     .from(tasks)
     .where(and(
       inArray(tasks.type, ["coding", "automation", "project", "media", "database"]),
-      inArray(tasks.status, ["queued", "running"]),
+      eq(tasks.status, "queued"),
     ));
 }
