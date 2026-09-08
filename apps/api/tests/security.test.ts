@@ -36,8 +36,12 @@ async function main() {
   test("security headers and request ids are present", async () => {
     const response = await fetch(`${base}/`);
     assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("x-frame-options"), "DENY");
+    assert.equal(response.headers.get("cross-origin-resource-policy"), "same-site");
+    assert.equal(response.headers.get("x-permitted-cross-domain-policies"), "none");
+    assert.equal(response.headers.get("content-security-policy"), "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
     assert.match(response.headers.get("x-request-id") || "", /^[A-Za-z0-9._:-]{1,128}$/);
   });
 
