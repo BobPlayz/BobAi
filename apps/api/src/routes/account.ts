@@ -13,9 +13,10 @@ const password = (value: unknown): value is string => typeof value === "string" 
 const resetBuckets = new Map<string, { startedAt: number; count: number }>();
 const RESET_WINDOW_MS = 15 * 60_000;
 const RESET_MAX_ATTEMPTS = 10;
-function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = resetBuckets.get(bucketKey); if (!current || now - current.startedAt >= RESET_WINDOW_MS) { resetBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > RESET_MAX_ATTEMPTS; }
-function cleanupResetBuckets() { const cutoff = Date.now() - RESET_WINDOW_MS; for (const [key, bucket] of resetBuckets) if (bucket.startedAt < cutoff) resetBuckets.delete(key); }
-setInterval(cleanupResetBuckets, RESET_WINDOW_MS).unref();
+const MAX_RESET_BUCKETS = 10_000;
+function cleanupResetBuckets(now = Date.now()) { const cutoff = now - RESET_WINDOW_MS; for (const [key, bucket] of resetBuckets) if (bucket.startedAt < cutoff) resetBuckets.delete(key); }
+function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = resetBuckets.get(bucketKey); if (!current || now - current.startedAt >= RESET_WINDOW_MS) { if (resetBuckets.size >= MAX_RESET_BUCKETS) cleanupResetBuckets(now); if (resetBuckets.size >= MAX_RESET_BUCKETS) return true; resetBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > RESET_MAX_ATTEMPTS; }
+setInterval(() => cleanupResetBuckets(), RESET_WINDOW_MS).unref();
 
 router.post("/password-reset/request", async (req, res) => {
   const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
