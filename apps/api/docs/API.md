@@ -8,9 +8,9 @@ Base URL: `/v1`
 
 `POST /auth/login` returns a short-lived access token and refresh token.
 
-`POST /auth/refresh` rotates the refresh token. Reuse of a revoked refresh token fails.
+`POST /auth/refresh` rotates the refresh token. Reuse of a revoked refresh token fails and session rotation is protected by the production CSRF check.
 
-`POST /auth/logout` revokes a refresh token.
+`POST /auth/logout` revokes a refresh token and is protected by the production CSRF check.
 
 `POST /auth/otp/request` and `POST /auth/otp/verify` handle optional email verification. OTP requests and verification attempts are additionally rate-limited.
 
@@ -22,15 +22,19 @@ Protected requests use:
 Authorization: Bearer <access-token>
 ```
 
+Browser cookie-authenticated mutation requests must also send `X-CSRF-Protection: 1` from an allowed origin in production.
+
 ## Account
 
 `GET /account/me` returns the authenticated profile.
+
+`POST /account/password` changes the password and requires the current password. All active sessions are revoked after a successful password change.
 
 `GET /account/export` returns the currently implemented personal-data export.
 
 `GET /account/sessions` lists active sessions. `DELETE /account/sessions/:id` revokes one session and `DELETE /account/sessions` revokes all sessions.
 
-`DELETE /account/me` starts account deactivation and revokes all sessions. Permanent deletion remains a deployment/retention-worker responsibility.
+`DELETE /account/me` requires the current password, revokes all sessions, clears selected profile fields, and starts account deactivation. Permanent deletion remains a deployment/retention-worker responsibility.
 
 ## Conversations
 
