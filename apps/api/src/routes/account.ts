@@ -19,7 +19,7 @@ router.post("/password-reset/request", async (req, res) => {
   const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   if (!email.test(address)) return res.status(400).json({ error: "invalid email" });
   if (limited(req, `request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many password reset requests", retryAfterSeconds: 900 });
-  try { const resetToken = await requestPasswordReset(address); return res.status(202).json({ message: "if the account exists, password reset instructions have been created", ...(process.env.NODE_ENV === "development" && resetToken ? { resetToken } : {}) }); }
+  try { await requestPasswordReset(address); return res.status(202).json({ message: "if the account exists, password reset instructions have been created" }); }
   catch { return res.status(503).json({ error: "password reset service unavailable" }); }
 });
 
