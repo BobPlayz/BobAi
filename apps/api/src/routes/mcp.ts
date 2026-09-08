@@ -1,16 +1,18 @@
 import { Router } from "express";
 import { createMcpApproval, discoverMcpTools, executeApprovedMcpTool, listConfiguredMcpServers } from "../services/mcpGateway.js";
+import { createUserRateLimit } from "../middleware/rateLimit.js";
 
 const router = Router();
+const limit = createUserRateLimit(20, 60_000);
 
 router.get("/servers", (_req, res) => res.json({ servers: listConfiguredMcpServers() }));
 
-router.get("/tools", async (_req, res) => {
+router.get("/tools", limit, async (_req, res) => {
   try { return res.json({ tools: await discoverMcpTools() }); }
   catch { return res.status(503).json({ error: "MCP discovery unavailable" }); }
 });
 
-router.post("/approve", async (req, res) => {
+router.post("/approve", limit, async (req, res) => {
   const userId = req.user?.id;
   const serverId = typeof req.body?.serverId === "string" ? req.body.serverId.trim() : "";
   const toolName = typeof req.body?.toolName === "string" ? req.body.toolName.trim() : "";
@@ -19,7 +21,7 @@ router.post("/approve", async (req, res) => {
   catch { return res.status(400).json({ error: "MCP tool approval unavailable" }); }
 });
 
-router.post("/execute", async (req, res) => {
+router.post("/execute", limit, async (req, res) => {
   const userId = req.user?.id;
   const approvalToken = typeof req.body?.approvalToken === "string" ? req.body.approvalToken.trim() : "";
   const serverId = typeof req.body?.serverId === "string" ? req.body.serverId.trim() : "";
