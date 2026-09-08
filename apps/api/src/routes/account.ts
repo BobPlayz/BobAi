@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, users } from "@bobai/db";
 import { requireAuth } from "../middleware/auth.js";
 import { changePassword, verifyCurrentPassword } from "../services/auth.js";
+import { beginMfaSetup, disableMfa, enableMfa, userMfaStatus } from "../services/mfa.js";
 import { requestPasswordReset, resetPassword } from "../services/passwordReset.js";
 import { listSessions, revokeAllSessions, revokeSession } from "../services/sessionManager.js";
 import { recordAudit } from "../services/audit.js";
@@ -30,27 +31,25 @@ router.post("/password-reset/confirm", async (req, res) => {
   const { token, password: nextPassword } = req.body ?? {};
   if (typeof token !== "string" || token.length < 32 || !password(nextPassword)) return res.status(400).json({ error: "invalid reset request" });
   if (limited(req, "confirm")) return res.status(429).json({ error: "too many password reset attempts", retryAfterSeconds: 900 });
-  try {
-    const result = await resetPassword(token, nextPassword);
-    if (!result.ok) return res.status(400).json({ error: result.error });
-    return res.status(204).send();
-  } catch { return res.status(503).json({ error: "password reset service unavailable" }); }
+  try { const result = await resetPassword(token, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); }
+  catch { return res.status(503).json({ error: "password reset service unavailable" }); }
 });
 
 router.use(requireAuth);
-router.get("/me", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.id, req.user!.id)).limit(1); return user ? res.json(user) : res.status(404).json({ error: "user not found" }); });
+router.get("/me", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled }).from(users).where(eq(users.id, req.user!.id)).limit(1); return user ? res.json(user) : res.status(404).json({ error: "user not found" }); });
+router.get("/mfa", async (req, res) => res.json({ enabled: await userMfaStatus(req.user!.id) }));
+router.post("/mfa/setup", async (req, res) => { try { return res.json(await beginMfaSetup(req.user!.id)); } catch { return res.status(503).json({ error: "MFA setup unavailable" }); } });
+router.post("/mfa/enable", async (req, res) => { const secret = typeof req.body?.secret === "string" ? req.body.secret.trim().toUpperCase() : ""; const code = typeof req.body?.code === "string" ? req.body.code : ""; if (!secret || !/^\d{6}$/.test(code)) return res.status(400).json({ error: "secret and six-digit code are required" }); try { if (!await enableMfa(req.user!.id, secret, code)) return res.status(400).json({ error: "invalid MFA secret or code" }); return res.json({ enabled: true }); } catch { return res.status(503).json({ error: "MFA enablement unavailable" }); } });
+router.post("/mfa/disable", async (req, res) => { const code = typeof req.body?.code === "string" ? req.body.code : ""; const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : ""; if (!/^\d{6}$/.test(code) || !currentPassword) return res.status(400).json({ error: "current password and six-digit code are required" }); try { if (!await verifyCurrentPassword(req.user!.id, currentPassword)) return res.status(401).json({ error: "current password is incorrect" }); if (!await disableMfa(req.user!.id, code)) return res.status(400).json({ error: "invalid MFA code" }); return res.json({ enabled: false }); } catch { return res.status(503).json({ error: "MFA disablement unavailable" }); } });
 router.post("/password", async (req, res) => {
   if (limited(req, `password:${req.user!.id}`)) return res.status(429).json({ error: "too many password change attempts", retryAfterSeconds: 900 });
   const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : "";
   const nextPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
   if (!currentPassword || !password(nextPassword)) return res.status(400).json({ error: "invalid password change request" });
-  try {
-    const result = await changePassword(req.user!.id, currentPassword, nextPassword);
-    if (!result.ok) return res.status(400).json({ error: result.error });
-    return res.status(204).send();
-  } catch (error) { if (process.env.NODE_ENV !== "production") console.error("password change failed", error); return res.status(503).json({ error: "password change service unavailable" }); }
+  try { const result = await changePassword(req.user!.id, currentPassword, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); }
+  catch (error) { if (process.env.NODE_ENV !== "production") console.error("password change failed", error); return res.status(503).json({ error: "password change service unavailable" }); }
 });
-router.get("/export", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, req.user!.id)).limit(1); if (!user) return res.status(404).json({ error: "user not found" }); return res.json({ exportedAt: new Date().toISOString(), user, sessions: await listSessions(req.user!.id) }); });
+router.get("/export", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, req.user!.id)).limit(1); if (!user) return res.status(404).json({ error: "user not found" }); return res.json({ exportedAt: new Date().toISOString(), user, sessions: await listSessions(req.user!.id) }); });
 router.get("/sessions", async (req, res) => res.json({ sessions: await listSessions(req.user!.id) }));
 router.delete("/sessions/:id", async (req, res) => res.status(await revokeSession(req.user!.id, req.params.id as string) ? 204 : 404).send());
 router.delete("/sessions", async (req, res) => { await revokeAllSessions(req.user!.id); return res.status(204).send(); });
