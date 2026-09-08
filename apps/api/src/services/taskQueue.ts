@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { executeAgentTask, type AgentTaskKind } from "./agentTasks.js";
 import type { AgentSkillId } from "./agentSkills.js";
+import { listRecoverableAgentTasks } from "../store/agentTaskDb.js";
 
 export type QueueJob = {
   id: string;
@@ -19,6 +20,7 @@ export type QueueJob = {
 const queue: QueueJob[] = [];
 const jobs = new Map<string, QueueJob>();
 let running = 0;
+let recoveryStarted = false;
 
 // Agents are available simultaneously, but only the workers needed by queued
 // work are started. One worker is the safe default for a local machine.
@@ -47,6 +49,46 @@ export function getQueueJob(id: string) {
 export function listQueueJobs() {
   return [...jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
+
+async function recoverPersistedJobs() {
+  if (recoveryStarted) return;
+  recoveryStarted = true;
+  try {
+    const persisted = await listRecoverableAgentTasks();
+    for (const task of persisted) {
+      if (!task.description || jobs.has(task.id)) continue;
+      const payload = task.payload && typeof task.payload === "object" && !Array.isArray(task.payload)
+        ? task.payload as Record<string, unknown>
+        : {};
+      const skills = Array.isArray(payload.skills)
+        ? payload.skills.filter((value): value is AgentSkillId => typeof value === "string")
+        : undefined;
+      const mode = typeof payload.mode === "string" ? payload.mode : undefined;
+      const kind = ["coding", "automation", "project", "media", "database"].includes(task.type)
+        ? task.type as AgentTaskKind
+        : undefined;
+      const job: QueueJob = {
+        id: task.id,
+        description: task.description,
+        kind,
+        skills,
+        mode,
+        context: { workspaceId: task.workspaceId, createdBy: task.createdBy ?? undefined },
+        attempts: 1,
+        status: "queued",
+        createdAt: task.createdAt.toISOString(),
+      };
+      jobs.set(job.id, job);
+      queue.push(job);
+    }
+    if (persisted.length) void drain();
+  } catch {
+    // Database outages must not prevent the API from starting. The durable
+    // queue will be retried on the next process restart.
+  }
+}
+
+void recoverPersistedJobs();
 
 async function drain() {
   while (running < concurrency) {
