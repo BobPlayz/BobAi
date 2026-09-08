@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { tasks } from "@bobai/db";
 
 let dbPromise: Promise<typeof import("@bobai/db").db | null> | null = null;
@@ -37,6 +37,20 @@ export async function persistAgentTask(input: {
     payload: input.payload,
     result: input.result,
     metadata: input.error ? { error: input.error } : undefined,
+  }).onConflictDoUpdate({
+    target: tasks.id,
+    set: {
+      workspaceId: input.workspaceId,
+      createdBy: input.createdBy,
+      title: input.title,
+      description: input.description,
+      type: input.type,
+      status: input.status,
+      payload: input.payload,
+      result: input.result,
+      metadata: input.error ? { error: input.error } : undefined,
+      updatedAt: new Date(),
+    },
   });
   return true;
 }
@@ -59,4 +73,26 @@ export async function updatePersistedAgentTask(input: {
 
   await db.update(tasks).set(update as never).where(eq(tasks.id, input.id));
   return true;
+}
+
+export async function listRecoverableAgentTasks() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select({
+    id: tasks.id,
+    workspaceId: tasks.workspaceId,
+    createdBy: tasks.createdBy,
+    title: tasks.title,
+    description: tasks.description,
+    type: tasks.type,
+    status: tasks.status,
+    payload: tasks.payload,
+    createdAt: tasks.createdAt,
+  })
+    .from(tasks)
+    .where(and(
+      inArray(tasks.type, ["coding", "automation", "project", "media", "database"]),
+      inArray(tasks.status, ["queued", "running"]),
+    ));
 }
