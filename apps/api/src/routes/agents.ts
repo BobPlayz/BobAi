@@ -6,6 +6,7 @@ import { agentAuth } from "../middleware/agentAuth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQueue.js";
 import { resolveUserWorkspace } from "../services/workspace.js";
+import { getPersistedAgentTask } from "../store/agentTaskDb.js";
 
 const router = Router();
 const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
@@ -116,10 +117,30 @@ router.post("/user/run", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/user/queue/:id", requireAuth, (req, res) => {
+router.get("/user/queue/:id", requireAuth, async (req, res) => {
   const job = getQueueJob(req.params.id as string);
-  if (!job || job.context?.createdBy !== req.user!.id) return res.status(404).json({ error: "agent job not found" });
-  return res.json({ id: job.id, status: job.status, createdAt: job.createdAt, result: job.result, error: job.error, workspaceId: job.context?.workspaceId });
+  if (job) {
+    if (job.context?.createdBy !== req.user!.id) return res.status(404).json({ error: "agent job not found" });
+    return res.json({ id: job.id, status: job.status, createdAt: job.createdAt, result: job.result, error: job.error, workspaceId: job.context?.workspaceId });
+  }
+
+  try {
+    const task = await getPersistedAgentTask(req.params.id as string, req.user!.id);
+    if (!task) return res.status(404).json({ error: "agent job not found" });
+    const metadata = task.metadata && typeof task.metadata === "object" ? task.metadata as Record<string, unknown> : {};
+    return res.json({
+      id: task.id,
+      status: task.status,
+      createdAt: task.createdAt,
+      startedAt: task.startedAt,
+      completedAt: task.completedAt,
+      result: task.result,
+      error: typeof metadata.error === "string" ? metadata.error : undefined,
+      workspaceId: task.workspaceId,
+    });
+  } catch {
+    return res.status(503).json({ error: "agent task storage unavailable" });
+  }
 });
 
 export default router;
