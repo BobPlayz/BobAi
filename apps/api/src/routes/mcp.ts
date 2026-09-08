@@ -10,12 +10,12 @@ router.get("/tools", async (_req, res) => {
   catch { return res.status(503).json({ error: "MCP discovery unavailable" }); }
 });
 
-router.post("/approve", (req, res) => {
+router.post("/approve", async (req, res) => {
   const userId = req.user?.id;
   const serverId = typeof req.body?.serverId === "string" ? req.body.serverId.trim() : "";
   const toolName = typeof req.body?.toolName === "string" ? req.body.toolName.trim() : "";
   if (!userId || !serverId || !toolName) return res.status(400).json({ error: "serverId and toolName are required" });
-  try { return res.json({ approval: createMcpApproval({ userId, serverId, toolName }) }); }
+  try { return res.json({ approval: await createMcpApproval({ userId, serverId, toolName }) }); }
   catch { return res.status(400).json({ error: "MCP tool approval unavailable" }); }
 });
 
