@@ -18,7 +18,7 @@ app.disable("x-powered-by");
 const trustProxy = process.env.TRUST_PROXY === "true";
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
 app.set("trust proxy", trustProxy ? trustProxyHops : false);
-app.use(cors({ origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key"] }));
+app.use(cors({ origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key", "X-CSRF-Protection"] }));
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -37,6 +37,17 @@ app.use(securityLog);
 app.use(rateLimit);
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb" }));
 app.use(validateRequestBody);
+
+app.use((req, res, next) => {
+  if (!isProduction || !["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
+  const hasSessionCookie = /(?:^|;)\s*bobai_(?:access|refresh)=/.test(req.header("cookie") || "");
+  if (!hasSessionCookie) return next();
+  const origin = req.header("origin");
+  const csrfHeader = req.header("x-csrf-protection");
+  if (!origin || !allowedOrigins.includes(origin) || csrfHeader !== "1") return res.status(403).json({ error: "request origin validation failed" });
+  return next();
+});
+
 app.get("/", (_req, res) => res.json({ name: "BobAI API", status: "ok" }));
 app.use(apiRouter);
 app.use((_req, res) => res.status(404).json({ error: "route not found" }));
