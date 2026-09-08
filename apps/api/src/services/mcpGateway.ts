@@ -9,6 +9,8 @@ export type McpTool = { name: string; description?: string; inputSchema?: unknow
 const MAX_SERVERS = 20;
 const MAX_TOOLS_PER_SERVER = 100;
 const REQUEST_TIMEOUT_MS = 15_000;
+const MAX_MCP_RESPONSE_BYTES = 10 * 1024 * 1024;
+const MAX_MCP_ARGUMENT_BYTES = 256 * 1024;
 const APPROVAL_TTL_MS = 5 * 60_000;
 const hashApprovalToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
@@ -46,14 +48,15 @@ async function call(server: McpServerConfig, method: string, params: Record<stri
       redirect: "error",
     });
     if (!response.ok) throw new Error(`MCP server returned ${response.status}`);
+    const contentLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > MAX_MCP_RESPONSE_BYTES) throw new Error("MCP response exceeds the 10 MB limit");
     const text = await response.text();
-    if (text.length > 10 * 1024 * 1024) throw new Error("MCP response exceeds the 10 MB limit");
+    if (text.length > MAX_MCP_RESPONSE_BYTES) throw new Error("MCP response exceeds the 10 MB limit");
     return JSON.parse(text) as Record<string, unknown>;
   } finally { clearTimeout(timer); }
 }
 
 function findServer(serverId: string) { return configuredServers().find((server) => server.id === serverId); }
-
 export function listConfiguredMcpServers(): McpServerConfig[] { return configuredServers().map((server) => ({ ...server })); }
 
 export async function discoverMcpTools(): Promise<McpTool[]> {
@@ -78,34 +81,18 @@ export async function createMcpApproval(input: { userId: string; serverId: strin
   const server = findServer(input.serverId);
   if (!server) throw new Error("MCP server unavailable");
   if (!input.toolName || input.toolName.length > 200) throw new Error("invalid MCP tool");
+  const discovered = await discoverMcpTools();
+  if (!discovered.some((tool) => tool.serverId === input.serverId && tool.name === input.toolName)) throw new Error("MCP tool is not available");
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS);
-  await db.insert(toolApprovals).values({
-    userId: input.userId,
-    kind: "mcp",
-    serverId: input.serverId,
-    targetName: input.toolName,
-    tokenHash: hashApprovalToken(token),
-    expiresAt,
-  });
+  await db.insert(toolApprovals).values({ userId: input.userId, kind: "mcp", serverId: input.serverId, targetName: input.toolName, tokenHash: hashApprovalToken(token), expiresAt });
   await recordAudit({ action: "mcp_approval_issued", resourceType: "mcp_approval", userId: input.userId, metadata: { serverId: input.serverId, toolName: input.toolName } });
   return { token, expiresAt: expiresAt.toISOString() };
 }
 
 async function consumeMcpApproval(input: { userId: string; approvalToken: string; serverId: string; toolName: string }) {
   const now = new Date();
-  const [approval] = await db.update(toolApprovals)
-    .set({ consumedAt: now })
-    .where(and(
-      eq(toolApprovals.tokenHash, hashApprovalToken(input.approvalToken)),
-      eq(toolApprovals.kind, "mcp"),
-      eq(toolApprovals.userId, input.userId),
-      eq(toolApprovals.serverId, input.serverId),
-      eq(toolApprovals.targetName, input.toolName),
-      isNull(toolApprovals.consumedAt),
-      gt(toolApprovals.expiresAt, now),
-    ))
-    .returning({ id: toolApprovals.id });
+  const [approval] = await db.update(toolApprovals).set({ consumedAt: now }).where(and(eq(toolApprovals.tokenHash, hashApprovalToken(input.approvalToken)), eq(toolApprovals.kind, "mcp"), eq(toolApprovals.userId, input.userId), eq(toolApprovals.serverId, input.serverId), eq(toolApprovals.targetName, input.toolName), isNull(toolApprovals.consumedAt), gt(toolApprovals.expiresAt, now))).returning({ id: toolApprovals.id });
   if (approval) await recordAudit({ action: "mcp_approval_consumed", resourceType: "mcp_approval", resourceId: approval.id, userId: input.userId, metadata: { serverId: input.serverId, toolName: input.toolName } });
   return Boolean(approval);
 }
@@ -115,6 +102,8 @@ export async function executeApprovedMcpTool(input: { userId: string; approvalTo
   const server = findServer(input.serverId);
   if (!server) throw new Error("MCP server unavailable");
   const safeArguments = input.arguments && typeof input.arguments === "object" && !Array.isArray(input.arguments) ? input.arguments : {};
+  const encodedArguments = JSON.stringify(safeArguments);
+  if (encodedArguments.length > MAX_MCP_ARGUMENT_BYTES) throw new Error("MCP arguments exceed the 256 KB limit");
   const response = await call(server, "tools/call", { name: input.toolName, arguments: safeArguments });
   if (response.error) throw new Error("MCP tool execution failed");
   return response.result ?? null;
