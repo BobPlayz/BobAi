@@ -23,7 +23,7 @@ const skills: AgentSkill[] = [
   { id: "developer_research", name: "developer research", description: "Search and solve developer-focused questions with source-backed research.", kind: "capability", available: env("BOBAI_RESEARCH_PROVIDER_URL") },
   { id: "web_search", name: "web search", description: "Search the web and return source metadata and citations.", kind: "capability", available: env("BOBAI_RESEARCH_PROVIDER_URL") },
   { id: "file_analysis", name: "file analysis", description: "Inspect supported uploaded documents and files.", kind: "capability", available: true },
-  { id: "vision", name: "vision", description: "Violet's visual coding skill: analyze screenshots/images with a configured vision model and use deterministic pixel/color metadata where supported.", kind: "capability", available: env("BOBAI_VISION_MODEL") || env("BOBAI_VISION_PROVIDER_URL") },
+  { id: "vision", name: "vision", description: "Violet's visual coding skill: analyze screenshots/images with the configured Ollama vision model and use deterministic pixel/color metadata where supported.", kind: "capability", available: env("BOBAI_VISION_MODEL") },
   { id: "image_generation", name: "image generation", description: "Create images through BobAI's image pipeline.", kind: "integration", available: true },
   { id: "image_upscale", name: "image upscaling", description: "Upscale and enhance low-resolution images.", kind: "integration", available: env("BOBAI_IMAGE_UPSCALE_PROVIDER_URL") },
   { id: "background_removal", name: "background removal", description: "Remove image backgrounds.", kind: "integration", available: env("BOBAI_IMAGE_EDIT_PROVIDER_URL") },
