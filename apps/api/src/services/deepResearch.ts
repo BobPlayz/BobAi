@@ -1,9 +1,12 @@
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { webSearch, type ResearchSource } from "./research.js";
 import { runChat } from "./chatEngine.js";
 
 const MAX_SUBQUERIES = 6;
 const DEFAULT_MAX_SOURCES = 24;
 const MAX_SOURCE_TEXT = 12_000;
+const MAX_SOURCE_RESPONSE_BYTES = 5 * 1024 * 1024;
 const MAX_SYNTHESIS_INPUT = 90_000;
 const DEFAULT_TIMEOUT_MS = 45_000;
 
@@ -26,13 +29,32 @@ function maxSources() {
   return Number.isFinite(configured) ? Math.min(Math.max(Math.floor(configured), 4), 50) : DEFAULT_MAX_SOURCES;
 }
 
+function isPrivateIp(address: string) {
+  if (isIP(address) === 4) {
+    const [a, b] = address.split(".").map(Number);
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+  }
+  if (isIP(address) === 6) {
+    const normalized = address.toLowerCase();
+    return normalized === "::1" || normalized === "::" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb");
+  }
+  return true;
+}
+
 function isPrivateHostname(hostname: string) {
   const host = hostname.toLowerCase().replace(/[\[\]]/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host === "::1" || host === "0.0.0.0") return true;
-  const parts = host.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  const [a, b] = parts;
-  return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || a === 0;
+  return host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host === "::1" || host === "0.0.0.0";
+}
+
+async function isPublicHost(hostname: string) {
+  if (isPrivateHostname(hostname)) return false;
+  if (isIP(hostname)) return !isPrivateIp(hostname);
+  try {
+    const addresses = await lookup(hostname, { all: true, verbatim: true });
+    return addresses.length > 0 && addresses.every(({ address }) => !isPrivateIp(address));
+  } catch {
+    return false;
+  }
 }
 
 function safeSourceUrl(value: string) {
@@ -72,18 +94,22 @@ function dedupeSources(sourceLists: ResearchSource[][]): ResearchSource[] {
 
 async function fetchEvidence(source: ResearchSource): Promise<{ url: string; title: string; excerpt: string } | null> {
   const safeUrl = safeSourceUrl(source.url);
-  if (!safeUrl) return null;
+  if (!safeUrl || !(await isPublicHost(safeUrl.hostname))) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
   try {
     const response = await fetch(safeUrl, { signal: controller.signal, redirect: "error" });
     if (!response.ok) return null;
+    const contentLength = Number(response.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > MAX_SOURCE_RESPONSE_BYTES) return null;
     const contentType = response.headers.get("content-type") || "";
     const isHtml = contentType.includes("text/html");
     if (!isHtml && !contentType.includes("text/plain")) return null;
-    const text = sanitizeSourceText(await response.text(), isHtml);
+    const raw = await response.text();
+    if (raw.length > MAX_SOURCE_RESPONSE_BYTES) return null;
+    const text = sanitizeSourceText(raw, isHtml);
     if (!text) return null;
-    return { url: safeUrl.toString(), title: source.title, excerpt: text.slice(0, MAX_SOURCE_TEXT) };
+    return { url: safeUrl.toString(), title: source.title.slice(0, 500), excerpt: text.slice(0, MAX_SOURCE_TEXT) };
   } catch {
     return null;
   } finally {
