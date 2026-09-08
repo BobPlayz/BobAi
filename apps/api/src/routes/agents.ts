@@ -8,13 +8,31 @@ import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { enqueueAgentTask, getQueueJob, listQueueJobs } from "../services/taskQueue.js";
 import { resolveUserWorkspace } from "../services/workspace.js";
 import { getPersistedAgentTask } from "../store/agentTaskDb.js";
+import { analyzeWithViolet } from "../services/violet.js";
 
 const router = Router();
 const allowedKinds: AgentTaskKind[] = ["coding", "automation", "project", "media", "database"];
 const userLimit = createUserRateLimit(5, 60_000);
-type TaskBody = { task?: unknown; kind?: unknown; mode?: unknown; skills?: unknown; workspaceId?: unknown };
-function parseTaskBody(body: unknown) { const input = (body && typeof body === "object" ? body : {}) as TaskBody; const description = typeof input.task === "string" ? input.task.trim() : ""; const requestedKind = typeof input.kind === "string" ? input.kind : undefined; const requestedMode = typeof input.mode === "string" ? input.mode : undefined; const requestedSkills = Array.isArray(input.skills) ? input.skills.filter((value): value is AgentSkillId => typeof value === "string") : undefined; const workspaceId = typeof input.workspaceId === "string" ? input.workspaceId.trim().slice(0, 200) : undefined; return { description, requestedKind, requestedMode, requestedSkills, workspaceId }; }
-function validateTask(body: unknown) { const parsed = parseTaskBody(body); if (!parsed.description) return { error: "task is required" } as const; if (parsed.description.length > 20_000) return { error: "task cannot exceed 20000 characters" } as const; if (parsed.requestedKind && !allowedKinds.includes(parsed.requestedKind as AgentTaskKind)) return { error: "invalid task kind" } as const; return { value: parsed } as const; }
+type TaskBody = { task?: unknown; kind?: unknown; mode?: unknown; skills?: unknown; workspaceId?: unknown; visualInputs?: unknown };
+function parseTaskBody(body: unknown) {
+  const input = (body && typeof body === "object" ? body : {}) as TaskBody;
+  const description = typeof input.task === "string" ? input.task.trim() : "";
+  const requestedKind = typeof input.kind === "string" ? input.kind : undefined;
+  const requestedMode = typeof input.mode === "string" ? input.mode : undefined;
+  const requestedSkills = Array.isArray(input.skills) ? input.skills.filter((value): value is AgentSkillId => typeof value === "string") : undefined;
+  const workspaceId = typeof input.workspaceId === "string" ? input.workspaceId.trim().slice(0, 200) : undefined;
+  const visualInputs = Array.isArray(input.visualInputs) ? input.visualInputs.filter((value): value is string => typeof value === "string") : undefined;
+  return { description, requestedKind, requestedMode, requestedSkills, workspaceId, visualInputs };
+}
+function validateTask(body: unknown) {
+  const parsed = parseTaskBody(body);
+  if (!parsed.description) return { error: "task is required" } as const;
+  if (parsed.description.length > 20_000) return { error: "task cannot exceed 20000 characters" } as const;
+  if (parsed.requestedKind && !allowedKinds.includes(parsed.requestedKind as AgentTaskKind)) return { error: "invalid task kind" } as const;
+  if (parsed.visualInputs && parsed.visualInputs.length > 3) return { error: "at most 3 visual inputs are allowed" } as const;
+  if (parsed.visualInputs?.some((image) => image.length > 2_000_000)) return { error: "visual input is too large" } as const;
+  return { value: parsed } as const;
+}
 router.get("/skills", agentAuth, (_req, res) => res.json({ skills: listAgentSkills() }));
 router.get("/services", agentAuth, (_req, res) => res.json({ services: listBobServices() }));
 router.get("/tasks", agentAuth, (_req, res) => res.json({ tasks: listAgentTasks() }));
@@ -24,6 +42,28 @@ router.get("/queue/:id", agentAuth, (req, res) => { const job = getQueueJob(req.
 router.post("/tasks", agentAuth, (req, res) => { const validated = validateTask(req.body); if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated); const { description, requestedKind, requestedMode, requestedSkills, workspaceId } = validated.value; try { const job = enqueueAgentTask({ description, kind: requestedKind as AgentTaskKind | undefined, skills: requestedSkills, mode: requestedMode, context: { workspaceId } }); return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt, agent: "background" }); } catch (error) { return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" }); } });
 router.post("/classify", agentAuth, (req, res) => { const validated = validateTask(req.body); if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated); return res.json({ kind: classifyAgentTask(validated.value.description) }); });
 router.post("/run", agentAuth, (req, res) => { const validated = validateTask(req.body); if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated); try { const job = enqueueAgentTask({ description: validated.value.description, kind: "coding", mode: validated.value.requestedMode, context: { workspaceId: validated.value.workspaceId } }); return res.status(202).json({ id: job.id, status: job.status, agent: "background" }); } catch (error) { return res.status(429).json({ error: error instanceof Error ? error.message : "agent queue unavailable" }); } });
-router.post("/user/run", requireAuth, userLimit, async (req, res) => { const validated = validateTask(req.body); if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated); try { const workspace = await resolveUserWorkspace(req.user!.id, validated.value.workspaceId); if (!workspace) return res.status(403).json({ error: "workspace access denied" }); const job = enqueueAgentTask({ description: validated.value.description, kind: validated.value.requestedKind as AgentTaskKind | undefined, skills: validated.value.requestedSkills, mode: validated.value.requestedMode, context: { workspaceId: workspace.id, createdBy: req.user!.id } }); return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt, agent: "background", workspaceId: workspace.id }); } catch { return res.status(503).json({ error: "agent queue unavailable" }); } });
+router.post("/user/run", requireAuth, userLimit, async (req, res) => {
+  const validated = validateTask(req.body);
+  if ("error" in validated) return res.status(validated.error === "task is required" ? 400 : 413).json(validated);
+  try {
+    const workspace = await resolveUserWorkspace(req.user!.id, validated.value.workspaceId);
+    if (!workspace) return res.status(403).json({ error: "workspace access denied" });
+
+    let description = validated.value.description;
+    let skills = validated.value.requestedSkills;
+    if (validated.value.visualInputs?.length) {
+      const violet = await analyzeWithViolet(validated.value.visualInputs, validated.value.description);
+      const visualContext = JSON.stringify(violet).slice(0, 14_000);
+      description = `${description}\n\n[VIOLET VISUAL ANALYSIS]\n${visualContext}`.slice(0, 20_000);
+      skills = [...new Set([...(skills || []), "vision" as AgentSkillId])];
+    }
+
+    const job = enqueueAgentTask({ description, kind: validated.value.requestedKind as AgentTaskKind | undefined, skills, mode: validated.value.requestedMode, context: { workspaceId: workspace.id, createdBy: req.user!.id } });
+    return res.status(202).json({ id: job.id, status: job.status, createdAt: job.createdAt, agent: "background", manager: "bob", employees: skills?.includes("vision") ? ["violet", "alex", "ben", "ryan"] : ["alex", "ben", "ryan"], workspaceId: workspace.id });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error("AGENT ROUTE ERROR:", error);
+    return res.status(503).json({ error: process.env.NODE_ENV === "production" ? "agent task unavailable" : error instanceof Error ? error.message : "agent task unavailable" });
+  }
+});
 router.get("/user/queue/:id", requireAuth, async (req, res) => { const job = getQueueJob(req.params.id as string); if (job) { if (job.context?.createdBy !== req.user!.id) return res.status(404).json({ error: "agent job not found" }); return res.json({ id: job.id, status: job.status, createdAt: job.createdAt, result: job.result, error: job.error ? "agent task failed" : undefined, workspaceId: job.context?.workspaceId }); } try { const task = await getPersistedAgentTask(req.params.id as string, req.user!.id); if (!task) return res.status(404).json({ error: "agent job not found" }); const metadata = task.metadata && typeof task.metadata === "object" ? task.metadata as Record<string, unknown> : {}; return res.json({ id: task.id, status: task.status, createdAt: task.createdAt, startedAt: task.startedAt, completedAt: task.completedAt, result: task.result, error: typeof metadata.error === "string" ? "agent task failed" : undefined, workspaceId: task.workspaceId }); } catch { return res.status(503).json({ error: "agent task storage unavailable" }); } });
 export default router;
