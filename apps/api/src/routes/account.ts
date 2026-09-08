@@ -2,8 +2,10 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, users } from "@bobai/db";
 import { requireAuth } from "../middleware/auth.js";
+import { changePassword, verifyCurrentPassword } from "../services/auth.js";
 import { requestPasswordReset, resetPassword } from "../services/passwordReset.js";
 import { listSessions, revokeAllSessions, revokeSession } from "../services/sessionManager.js";
+import { recordAudit } from "../services/audit.js";
 
 const router = Router();
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -36,15 +38,31 @@ router.post("/password-reset/confirm", async (req, res) => {
 
 router.use(requireAuth);
 router.get("/me", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.id, req.user!.id)).limit(1); return user ? res.json(user) : res.status(404).json({ error: "user not found" }); });
+router.post("/password", async (req, res) => {
+  if (limited(req, `password:${req.user!.id}`)) return res.status(429).json({ error: "too many password change attempts", retryAfterSeconds: 900 });
+  const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : "";
+  const nextPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
+  if (!currentPassword || !password(nextPassword)) return res.status(400).json({ error: "invalid password change request" });
+  try {
+    const result = await changePassword(req.user!.id, currentPassword, nextPassword);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    return res.status(204).send();
+  } catch (error) { if (process.env.NODE_ENV !== "production") console.error("password change failed", error); return res.status(503).json({ error: "password change service unavailable" }); }
+});
 router.get("/export", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, req.user!.id)).limit(1); if (!user) return res.status(404).json({ error: "user not found" }); return res.json({ exportedAt: new Date().toISOString(), user, sessions: await listSessions(req.user!.id) }); });
 router.get("/sessions", async (req, res) => res.json({ sessions: await listSessions(req.user!.id) }));
 router.delete("/sessions/:id", async (req, res) => res.status(await revokeSession(req.user!.id, req.params.id as string) ? 204 : 404).send());
 router.delete("/sessions", async (req, res) => { await revokeAllSessions(req.user!.id); return res.status(204).send(); });
 router.delete("/me", async (req, res) => {
+  if (limited(req, `delete:${req.user!.id}`)) return res.status(429).json({ error: "too many account deletion attempts", retryAfterSeconds: 900 });
+  const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : "";
+  if (!currentPassword) return res.status(400).json({ error: "currentPassword is required" });
+  if (!await verifyCurrentPassword(req.user!.id, currentPassword)) return res.status(401).json({ error: "current password is incorrect" });
   const now = new Date();
   await revokeAllSessions(req.user!.id);
-  const [user] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt });
+  const [user] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, isActive: false, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt });
   if (!user) return res.status(404).json({ error: "user not found" });
+  await recordAudit({ action: "account_deletion_requested", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id });
   return res.status(202).json({ status: "account deletion scheduled", deletedAt: user.deletedAt, permanentDeletionAfterDays: 30 });
 });
 export default router;
