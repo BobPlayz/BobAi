@@ -5,7 +5,7 @@ export type AgentSkillId =
   | "voice_synthesis" | "speech_to_text" | "meeting_transcription"
   | "music_generation" | "music_discovery" | "diagram_generation" | "sketch_to_ui"
   | "developer_research" | "web_search" | "writing" | "app_builder" | "website_builder" | "ai_code_editor" | "build_and_deploy"
-  | "bobdb";
+  | "bobdb" | "research_first" | "code_review" | "security_review" | "test_verification";
 
 export type AgentMode = "standard" | "divesh";
 export type AgentSkill = { id: AgentSkillId; name: string; description: string; kind: "execution" | "integration" | "capability"; available: boolean };
@@ -15,6 +15,10 @@ const env = (name: string) => Boolean(process.env[name]?.trim());
 const skills: AgentSkill[] = [
   { id: "coding", name: "coding", description: "Inspect, write, modify, test, and debug code in the configured coding-agent workspace.", kind: "execution", available: env("BOBAI_CODING_AGENTS_DIR") },
   { id: "automation", name: "automation", description: "Plan and implement repeatable workflows using configured tools and integrations.", kind: "execution", available: env("BOBAI_CODING_AGENTS_DIR") },
+  { id: "research_first", name: "research first", description: "Inspect existing code, tests, schemas, and contracts before implementation.", kind: "capability", available: true },
+  { id: "code_review", name: "code review", description: "Review changes for correctness, maintainability, regressions, and unnecessary code.", kind: "capability", available: true },
+  { id: "security_review", name: "security review", description: "Red-team changes for authorization, injection, secret exposure, SSRF, unsafe execution, and data leakage.", kind: "capability", available: true },
+  { id: "test_verification", name: "test and verification", description: "Run relevant tests/build checks, repair code-side failures, and repeat verification.", kind: "capability", available: true },
   { id: "web_research", name: "web research", description: "Research information using BobAI's configured web-search capability.", kind: "capability", available: env("BOBAI_RESEARCH_PROVIDER_URL") },
   { id: "developer_research", name: "developer research", description: "Search and solve developer-focused questions with source-backed research.", kind: "capability", available: env("BOBAI_RESEARCH_PROVIDER_URL") },
   { id: "web_search", name: "web search", description: "Search the web and return source metadata and citations.", kind: "capability", available: env("BOBAI_RESEARCH_PROVIDER_URL") },
@@ -85,7 +89,9 @@ const SKILL_PATTERNS: Array<[AgentSkillId, RegExp[]]> = [
 
 export function inferAgentSkills(text: string): AgentSkillId[] {
   const matches = SKILL_PATTERNS.filter(([, patterns]) => patterns.some((pattern) => pattern.test(text.trim()))).map(([id]) => id);
-  return matches.length ? [...new Set(matches)] : ["coding"];
+  const engineering = /\b(code|coding|build|create|fix|debug|refactor|implement|deploy|secure|security|test|review|architecture|app|website|frontend|backend)\b/i.test(text);
+  if (engineering) matches.push("research_first", "code_review", "security_review", "test_verification");
+  return matches.length ? [...new Set(matches)] : ["coding", "research_first", "code_review", "security_review", "test_verification"];
 }
 
 export function normalizeAgentMode(mode?: string): AgentMode { return mode?.toLowerCase() === "divesh" ? "divesh" : "standard"; }
