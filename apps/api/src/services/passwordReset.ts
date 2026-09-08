@@ -1,7 +1,8 @@
 import { createHash, randomBytes, scrypt as scryptCallback } from "node:crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import { db, passwordResets, sessions, users } from "@bobai/db";
 import { enforcePasswordPolicy } from "./passwordPolicy.js";
+import { recordAudit } from "./audit.js";
 
 const scrypt = (password: string, salt: Buffer, keylen: number, options: { N: number; r: number; p: number; maxmem: number }) => new Promise<Buffer>((resolve, reject) => scryptCallback(password, salt, keylen, options, (error, derived) => error ? reject(error) : resolve(derived as Buffer)));
 const TTL_MS = 15 * 60 * 1000;
@@ -27,10 +28,20 @@ export async function resetPassword(rawToken: string, password: string) {
   const [reset] = await db.select().from(passwordResets).where(and(eq(passwordResets.tokenHash, hash(rawToken)), eq(passwordResets.isActive, true), isNull(passwordResets.usedAt), gt(passwordResets.expiresAt, new Date()))).limit(1);
   if (!reset) return { ok: false as const, error: "invalid or expired reset token" };
   const stored = await passwordHash(password);
-  const [updated] = await db.update(passwordResets).set({ usedAt: new Date(), isActive: false }).where(and(eq(passwordResets.id, reset.id), eq(passwordResets.isActive, true), isNull(passwordResets.usedAt))).returning({ id: passwordResets.id });
-  if (!updated) return { ok: false as const, error: "invalid or expired reset token" };
   const now = new Date();
-  await db.update(users).set({ passwordHash: stored, updatedAt: now }).where(eq(users.id, reset.userId));
-  await db.update(sessions).set({ revokedAt: now, isActive: false, updatedAt: now }).where(and(eq(sessions.userId, reset.userId), eq(sessions.isActive, true), isNull(sessions.revokedAt)));
-  return { ok: true as const };
+  try {
+    await db.transaction(async (tx) => {
+      const [updated] = await tx.update(passwordResets).set({ usedAt: now, isActive: false }).where(and(eq(passwordResets.id, reset.id), eq(passwordResets.isActive, true), isNull(passwordResets.usedAt), gt(passwordResets.expiresAt, now))).returning({ id: passwordResets.id });
+      if (!updated) throw new Error("reset token was already consumed");
+      const [user] = await tx.update(users).set({ passwordHash: stored, updatedAt: now }).where(and(eq(users.id, reset.userId), isNull(users.deletedAt))).returning({ id: users.id });
+      if (!user) throw new Error("account is unavailable");
+      await tx.update(sessions).set({ revokedAt: now, isActive: false, updatedAt: now }).where(and(eq(sessions.userId, reset.userId), eq(sessions.isActive, true), isNull(sessions.revokedAt)));
+    });
+    await recordAudit({ action: "password_reset_completed", resourceType: "user", resourceId: reset.userId, userId: reset.userId });
+    return { ok: true as const };
+  } catch { return { ok: false as const, error: "invalid or expired reset token" }; }
+}
+
+export async function cleanupExpiredPasswordResets() {
+  await db.delete(passwordResets).where(lt(passwordResets.expiresAt, new Date()));
 }
