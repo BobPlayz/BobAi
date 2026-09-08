@@ -23,8 +23,26 @@ export function getAgentTask(id: string) { return tasks.get(id); }
 export function listAgentTasks() { return [...tasks.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
 
 function buildInstruction(kind: AgentTaskKind, description: string, skills: AgentSkillId[], mode: AgentMode) {
-  const rules = kind === "automation" ? "Break the automation into concrete, verifiable steps. Implement only configured integrations and verify the result." : kind === "database" ? "Treat BobDB as a separate service. Reuse existing BobAI service boundaries and never invent an undocumented BobDB API." : kind === "media" ? "Use only actually configured media providers. Never fabricate generated media URLs or claim generation succeeded when unavailable." : "Inspect the existing repository first, preserve working functionality, avoid duplicate implementations, and run relevant checks after changes.";
-  return [buildSkillInstruction(skills, mode), rules, `Task: ${description}`].join("\n\n");
+  const rules = kind === "automation"
+    ? "Break the automation into concrete, verifiable steps. Implement only configured integrations and verify the result."
+    : kind === "database"
+      ? "Treat BobDB as a separate service. Reuse existing BobAI service boundaries and never invent an undocumented BobDB API."
+      : kind === "media"
+        ? "Use only actually configured media providers. Never fabricate generated media URLs or claim generation succeeded when unavailable."
+        : "Inspect the existing repository first, preserve working functionality, avoid duplicate implementations, and run relevant checks after changes.";
+
+  const lifecycle = [
+    "ENGINEERING LIFECYCLE: perform this as one automated workflow, not a sequence of user-facing commands.",
+    "1. INSPECT: inspect the existing implementation, tests, schemas, security rules, and relevant configuration before editing.",
+    "2. PLAN: form a minimal implementation plan and identify files that actually need changes.",
+    "3. IMPLEMENT: make the smallest safe change and preserve unrelated code.",
+    "4. SECURITY REVIEW: review authentication, authorization, workspace isolation, input validation, secrets, SSRF, path traversal, command execution, prompt/output trust, permissions, rate limits, and error leakage. Fix code-side findings before continuing.",
+    "5. VERIFY: run relevant tests, type checks, and build checks. If a check fails because of your changes, fix it and verify again.",
+    "6. FINAL REVIEW: inspect the resulting diff for regressions, unnecessary code, duplicate implementations, and unfinished placeholders.",
+    "Never claim a test, security review, provider call, or deployment succeeded unless it actually succeeded. If something requires a user's environment or credentials, report that as a blocker instead of fabricating success.",
+  ].join("\n");
+
+  return [lifecycle, buildSkillInstruction(skills, mode), rules, `Task: ${description}`].join("\n\n");
 }
 
 export async function executeAgentTask(description: string, requestedKind?: AgentTaskKind, requestedSkills?: AgentSkillId[], requestedMode?: string, context?: { workspaceId?: string; createdBy?: string }) {
@@ -55,10 +73,10 @@ export async function executeAgentTask(description: string, requestedKind?: Agen
       await updatePersistedAgentTask({ id: task.id, status: task.status, result: task.result }).catch(() => false);
       return task;
     }
-    updateOfficeAgent(officeAgent.id, { status: "coding", location: "coding workstation", activity: "working with coding agent" });
+    updateOfficeAgent(officeAgent.id, { status: "coding", location: "coding workstation", activity: "running automated engineering lifecycle" });
     const result = await runCodingAgent(buildInstruction(kind, normalized, skills, mode));
     task.status = "completed"; task.completedAt = new Date().toISOString(); task.result = result;
-    updateOfficeAgent(officeAgent.id, { status: "completed", location: "team board", activity: "task completed" });
+    updateOfficeAgent(officeAgent.id, { status: "completed", location: "team board", activity: "implemented, reviewed, and verified" });
     await updatePersistedAgentTask({ id: task.id, status: task.status, result }).catch(() => false);
     return task;
   } catch (error) {
