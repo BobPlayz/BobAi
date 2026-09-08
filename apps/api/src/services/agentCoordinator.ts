@@ -3,11 +3,12 @@ import type { AgentSkillId } from "./agentSkills.js";
 import type { AgentTaskKind } from "./agentTasks.js";
 
 /**
- * BobAI has exactly one conversational agent. Specialist agents are workers:
- * they only wake when a task is explicitly queued for them and never talk to
- * the user directly. Their results are returned to the conversational layer.
+ * Bob is the only conversational agent. Alex, Ben, Ryan, and Violet are
+ * specialist employees managed by Bob and never address the user directly.
  */
 export const USER_FACING_AGENT = "bob" as const;
+export const BOB_EMPLOYEES = ["alex", "ben", "ryan", "violet"] as const;
+export type BobEmployee = (typeof BOB_EMPLOYEES)[number];
 
 export type BackgroundTaskRequest = {
   description: string;
