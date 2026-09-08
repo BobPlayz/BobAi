@@ -50,7 +50,7 @@ export async function webSearch(query: string, options: Record<string, unknown> 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), getTimeoutMs());
     try {
-      const response = await fetch(getProvider(), { method: "POST", headers, body: JSON.stringify({ query: normalized, ...options }), signal: controller.signal });
+      const response = await fetch(getProvider(), { method: "POST", headers, body: JSON.stringify({ query: normalized, ...options }), signal: controller.signal, redirect: "error" });
       const contentLength = Number(response.headers.get("content-length"));
       if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) throw new Error("web search response exceeds the 10 MB limit");
       const text = await response.text();
