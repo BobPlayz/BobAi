@@ -5,6 +5,7 @@ const MAX_IMAGES = 3;
 const MAX_IMAGE_BASE64 = 2_000_000;
 const MAX_PROMPT = 6_000;
 const MAX_PIXELS = 4_000_000;
+const MAX_MODEL_REPORT = 4_000;
 
 type Rgb = { r: number; g: number; b: number };
 export type VioletImageReport = {
@@ -54,22 +55,17 @@ function readPng(buffer: Buffer): VioletImageReport | null {
       bitDepth = buffer[start + 8];
       colorType = buffer[start + 9];
       interlace = buffer[start + 12];
-    } else if (type === "IDAT") {
-      idat.push(buffer.subarray(start, end));
-    } else if (type === "IEND") break;
+    } else if (type === "IDAT") idat.push(buffer.subarray(start, end));
+    else if (type === "IEND") break;
     offset = end + 4;
   }
   if (!width || !height || width * height > MAX_PIXELS || bitDepth !== 8 || ![2, 6].includes(colorType) || interlace !== 0 || !idat.length) return null;
   const channels = colorType === 6 ? 4 : 3;
   const rowBytes = width * channels;
   const expected = height * (rowBytes + 1);
-  if (!Number.isSafeInteger(expected) || expected > MAX_PIXELS * 4 + MAX_PIXELS) return null;
+  if (!Number.isSafeInteger(expected) || expected > MAX_PIXELS * 5) return null;
   let inflated: Buffer;
-  try {
-    inflated = inflateSync(Buffer.concat(idat), { maxOutputLength: expected });
-  } catch {
-    return null;
-  }
+  try { inflated = inflateSync(Buffer.concat(idat), { maxOutputLength: expected }); } catch { return null; }
   if (inflated.length < expected) return null;
 
   const previous = Buffer.alloc(rowBytes);
@@ -90,24 +86,19 @@ function readPng(buffer: Buffer): VioletImageReport | null {
       else if (filter === 3) row[x] = (value + Math.floor((left + up) / 2)) & 255;
       else if (filter === 4) {
         const p = left + up - upLeft;
-        const pa = Math.abs(p - left);
-        const pb = Math.abs(p - up);
-        const pc = Math.abs(p - upLeft);
+        const pa = Math.abs(p - left), pb = Math.abs(p - up), pc = Math.abs(p - upLeft);
         const predictor = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft;
         row[x] = (value + predictor) & 255;
       } else return null;
     }
     for (let x = 0; x < width; x += 1) {
       const i = x * channels;
-      const alpha = channels === 4 ? row[i + 3] : 255;
-      if (alpha < 32) continue;
-      const rgb: Rgb = { r: row[i], g: row[i + 1], b: row[i + 2] };
-      const key = hex(rgb);
+      if (channels === 4 && row[i + 3] < 32) continue;
+      const key = hex({ r: row[i], g: row[i + 1], b: row[i + 2] });
       colors.set(key, (colors.get(key) || 0) + 1);
     }
     row.copy(previous);
   }
-
   const dominantColors = [...colors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([color, pixels]) => ({ hex: color, pixels }));
   return { index: 0, mimeType: "image/png", bytes: buffer.length, width, height, dominantColors, pixelAnalysis: "exact-png" };
 }
@@ -115,18 +106,15 @@ function readPng(buffer: Buffer): VioletImageReport | null {
 export async function analyzeWithViolet(images: string[], prompt = "Analyze these visual inputs for a coding task. Identify layout, components, spacing, typography, colors, states, visual defects, and implementation-relevant details. Do not invent details that are not visible.") {
   if (!Array.isArray(images) || images.length < 1 || images.length > MAX_IMAGES) throw new Error(`Violet accepts 1-${MAX_IMAGES} images`);
   if (typeof prompt !== "string" || prompt.length > MAX_PROMPT) throw new Error("Violet prompt is too long");
-
   const parsed = images.map(parseImage);
   const reports = parsed.map((image, index) => {
     const report = image.mimeType === "image/png" ? readPng(image.buffer) : null;
     return report ? { ...report, index } : { index, mimeType: image.mimeType, bytes: image.buffer.length, pixelAnalysis: "vision-model-only" as const };
   });
-
-  const modelReports: string[] = [];
+  const analysis: string[] = [];
   for (const image of parsed) {
     const result = await analyzeImage(image.base64, prompt.trim() || "Analyze this image for a coding task in useful detail.");
-    modelReports.push(result.response);
+    analysis.push(result.response.slice(0, MAX_MODEL_REPORT));
   }
-
-  return { specialist: "violet", reports, model: modelReports.length ? process.env.BOBAI_VISION_MODEL : undefined, analysis: modelReports };
+  return { specialist: "violet", reports, model: process.env.BOBAI_VISION_MODEL, analysis };
 }
