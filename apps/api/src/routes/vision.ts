@@ -1,9 +1,11 @@
 import { Router } from "express";
+import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { analyzeImage } from "../services/vision.js";
 
 const router = Router();
+const limit = createUserRateLimit(20, 60_000);
 
-router.post("/analyze", async (req, res) => {
+router.post("/analyze", limit, async (req, res) => {
   const image = req.body?.image;
   const prompt = req.body?.prompt;
 
