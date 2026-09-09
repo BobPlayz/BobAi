@@ -1,5 +1,6 @@
 {
   "name": "bobai",
+  "description": "BobAI core AI platform",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
