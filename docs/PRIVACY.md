@@ -1,53 +1,55 @@
 # BobAI Privacy Notice
 
-**Status:** product/legal draft — requires the operator's legal name, contact details, actual provider inventory, retention periods, and jurisdiction-specific legal review before publication.
+**Status:** product/legal draft. It must be completed and reviewed by qualified counsel before public launch.
 
 ## What BobAI processes
-
-Depending on the features used, BobAI may process account identifiers, contact details, prompts and conversations, saved memories, uploaded files, agent tasks and workflow data, generated outputs, and technical/security information.
+Depending on features used, BobAI may process account identifiers, contact details, prompts and conversations, saved memories, uploaded files, agent tasks, generated outputs, settings/preferences, and technical/security information.
 
 BobAI should collect only information reasonably necessary for the requested feature.
 
 ## Why we process it
+We process data to provide requested AI features, authenticate and secure accounts, store user-created content and memories, execute requested agents/tools, process files, operate integrations, prevent abuse, maintain reliability, and comply with applicable law.
 
-We process personal data to provide requested AI features, authenticate and secure accounts, store conversations and user-created memories, execute agents and automations, process files, operate integrations, prevent abuse, maintain reliability, and comply with applicable law.
+## Model improvement and training
+**BobAI must not use a user's conversations or preferences to train or improve Bob's model unless the user has explicitly opted in through a separate, understandable model-training control.** The training control is stored server-side as `modelTraining` and is independent from ordinary service consent.
 
-Each production data flow must have a documented purpose and an appropriate lawful basis under applicable law. Client input must never silently expand the purpose of processing.
+When model-training opt-in is enabled, the training pipeline must:
+
+- use only data belonging to that opted-in user/workspace;
+- exclude secrets, credentials, authentication codes, and other sensitive data;
+- minimize or remove direct identifiers before dataset creation;
+- keep training data logically separated from production conversation storage;
+- record dataset/model versions for provenance;
+- honor withdrawal for future collection immediately;
+- support deletion of eligible training records when required by the applicable policy/law;
+- never treat a user's private conversation as public training data merely because it was sent to BobAI.
+
+A model's weights cannot be assumed to contain or reproduce a particular user's conversation. The production training pipeline must include privacy review and memorization testing before a trained model is deployed.
 
 ## Notice and consent
-
-Before collecting personal data where notice/consent is required, BobAI must provide a standalone, clear notice identifying the personal data collected and the specific purpose(s) for processing, together with accessible methods for exercising rights and withdrawing consent where applicable.
-
-The Digital Personal Data Protection Rules, 2025 require this notice to be clear, plain, standalone, itemized, and to explain the purposes and enabled services. The Rules use a phased commencement schedule, so implementation must track the applicable effective dates.
+Before collecting or using personal data where notice or consent is required, BobAI must provide a clear, standalone notice describing the data and purposes and provide applicable withdrawal and rights mechanisms.
 
 ## User rights
-
-Subject to applicable law, BobAI will provide mechanisms for users to request access to information, correction, deletion, withdrawal of consent where applicable, and grievance handling. These controls must be enforced by the backend and must be scoped to the authenticated user and authorized workspace.
+Subject to applicable law, BobAI will provide mechanisms for access, correction, deletion, withdrawal of applicable consent, and grievance handling. Backend authorization must scope these operations to the authenticated user and authorized workspace.
 
 ## Security
-
-BobAI uses access controls, rate limiting, security headers, input validation, provider allowlisting/configuration, and protection of secrets. Uploaded files and agent inputs are treated as untrusted data.
+BobAI uses access controls, rate limiting, security headers, input validation, provider allowlisting/configuration, secret protection, and audit controls. Uploaded files and model/tool inputs are treated as untrusted data.
 
 No system can guarantee absolute security.
 
 ## Sharing and processors
-
-BobAI may use infrastructure, database, AI-model, storage, media, communications, and other service providers needed to deliver requested features. The production provider list must be maintained separately and reflected here before launch.
+BobAI may use infrastructure, database, model, storage, media, communications, and other providers needed to deliver requested features. The production provider inventory must be maintained and reflected here before launch.
 
 ## Retention
-
-Retention periods must be documented per data category and implemented in storage/cleanup jobs. This document intentionally does not invent retention periods before the operator has selected them.
+Retention periods must be documented per data category and implemented in storage and cleanup jobs. The final notice must contain the actual periods selected by the operator.
 
 ## Children
-
-BobAI must implement an age/child-data policy appropriate to its target users and applicable law before public launch. Where child-specific consent or safeguards are required, the backend must enforce them rather than relying only on a policy statement.
+BobAI must implement an age/child-data policy appropriate to its target users and applicable law before public launch. Where child-specific consent or safeguards are required, the backend must enforce them.
 
 ## Contact and complaints
-
 **Privacy contact:** [insert official privacy contact]
 
 **Operator/Data Fiduciary:** [insert legal entity]
 
 ## Legal status
-
-This document is a technical/product privacy draft, not legal advice. The final public notice must be reviewed against the laws applicable to BobAI and the locations where it is offered.
+This document is a technical/product privacy draft, not legal advice. Final publication requires jurisdiction-specific legal review.
