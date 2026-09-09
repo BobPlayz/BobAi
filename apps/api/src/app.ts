@@ -13,13 +13,27 @@ export const app = express();
 const isProduction = process.env.NODE_ENV === "production";
 const allowedOrigins = (process.env.CORS_ORIGIN || "*").split(",").map((origin) => origin.trim()).filter(Boolean);
 
-if (isProduction && (!allowedOrigins.length || allowedOrigins.includes("*"))) throw new Error("CORS_ORIGIN must explicitly list allowed origins in production");
+if (isProduction && (!allowedOrigins.length || allowedOrigins.includes("*"))) {
+  throw new Error("CORS_ORIGIN must explicitly list allowed origins in production");
+}
 
 app.disable("x-powered-by");
 const trustProxy = process.env.TRUST_PROXY === "true";
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
 app.set("trust proxy", trustProxy ? trustProxyHops : false);
-app.use(cors({ origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key", "X-CSRF-Protection"] }));
+app.use(cors({
+  origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key", "X-CSRF-Protection"],
+}));
+
+app.use((req, res, next) => {
+  const headerBytes = req.rawHeaders.reduce((total, value) => total + Buffer.byteLength(value, "utf8"), 0);
+  if (headerBytes > 16 * 1024) return res.status(431).json({ error: "request headers too large" });
+  return next();
+});
+
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Pragma", "no-cache");
@@ -33,15 +47,18 @@ app.use((_req, res, next) => {
   if (isProduction) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   next();
 });
+
 app.use((req, res, next) => {
   const incoming = req.header("x-request-id");
   const requestId = incoming && /^[A-Za-z0-9._:-]{1,128}$/.test(incoming) ? incoming : randomUUID();
   res.setHeader("x-request-id", requestId);
   next();
 });
+
 app.use(securityLog);
 app.use(rateLimit);
-app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb" }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb", strict: true, type: ["application/json", "application/*+json"] }));
+app.use(express.urlencoded({ extended: false, limit: "256kb", parameterLimit: 100 }));
 app.use(validateRequestBody);
 startMaintenance();
 
