@@ -2,15 +2,55 @@
 import { useEffect, useMemo, useState } from "react";
 import { deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, uploadFile } from "@/lib/api";
 import type { Conversation, ChatMessage, ChatImage, ChatFile } from "@/types/chat";
-const STORAGE_KEY = "bobai.conversations.v2"; const SETTINGS_KEY = "bobai.settings.v1";
+const STORAGE_KEY = "bobai.conversation-ui.v3";
+const SETTINGS_KEY = "bobai.settings.v1";
 type GeneratedImage = { url: string; prompt?: string }; type ImageResponse = { images: GeneratedImage[] };
 type ChatSettings = { personality: string; memory?: boolean };
 function createConversation(): Conversation { return { id: crypto.randomUUID(), title: "new chat", createdAt: Date.now(), pinned: false, messages: [] }; }
 function loadSettings(): ChatSettings { if (typeof window === "undefined") return { personality: "" }; try { const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); return { personality: typeof parsed?.personality === "string" ? parsed.personality : "", memory: parsed?.memory !== false }; } catch { return { personality: "" }; } }
+function loadLocalConversationUi(): Conversation[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    if (!Array.isArray(data)) return [];
+    return data.flatMap((item: unknown) => {
+      const value = item as Record<string, unknown> | null;
+      if (!value || typeof value.id !== "string") return [];
+      return [{ id: value.id, title: typeof value.title === "string" ? value.title.slice(0, 200) : "new chat", createdAt: typeof value.createdAt === "number" ? value.createdAt : Date.now(), pinned: value.pinned === true, messages: [] }];
+    });
+  } catch { return []; }
+}
 export function useChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]); const [activeId, setActiveId] = useState(""); const [input, setInput] = useState(""); const [search, setSearch] = useState(""); const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null); const [settings, setSettings] = useState<ChatSettings>(loadSettings); const [uploadingFiles, setUploadingFiles] = useState<string[]>([]); const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}); const [serverReady, setServerReady] = useState(false);
-  useEffect(() => { let cancelled = false; const saved = localStorage.getItem(STORAGE_KEY); let localConversations: Conversation[] = []; if (saved) { try { const data = JSON.parse(saved) as Conversation[]; if (Array.isArray(data)) localConversations = data; } catch {} } if (!localConversations.length) localConversations = [createConversation()]; setConversations(localConversations); setActiveId(localConversations[0].id); void listConversations().then((remote) => { if (cancelled) return; if (remote.length) { const localById = new Map(localConversations.map((conversation) => [conversation.id, conversation])); const merged = remote.map((conversation) => ({ ...conversation, pinned: localById.get(conversation.id)?.pinned ?? false })); setConversations(merged); setActiveId(merged[0]?.id || ""); } else { for (const conversation of localConversations) void saveConversation(conversation).catch(() => undefined); } setServerReady(true); }).catch(() => { if (!cancelled) setServerReady(true); }); return () => { cancelled = true; }; }, []);
-  useEffect(() => { if (conversations.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations)); }, [conversations]); useEffect(() => { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }, [settings]); useEffect(() => { if (!serverReady || !conversations.length) return; const timer = window.setTimeout(() => { for (const conversation of conversations) void saveConversation(conversation).catch(() => undefined); }, 500); return () => window.clearTimeout(timer); }, [conversations, serverReady]);
+  useEffect(() => {
+    let cancelled = false;
+    const localConversations = loadLocalConversationUi();
+    const initial = localConversations.length ? localConversations : [createConversation()];
+    setConversations(initial);
+    setActiveId(initial[0].id);
+    void listConversations().then((remote) => {
+      if (cancelled) return;
+      if (remote.length) {
+        const localById = new Map(localConversations.map((conversation) => [conversation.id, conversation]));
+        const merged = remote.map((conversation) => ({ ...conversation, pinned: localById.get(conversation.id)?.pinned ?? false }));
+        setConversations(merged);
+        setActiveId(merged[0]?.id || "");
+      } else {
+        for (const conversation of initial) void saveConversation(conversation).catch(() => undefined);
+      }
+      setServerReady(true);
+    }).catch(() => {
+      if (!cancelled) setServerReady(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    if (!conversations.length) return;
+    // Persist only non-sensitive UI metadata. Conversation/message content stays server-backed.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.map(({ id, title, createdAt, pinned }) => ({ id, title, createdAt, pinned }))));
+  }, [conversations]);
+  useEffect(() => { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }, [settings]);
+  useEffect(() => { if (!serverReady || !conversations.length) return; const timer = window.setTimeout(() => { for (const conversation of conversations) void saveConversation(conversation).catch(() => undefined); }, 500); return () => window.clearTimeout(timer); }, [conversations, serverReady]);
   const activeConversation = conversations.find((c) => c.id === activeId); const visibleConversations = useMemo(() => conversations.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())).sort((a, b) => a.pinned !== b.pinned ? (a.pinned ? -1 : 1) : b.createdAt - a.createdAt), [conversations, search]);
   function updateConversation(id: string, updater: (c: Conversation) => Conversation) { setConversations((prev) => prev.map((c) => c.id === id ? updater(c) : c)); }
   function imageMessage(images: GeneratedImage[]): ChatMessage { return { id: crypto.randomUUID(), role: "assistant", content: "", images: images.filter((img): img is GeneratedImage & { url: string } => typeof img.url === "string").map((img): ChatImage => ({ id: crypto.randomUUID(), url: img.url, prompt: img.prompt ?? "" })) }; }
