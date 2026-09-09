@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, uploadFile } from "@/lib/api";
 import type { Conversation, ChatMessage, ChatImage, ChatFile } from "@/types/chat";
 const STORAGE_KEY = "bobai.conversation-ui.v3";
+const LEGACY_STORAGE_KEY = "bobai.conversations.v2";
 const SETTINGS_KEY = "bobai.settings.v1";
 type GeneratedImage = { url: string; prompt?: string }; type ImageResponse = { images: GeneratedImage[] };
 type ChatSettings = { personality: string; memory?: boolean };
@@ -11,6 +12,8 @@ function loadSettings(): ChatSettings { if (typeof window === "undefined") retur
 function loadLocalConversationUi(): Conversation[] {
   if (typeof window === "undefined") return [];
   try {
+    // Remove the previous cache format because it could contain full conversation content.
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     if (!Array.isArray(data)) return [];
     return data.flatMap((item: unknown) => {
