@@ -1,0 +1,7 @@
+import { Router } from "express";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, conversations, messages } from "@bobai/db";
+const router = Router();
+const UUID = /^[0-9a-f-]{36}$/i;
+router.post("/:id/feedback", async (req, res) => { try { const userId = req.user?.id; const id = req.params.id as string; const rating = (req.body as Record<string, unknown> | undefined)?.rating; const note = (req.body as Record<string, unknown> | undefined)?.note; if (!userId || !UUID.test(id) || (rating !== "up" && rating !== "down")) return res.status(400).json({ error: "valid message id and rating are required" }); if (note !== undefined && (typeof note !== "string" || note.length > 2000)) return res.status(400).json({ error: "feedback note is too long" }); const [message] = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq(conversations.id, messages.conversationId)).where(and(eq(messages.id, id), eq(conversations.userId, userId), isNull(messages.deletedAt))).limit(1); if (!message) return res.status(404).json({ error: "message not found" }); const [updated] = await db.update(messages).set({ metadata: { feedback: { rating, note: typeof note === "string" ? note.trim() : null, updatedAt: new Date().toISOString() } }, updatedAt: new Date() }).where(eq(messages.id, id)).returning({ id: messages.id }); return res.json({ success: Boolean(updated) }); } catch { return res.status(503).json({ error: "feedback unavailable" }); } });
+export default router;
