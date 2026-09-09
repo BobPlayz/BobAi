@@ -26,40 +26,16 @@ import skillsRouter from "./skills.js";
 import capabilitiesRouter from "./capabilities.js";
 import toolsRouter from "./tools.js";
 import projectsRouter from "./projects.js";
+import searchRouter from "./search.js";
 
 function buildApiRouter() {
   const router = Router();
-  router.use("/auth", authRouter);
-  router.use("/account", accountRouter);
-  router.use("/api-keys", apiKeysRouter);
+  router.use("/auth", authRouter); router.use("/account", accountRouter); router.use("/api-keys", apiKeysRouter);
   router.use(requireAuth);
-  router.use("/admin", adminRouter);
-  router.use("/chat", chatRouter);
-  router.use("/stream", streamRouter);
-  router.use("/conversations", conversationsRouter);
-  router.use("/images", imagesRouter);
-  router.use("/memory", memoryRouter);
-  router.use("/files", filesRouter);
-  router.use("/agents", agentsRouter);
-  router.use("/automation", automationRouter);
-  router.use("/agent-office", agentOfficeRouter);
-  router.use("/voice", voiceRouter);
-  router.use("/music", musicRouter);
-  router.use("/vision", visionRouter);
-  router.use("/research", researchRouter);
-  router.use("/deep-research", deepResearchRouter);
-  router.use("/study", studyRouter);
-  router.use("/mcp", mcpRouter);
-  router.use("/skills", skillsRouter);
-  router.use("/capabilities", capabilitiesRouter);
-  router.use("/model-agents", modelAgentsRouter);
-  router.use("/tools", toolsRouter);
-  router.use("/projects", projectsRouter);
+  router.use("/admin", adminRouter); router.use("/chat", chatRouter); router.use("/stream", streamRouter); router.use("/conversations", conversationsRouter); router.use("/search", searchRouter);
+  router.use("/images", imagesRouter); router.use("/memory", memoryRouter); router.use("/files", filesRouter); router.use("/agents", agentsRouter); router.use("/automation", automationRouter); router.use("/agent-office", agentOfficeRouter); router.use("/voice", voiceRouter); router.use("/music", musicRouter); router.use("/vision", visionRouter); router.use("/research", researchRouter); router.use("/deep-research", deepResearchRouter); router.use("/study", studyRouter); router.use("/mcp", mcpRouter); router.use("/skills", skillsRouter); router.use("/capabilities", capabilitiesRouter); router.use("/model-agents", modelAgentsRouter); router.use("/tools", toolsRouter); router.use("/projects", projectsRouter);
   return router;
 }
 
 export const apiRouter = Router();
-apiRouter.use(healthRouter);
-apiRouter.use("/v1", healthRouter);
-apiRouter.use(buildApiRouter());
-apiRouter.use("/v1", buildApiRouter());
+apiRouter.use(healthRouter); apiRouter.use("/v1", healthRouter); apiRouter.use(buildApiRouter()); apiRouter.use("/v1", buildApiRouter());
