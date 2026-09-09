@@ -62,6 +62,12 @@ function providerConfigured(toolId: string): boolean {
     case "image": return Boolean(process.env.BOBAI_IMAGE_PROVIDER_URL);
     case "video": return Boolean(process.env.BOBAI_VIDEO_PROVIDER_URL);
     case "music": return Boolean(process.env.BOBAI_MUSIC_PROVIDER_URL);
-    default: return true;
+    case "documents": return true;
+    case "knowledge": return true;
+    case "data-analysis": return true;
+    case "automation": return Boolean(process.env.BOBAI_AUTOMATION_ENABLED === "true");
+    case "diagrams": return Boolean(process.env.BOBAI_DIAGRAMS_ENABLED === "true");
+    case "sketch-to-ui": return Boolean(process.env.BOBAI_SKETCH_TO_UI_ENABLED === "true");
+    default: return false;
   }
 }
