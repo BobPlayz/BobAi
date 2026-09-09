@@ -1,8 +1,9 @@
-import { pgTable, uuid, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, boolean, jsonb, index } from "drizzle-orm/pg-core";
 
 export const sessions = pgTable("sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull(),
+  familyId: uuid("family_id").notNull().defaultRandom(),
   accessTokenHash: text("access_token_hash").notNull().unique(),
   refreshTokenHash: text("refresh_token_hash").notNull().unique(),
   deviceName: text("device_name"),
@@ -19,4 +20,4 @@ export const sessions = pgTable("sessions", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
-});
+}, (table) => ({ familyIdx: index("sessions_refresh_family_idx").on(table.familyId) }));
