@@ -4,21 +4,18 @@ type ProviderConfig = { provider: "bob" | "coding"; baseUrl: string; apiKey: str
 const MIN_TIMEOUT_MS = 5_000;
 const MAX_TIMEOUT_MS = 300_000;
 const MAX_RESPONSE_CHARS = 200_000;
-
 function config(provider: "bob" | "coding", modelOverride?: string): ProviderConfig {
   const prefix = provider === "bob" ? "BOBAI_MODEL" : "BOBAI_CODING_MODEL";
   const baseUrl = (process.env[`${prefix}_URL`] || "").trim().replace(/\/$/, "");
   const apiKey = (process.env[`${prefix}_KEY`] || "").trim();
-  const model = (modelOverride || process.env[`${prefix}_NAME"] || "").trim();
+  const model = (modelOverride || process.env[`${prefix}_NAME`] || "").trim();
   const timeout = Number(process.env.BOBAI_PROVIDER_TIMEOUT_MS || 120_000);
   if (!baseUrl || !model) throw new Error(`${provider} model is not configured`);
-  let url: URL;
-  try { url = new URL(baseUrl); } catch { throw new Error(`${provider} model URL is invalid`); }
+  let url: URL; try { url = new URL(baseUrl); } catch { throw new Error(`${provider} model URL is invalid`); }
   if (url.protocol !== "https:" && !(process.env.NODE_ENV !== "production" && ["localhost", "127.0.0.1", "::1"].includes(url.hostname))) throw new Error(`${provider} model URL must use HTTPS outside local development`);
   return { provider, baseUrl, apiKey, model, timeoutMs: Number.isFinite(timeout) ? Math.min(Math.max(timeout, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS) : 120_000 };
 }
 function headers(cfg: ProviderConfig) { return { "content-type": "application/json", ...(cfg.apiKey ? { authorization: `Bearer ${cfg.apiKey}` } : {}) }; }
-
 export class BobModelProvider {
   private controller(timeoutMs: number) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs); return { controller, timer }; }
   async chat(messages: ProviderMessage[], provider: "bob" | "coding" = "bob", modelOverride?: string): Promise<ProviderResult> {
