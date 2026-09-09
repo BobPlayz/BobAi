@@ -87,6 +87,15 @@ async function migrationAlreadySatisfied(sql: ReturnType<typeof postgres>, id: s
     return Boolean(row?.personal_index);
   }
 
+  if (id.startsWith("0011_refresh_token_families")) {
+    const [row] = await sql`
+      SELECT
+        EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'sessions' AND column_name = 'family_id') AS family_id,
+        EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'sessions_refresh_family_idx') AS family_index
+    `;
+    return Boolean(row?.family_id && row?.family_index);
+  }
+
   return false;
 }
 
