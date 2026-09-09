@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
-import { db, users } from "@bobai/db";
+import { and, eq, inArray } from "drizzle-orm";
+import { db, apiKeys, conversations, memories, messages, projects, settings, uploads, users } from "@bobai/db";
 import { requireAuth } from "../middleware/auth.js";
 import { changePassword, verifyCurrentPassword } from "../services/auth.js";
 import { beginMfaSetup, disableMfa, enableMfa, userMfaStatus } from "../services/mfa.js";
@@ -15,6 +15,7 @@ const resetBuckets = new Map<string, { startedAt: number; count: number }>();
 const RESET_WINDOW_MS = 15 * 60_000;
 const RESET_MAX_ATTEMPTS = 10;
 const MAX_RESET_BUCKETS = 10_000;
+const MAX_EXPORT_BYTES = 25 * 1024 * 1024;
 function cleanupResetBuckets(now = Date.now()) { const cutoff = now - RESET_WINDOW_MS; for (const [key, bucket] of resetBuckets) if (bucket.startedAt < cutoff) resetBuckets.delete(key); }
 function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = resetBuckets.get(bucketKey); if (!current || now - current.startedAt >= RESET_WINDOW_MS) { if (resetBuckets.size >= MAX_RESET_BUCKETS) cleanupResetBuckets(now); if (resetBuckets.size >= MAX_RESET_BUCKETS) return true; resetBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > RESET_MAX_ATTEMPTS; }
 setInterval(() => cleanupResetBuckets(), RESET_WINDOW_MS).unref();
@@ -49,7 +50,34 @@ router.post("/password", async (req, res) => {
   try { const result = await changePassword(req.user!.id, currentPassword, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); }
   catch (error) { if (process.env.NODE_ENV !== "production") console.error("password change failed", error); return res.status(503).json({ error: "password change service unavailable" }); }
 });
-router.get("/export", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, req.user!.id)).limit(1); if (!user) return res.status(404).json({ error: "user not found" }); return res.json({ exportedAt: new Date().toISOString(), user, sessions: await listSessions(req.user!.id) }); });
+router.get("/export", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) return res.status(404).json({ error: "user not found" });
+
+    const [conversationRows, memoryRows, projectRows, uploadRows, settingRows, apiKeyRows, sessionRows] = await Promise.all([
+      db.select().from(conversations).where(eq(conversations.userId, userId)),
+      db.select().from(memories).where(eq(memories.userId, userId)),
+      db.select().from(projects).where(eq(projects.ownerId, userId)),
+      db.select().from(uploads).where(eq(uploads.uploadedBy, userId)),
+      db.select().from(settings).where(eq(settings.userId, userId)),
+      db.select({ id: apiKeys.id, workspaceId: apiKeys.workspaceId, name: apiKeys.name, prefix: apiKeys.prefix, permissions: apiKeys.permissions, metadata: apiKeys.metadata, lastUsedAt: apiKeys.lastUsedAt, expiresAt: apiKeys.expiresAt, revokedAt: apiKeys.revokedAt, isActive: apiKeys.isActive, createdAt: apiKeys.createdAt, updatedAt: apiKeys.updatedAt }).from(apiKeys).where(eq(apiKeys.createdBy, userId)),
+      listSessions(userId),
+    ]);
+
+    const conversationIds = conversationRows.map((conversation) => conversation.id);
+    const messageRows = conversationIds.length ? await db.select().from(messages).where(inArray(messages.conversationId, conversationIds)) : [];
+    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), version: 2, user, sessions: sessionRows, conversations: conversationRows, messages: messageRows, memories: memoryRows, projects: projectRows, files: uploadRows, settings: settingRows, apiKeys: apiKeyRows });
+    if (Buffer.byteLength(payload, "utf8") > MAX_EXPORT_BYTES) return res.status(413).json({ error: "account export is too large; request a smaller export through the data portability service" });
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="bobai-account-export-${userId}.json"`);
+    return res.send(payload);
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error("account export failed", error);
+    return res.status(503).json({ error: "account export unavailable" });
+  }
+});
 router.get("/sessions", async (req, res) => res.json({ sessions: await listSessions(req.user!.id) }));
 router.delete("/sessions/:id", async (req, res) => res.status(await revokeSession(req.user!.id, req.params.id as string) ? 204 : 404).send());
 router.delete("/sessions", async (req, res) => { await revokeAllSessions(req.user!.id); return res.status(204).send(); });
