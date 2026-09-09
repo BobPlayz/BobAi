@@ -21,4 +21,4 @@ export function clearSession() { session = null; }
 export async function refreshSession(): Promise<Session | null> { try { const res = await fetch(`${API}/auth/refresh`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } }); if (!res.ok) { clearSession(); return null; } const next = await readJson<{ expiresIn?: number }>(res); if (typeof next.expiresIn !== "number") { clearSession(); return null; } session = { accessToken: "", expiresIn: next.expiresIn }; return session; } catch { return null; } }
 export function isLoggedIn() { return session !== null; }
 export function hasCompletedOnboarding() { if (typeof window === "undefined") return false; return localStorage.getItem(ONBOARDING_KEY) === "complete"; }
-export function saveOnboarding(answers: unknown) { localStorage.setItem(ONBOARDING_KEY, "complete"); localStorage.setItem("bobai_onboarding_answers", JSON.stringify(answers)); }
+export function saveOnboarding(_answers: unknown) { localStorage.setItem(ONBOARDING_KEY, "complete"); }
