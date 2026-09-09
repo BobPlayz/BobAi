@@ -10,7 +10,17 @@ import { ensurePersonalWorkspace } from "../services/workspace.js";
 const router = Router();
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_EXTRACTED_TEXT = 5 * 1024 * 1024;
-const upload = multer({ dest: "uploads/", limits: { fileSize: MAX_FILE_SIZE, fields: 8, fieldSize: 16 * 1024, parts: 10, headerPairs: 100 } });
+const upload = multer({
+  dest: "uploads/",
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+    fields: 8,
+    fieldSize: 16 * 1024,
+    parts: 10,
+    headerPairs: 100,
+    fieldArrayIndexLimit: 100,
+  },
+});
 
 function uploadMiddleware(req: Request, res: Response, next: NextFunction) {
   upload.single("file")(req, res, (error) => {
@@ -21,6 +31,10 @@ function uploadMiddleware(req: Request, res: Response, next: NextFunction) {
 }
 
 function isPdf(buffer: Buffer) { return buffer.subarray(0, 5).toString("ascii") === "%PDF-"; }
+function isPng(buffer: Buffer) { return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])); }
+function isJpeg(buffer: Buffer) { return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff; }
+function isGif(buffer: Buffer) { return buffer.length >= 6 && (buffer.subarray(0, 6).toString("ascii") === "GIF87a" || buffer.subarray(0, 6).toString("ascii") === "GIF89a"); }
+function isWebp(buffer: Buffer) { return buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP"; }
 function isSupportedTextType(mimetype: string) { return /^text\/(plain|markdown|csv|html|css|javascript|xml)$/i.test(mimetype); }
 function safeName(name: string) { return name.replace(/[\u0000-\u001f\u007f\\/:*?"<>|]/g, "_").slice(0, 255); }
 
@@ -55,6 +69,7 @@ router.post("/upload", uploadMiddleware, async (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: "no file uploaded" });
   try {
+    if (file.size > MAX_FILE_SIZE) return res.status(413).json({ error: "file exceeds the 10 MB size limit" });
     const buffer = await fs.readFile(file.path);
     const { mimetype } = file;
     const checksum = createHash("sha256").update(buffer).digest("hex");
@@ -64,8 +79,11 @@ router.post("/upload", uploadMiddleware, async (req, res) => {
       const parser = new PDFParse({ data: buffer });
       try { text = (await parser.getText()).text || ""; } finally { await parser.destroy(); }
     } else if (isSupportedTextType(mimetype)) text = buffer.toString("utf8");
-    else if (/^image\/(png|jpeg|webp|gif)$/i.test(mimetype)) text = "[image uploaded]";
-    else return res.status(415).json({ error: "unsupported file type" });
+    else if (mimetype === "image/png" || mimetype === "image/jpeg" || mimetype === "image/webp" || mimetype === "image/gif") {
+      const validImage = mimetype === "image/png" ? isPng(buffer) : mimetype === "image/jpeg" ? isJpeg(buffer) : mimetype === "image/webp" ? isWebp(buffer) : isGif(buffer);
+      if (!validImage) return res.status(415).json({ error: "file content does not match image type" });
+      text = "[image uploaded]";
+    } else return res.status(415).json({ error: "unsupported file type" });
 
     if (text.length > MAX_EXTRACTED_TEXT) return res.status(413).json({ error: "extracted document text exceeds the 5 MB limit" });
     const workspace = await ensurePersonalWorkspace(req.user!.id);
