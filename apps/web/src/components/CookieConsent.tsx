@@ -5,6 +5,17 @@ import Script from "next/script";
 
 const STORAGE_KEY = "bobai-analytics-consent";
 
+function safeAnalyticsUrl(value: string | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 export default function CookieConsent() {
   const [consent, setConsent] = useState<string | null>(null);
 
@@ -13,9 +24,9 @@ export default function CookieConsent() {
   }, []);
 
   if (consent === "accepted") {
-    const analyticsUrl = process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN;
+    const analyticsUrl = safeAnalyticsUrl(process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN);
     const siteDomain = process.env.NEXT_PUBLIC_SITE_DOMAIN;
-    return analyticsUrl ? <Script defer data-domain={siteDomain} src={`${analyticsUrl.replace(/\/$/, "")}/js/script.js`} /> : null;
+    return analyticsUrl ? <Script defer data-domain={siteDomain} src={`${analyticsUrl}/js/script.js`} /> : null;
   }
 
   if (consent === "declined") return null;
