@@ -1,665 +1,1018 @@
-# BobAI — living production roadmap
+# BobAI — living product + engineering roadmap
 
-last updated: 2026-08-28
-base reviewed: `main` at `a89077f`
-ui status: **FROZEN** — no UI/layout/visual redesign work is included in this roadmap unless Bob explicitly asks for it.
+**last updated:** 2026-09-09  
+**base reviewed:** `main` at `6efa6103127224fd25e4b04bf3ec5c9471e13183`  
+**scope:** current repository + BobAI handoffs + prior BobAI project context available in ChatGPT  
+**principle:** this file records what is actually implemented, what is partially implemented, and what still needs real engineering. Discussion, UI mockups, schemas, or provider placeholders are not counted as working features.
 
 ## status legend
 
-- [x] done in code/repository
-- [~] implemented, but requires real-environment verification
-- [ ] engineering work remaining
-- [USER] requires Bob's account, secret, domain, hosting, hardware, or explicit product decision
-- [BLOCKED] cannot be honestly completed until a [USER] dependency exists
+- [x] **done** — implemented in the repository
+- [~] **implemented/foundation** — code exists but real provider/environment or broader verification is still required
+- [ ] **remaining** — not complete
+- [USER] **requires Bob/environment** — account, credential, domain, hardware, deployment, or explicit product choice
+- [BLOCKED] cannot be honestly completed until a `[USER]` dependency exists
 
 ---
 
-# 0. confirmed project state
+# 0. PRODUCT VISION
 
-## confirmed from the project chat
+BobAI is intended to be a general-purpose AI platform rather than a Discord bot. The long-term product is a ChatGPT-style assistant/platform that can power the web app, future mobile/desktop clients, APIs, BobBot, and autonomous agents.
 
-- [x] local Ollama is running
-- [x] `qwen2.5:3b` works
-- [x] `qwen2.5:7b` works
-- [x] `qwen2.5-coder:1.5b` works
-- [x] `qwen2.5-coder:latest` works
-- [x] API runs on `http://localhost:3001`
-- [x] Next.js web runs on `http://localhost:3000`
-- [x] email provider/SMTP development setup works
-- [x] OTP email delivery works
-- [x] OTP verification works
-- [x] database schema push eventually succeeded after the missing `vector` type issue was resolved
-- [x] `npm test` passed with the existing security tests
-- [x] `npm run build` passed for API and web
-- [x] the `/chat` undefined `activeConversation.messages` crash was fixed
-- [x] hydration mismatch encountered on `/chat` was fixed
-- [x] registration is wired to the API
-- [x] authenticated API requests and refresh handling are wired into the web client
+The intended assistant model is:
 
-## confirmed from repository inspection
+```text
+User
+  ↓
+BobAI / Bob
+  ↓
+chat + memory + tools + files + research + creation + agents
+  ↓
+Alex ↔ Ben ↔ Ryan ↔ Violet/vision
+```
 
-- [x] npm-workspaces monorepo with `apps/api`, `apps/web`, and `packages/db`
-- [x] Express API with centralized auth middleware
-- [x] Next.js/React web app
-- [x] PostgreSQL + Drizzle schema
+Bob remains the user-facing manager. Internal employees should communicate with each other without making the user relay messages.
+
+Coding agents remain a separate subsystem until their execution loop is demonstrably trustworthy.
+
+---
+
+# 1. WHAT IS ACTUALLY IN THE REPOSITORY NOW
+
+## platform
+
+- [x] npm-workspaces monorepo
+- [x] `apps/api`
+- [x] `apps/web`
+- [x] `packages/db`
+- [x] TypeScript
+- [x] Node.js
+- [x] Express API
+- [x] Next.js/React frontend
+- [x] PostgreSQL + Drizzle
 - [x] pgvector schema groundwork
-- [x] users, sessions, workspaces, workspace members, conversations, messages, memories, memory embeddings, uploads, projects, agents, agent runs, tasks, audit logs, usage, notifications, integrations, model providers, workflows, webhooks, billing/subscription groundwork, OTPs, and password-reset tables exist
-- [x] access and refresh tokens are stored as hashes
-- [x] refresh-token rotation/revocation exists
-- [x] account session management exists
-- [x] password reset backend exists
-- [x] OTP sender is abstracted so the email provider can be replaced later
-- [x] Ollama health/readiness and installed-model discovery exist
-- [x] capability-aware model routing exists
-- [x] Alex/Ben/Ryan roles exist
-- [x] coding-agent detection/orchestration exists
-- [x] conversation persistence endpoints exist
-- [x] file upload and PDF/text extraction exist
-- [x] image-generation endpoint and media provider abstraction exist
-- [x] streaming endpoint exists
-- [x] production configuration validation exists
-- [x] CORS restrictions, security headers, request IDs, body limits, and rate limiting exist
-- [x] CI/build/test scripts exist
-- [x] provider-agnostic research/web-search bridge exists and is disabled until configured
-- [x] Ollama vision bridge exists and is disabled until a vision model is configured
-- [x] password hashing was reduced from the previous oversized scrypt memory setting so the local registration path can operate on the available machine
-- [x] focused auth rate limiting now covers registration, login, OTP request, and OTP verification
-- [x] conversation persistence now resolves a personal workspace automatically and stores complete message snapshots including attachments
-- [x] memory routes no longer trust a client-supplied user ID
-- [x] normal chat now reads stored memories and writes explicit memory requests to the database
-
----
-
-# 1. foundation and architecture
-
-## done
-
-- [x] monorepo structure
-- [x] TypeScript base configuration
-- [x] API/web/database package separation
-- [x] shared schema exports
 - [x] environment templates
 - [x] development launcher
-- [x] build/test/audit scripts
-- [x] CI workflow
-- [x] production environment validation
+- [x] API on port 3001 in the documented local setup
+- [x] web app on port 3000 in the documented local setup
 
-## remaining code-side
+## persistence/schema
 
-- [ ] replace production `db:push` workflow with versioned migrations
-- [ ] add migration-only deployment command
-- [ ] add deterministic release/rollback procedure
-- [ ] add production smoke-test command
-- [ ] add backup/restore documentation and verification script
-- [ ] add dependency vulnerability triage
-- [ ] remove unnecessary dependencies where possible
-- [ ] pin/lock critical production dependency behavior
-
-## user required
-
-- [USER] production database/account and deployment credentials
-
----
-
-# 2. authentication, OTP and account security
-
-## done
-
-- [x] registration
-- [x] login
-- [x] short-lived access token
-- [x] long-lived refresh token
-- [x] refresh rotation
-- [x] logout/revocation
-- [x] session listing and individual/all-session revocation
-- [x] password reset token storage and consumption
-- [x] password reset revokes active sessions
-- [x] six-digit OTP generation
-- [x] OTP expiry
-- [x] OTP maximum attempts
-- [x] OTP single-use consumption
-- [x] OTP sender abstraction
-- [x] development Resend delivery
-- [x] global API rate limiting
-- [x] focused registration/login/OTP rate limits
-- [x] security headers and request IDs
-- [x] production secret validation
-
-## remaining engineering
-
-- [ ] cleanup expired OTP/password-reset rows
-- [ ] login/session audit events
-- [ ] stronger adaptive brute-force protection
-- [ ] production password-reset email delivery through the same sender abstraction
-- [ ] decide and enforce which actions require verified email
-- [ ] implement complete account deletion worker
-- [ ] expand account export to all owned application data
-- [ ] add authentication integration tests for success/failure/rotation/OTP abuse
-
-## user required
-
-- [USER] production Resend/API credential
-- [USER] production sender/domain configuration if the development sender is replaced
-- [USER] final decision on whether email verification is mandatory or optional for launch
+- [x] users
+- [x] sessions
+- [x] workspaces
+- [x] workspace members
+- [x] conversations
+- [x] messages
+- [x] memories
+- [x] memory embeddings schema
+- [x] uploads
+- [x] projects
+- [x] agents
+- [x] agent runs/tasks
+- [x] audit logs
+- [x] usage records
+- [x] notifications
+- [x] integrations
+- [x] model-provider groundwork
+- [x] workflows/automation groundwork
+- [x] webhooks groundwork
+- [x] billing/subscription groundwork
+- [x] email OTPs
+- [x] password resets
+- [x] tool approvals
+- [x] refresh-token family tracking
 
 ---
 
-# 3. database, workspace and persistence
+# 2. CORE CHAT
 
-## done
-
-- [x] PostgreSQL/Drizzle integration
-- [x] vector schema support
-- [x] auth persistence
-- [x] workspace and workspace-member schema
-- [x] conversation/message schema
-- [x] server conversation API
-- [x] automatic personal-workspace resolution for normal conversation/memory operations
-- [x] server conversation snapshot persistence
-- [x] attachment persistence in message metadata
-- [x] authenticated ownership checks
-
-## remaining engineering
-
-- [ ] add deterministic unique constraints for personal workspace membership where appropriate
-- [ ] add indexes for user/workspace/conversation/message queries
-- [ ] add offline/local-to-server reconciliation rules
-- [ ] add conflict handling for multi-device edits
-- [ ] add retention policies
-- [ ] add database migration files
-- [ ] add backup/restore verification
-- [ ] add connection pool tuning
-- [ ] add production database observability
-
-## user required
-
-- [USER] production Neon/PostgreSQL database
-- [USER] production `DATABASE_URL`
-
----
-
-# 4. web chat state and server-backed conversations
-
-## done
-
-- [x] local conversation creation
-- [x] new chat
-- [x] search
-- [x] selection
-- [x] local pin/rename/delete/message controls
-- [x] server conversation list API
-- [x] server conversation save API
-- [x] server conversation delete API
-- [x] web client authenticated persistence helpers
-- [x] web hook restores server conversations after login
-- [x] local conversations are used as a fallback when the backend is unavailable
-- [x] local changes are synchronized back to the server without changing the UI
-
-## remaining engineering
-
-- [ ] persist streamed assistant messages atomically after stream completion
-- [ ] persist cancellation/failed-message status
-- [ ] improve offline reconciliation instead of simple fallback
-- [ ] cross-device conflict resolution
-- [ ] server-side conversation search for large accounts
-- [ ] pagination for very large conversation histories
-- [ ] message editing/regeneration persistence semantics
-
-## note
-
-The UI is intentionally untouched. These items are data/state engineering only.
-
----
-
-# 5. chat engine and model routing
-
-## done
+## implemented
 
 - [x] normal Ollama chat
 - [x] streaming chat
+- [x] model selection
 - [x] model registry
-- [x] capability metadata
+- [x] capability-aware routing
 - [x] installed-model discovery
-- [x] health checks
-- [x] availability checks
-- [x] timeouts
-- [x] capability-safe fallback
-- [x] local Qwen 3B
-- [x] local Qwen 7B
-- [x] local Coder 1.5B
-- [x] local Coder latest
-- [x] Alex → Qwen 3B
-- [x] Ben → Coder latest
-- [x] Ryan → Qwen 3B
+- [x] health/readiness checks
+- [x] local Qwen models
+- [x] coder-model routing
+- [x] Alex/Ben/Ryan model roles
 - [x] coding-intent detection
+- [x] conversation creation
+- [x] new chat
+- [x] conversation selection
+- [x] conversation restore
+- [x] conversation rename
+- [x] conversation deletion
+- [x] conversation pinning
+- [x] message controls
+- [x] assistant regeneration groundwork
+- [x] file attachments
+- [x] local fallback when the server is unavailable
+- [x] authenticated server persistence
+- [x] workspace-scoped conversation persistence
+- [x] complete message snapshots including attachment metadata
+- [x] concurrent conversation-save protection
 
-## remaining engineering
+## recent additions
 
-- [ ] formal provider interface for hosted/cloud models
-- [ ] provider credential abstraction
-- [ ] provider retry/backoff policies
-- [ ] circuit breaker/provider health recovery
-- [ ] request cancellation propagation
-- [ ] context/token budgeting
-- [ ] structured generation validation
-- [ ] per-user/model/provider usage accounting
-- [ ] privacy-safe model telemetry
-- [ ] embeddings provider abstraction
-- [ ] hosted inference provider integration
+- [x] server-side cross-resource search endpoint covering conversations, messages, and projects
+- [x] search query length/escaping controls
+- [x] workspace authorization for search
+- [x] conversation payload limits
+- [x] message-shape validation before persistence
+- [x] attachment payload limits
+- [x] UUID validation for conversation/message identifiers
 
-## user required
+## remaining
 
-- [USER] production inference provider/capacity
-- [USER] public AI backend reachable by production API
-
-important: local Ollama on Bob's laptop is a development model host, not a production backend for a school audience.
+- [ ] atomic persistence of streamed assistant messages
+- [ ] explicit persisted cancelled/failed message states
+- [ ] durable edit/regeneration history
+- [ ] cursor pagination for large conversation histories
+- [ ] better offline reconciliation
+- [ ] multi-device conflict resolution
+- [ ] indexed full-text search instead of ILIKE at scale
+- [ ] conversation branching
+- [ ] conversation merge/split
+- [ ] folders/labels
+- [ ] archive/restore semantics across all clients
+- [ ] message version history
+- [ ] long-context budget management
+- [ ] automatic context compaction with verification
 
 ---
 
-# 6. memory and personalization
+# 3. AUTHENTICATION + ACCOUNT SECURITY
 
-## done
+## implemented
+
+- [x] registration
+- [x] login
+- [x] logout
+- [x] short-lived access tokens
+- [x] long-lived refresh tokens
+- [x] hashed token storage
+- [x] refresh rotation
+- [x] refresh-token family IDs
+- [x] refresh-token reuse detection
+- [x] family revocation on reuse
+- [x] individual session revocation
+- [x] all-session revocation
+- [x] session metadata groundwork
+- [x] password hashing with scrypt
+- [x] password policy
+- [x] password reset
+- [x] password reset session revocation
+- [x] email OTP
+- [x] OTP expiry
+- [x] OTP attempt limits
+- [x] OTP single-use consumption
+- [x] email verification
+- [x] MFA/TOTP
+- [x] encrypted MFA secret storage
+- [x] MFA challenge protection
+- [x] password change verifies current password
+- [x] password change revokes sessions
+- [x] generic password-reset responses to reduce enumeration
+- [x] focused auth rate limits
+- [x] cookie-based browser authentication
+- [x] httpOnly/Secure/SameSite cookie controls
+- [x] CSRF protection for cookie-authenticated mutations
+- [x] permanent account-deletion foundation
+- [x] account export foundation
+
+## remaining
+
+- [ ] passkeys/WebAuthn
+- [ ] trusted-device management UI/API
+- [ ] adaptive login abuse detection
+- [ ] user-visible security activity timeline
+- [ ] complete deletion worker for every owned data type
+- [ ] prove export coverage against every user-owned table
+- [ ] authentication integration test matrix
+- [ ] expired OTP/reset cleanup worker
+- [ ] production password-reset email verification
+- [ ] final launch policy for mandatory verified email
+
+---
+
+# 4. PRIVACY, LEGAL + DATA CONTROL
+
+## implemented
+
+- [x] Privacy Policy document
+- [x] Terms of Service document
+- [x] Terms acceptance at registration
+- [x] stored terms version/acceptance timestamp
+- [x] cookie consent UI
+- [x] analytics only after explicit consent
+- [x] privacy-policy navigation
+- [x] local browser state no longer stores full sensitive chat/session state
+- [x] account deletion foundation
+- [x] account export foundation
+- [x] audit event sanitization/capping
+- [x] provider credentials are not exposed through normal client persistence
+
+## remaining
+
+- [ ] complete data inventory and retention schedule
+- [ ] prove deletion coverage for every storage layer
+- [ ] privacy classification for memories/files/tool results
+- [ ] user-visible memory controls
+- [ ] data-processing/third-party provider inventory
+- [ ] production legal review
+- [ ] regional compliance review where BobAI is actually launched
+
+---
+
+# 5. MEMORY
+
+## implemented
 
 - [x] memory schema
-- [x] memory write endpoint
 - [x] memory read endpoint
+- [x] memory write endpoint
 - [x] memory clear endpoint
-- [x] explicit memory detection
-- [x] authenticated user isolation
-- [x] personal workspace fallback
-- [x] memory context injection into normal chat
+- [x] explicit “remember this” detection
+- [x] user isolation
+- [x] personal-workspace fallback
+- [x] relevant-memory filtering
+- [x] memory ON/OFF control
+- [x] normal chat memory injection
 - [x] explicit memory persistence from normal chat
 
-## remaining engineering
+## remaining for genuinely advanced assistant memory
 
-- [ ] inject memory context into streaming chat
-- [ ] generate real embeddings
-- [ ] vector similarity retrieval
-- [ ] relevance scoring
+- [ ] streaming memory injection parity
+- [ ] real embedding generation
+- [ ] pgvector similarity retrieval
+- [ ] hybrid lexical + vector retrieval
 - [ ] recency weighting
-- [ ] memory deduplication/update
-- [ ] memory expiration policy
-- [ ] privacy classification before storage
+- [ ] importance weighting
+- [ ] memory deduplication
+- [ ] memory update/merge
+- [ ] memory confidence
+- [ ] memory provenance
+- [ ] expiration/forget-after rules
 - [ ] sensitive-memory policy
+- [ ] privacy classification
+- [ ] contradiction detection
+- [ ] user approval for sensitive memories
 - [ ] memory audit history
-- [ ] memory isolation integration tests
-- [ ] export/delete coverage
-
-## user required
-
-- [USER] only required when a real external embedding/AI provider is selected
+- [ ] “why does Bob remember this?” provenance
+- [ ] project-specific memory isolation
+- [ ] workspace-shared memory with permissions
+- [ ] memory export/delete tests
 
 ---
 
-# 7. files and document pipeline
+# 6. FILES + DOCUMENT INTELLIGENCE
 
-## done
+## implemented
 
-- [x] authenticated uploads
-- [x] upload progress in web client
-- [x] 10 MB request file limit
-- [x] MIME/type checks
+- [x] authenticated file uploads
+- [x] upload progress
+- [x] request/file-size limits
+- [x] multipart abuse limits
+- [x] MIME/type validation
+- [x] file signature/magic-byte validation
 - [x] PDF signature validation
-- [x] PDF text extraction
-- [x] text/markdown/csv/html/css/javascript/xml extraction
-- [x] basic image upload recognition
+- [x] PDF extraction
+- [x] text/markdown/CSV/HTML/CSS/JS/XML extraction
+- [x] image upload recognition
 - [x] temporary-file cleanup
-- [x] message attachment persistence groundwork
+- [x] attachment persistence groundwork
+- [x] file ownership checks
 
-## remaining engineering
+## remaining
 
-- [ ] production object storage abstraction with durable storage
-- [ ] Cloudflare R2/S3-compatible implementation
-- [ ] upload checksum verification
-- [ ] malware scanning integration point
+- [ ] durable object-storage abstraction
+- [ ] S3/R2-compatible storage
+- [ ] checksums/content-addressed files
+- [ ] background extraction workers
+- [ ] OCR pipeline using Tesseract
 - [ ] document chunking
+- [ ] stable chunk IDs
 - [ ] document indexing
 - [ ] semantic document retrieval
-- [ ] ownership/isolation tests
+- [ ] hybrid file search
+- [ ] file version history
+- [ ] file sharing/permissions
+- [ ] malware-scanning integration
 - [ ] file retention/deletion worker
-- [ ] extraction worker for large documents
-- [ ] OCR execution using the installed Tesseract dependency
-- [ ] durable generated-media storage
-
-## user required
-
-- [USER] production object-storage account/credentials if R2/S3 is used
+- [ ] generated-media storage
+- [ ] cross-file search
 
 ---
 
-# 8. vision, image, video, voice and music
+# 7. RESEARCH + WEB KNOWLEDGE
 
-## done
+## implemented/foundation
+
+- [x] provider-neutral research service
+- [x] authenticated research endpoint
+- [x] query validation
+- [x] HTTPS production-provider validation
+- [x] provider timeouts
+- [x] retries
+- [x] response-size caps
+- [x] redirect rejection where applicable
+- [x] capability-aware provider gating
+- [x] deep-research route/foundation
+
+## remaining
+
+- [ ] connect a real search provider
+- [ ] stable source/result schema
+- [ ] citation objects attached to answers
+- [ ] source deduplication
+- [ ] source ranking
+- [ ] source credibility metadata
+- [ ] claim-to-source mapping
+- [ ] contradiction detection
+- [ ] research-session persistence
+- [ ] saved research collections
+- [ ] research replay
+- [ ] search caching
+- [ ] provider failover
+- [ ] web-content prompt-injection isolation
+- [ ] per-user search quotas
+- [ ] scheduled research briefs
+
+[USER] real search-provider credential/capacity is required before live external search can be enabled.
+
+---
+
+# 8. VISION + IMAGE + MEDIA
+
+## implemented/foundation
 
 - [x] image-generation route
-- [x] local media-provider abstraction
+- [x] media provider abstraction
+- [x] image prompt length limits
+- [x] vision route
+- [x] Violet vision bridge
+- [x] 1–3 image input validation
+- [x] PNG/JPEG/WebP validation
+- [x] image-size limits
+- [x] PNG color parsing safety
+- [x] model-only processing for formats that cannot be safely parsed locally
+- [x] response truncation
+- [x] provider fail-closed behavior
 - [x] video-generation contract groundwork
 - [x] voice provider abstraction
 - [x] music provider abstraction/route groundwork
-- [x] Ollama vision endpoint code
-- [x] vision input size validation
 
-## remaining engineering
+## remaining
 
-- [ ] connect the web chat to vision without changing UI structure
-- [ ] validate vision model capabilities before use
-- [ ] add provider health/readiness for multimodal providers
-- [ ] add image output persistence
-- [ ] add video job persistence
-- [ ] add voice transcription provider
-- [ ] add voice synthesis provider
-- [ ] add music provider
-- [ ] add media content safety/policy layer
-- [ ] add media retention cleanup
+- [ ] connect vision into normal chat attachments
+- [ ] automatic vision-capability detection
+- [ ] image understanding/OCR/layout extraction
+- [ ] persistent media asset library
+- [ ] image editing
+- [ ] image upscaling
+- [ ] video generation jobs
+- [ ] video editing jobs
+- [ ] video scene/chapter extraction
+- [ ] audio transcription
+- [ ] speaker labels
+- [ ] audio summaries
+- [ ] voice synthesis
+- [ ] music generation
+- [ ] unified media history
+- [ ] media retention cleanup
+- [ ] media safety/policy layer
 
-## user required
-
-- [USER] vision model installed/configured if Ollama vision is used
-- [USER] external image/video/voice/music provider credentials if external providers are chosen
-
----
-
-# 9. web search / research
-
-## done
-
-- [x] provider-agnostic research service
-- [x] authenticated `/research/search` endpoint
-- [x] query length validation
-- [x] HTTPS requirement for production providers
-- [x] timeout handling
-- [x] provider can be replaced without changing the public API
-
-## remaining engineering
-
-- [ ] connect an actual search provider
-- [ ] normalize search results into a stable BobAI result schema
-- [ ] citations/source metadata model
-- [ ] result ranking/deduplication
-- [ ] search caching
-- [ ] provider failure fallback
-- [ ] prompt-injection isolation for retrieved web content
-- [ ] per-user search rate limits
-
-## user required
-
-- [USER] actual search provider choice and credential/API key
+[USER] real external media providers or an adequately capable local model are required for live production media generation.
 
 ---
 
-# 10. coding agents and autonomous execution
+# 9. PERSONALIZATION + SETTINGS
 
-## done
+## implemented
 
-- [x] Bob remains the only user-facing agent
-- [x] Alex planner
-- [x] Ben coder
-- [x] Ryan reviewer
-- [x] model assignments
-- [x] coding intent detection
-- [x] task queue groundwork
-- [x] retry count
-- [x] coding-agent bridge
-- [x] internal agent messages/status architecture
-- [x] authenticated agent endpoints
+- [x] settings API groundwork
+- [x] server-side settings persistence
+- [x] personality configuration groundwork
+- [x] model preferences groundwork
+- [x] memory preference
+- [x] four-theme system: dark/light/futuristic/anime
+- [x] theme persistence
+- [x] legacy browser-state cleanup for sensitive onboarding data
+- [x] saved prompt API groundwork
+- [x] prompt-library route
 
-## remaining engineering
+## remaining
 
-- [ ] durable database-backed queue
-- [ ] worker restart recovery
-- [ ] real filesystem execution hardening
-- [ ] workspace sandbox
-- [ ] path traversal protection
-- [ ] process CPU/memory/time limits
-- [ ] command allow/deny policy
-- [ ] checkpoint/rollback
+- [ ] complete user preference schema
+- [ ] response-length preference
+- [ ] tone/style controls
+- [ ] language preference
+- [ ] default-model preference
+- [ ] default-tool permissions
+- [ ] custom instructions
+- [ ] prompt variables/templates UI
+- [ ] personality presets
+- [ ] import/export preferences
+- [ ] per-project settings
+- [ ] accessibility preferences
+
+---
+
+# 10. PROJECTS + WORKSPACES
+
+## implemented
+
+- [x] workspace schema
+- [x] workspace members
+- [x] personal-workspace fallback
+- [x] workspace authorization
+- [x] projects schema/API foundation
+- [x] project-aware search
+- [x] project ownership checks
+
+## remaining
+
+- [ ] project-specific memory
+- [ ] project file collections
+- [ ] project instructions
+- [ ] project-specific model/tool permissions
+- [ ] project context window
+- [ ] project activity history
+- [ ] workspace roles/permissions beyond membership
+- [ ] invitations
+- [ ] collaboration
+- [ ] shared conversations
+- [ ] project export/import
+
+---
+
+# 11. BOB + EMPLOYEE AGENTS
+
+## implemented
+
+- [x] Bob as intended user-facing manager
+- [x] Alex planner/engineering manager role
+- [x] Ben coding role
+- [x] Ryan review/security role
+- [x] Violet vision bridge
+- [x] model-role mapping
+- [x] coding-intent detection
+- [x] agent task routes
+- [x] workspace authorization before agent task creation
+- [x] workspace/user-scoped task retrieval
+- [x] durable task persistence
+- [x] startup recovery groundwork
+- [x] queue concurrency controls
+- [x] attempt/retry limits
+- [x] duplicate retry protection
+- [x] mutation audit trail
+- [x] production sandbox-attestation gate for coding-agent access
+
+## remaining
+
+- [ ] finish reliable Alex → Ben → executor → Ryan → validation loop
+- [ ] prevent zero-action jobs from being marked successful
+- [ ] robust structured planner output validation
+- [ ] robust coder action generation
+- [ ] reliable reviewer diff-awareness
+- [ ] genuine agent-to-agent communication
+- [ ] internal agent handoff artifacts
+- [ ] visible Bob delegation state
+- [ ] task dependency graph
+- [ ] agent budget/token accounting
+- [ ] confidence/escalation thresholds
+- [ ] human approval checkpoints
+- [ ] real disposable coding workspace
+- [ ] process isolation
+- [ ] CPU/memory/time limits
+- [ ] command policy
+- [ ] checkpoint/rollback verification
 - [ ] patch/diff validation
-- [ ] structured agent output validation
 - [ ] persistent agent-run history
-- [ ] cancellation
-- [ ] workspace-scoped permissions
-- [ ] audit log for every mutation
-- [ ] disposable-workspace end-to-end tests
+- [ ] cancellation propagation
+- [ ] end-to-end sandbox tests
+- [ ] remove every remaining demo/default coding task
 
-## user required
-
-- [USER] coding-agent bridge/workspace location
-- [USER] coding-agent credential if a bridge is used
-- [USER] explicit production filesystem permission policy
+[USER] a real local/remote coding-agent runtime with sufficient hardware and verified isolation is required before production autonomous code execution.
 
 ---
 
-# 11. tools and automation
+# 12. TOOLS + MCP + ACTIONS
 
-## done
+## implemented/foundation
 
 - [x] tool schema groundwork
-- [x] tool log schema
-- [x] integrations schema
+- [x] tool registry/capability groundwork
+- [x] tool approvals
+- [x] hashed approval tokens
+- [x] atomic approval consumption
+- [x] tool audit groundwork
+- [x] MCP route/foundation
+- [x] integration schema
 - [x] webhook schema
-- [x] automation route/schema groundwork
-- [x] notification schema
+- [x] automation schema/route
+- [x] capability flags for optional automation/diagram/sketch-to-UI features
+- [x] unknown provider-backed tools fail closed
 
-## remaining engineering
+## remaining
 
 - [ ] strict tool registry
-- [ ] tool input/output schemas
+- [ ] per-tool JSON schemas
 - [ ] per-tool permissions
-- [ ] timeout/idempotency/retry semantics
-- [ ] result size limits
-- [ ] tool audit logging
-- [ ] scheduled job worker
-- [ ] webhook signature verification
+- [ ] tool result-size limits everywhere
+- [ ] universal idempotency keys
+- [ ] retry policy per tool
+- [ ] timeout policy per tool
+- [ ] user confirmation for destructive actions
+- [ ] signed webhook verification
 - [ ] webhook replay protection
-- [ ] notification provider implementation
-
-## user required
-
-- [USER] external integration credentials only for integrations Bob chooses to activate
+- [ ] webhook delivery retries
+- [ ] scheduled automation worker
+- [ ] user-visible automation history
+- [ ] user-managed MCP server registry
+- [ ] per-MCP-server permission scopes
+- [ ] OAuth-based connector authorization
 
 ---
 
-# 12. production security and reliability
+# 13. SEARCH, NOTIFICATIONS + PRODUCTIVITY
 
-## done
+## implemented
 
-- [x] authentication middleware
-- [x] agent authentication middleware
-- [x] admin identity checks
-- [x] explicit production CORS
-- [x] HTTPS-only production origins
+- [x] authenticated server-side search
+- [x] conversation/message/project search
+- [x] notification persistence schema
+- [x] authenticated notification inbox
+- [x] mark-one-read
+- [x] mark-all-read
+- [x] archive notification
+- [x] notification ownership checks
+- [x] reminder route/foundation
+
+## remaining
+
+- [ ] frontend notification center integration
+- [ ] unread-count endpoint/streaming updates
+- [ ] push notifications
+- [ ] email notifications
+- [ ] reminder scheduler
+- [ ] recurring reminders
+- [ ] timezone-aware scheduling
+- [ ] calendar integration
+- [ ] task lists
+- [ ] lightweight notes
+- [ ] saved research
+- [ ] saved artifacts
+
+---
+
+# 14. PUBLIC WEBSITE
+
+## confirmed/implemented from prior project work
+
+- [x] navigation
+- [x] 404 page
+- [x] breadcrumbs
+- [x] CTA sections
+- [x] FAQ
+- [x] About
+- [x] Contact UI
+- [x] Privacy page
+- [x] Terms page
+- [x] waitlist UI
+- [x] cookie/analytics consent
+- [x] sitemap
+- [x] robots
+- [x] Open Graph metadata
+- [x] favicon
+- [x] responsive navigation
+
+## remaining
+
+- [ ] final public-copy review
+- [ ] production analytics only after consent
+- [ ] production domain configuration
+- [ ] performance budget
+- [ ] accessibility audit
+- [ ] SEO validation
+
+---
+
+# 15. FRONTEND / NEURAL UI HISTORY
+
+The handoff confirms the following work exists or was built during the earlier UI project:
+
+- [x] original functional chat architecture
+- [x] neural UI component system
+- [x] `NeuralShell`
+- [x] `NeuralSidebar`
+- [x] `NeuralTopbar`
+- [x] `NeuralComposer`
+- [x] `NeuralChatStage`
+- [x] `NeuralScene`
+- [x] `SceneEngine`
+- [x] `RobotIntro`
+- [x] `ThemeProvider`
+- [x] futuristic/glass visual direction
+- [x] Three.js robot scene groundwork
+- [x] robot GLTF assets
+- [x] charging-station scene concept
+- [x] anime intro concept
+- [x] four theme identifiers
+- [x] sidebar conversation-management controls
+- [x] autoscroll work/history
+- [x] provider-context runtime fixes
+
+## current rule
+
+The neural UI must not become a second independent chat state system. Existing chat state/backend capabilities should be reused and unified.
+
+## remaining
+
+- [ ] finish one canonical frontend state architecture
+- [ ] ensure every visible control calls a real backend/state action
+- [ ] final robot asset/path verification
+- [ ] final robot intro/shutdown behavior
+- [ ] complete anime 3D system if retained
+- [ ] complete theme-specific visuals
+- [ ] final responsive/mobile behavior
+- [ ] accessibility/keyboard navigation
+- [ ] visual regression testing
+
+**UI is not being randomly redesigned during backend hardening.** Visual work should happen only when explicitly requested or when required to make an existing control functional.
+
+---
+
+# 16. DATABASE + MIGRATIONS
+
+## implemented
+
+- [x] PostgreSQL integration
+- [x] Drizzle schema
+- [x] pgvector schema support
+- [x] migration locking/checksums
+- [x] migration bookkeeping
+- [x] personal-workspace concurrency protection
+- [x] refresh-token-family migration
+
+## remaining
+
+- [ ] complete migration coverage for every historical schema change
+- [ ] remove reliance on production `db:push`
+- [ ] deterministic migration deployment
+- [ ] deterministic rollback procedure
+- [ ] backup verification
+- [ ] restore drill
+- [ ] connection-pool tuning
+- [ ] query performance indexes
+- [ ] database observability
+- [ ] retention jobs
+- [ ] carefully designed PostgreSQL RLS rollout
+
+**RLS warning:** do not blindly enable RLS. It must be designed around the existing application authorization model and tested against every workspace/user query.
+
+[USER] production Neon/PostgreSQL instance and credentials are required for production verification.
+
+---
+
+# 17. SECURITY FINAL-PASS STATUS
+
+## implemented
+
+- [x] MFA
+- [x] account-enumeration-resistant reset behavior
+- [x] business-logic authorization checks
+- [x] workspace ownership checks
+- [x] race-safe personal workspace creation
+- [x] refresh-token rotation/reuse detection
+- [x] CSRF protection
+- [x] secure browser cookies
+- [x] sensitive browser storage reduction
+- [x] open-redirect/provider URL validation
+- [x] provider redirect rejection where applicable
+- [x] unsecured endpoint review for protected API routes
+- [x] request timeouts
+- [x] response-size limits
+- [x] upload/multipart limits
+- [x] file signature validation
+- [x] AI output/result validation foundations
+- [x] excessive AI-permission fail-closed behavior
+- [x] production environment validation
+- [x] pinned GitHub Actions
+- [x] CI credential persistence disabled
 - [x] security headers
-- [x] HSTS
-- [x] request IDs
-- [x] JSON body limits
-- [x] global rate limiting
-- [x] focused auth rate limits
-- [x] hidden internal errors in production
-- [x] production env validation
-- [x] proxy trust validation
-- [x] security integration tests
+- [x] HSTS in production
+- [x] CORS restrictions
+- [x] rate limiting
+- [x] audit logging
+- [x] coding-agent sandbox attestation gate
+- [x] destructive coding-operation approval groundwork
+- [x] audit metadata sanitization
 
-## remaining engineering
+## remaining
 
-- [ ] distributed rate limiter for multiple API instances
-- [ ] centralized structured logging
-- [ ] error monitoring
-- [ ] alerting
-- [ ] uptime monitoring
-- [ ] graceful shutdown
-- [ ] database pool tuning
-- [ ] liveness/readiness separation
-- [ ] upload-specific abuse controls
-- [ ] secret rotation process
-- [ ] dependency vulnerability remediation
+- [ ] distributed rate limiting
+- [ ] centralized security monitoring
+- [ ] dependency vulnerability monitoring
+- [ ] secret rotation automation
+- [ ] supply-chain/license policy
+- [ ] production penetration test
+- [ ] production load test
 - [ ] incident-response runbook
-- [ ] production load tests
+- [ ] full webhook security once inbound webhooks are enabled
+- [ ] full coding sandbox verification
 
 ---
 
-# 13. production deployment
+# 18. RELIABILITY + OBSERVABILITY
+
+## implemented
+
+- [x] API request timeout
+- [x] Node headers timeout
+- [x] keep-alive timeout
+- [x] graceful shutdown logic
+- [x] health endpoint
+- [x] readiness endpoint with database dependency check
+- [x] request IDs
+- [x] sanitized production errors
+- [x] task retry limits
+- [x] task recovery groundwork
+
+## remaining
+
+- [ ] structured logs
+- [ ] centralized log storage
+- [ ] error tracking
+- [ ] metrics
+- [ ] latency dashboards
+- [ ] model/provider health dashboard
+- [ ] alerting
+- [ ] uptime monitor
+- [ ] queue-depth metrics
+- [ ] token/usage dashboards
+- [ ] database slow-query monitoring
+- [ ] distributed tracing
+
+---
+
+# 19. CI/CD + SUPPLY CHAIN
+
+## implemented
+
+- [x] CI workflow
+- [x] API/web build commands
+- [x] security tests
+- [x] npm audit command
+- [x] GitHub Actions pinned by SHA
+- [x] `persist-credentials: false`
+- [x] dependency-lock synchronization workflow
+- [x] lockfile regeneration automation
+- [x] CI revalidation after dependency-lock synchronization
+- [x] CodeQL workflow
+- [x] Lighthouse workflow
+- [x] workflow concurrency/timeouts
+
+## current verification
+
+- [~] latest CI/Lighthouse/CodeQL runs were queued/pending at the time of this roadmap update; they must report success before the repository is called green
+
+## remaining
+
+- [ ] required-status branch protection
+- [ ] release tagging
+- [ ] signed releases/commits if desired
+- [ ] SBOM generation
+- [ ] dependency/license policy
+- [ ] automated dependency-update review
+- [ ] production deployment pipeline
+- [ ] rollback deployment pipeline
+
+---
+
+# 20. PRODUCTION DEPLOYMENT
 
 ## code-side preparation
 
-- [x] configurable `NEXT_PUBLIC_API_URL`
-- [x] production web build
-- [x] production API config validation
-- [x] health endpoint
-- [x] readiness endpoint
-- [ ] Cloudflare-compatible deployment configuration
-- [ ] API-host deployment configuration
-- [ ] production migration command
-- [ ] deployment smoke test
-- [ ] rollback documentation
+- [x] production environment validation
+- [x] explicit production CORS requirements
+- [x] HTTPS requirements
+- [x] health/readiness endpoints
+- [x] production provider fail-closed behavior
+- [x] production coding sandbox gate
 
-## user required
+## user/environment required
 
-- [USER] Cloudflare account/project
-- [USER] domain/DNS access
+- [USER] production Neon/PostgreSQL
+- [USER] production AI inference provider or hosted model capacity
+- [USER] production search provider
+- [USER] production object storage if durable files are required
+- [USER] production email sender/domain
+- [USER] hosting account
+- [USER] domain/DNS
 - [USER] public frontend hostname
 - [USER] public API hostname
-- [USER] production API hosting account/project
-- [USER] production environment variables/secrets
+- [USER] production secrets
+- [USER] real coding-agent runtime if autonomous coding is enabled
 
 ---
 
-# 14. 2k+ school-visitor readiness
+# 21. SCHOOL / HIGH-CONCURRENCY READINESS
 
-The public launch target is not "the website loads". It is "the website remains usable when many students arrive at once."
-
-## must be completed before announcement
-
-- [ ] hosted AI inference available
-- [ ] production PostgreSQL with backups
-- [ ] durable job queue/worker if agents are enabled publicly
-- [ ] distributed rate limiting
-- [ ] abuse protection
-- [ ] monitoring and alerting
-- [ ] error tracking
-- [ ] realistic concurrent-chat load test
-- [ ] registration/login load test
-- [ ] OTP load/abuse test
-- [ ] streaming-through-Cloudflare test
-- [ ] database connection-pressure test
-- [ ] file-upload abuse test
-- [ ] provider outage/fallback test
-- [ ] confirm no public request depends on Bob's local laptop
-- [ ] confirm API and frontend can recover from restarts
-
-## user required
-
-- [USER] final expected concurrent users
-- [USER] hosting/inference capacity decision
-- [USER] public domain/URL
-- [USER] launch date/time
-
----
-
-# 15. testing matrix
-
-## already confirmed
-
-- [x] TypeScript API build
-- [x] Next.js production build
-- [x] security tests
-- [x] local Ollama model smoke tests
-- [x] local OTP delivery/verification
-- [x] database schema push
+The school/science-fair target discussed in the project is a real multi-user deployment, not merely a laptop demo.
 
 ## remaining engineering
 
-- [ ] auth success/failure integration suite
-- [ ] OTP abuse/expiry tests
-- [ ] refresh-token rotation tests
-- [ ] conversation ownership tests
-- [ ] workspace isolation tests
-- [ ] memory isolation tests
-- [ ] file ownership tests
-- [ ] model fallback tests
-- [ ] streaming disconnect tests
-- [ ] agent retry/failure tests
-- [ ] webhook signature tests
-- [ ] production configuration validation tests
-- [ ] migration tests
-- [ ] load tests
-- [ ] end-to-end browser test suite
+- [ ] production load test
+- [ ] concurrent chat tests
+- [ ] queue saturation tests
+- [ ] provider rate-limit handling
+- [ ] distributed rate limiting
+- [ ] database connection limits
+- [ ] object-storage throughput tests
+- [ ] CDN/static asset strategy
+- [ ] cache strategy
+- [ ] autoscaling strategy
+- [ ] graceful degradation when AI providers fail
+- [ ] friendly maintenance mode
+- [ ] abuse monitoring
 
-## user/environment verification
-
-- [USER] local runtime pass after pulling latest code
-- [USER] production smoke test after deployment
-- [USER] real provider verification after credentials are installed
+[USER] actual hosting/inference/database capacity is required to validate this section.
 
 ---
 
-# 16. UI work — explicitly owned by Bob
+# 22. HIGH-VALUE AI CAPABILITIES TO COMPLETE
 
-**no UI changes are being made by the code-side production pass.**
+These are the capabilities that modern AI users commonly expect and that fit BobAI's architecture. They are **implementation targets**, not counted as done merely because a route/schema exists.
 
-Bob owns:
+## intelligence
 
-- [USER] chat UI redesign
-- [USER] frontend bug/visual fixes
-- [USER] final UI polish
-- [USER] final layout/proportions/spacing
-- [USER] glass/neural visual tuning
-- [USER] final theme visuals
-- [USER] final reference-accurate styling
-- [USER] final animation/interaction polish
+- [ ] strong hosted/cloud model support
+- [ ] multi-model comparison
+- [ ] automatic model selection by task
+- [ ] context-aware model selection
+- [ ] user-selectable reasoning depth where supported
+- [ ] response citations
+- [ ] factuality/source verification layer
+- [ ] structured-output repair
+- [ ] tool-use planning
 
-These are intentionally excluded from engineering work until Bob requests them.
+## memory
+
+- [ ] semantic memory
+- [ ] editable memories
+- [ ] memory provenance
+- [ ] memory expiration
+- [ ] project memory
+- [ ] memory conflict resolution
+
+## research
+
+- [ ] live web search
+- [ ] deep research
+- [ ] multi-source synthesis
+- [ ] citations
+- [ ] source comparison
+- [ ] saved research
+- [ ] scheduled briefs
+
+## creation
+
+- [ ] image generation/editing
+- [ ] document generation
+- [ ] spreadsheets/data analysis
+- [ ] presentations
+- [ ] diagrams
+- [ ] canvas/artifacts
+- [ ] code generation
+- [ ] code execution in sandbox
+- [ ] multimodal analysis
+- [ ] voice conversation
+- [ ] video understanding/generation
+- [ ] music/audio generation
+
+## agents
+
+- [ ] autonomous multi-step tasks
+- [ ] Bob delegation
+- [ ] Alex planning
+- [ ] Ben implementation
+- [ ] Ryan verification
+- [ ] Violet visual verification
+- [ ] approvals
+- [ ] resumable jobs
+- [ ] task history
+- [ ] user-visible progress
+
+## productivity
+
+- [ ] reminders
+- [ ] scheduled tasks
+- [ ] calendar
+- [ ] email/notification actions
+- [ ] GitHub integration
+- [ ] MCP connectors
+- [ ] user-approved external actions
+- [ ] reusable workflows
+
+## platform
+
+- [ ] mobile client
+- [ ] desktop client
+- [ ] public API
+- [ ] API keys/scopes
+- [ ] SDKs
+- [ ] collaboration
+- [ ] shared projects
+- [ ] usage/billing
+- [ ] admin console
 
 ---
 
-# 17. final user-required checklist
+# 23. WHAT SHOULD NOT BE FAKED
 
-These are the things Bob actually has to supply/do. Everything else should be treated as engineering work and finished in code first.
+BobAI must never advertise a capability as working merely because:
 
-- [USER] production Neon/PostgreSQL
-- [USER] production database URL
-- [USER] production email/Resend credential and sender/domain decision
-- [USER] production AI inference provider or publicly reachable inference host
-- [USER] production AI credentials where required
-- [USER] Cloudflare account/project
-- [USER] domain/DNS access
-- [USER] API hosting account/project
-- [USER] production object storage credentials if enabled
-- [USER] search provider/API key if enabled
-- [USER] vision model/provider if enabled
-- [USER] voice provider if enabled
-- [USER] video/music providers if enabled
-- [USER] coding-agent bridge/workspace/key if enabled
-- [USER] production secret generation and installation
-- [USER] final public URL
-- [USER] final launch/concurrency decision
-- [USER] final local and production smoke tests
+- a database table exists
+- a route exists
+- a UI button exists
+- a provider URL is configurable
+- a model name is configured
+- an agent returned text
+- a reviewer said “approved”
+- a task executed zero actions
+
+A capability is **done** only when its real execution path, authorization, failure behavior, persistence, and tests are present.
+
+Provider-backed capabilities stay disabled until a real provider and credential are configured.
 
 ---
 
-# 18. production definition of done
+# 24. CURRENT PRIORITY ORDER
 
-BobAI is **production ready** when all of the following are true:
+1. **Make CI genuinely green and keep it green.**
+2. **Finish server-backed chat semantics and large-history performance.**
+3. **Finish advanced memory with pgvector.**
+4. **Finish file indexing/RAG.**
+5. **Connect a real research provider and citations.**
+6. **Finish Bob → Alex/Ben/Ryan/Violet orchestration and trustworthy coding execution.**
+7. **Finish notifications/reminders/automation.**
+8. **Finish real multimodal providers.**
+9. **Finish production observability, load testing, backups, and deployment.**
+10. **Then expand external connectors, mobile/desktop clients, collaboration, and the public API.**
 
-1. API and web builds pass.
-2. Automated security/integration tests pass.
-3. Database migrations apply cleanly to a fresh production database.
-4. Authentication, refresh, OTP, logout, and password reset work against production services.
-5. Conversations survive API/web restarts and login from another device.
-6. Memory is isolated per user/workspace and retrieval is tested.
-7. Files use durable storage and ownership checks.
-8. AI inference is hosted/reachable without Bob's laptop.
-9. Streaming works through the production proxy.
-10. Rate limiting and abuse controls work across production instances.
-11. Monitoring, error tracking, and alerts are active.
-12. Backups exist and restore has been verified.
-13. Agent execution is sandboxed or disabled for public users until it is safe.
-14. Cloudflare/frontend deployment and API deployment both pass smoke tests.
-15. A realistic concurrency/load test passes for the expected school traffic.
-16. Bob has completed the remaining [USER] checklist.
-17. UI is considered complete by Bob separately; the engineering roadmap does not silently modify it.
+The product should grow by connecting these systems into **one BobAI experience**, not by creating parallel duplicate architectures.
 
 ---
 
-# living-roadmap rule
+# 25. HANDOFF / PROJECT-CONTEXT RECONCILIATION
 
-This file is the source of truth for BobAI engineering status. Whenever code is changed, update the relevant checklist/status here. Do not mark environment-dependent work as done merely because the code exists. Do not mark UI work as done during backend/production engineering unless Bob explicitly asks for UI work.
+The older handoffs correctly documented several historical gaps: neural UI integration, duplicate chat architecture, incomplete coding-agent reliability, missing production providers, and uncertain final frontend state. Later repository work has closed many of the security, persistence, routing, provider-gating, and authentication gaps.
+
+Historical statements such as “localStorage conversations are the primary persistence layer,” “notifications are only schema groundwork,” “conversation routes are unmounted,” or “MFA is missing” must therefore be treated as **historical**, not current, when the repository now contains the corresponding implementation.
+
+The handoff also explicitly warned against counting discussion as implementation. That rule remains authoritative.
+
+---
+
+# 26. DEFINITION OF “BOBAI IS ACTUALLY FINISHED”
+
+BobAI is not finished when it has a pretty chat page.
+
+The finish line is:
+
+```text
+secure account
+  ↓
+persistent conversations
+  ↓
+strong model routing
+  ↓
+useful memory
+  ↓
+files + RAG
+  ↓
+web research + citations
+  ↓
+multimodal understanding/creation
+  ↓
+reliable tools
+  ↓
+Bob orchestration
+  ↓
+verified employee agents
+  ↓
+productivity + automations
+  ↓
+privacy + export + deletion
+  ↓
+observability + backups
+  ↓
+load-tested production deployment
+```
+
+Every stage needs a real implementation and verification path. No “looks finished” shortcuts.
