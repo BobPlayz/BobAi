@@ -1,0 +1,20 @@
+{
+  "model_id": "bob-0.1",
+  "base_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "method": "lora-sft",
+  "max_seq_length": 512,
+  "per_device_train_batch_size": 1,
+  "per_device_eval_batch_size": 1,
+  "gradient_accumulation_steps": 8,
+  "num_train_epochs": 1,
+  "learning_rate": 0.0001,
+  "lora_r": 8,
+  "lora_alpha": 16,
+  "lora_dropout": 0.05,
+  "target_modules": ["q_proj", "v_proj"],
+  "seed": 42,
+  "warmup_ratio": 0.05,
+  "logging_steps": 1,
+  "save_strategy": "epoch",
+  "evaluation_strategy": "epoch"
+}
