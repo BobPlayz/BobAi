@@ -5,28 +5,18 @@ import { db, settings } from "@bobai/db";
 import { prepareChat, runChat } from "../services/chatEngine.js";
 import { queueBackgroundTask } from "../services/agentCoordinator.js";
 import { isCodingTask } from "../services/codingAgent.js";
-import { dbRecallAll, dbRemember, isSensitiveMemory } from "../store/memoryDb.js";
+import { dbRecallRelevant, dbRemember, isSensitiveMemory } from "../store/memoryDb.js";
 import { dbSaveConversation } from "../store/conversationDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
-const STOP_WORDS = new Set(["the", "and", "that", "this", "with", "from", "what", "when", "where", "how", "why", "for", "are", "you", "about", "can", "could", "would", "please"]);
 const MAX_SETTINGS_LOOKUP = 20;
 
-function relevantMemories(memories: Array<{ key: string; value: string }> | null, query: string) {
+function relevantMemories(memories: Array<{ key?: string; value?: string; category?: string; content?: string }> | null, query: string) {
   if (!memories?.length) return [];
-  const terms = query.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 2 && !STOP_WORDS.has(term));
-  if (!terms.length) return memories.slice(0, 8).map((memory) => `${memory.key}: ${memory.value}`);
-  return memories.map((memory) => {
-    const text = `${memory.key} ${memory.value}`.toLowerCase();
-    const score = terms.reduce((total, term) => total + (text.includes(term) ? 1 : 0), 0);
-    return { memory, score };
-  }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 12).map((item) => `${item.memory.key}: ${item.memory.value}`);
+  return memories.slice(0, 12).map((memory) => `${memory.key || memory.category || "memory"}: ${memory.value || memory.content || ""}`);
 }
-
-function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) {
-  return rows.find((row) => row.key === key)?.value;
-}
+function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
 
 router.post("/", async (req, res) => {
   try {
@@ -38,8 +28,8 @@ router.post("/", async (req, res) => {
     const storedResponseStyle = settingValue(rows, "responseStyle");
     const storedMemory = settingValue(rows, "memoryEnabled");
     const memoryEnabled = req.body?.memoryEnabled !== false && storedMemory !== false;
-    const memories = memoryEnabled ? await dbRecallAll(workspace.id, req.user!.id) : [];
     const latestText = Array.isArray(req.body?.messages) ? [...req.body.messages].reverse().find((message: any) => message?.role === "user")?.content || "" : "";
+    const memories = memoryEnabled ? await dbRecallRelevant(workspace.id, req.user!.id, typeof latestText === "string" ? latestText : "") : [];
     const prepared = prepareChat({
       messages: req.body?.messages,
       personality: typeof req.body?.personality === "string" ? req.body.personality : storedPersonality,
