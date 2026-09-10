@@ -28,7 +28,7 @@ export async function refresh(refreshToken: string) {
   }
   const [user] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, session.userId), isNull(users.deletedAt))).limit(1);
   if (!user) return null;
-  const next = await issueSession(session.userId, undefined, session.familyId);
+  const next = await issueSession(session.userId, undefined, session.familyId as `${string}-${string}-${string}-${string}-${string}`);
   await recordAudit({ action: "session_refreshed", resourceType: "session", resourceId: next.sessionId, userId: session.userId, sessionId: next.sessionId, metadata: { replacedSessionId: session.id, familyId: session.familyId } });
   return next;
 }
