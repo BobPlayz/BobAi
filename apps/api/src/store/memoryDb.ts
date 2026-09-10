@@ -8,10 +8,9 @@ export function isSensitiveMemory(value: string) { return /\b(password|passcode|
 async function saveEmbedding(memoryId: string, content: string) {
   const db = await getDb(); if (!db) return false;
   const vector = await generateEmbedding(content); if (!vector) return false;
-  const literal = JSON.stringify(vector);
   await db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.memoryId, memoryId));
   await db.insert(memoryEmbeddings).values({ memoryId, embedding: vector });
-  return Boolean(literal);
+  return true;
 }
 
 export async function dbRemember(input: { workspaceId: string; userId?: string; key: string; value: string }) {
@@ -30,17 +29,15 @@ export async function dbRemember(input: { workspaceId: string; userId?: string; 
 
 export async function dbRecallAll(workspaceId: string, userId?: string) {
   const db = await getDb(); if (!db) return null;
-  const rows = await db.select().from(memories).where(and(eq(memories.workspaceId, workspaceId), userId ? eq(memories.userId, userId) : undefined, eq(memories.isArchived, false), isNull(memories.deletedAt))).orderBy(desc(memories.isPinned), desc(memories.importance), desc(memories.updatedAt));
-  return rows;
+  return db.select().from(memories).where(and(eq(memories.workspaceId, workspaceId), userId ? eq(memories.userId, userId) : undefined, eq(memories.isArchived, false), isNull(memories.deletedAt))).orderBy(desc(memories.isPinned), desc(memories.importance), desc(memories.updatedAt));
 }
 
 export async function dbRecallRelevant(workspaceId: string, userId: string | undefined, query: string, limit = 12) {
   const db = await getDb(); if (!db) return [];
   const vector = await generateEmbedding(query);
   if (!vector) return (await dbRecallAll(workspaceId, userId))?.slice(0, limit) ?? [];
-  const vectorLiteral = JSON.stringify(vector);
-  const rows = await db.execute(sql`select m.* from memories m inner join memory_embeddings e on e.memory_id = m.id where m.workspace_id = ${workspaceId} and ${userId ? sql`m.user_id = ${userId}` : sql`true`} and m.is_archived = false and m.deleted_at is null order by e.embedding <=> ${vectorLiteral}::vector limit ${Math.min(50, Math.max(1, Math.floor(limit)))}`);
-  return (rows as unknown as Array<Record<string, unknown>>).map((row) => row);
+  const rows = await db.execute(sql`select m.* from memories m inner join memory_embeddings e on e.memory_id = m.id where m.workspace_id = ${workspaceId} and ${userId ? sql`m.user_id = ${userId}` : sql`true`} and m.is_archived = false and m.deleted_at is null order by e.embedding <=> ${JSON.stringify(vector)}::vector limit ${Math.min(50, Math.max(1, Math.floor(limit)))}`);
+  return rows as unknown as Array<Record<string, unknown>>;
 }
 
 export async function dbUpdateMemory(id: string, workspaceId: string, userId: string, changes: { category?: string; content?: string; isPinned?: boolean; isArchived?: boolean; importance?: number }) {
