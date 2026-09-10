@@ -42,7 +42,9 @@ export async function dbSaveConversation(input: { id: string; userId: string; wo
 
 export async function dbUpdateMessageStatus(input: { conversationId: string; messageId: string; userId: string; workspaceId: string; status: "pending" | "streaming" | "completed" | "failed" | "cancelled"; content?: string; model?: string | null }) {
   const database = await getDb(); if (!database) return false; const { conversations, messages } = database;
-  const result = await database.db.update(messages).set({ status: input.status, ...(input.content !== undefined ? { content: input.content } : {}), ...(input.model !== undefined ? { model: input.model } : {}), updatedAt: new Date() }).where(and(eq(messages.id, input.messageId), eq(messages.conversationId, input.conversationId), eq(conversations.userId, input.userId))).returning({ id: messages.id });
+  const owner = await database.db.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.id, input.conversationId), eq(conversations.userId, input.userId), eq(conversations.workspaceId, input.workspaceId))).limit(1);
+  if (!owner[0]) return false;
+  const result = await database.db.update(messages).set({ status: input.status, ...(input.content !== undefined ? { content: input.content } : {}), ...(input.model !== undefined ? { model: input.model } : {}), updatedAt: new Date() }).where(and(eq(messages.id, input.messageId), eq(messages.conversationId, input.conversationId))).returning({ id: messages.id });
   return Boolean(result[0]);
 }
 
