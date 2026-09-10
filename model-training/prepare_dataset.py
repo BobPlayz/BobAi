@@ -63,17 +63,17 @@ def normalize(row: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def split(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
-    train: list[dict[str, Any]] = []
-    validation: list[dict[str, Any]] = []
-    test: list[dict[str, Any]] = []
-    for row in rows:
-        bucket = int(row["fingerprint"][:8], 16) % 100
-        if bucket < 80:
-            train.append({"messages": row["messages"]})
-        elif bucket < 90:
-            validation.append({"messages": row["messages"]})
-        else:
-            test.append({"messages": row["messages"]})
+    ordered = sorted(rows, key=lambda row: row["fingerprint"])
+    if len(ordered) < 10:
+        raise ValueError("At least 10 unique eligible examples are required for train/validation/test splits.")
+    test_count = max(1, round(len(ordered) * 0.10))
+    validation_count = max(1, round(len(ordered) * 0.10))
+    if test_count + validation_count >= len(ordered):
+        test_count = validation_count = 1
+    train_end = len(ordered) - validation_count - test_count
+    train = [{"messages": row["messages"]} for row in ordered[:train_end]]
+    validation = [{"messages": row["messages"]} for row in ordered[train_end:train_end + validation_count]]
+    test = [{"messages": row["messages"]} for row in ordered[train_end + validation_count:]]
     return train, validation, test
 
 
@@ -91,7 +91,7 @@ def main() -> None:
     accepted: list[dict[str, Any]] = []
     rejected = 0
     seen: set[str] = set()
-    for line_number, line in enumerate(args.input.read_text(encoding="utf-8").splitlines(), 1):
+    for line in args.input.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         try:
@@ -105,12 +105,10 @@ def main() -> None:
         seen.add(normalized["fingerprint"])
         accepted.append(normalized)
 
-    train, validation, test = split(accepted)
-    if not train or not validation or not test:
-        raise SystemExit(
-            f"Dataset is too small for a complete split: train={len(train)} validation={len(validation)} test={len(test)}. "
-            "Add more diverse eligible examples before training."
-        )
+    try:
+        train, validation, test = split(accepted)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
 
     write_jsonl(args.output_dir / "train.jsonl", train)
     write_jsonl(args.output_dir / "validation.jsonl", validation)
