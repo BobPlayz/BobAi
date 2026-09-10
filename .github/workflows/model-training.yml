@@ -1,0 +1,28 @@
+name: model-training
+
+on:
+  push:
+    paths:
+      - "model-training/**"
+      - ".github/workflows/model-training.yml"
+  pull_request:
+    paths:
+      - "model-training/**"
+      - ".github/workflows/model-training.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dataset-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate dataset policy helpers
+        working-directory: model-training
+        run: python -m unittest test_prepare_dataset.py
+      - name: Prepare synthetic starter dataset
+        run: python model-training/prepare_dataset.py --input model-training/data/source.jsonl --output-dir /tmp/bobai-training-data
