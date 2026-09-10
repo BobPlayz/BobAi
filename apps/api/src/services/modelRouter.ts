@@ -13,10 +13,11 @@ function isConfigured(definition: ModelDefinition) {
 }
 
 function candidates(request: ModelSelectionRequest): ModelDefinition[] {
-  const compatible = request.capability ? MODEL_REGISTRY.filter((model) => model.capabilities.includes(request.capability)) : [...MODEL_REGISTRY];
+  const capability = request.capability;
+  const compatible = capability ? MODEL_REGISTRY.filter((model) => model.capabilities.includes(capability)) : [...MODEL_REGISTRY];
   const requested = request.modelId ? getModelDefinition(request.modelId) : undefined;
   if (request.modelId && !requested) throw new Error(`unknown model: ${request.modelId}`);
-  const fallback = getModelDefinition(request.fallbackModelId || (request.capability === "chat" ? FALLBACK_MODEL_ID : ""));
+  const fallback = getModelDefinition(request.fallbackModelId || (capability === "chat" ? FALLBACK_MODEL_ID : ""));
   return uniqueModels([...(requested ? [requested] : []), ...compatible.filter((model) => model.id === DEFAULT_MODEL_ID || model.id === FALLBACK_MODEL_ID), ...compatible, ...(fallback ? [fallback] : [])]);
 }
 
