@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
       ) results
       ORDER BY pinned DESC, "updatedAt" DESC
       LIMIT 50
-    `;
+    `);
     return res.json({ query, results: rows });
   } catch {
     return res.status(503).json({ error: "search temporarily unavailable" });
