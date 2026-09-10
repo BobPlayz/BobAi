@@ -1,6 +1,22 @@
 # BobAI model training architecture
 
-BobAI's long-term core model is **Bob**, owned and operated by the BobAI project. Core chat inference must use the Bob model gateway. Coding work uses separately configured first-party coding models. Ollama is not a core dependency or inference path.
+BobAI's long-term core model is **Bob**, owned and operated by the BobAI project. Core chat inference uses the Bob model gateway. Coding work uses separately configured coding models. Ollama is not a core dependency or inference path.
+
+## Bob-0.1 is now scaffolded
+
+The repository contains a small, reproducible first training target under `model-training/`:
+
+- Base model: `Qwen/Qwen2.5-0.5B-Instruct`.
+- Method: LoRA supervised fine-tuning (SFT).
+- Dataset: JSONL conversational messages with an explicit eligibility/consent envelope.
+- Preparation: deterministic sanitization, secret/PII redaction, deduplication, and train/validation/test splitting.
+- Evaluation: fixed prompts plus deterministic smoke checks.
+- Artifact: a PEFT/LoRA adapter, not a new foundation model.
+- Serving contract: OpenAI-compatible `/v1/chat/completions`, matching BobAI's provider-neutral model gateway.
+
+The starter examples are synthetic. Do not copy raw private conversations into the repository. The training policy is fail-closed and requires explicit eligibility and consent before examples enter the dataset.
+
+See `model-training/README.md` for the exact local setup and commands.
 
 ## Personalization vs training
 
@@ -19,9 +35,15 @@ Model training is a separate, consent-gated pipeline:
 
 ## Important boundary
 
-A repository can implement the data contract, consent controls, sanitization, dataset governance, evaluation harness, and model-serving interface. It cannot honestly manufacture a frontier-quality model or complete GPU training without actual model weights, compute, a tokenizer, a training stack, and an owned training environment.
+The repository can implement the data contract, consent controls, sanitization, dataset governance, evaluation harness, and model-serving interface. It cannot honestly manufacture a frontier-quality model or complete GPU training without actual model weights, compute, a tokenizer, a training stack, and an owned training environment.
 
-The model-serving interface is intentionally OpenAI-compatible so Bob's implementation can evolve from a development checkpoint to a larger internally trained model without changing the application contract.
+The model-serving interface is intentionally provider-neutral/OpenAI-compatible so Bob's implementation can evolve from Bob-0.1 to a larger internally trained model without changing the application contract.
+
+## Laptop phase → RTX phase
+
+Bob-0.1 is the learning/validation phase. A modest laptop can prepare data and may be able to run the small LoRA experiment slowly. The same dataset format, evaluation harness, model registry, and serving contract can later be reused on a stronger RTX 3050 machine.
+
+The larger model phase should change the model/training configuration, not the BobAI application architecture.
 
 ## Model quality target
 
