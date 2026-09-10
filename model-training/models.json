@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "active": "bob-0.1",
+  "models": [
+    {
+      "id": "bob-0.1",
+      "status": "experimental",
+      "base_model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "training": "LoRA SFT",
+      "artifact_type": "peft-adapter",
+      "inference_contract": "OpenAI-compatible /v1/chat/completions",
+      "promoted": false,
+      "notes": "First small-model training target. Do not treat as production-quality."
+    }
+  ]
+}
