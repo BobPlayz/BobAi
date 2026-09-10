@@ -1,13 +1,12 @@
 import { Router } from "express";
 import { agentAuth } from "../middleware/agentAuth.js";
 import { AGENT_REGISTRY, MODEL_REGISTRY, VISION_ARCHITECTURE } from "../services/modelRegistry.js";
-import { ollamaProvider } from "../services/ollamaProvider.js";
 import { getCodingOrchestration, listCodingOrchestrations, runCodingOrchestration } from "../services/codingOrchestrator.js";
 
 const router = Router();
 
-router.get("/models", agentAuth, async (_req, res) => {
-  return res.json({ registry: MODEL_REGISTRY, ollama: await ollamaProvider.registryStatus(), vision: VISION_ARCHITECTURE });
+router.get("/models", agentAuth, (_req, res) => {
+  return res.json({ registry: MODEL_REGISTRY, vision: VISION_ARCHITECTURE });
 });
 
 router.get("/agents", agentAuth, (_req, res) => res.json({ agents: Object.values(AGENT_REGISTRY) }));
