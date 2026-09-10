@@ -11,11 +11,13 @@ import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
 const STOP_WORDS = new Set(["the", "and", "that", "this", "with", "from", "what", "when", "where", "how", "why", "for", "are", "you", "about", "can", "could", "would", "please"]);
-function relevantMemories(memories: Array<{ key: string; value: string }> | null, query: string) {
+type MemoryRecord = { content: string; key?: string | null; value?: string | null };
+function relevantMemories(memories: MemoryRecord[] | null, query: string) {
   if (!memories?.length) return [];
   const terms = query.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 2 && !STOP_WORDS.has(term));
-  if (!terms.length) return memories.slice(0, 8).map((memory) => `${memory.key}: ${memory.value}`);
-  return memories.map((memory) => ({ memory, score: terms.reduce((total, term) => total + (`${memory.key} ${memory.value}`.toLowerCase().includes(term) ? 1 : 0), 0) })).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 12).map((item) => `${item.memory.key}: ${item.memory.value}`);
+  const textFor = (memory: MemoryRecord) => memory.key && memory.value ? `${memory.key}: ${memory.value}` : memory.content;
+  if (!terms.length) return memories.slice(0, 8).map(textFor);
+  return memories.map((memory) => ({ memory, score: terms.reduce((total, term) => total + (textFor(memory).toLowerCase().includes(term) ? 1 : 0), 0) })).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 12).map((item) => textFor(item.memory));
 }
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
 function persistedInputMessages(messages: Array<{ role: string; content: string }>) { return messages.map((message) => ({ id: randomUUID(), role: message.role, content: message.content, model: null, status: "completed" })); }
