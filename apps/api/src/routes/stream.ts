@@ -18,6 +18,7 @@ function relevantMemories(memories: Array<{ key: string; value: string }> | null
   return memories.map((memory) => ({ memory, score: terms.reduce((total, term) => total + (`${memory.key} ${memory.value}`.toLowerCase().includes(term) ? 1 : 0), 0) })).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 12).map((item) => `${item.memory.key}: ${item.memory.value}`);
 }
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
+function persistedInputMessages(messages: Array<{ role: string; content: string }>) { return messages.map((message) => ({ id: randomUUID(), role: message.role, content: message.content, model: null, status: "completed" })); }
 
 router.post("/", async (req, res) => {
   const { send } = initSSE(res);
@@ -43,12 +44,12 @@ router.post("/", async (req, res) => {
     if (prepared.latestUserMessage && isCodingTask(prepared.latestUserMessage.content) && process.env.BOBAI_CODING_AGENTS_DIR) {
       const result = await runCodingAgent(prepared.latestUserMessage.content);
       const reply = result.output || "the coding agent completed without output.";
-      const persisted = await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...prepared.messages, { id: randomUUID(), role: "assistant", content: reply, model: "coding-agent", status: "completed" }] }).catch(() => false);
+      const persisted = await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedInputMessages(prepared.messages), { id: randomUUID(), role: "assistant", content: reply, model: "coding-agent", status: "completed" }] }).catch(() => false);
       send("done", { reply, title: prepared.title, agent: "coding", warnings: result.warnings, conversationId, persisted }); return res.end();
     }
 
     assistantId = randomUUID();
-    await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [{ id: assistantId, role: "assistant", content: "", model: null, status: "pending" }] }).catch(() => false);
+    await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedInputMessages(prepared.messages), { id: assistantId, role: "assistant", content: "", model: null, status: "pending" }] }).catch(() => false);
     await dbUpdateMessageStatus({ conversationId, messageId: assistantId, userId: req.user!.id, workspaceId: workspace.id, status: "streaming" }).catch(() => false);
 
     let disconnected = false;
