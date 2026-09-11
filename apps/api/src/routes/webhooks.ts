@@ -1,0 +1,21 @@
+import { randomBytes } from "node:crypto";
+import { Router } from "express";
+import { and, desc, eq, isNull } from "drizzle-orm";
+import { db, webhooks, workspaceMembers } from "@bobai/db";
+import { ensurePersonalWorkspace } from "../services/workspace.js";
+import { deliverWebhook } from "../services/webhooks.js";
+
+const router = Router();
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isSafeWebhookUrl(value: string) { try { return new URL(value).protocol === "https:"; } catch { return false; } }
+async function workspace(userId: string, requested?: unknown) { if (typeof requested !== "string" || !requested) return ensurePersonalWorkspace(userId); if (!UUID.test(requested)) return null; const [member] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, requested), eq(workspaceMembers.userId, userId))).limit(1); return member ? { id: requested } : null; }
+
+router.get("/", async (req, res) => { try { const current = await workspace(req.user!.id, req.query.workspaceId); if (!current) return res.status(403).json({ error: "workspace access denied" }); const rows = await db.select({ id: webhooks.id, name: webhooks.name, url: webhooks.url, events: webhooks.events, isEnabled: webhooks.isEnabled, lastTriggeredAt: webhooks.lastTriggeredAt, createdAt: webhooks.createdAt, updatedAt: webhooks.updatedAt }).from(webhooks).where(and(eq(webhooks.workspaceId, current.id), isNull(webhooks.deletedAt))).orderBy(desc(webhooks.createdAt)); return res.json({ webhooks: rows }); } catch { return res.status(503).json({ error: "webhook storage unavailable" }); } });
+
+router.post("/", async (req, res) => { try { const current = await workspace(req.user!.id, req.body?.workspaceId); if (!current) return res.status(403).json({ error: "workspace access denied" }); const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""; const url = typeof req.body?.url === "string" ? req.body.url.trim() : ""; const events = Array.isArray(req.body?.events) ? req.body.events.filter((event: unknown): event is string => typeof event === "string" && /^[a-zA-Z0-9._:-]{1,100}$/.test(event)).slice(0, 50) : []; if (!name || name.length > 200 || !isSafeWebhookUrl(url) || events.length === 0) return res.status(400).json({ error: "name, HTTPS url, and at least one event are required" }); const secret = randomBytes(32).toString("base64url"); const headers = req.body?.headers && typeof req.body.headers === "object" && !Array.isArray(req.body.headers) ? req.body.headers : null; const [created] = await db.insert(webhooks).values({ workspaceId: current.id, createdBy: req.user!.id, name, url, secret, events, headers }).returning({ id: webhooks.id, name: webhooks.name, url: webhooks.url, events: webhooks.events, createdAt: webhooks.createdAt }); if (!created) return res.status(503).json({ error: "webhook creation failed" }); return res.status(201).json({ webhook: created, secret }); } catch { return res.status(503).json({ error: "webhook creation unavailable" }); } });
+
+router.delete("/:id", async (req, res) => { if (!UUID.test(req.params.id)) return res.status(400).json({ error: "invalid webhook id" }); try { const current = await workspace(req.user!.id); if (!current) return res.status(403).json({ error: "workspace access denied" }); const [row] = await db.update(webhooks).set({ isEnabled: false, deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(webhooks.id, req.params.id), eq(webhooks.workspaceId, current.id), isNull(webhooks.deletedAt))).returning({ id: webhooks.id }); return row ? res.json({ success: true }) : res.status(404).json({ error: "webhook not found" }); } catch { return res.status(503).json({ error: "webhook deletion unavailable" }); } });
+
+router.post("/:id/test", async (req, res) => { if (!UUID.test(req.params.id)) return res.status(400).json({ error: "invalid webhook id" }); try { const current = await workspace(req.user!.id); if (!current) return res.status(403).json({ error: "workspace access denied" }); const result = await deliverWebhook(req.params.id, current.id, "webhook.test", { message: "BobAI webhook test" }); return res.json(result); } catch { return res.status(503).json({ error: "webhook test unavailable" }); } });
+
+export default router;
