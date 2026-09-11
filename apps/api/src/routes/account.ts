@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { and, eq, inArray } from "drizzle-orm";
-import { db, apiKeys, conversations, memories, messages, projects, settings, uploads, users } from "@bobai/db";
+import { db, apiKeys, conversations, memories, messages, projects, settings, uploads, users, notifications, reminders, workflows, workflowRuns, agents, agentRuns, tasks, integrations, images, voices, researchSessions } from "@bobai/db";
 import { requireAuth } from "../middleware/auth.js";
 import { changePassword, verifyCurrentPassword } from "../services/auth.js";
 import { beginMfaSetup, disableMfa, enableMfa, userMfaStatus } from "../services/mfa.js";
@@ -8,89 +8,22 @@ import { requestPasswordReset, resetPassword } from "../services/passwordReset.j
 import { listSessions, revokeAllSessions, revokeSession } from "../services/sessionManager.js";
 import { recordAudit } from "../services/audit.js";
 
-const router = Router();
-const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const password = (value: unknown): value is string => typeof value === "string" && value.length >= 12 && value.length <= 128;
-const resetBuckets = new Map<string, { startedAt: number; count: number }>();
-const RESET_WINDOW_MS = 15 * 60_000;
-const RESET_MAX_ATTEMPTS = 10;
-const MAX_RESET_BUCKETS = 10_000;
-const MAX_EXPORT_BYTES = 25 * 1024 * 1024;
+const router = Router(); const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; const password = (value: unknown): value is string => typeof value === "string" && value.length >= 12 && value.length <= 128; const resetBuckets = new Map<string, { startedAt: number; count: number }>(); const RESET_WINDOW_MS = 15 * 60_000, RESET_MAX_ATTEMPTS = 10, MAX_RESET_BUCKETS = 10_000, MAX_EXPORT_BYTES = 25 * 1024 * 1024;
 function cleanupResetBuckets(now = Date.now()) { const cutoff = now - RESET_WINDOW_MS; for (const [key, bucket] of resetBuckets) if (bucket.startedAt < cutoff) resetBuckets.delete(key); }
 function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = resetBuckets.get(bucketKey); if (!current || now - current.startedAt >= RESET_WINDOW_MS) { if (resetBuckets.size >= MAX_RESET_BUCKETS) cleanupResetBuckets(now); if (resetBuckets.size >= MAX_RESET_BUCKETS) return true; resetBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > RESET_MAX_ATTEMPTS; }
 setInterval(() => cleanupResetBuckets(), RESET_WINDOW_MS).unref();
-
-router.post("/password-reset/request", async (req, res) => {
-  const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
-  if (!email.test(address)) return res.status(400).json({ error: "invalid email" });
-  if (limited(req, `request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many password reset requests", retryAfterSeconds: 900 });
-  try { await requestPasswordReset(address); return res.status(202).json({ message: "if the account exists, password reset instructions have been created" }); }
-  catch { return res.status(503).json({ error: "password reset service unavailable" }); }
-});
-
-router.post("/password-reset/confirm", async (req, res) => {
-  const { token, password: nextPassword } = req.body ?? {};
-  if (typeof token !== "string" || token.length < 32 || !password(nextPassword)) return res.status(400).json({ error: "invalid reset request" });
-  if (limited(req, "confirm")) return res.status(429).json({ error: "too many password reset attempts", retryAfterSeconds: 900 });
-  try { const result = await resetPassword(token, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); }
-  catch { return res.status(503).json({ error: "password reset service unavailable" }); }
-});
-
+router.post("/password-reset/request", async (req, res) => { const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : ""; if (!email.test(address)) return res.status(400).json({ error: "invalid email" }); if (limited(req, `request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many password reset requests", retryAfterSeconds: 900 }); try { await requestPasswordReset(address); return res.status(202).json({ message: "if the account exists, password reset instructions have been created" }); } catch { return res.status(503).json({ error: "password reset service unavailable" }); } });
+router.post("/password-reset/confirm", async (req, res) => { const { token, password: nextPassword } = req.body ?? {}; if (typeof token !== "string" || token.length < 32 || !password(nextPassword)) return res.status(400).json({ error: "invalid reset request" }); if (limited(req, "confirm")) return res.status(429).json({ error: "too many password reset attempts", retryAfterSeconds: 900 }); try { const result = await resetPassword(token, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); } catch { return res.status(503).json({ error: "password reset service unavailable" }); } });
 router.use(requireAuth);
 router.get("/me", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled }).from(users).where(eq(users.id, req.user!.id)).limit(1); return user ? res.json(user) : res.status(404).json({ error: "user not found" }); });
 router.get("/mfa", async (req, res) => res.json({ enabled: await userMfaStatus(req.user!.id) }));
 router.post("/mfa/setup", async (req, res) => { try { return res.json(await beginMfaSetup(req.user!.id)); } catch { return res.status(503).json({ error: "MFA setup unavailable" }); } });
 router.post("/mfa/enable", async (req, res) => { const secret = typeof req.body?.secret === "string" ? req.body.secret.trim().toUpperCase() : ""; const code = typeof req.body?.code === "string" ? req.body.code : ""; if (!secret || !/^\d{6}$/.test(code)) return res.status(400).json({ error: "secret and six-digit code are required" }); try { if (!await enableMfa(req.user!.id, secret, code)) return res.status(400).json({ error: "invalid MFA secret or code" }); return res.json({ enabled: true }); } catch { return res.status(503).json({ error: "MFA enablement unavailable" }); } });
 router.post("/mfa/disable", async (req, res) => { const code = typeof req.body?.code === "string" ? req.body.code : ""; const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : ""; if (!/^\d{6}$/.test(code) || !currentPassword) return res.status(400).json({ error: "current password and six-digit code are required" }); try { if (!await verifyCurrentPassword(req.user!.id, currentPassword)) return res.status(401).json({ error: "current password is incorrect" }); if (!await disableMfa(req.user!.id, code)) return res.status(400).json({ error: "invalid MFA code" }); return res.json({ enabled: false }); } catch { return res.status(503).json({ error: "MFA disablement unavailable" }); } });
-router.post("/password", async (req, res) => {
-  if (limited(req, `password:${req.user!.id}`)) return res.status(429).json({ error: "too many password change attempts", retryAfterSeconds: 900 });
-  const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : "";
-  const nextPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
-  if (!currentPassword || !password(nextPassword)) return res.status(400).json({ error: "invalid password change request" });
-  try { const result = await changePassword(req.user!.id, currentPassword, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); }
-  catch (error) { if (process.env.NODE_ENV !== "production") console.error("password change failed", error); return res.status(503).json({ error: "password change service unavailable" }); }
-});
-router.get("/export", async (req, res) => {
-  try {
-    const userId = req.user!.id;
-    const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, userId)).limit(1);
-    if (!user) return res.status(404).json({ error: "user not found" });
-
-    const [conversationRows, memoryRows, projectRows, uploadRows, settingRows, apiKeyRows, sessionRows] = await Promise.all([
-      db.select().from(conversations).where(eq(conversations.userId, userId)),
-      db.select().from(memories).where(eq(memories.userId, userId)),
-      db.select().from(projects).where(eq(projects.ownerId, userId)),
-      db.select().from(uploads).where(eq(uploads.uploadedBy, userId)),
-      db.select().from(settings).where(eq(settings.userId, userId)),
-      db.select({ id: apiKeys.id, workspaceId: apiKeys.workspaceId, name: apiKeys.name, prefix: apiKeys.prefix, permissions: apiKeys.permissions, metadata: apiKeys.metadata, lastUsedAt: apiKeys.lastUsedAt, expiresAt: apiKeys.expiresAt, revokedAt: apiKeys.revokedAt, isActive: apiKeys.isActive, createdAt: apiKeys.createdAt, updatedAt: apiKeys.updatedAt }).from(apiKeys).where(eq(apiKeys.createdBy, userId)),
-      listSessions(userId),
-    ]);
-
-    const conversationIds = conversationRows.map((conversation) => conversation.id);
-    const messageRows = conversationIds.length ? await db.select().from(messages).where(inArray(messages.conversationId, conversationIds)) : [];
-    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), version: 2, user, sessions: sessionRows, conversations: conversationRows, messages: messageRows, memories: memoryRows, projects: projectRows, files: uploadRows, settings: settingRows, apiKeys: apiKeyRows });
-    if (Buffer.byteLength(payload, "utf8") > MAX_EXPORT_BYTES) return res.status(413).json({ error: "account export is too large; request a smaller export through the data portability service" });
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="bobai-account-export-${userId}.json"`);
-    return res.send(payload);
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") console.error("account export failed", error);
-    return res.status(503).json({ error: "account export unavailable" });
-  }
-});
+router.post("/password", async (req, res) => { if (limited(req, `password:${req.user!.id}`)) return res.status(429).json({ error: "too many password change attempts", retryAfterSeconds: 900 }); const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : ""; const nextPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : ""; if (!currentPassword || !password(nextPassword)) return res.status(400).json({ error: "invalid password change request" }); try { const result = await changePassword(req.user!.id, currentPassword, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); } catch (error) { if (process.env.NODE_ENV !== "production") console.error("password change failed", error); return res.status(503).json({ error: "password change service unavailable" }); } });
+router.get("/export", async (req, res) => { try { const userId = req.user!.id; const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled, createdAt: users.createdAt, updatedAt: users.updatedAt }).from(users).where(eq(users.id, userId)).limit(1); if (!user) return res.status(404).json({ error: "user not found" }); const [conversationRows, memoryRows, projectRows, uploadRows, settingRows, apiKeyRows, sessionRows, notificationRows, reminderRows, workflowRows, workflowRunRows, agentRows, agentRunRows, taskRows, integrationRows, imageRows, voiceRows, researchRows] = await Promise.all([db.select().from(conversations).where(eq(conversations.userId, userId)), db.select().from(memories).where(eq(memories.userId, userId)), db.select().from(projects).where(eq(projects.ownerId, userId)), db.select().from(uploads).where(eq(uploads.uploadedBy, userId)), db.select().from(settings).where(eq(settings.userId, userId)), db.select({ id: apiKeys.id, workspaceId: apiKeys.workspaceId, name: apiKeys.name, prefix: apiKeys.prefix, permissions: apiKeys.permissions, metadata: apiKeys.metadata, lastUsedAt: apiKeys.lastUsedAt, expiresAt: apiKeys.expiresAt, revokedAt: apiKeys.revokedAt, isActive: apiKeys.isActive, createdAt: apiKeys.createdAt, updatedAt: apiKeys.updatedAt }).from(apiKeys).where(eq(apiKeys.createdBy, userId)), listSessions(userId), db.select().from(notifications).where(eq(notifications.userId, userId)), db.select().from(reminders).where(eq(reminders.userId, userId)), db.select().from(workflows).where(eq(workflows.createdBy, userId)), db.select().from(workflowRuns).where(eq(workflowRuns.startedBy, userId)), db.select().from(agents).where(eq(agents.createdBy, userId)), db.select().from(agentRuns).where(eq(agentRuns.createdBy, userId)), db.select().from(tasks).where(eq(tasks.createdBy, userId)), db.select().from(integrations).where(eq(integrations.createdBy, userId)), db.select().from(images).where(eq(images.createdBy, userId)), db.select().from(voices).where(eq(voices.createdBy, userId)), db.select().from(researchSessions).where(eq(researchSessions.userId, userId))]); const conversationIds = conversationRows.map((conversation) => conversation.id); const messageRows = conversationIds.length ? await db.select().from(messages).where(inArray(messages.conversationId, conversationIds)) : []; const payload = JSON.stringify({ exportedAt: new Date().toISOString(), version: 3, user, sessions: sessionRows, conversations: conversationRows, messages: messageRows, memories: memoryRows, projects: projectRows, files: uploadRows, settings: settingRows, apiKeys: apiKeyRows, notifications: notificationRows, reminders: reminderRows, workflows: workflowRows, workflowRuns: workflowRunRows, agents: agentRows, agentRuns: agentRunRows, tasks: taskRows, integrations: integrationRows, images: imageRows, voices: voiceRows, researchSessions: researchRows }); if (Buffer.byteLength(payload, "utf8") > MAX_EXPORT_BYTES) return res.status(413).json({ error: "account export is too large; request a smaller export through the data portability service" }); res.setHeader("Content-Type", "application/json; charset=utf-8"); res.setHeader("Content-Disposition", `attachment; filename="bobai-account-export-${userId}.json"`); return res.send(payload); } catch (error) { if (process.env.NODE_ENV !== "production") console.error("account export failed", error); return res.status(503).json({ error: "account export unavailable" }); } });
 router.get("/sessions", async (req, res) => res.json({ sessions: await listSessions(req.user!.id) }));
 router.delete("/sessions/:id", async (req, res) => res.status(await revokeSession(req.user!.id, req.params.id as string) ? 204 : 404).send());
 router.delete("/sessions", async (req, res) => { await revokeAllSessions(req.user!.id); return res.status(204).send(); });
-router.delete("/me", async (req, res) => {
-  if (limited(req, `delete:${req.user!.id}`)) return res.status(429).json({ error: "too many account deletion attempts", retryAfterSeconds: 900 });
-  const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : "";
-  if (!currentPassword) return res.status(400).json({ error: "currentPassword is required" });
-  if (!await verifyCurrentPassword(req.user!.id, currentPassword)) return res.status(401).json({ error: "current password is incorrect" });
-  const now = new Date();
-  await revokeAllSessions(req.user!.id);
-  const [user] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt });
-  if (!user) return res.status(404).json({ error: "user not found" });
-  await recordAudit({ action: "account_deletion_requested", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id });
-  return res.status(202).json({ status: "account deletion scheduled", deletedAt: user.deletedAt, permanentDeletionAfterDays: 30 });
-});
+router.delete("/me", async (req, res) => { if (limited(req, `delete:${req.user!.id}`)) return res.status(429).json({ error: "too many account deletion attempts", retryAfterSeconds: 900 }); const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : ""; if (!currentPassword) return res.status(400).json({ error: "currentPassword is required" }); if (!await verifyCurrentPassword(req.user!.id, currentPassword)) return res.status(401).json({ error: "current password is incorrect" }); const now = new Date(); await revokeAllSessions(req.user!.id); const [user] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt }); if (!user) return res.status(404).json({ error: "user not found" }); await recordAudit({ action: "account_deletion_requested", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id }); return res.status(202).json({ status: "account deletion scheduled", deletedAt: user.deletedAt, permanentDeletionAfterDays: 30 }); });
 export default router;
