@@ -1,5 +1,6 @@
 import { and, lt, or, eq, isNotNull } from "drizzle-orm";
 import { db, emailOtps, passwordResets, sessions, users } from "@bobai/db";
+import { purgeUserOwnedData } from "./accountPurge.js";
 
 const OTP_RETENTION_MS = 24 * 60 * 60 * 1000;
 const RESET_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -19,11 +20,15 @@ export async function runRetentionCleanup(now = new Date()) {
   ]);
 
   let accountsDeleted = 0;
-  try {
-    const deleted = await db.delete(users).where(and(isNotNull(users.deletedAt), lt(users.deletedAt, accountCutoff))).returning({ id: users.id });
-    accountsDeleted = deleted.length;
-  } catch {
-    // Older databases can start before migration 0005; skip account cleanup until it exists.
+  const candidates = await db.select({ id: users.id }).from(users).where(and(isNotNull(users.deletedAt), lt(users.deletedAt, accountCutoff)));
+  for (const account of candidates) {
+    try {
+      await purgeUserOwnedData(account.id);
+      const deleted = await db.delete(users).where(eq(users.id, account.id)).returning({ id: users.id });
+      if (deleted.length) accountsDeleted += 1;
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") console.warn("account purge deferred", error);
+    }
   }
 
   return { otpRows: otps.length, passwordResetRows: resets.length, sessionRows: sessionsDeleted.length, accountRows: accountsDeleted };
@@ -31,11 +36,7 @@ export async function runRetentionCleanup(now = new Date()) {
 
 export function startRetentionWorker(intervalMs = 60 * 60 * 1000) {
   const safeInterval = Math.max(60_000, intervalMs);
-  const timer = setInterval(() => {
-    void runRetentionCleanup().catch((error) => {
-      if (process.env.NODE_ENV !== "production") console.warn("retention cleanup failed", error);
-    });
-  }, safeInterval);
+  const timer = setInterval(() => { void runRetentionCleanup().catch((error) => { if (process.env.NODE_ENV !== "production") console.warn("retention cleanup failed", error); }); }, safeInterval);
   timer.unref();
   return timer;
 }

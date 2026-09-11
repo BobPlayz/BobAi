@@ -1,43 +1,41 @@
 - [x] npm-workspaces monorepo with API, web, and database packages
-- [x] TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, and pgvector groundwork
-- [x] authenticated users, sessions, workspaces, members, conversations, messages, memories, uploads, projects, agents, tasks, audit logs, usage, notifications, integrations, workflows, webhooks, billing, OTP, password reset, MFA, and tool approvals
-- [x] access/refresh authentication with hashing, rotation, reuse detection, session revocation, password policy, OTP limits, email verification, MFA, CSRF, secure cookies, account deletion/export foundations
-- [x] security headers, request IDs, rate limits, sanitized production errors, migration locking/checksums, CI security workflows, dependency overrides, and audit logging
-- [x] durable streamed-message lifecycle with completed, failed, and cancelled states
-- [x] conversation persistence, pagination, deterministic cursors, revisions, restoration, archive/restore, offline-sync conflict detection, and workspace authorization
-- [x] indexed PostgreSQL full-text search with ranked fallback for conversations/projects and ranked document-chunk lexical search
-- [x] project instructions, model/tool policy, project files, project activity, ownership checks, and scoped chat context
-- [x] memory scoped retrieval, relevance/provenance foundations, expiration, maintenance cleanup, immutable history, and normal/streaming chat integration foundations
-- [x] file upload validation, extraction, project ownership, version lineage, chunking, indexing, OCR queue, authorized downloads, malware scanning boundary, and cross-file search foundations
-- [x] provider-neutral research service, guarded route, persistent research sessions, normalized citations, retries, timeouts, response limits, and HTTPS validation
-- [x] vision/image/media provider abstractions, normal-chat image attachment bridge, generated image history, provider URL validation, and media input limits
+- [x] TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and development launcher
+- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, session revocation, password reset/change, OTP, email verification, MFA/TOTP, CSRF, secure cookies, rate limits, and account deletion/export foundations
+- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, and dependency vulnerability overrides
+- [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, pagination, deterministic cursors, revisions, restoration, archive/restore, offline conflict detection, and indexed full-text search
+- [x] project instructions, model/tool policy, project files, activity, ownership checks, and scoped chat context
+- [x] memory scoped retrieval, relevance/provenance foundations, expiration, cleanup, immutable history, normal/streaming injection, and sensitive-secret rejection
+- [x] file validation/extraction, project ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
+- [x] provider-neutral research with authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, and deep-research prompt-injection isolation
+- [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
-- [x] durable automation workflows/runs, restart recovery, overlap protection, safe provider URLs, authenticated webhook management, signed delivery/replay protection, and delivery records
-- [x] durable agent queue/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, reviewer fail-closed behavior, and production sandbox-attestation gate
-- [x] MCP approval tokens are hashed, short-lived, atomically consumed, and bound to user/workspace
-- [x] user-managed MCP server registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS/URL validation, DNS public-address checks, bounded discovery, and outbound-call revalidation
+- [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, and reminder workers
+- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, fail-closed review, and production sandbox-attestation gating
+- [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
+- [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, and outbound-call revalidation
+- [x] adaptive in-process login/MFA abuse backoff layered over fixed auth rate limits
+- [x] expired OTP/password-reset/session cleanup runs through maintenance retention
+- [x] permanent account purge removes direct user-owned operational records and dependent conversation/memory/file/index records before final user deletion
+- [x] model-backed long-context compaction with bounded fallback and explicit untrusted-context handling
 - [x] major image, automation, and MCP execution paths have idempotency groundwork
-- [x] dependency vulnerability fixes currently recorded in the repository have been applied
-- [ ] adaptive login abuse detection and expired auth/OTP/reset cleanup verification
-- [ ] complete deletion-worker coverage and prove export coverage against every user-owned table/storage layer
-- [ ] complete privacy classification, retention schedule, sensitive-memory approval, contradiction detection, and provenance UI
-- [ ] semantic long-context compaction with model-backed summarization and verification
+- [ ] production distributed rate limiting and security monitoring
+- [ ] complete deletion/export proof for every remaining user-owned table and storage layer
+- [ ] privacy classification, retention schedule, sensitive-memory approval, contradiction detection, and provenance UI
+- [ ] advanced memory merge/dedup/confidence/importance ranking and production embeddings
 - [ ] folders/labels, conversation merge/split, multi-device merge UI, and remaining message-version UX
-- [ ] production embedding provider, production OCR verification, and durable object storage integration
-- [ ] research source ranking, credibility metadata, contradiction detection, claim-to-source mapping, caching, replay, quotas, and prompt-injection isolation
-- [ ] scheduled research briefs and saved research collections
-- [ ] automatic vision capability selection, OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
-- [ ] complete project export/import and broader collaboration/workspace role flows
+- [ ] durable object storage, production OCR verification, file sharing, and retention cleanup
+- [ ] research source ranking/credibility metadata, claim-to-source mapping, caching/replay/quotas, saved collections, and scheduled briefs
+- [ ] production search-provider credentials and live external search capacity
+- [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
+- [ ] complete project export/import and broader workspace roles/invitations/collaboration/shared conversations
 - [ ] full agent dependency graph, budgets, confidence/escalation, human checkpoints, cancellation propagation, patch/diff validation, and persistent run artifacts
-- [ ] genuine disposable coding workspace with filesystem, command, CPU, memory, time, and process isolation
+- [ ] genuine disposable coding workspace with filesystem, command, process, CPU, memory, and time isolation
 - [ ] end-to-end sandbox tests and verified production autonomous coding runtime
-- [ ] strict tool schemas and permission enforcement for every executable tool
-- [ ] universal idempotency coverage for remaining executable/costly actions, per-tool retry/timeout policy, and complete destructive-action confirmation audit
-- [ ] automation history UI/API completion
-- [ ] user-managed MCP OAuth/connector authorization and durable secret handling
-- [ ] distributed rate limiting, production security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
-- [ ] deliberate RLS rollout if selected after authorization testing
-- [ ] production backup/restore drill and connection-pool/performance tuning
+- [ ] strict per-tool schemas, permission enforcement, result limits, retry/timeout policy, universal idempotency coverage, and destructive-action confirmation audit
+- [ ] automation history API/UI completion
+- [ ] MCP OAuth/connector authorization and durable third-party secret handling
+- [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
+- [ ] dependency/license/supply-chain policy, secret rotation automation, penetration testing, and load testing
 - [ ] trained Bob model weights and production model/provider credentials
-- [ ] production search/media/email/storage/hosting credentials and DNS
-- [ ] post-change local build, API smoke tests, UI verification, provider connectivity, and real sandbox verification
+- [ ] production object storage, email, search, media, hosting, DNS, and deployment secrets
+- [ ] post-code laptop build, API smoke tests, browser verification, provider connectivity, and sandbox verification
