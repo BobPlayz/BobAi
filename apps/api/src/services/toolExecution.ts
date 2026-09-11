@@ -5,71 +5,13 @@ import { getTool, validateToolInput, type BobTool, type ToolPermission } from ".
 import { recordAudit } from "./audit.js";
 
 export type ToolExecutionContext = { userId: string; workspaceId: string; approvalToken?: string; permission?: ToolPermission; arguments?: unknown };
-export type ToolExecutionResult =
-  | { status: "ready"; tool: BobTool }
-  | { status: "approval_required"; tool: BobTool }
-  | { status: "unauthorized"; tool: BobTool }
-  | { status: "invalid_arguments"; tool: BobTool; reason: string }
-  | { status: "unavailable"; tool: BobTool; reason: string };
-
-const APPROVAL_TTL_MS = 2 * 60_000;
-const MAX_APPROVAL_TOKEN_LENGTH = 256;
-const hashApprovalToken = (token: string) => createHash("sha256").update(token).digest("hex");
-
-async function member(userId: string, workspaceId: string) {
-  const [row] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId))).limit(1);
-  return Boolean(row);
-}
-
-export async function issueToolApproval(toolId: string, userId: string, workspaceId: string) {
-  const tool = getTool(toolId);
-  if (!tool || !tool.requiresUserApproval || !await member(userId, workspaceId)) return null;
-  const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS);
-  await db.insert(toolApprovals).values({ userId, workspaceId, kind: "tool", toolId: tool.id, targetName: tool.name, tokenHash: hashApprovalToken(token), expiresAt });
-  await recordAudit({ action: "tool_approval_issued", resourceType: "tool_approval", userId, workspaceId, metadata: { toolId: tool.id } });
-  return { token, expiresIn: APPROVAL_TTL_MS / 1000 };
-}
-
-async function consumeApproval(token: string | undefined, toolId: string, userId: string, workspaceId: string) {
-  if (!token || token.length > MAX_APPROVAL_TOKEN_LENGTH) return false;
-  const now = new Date();
-  const [grant] = await db.update(toolApprovals).set({ consumedAt: now }).where(and(eq(toolApprovals.tokenHash, hashApprovalToken(token)), eq(toolApprovals.kind, "tool"), eq(toolApprovals.userId, userId), eq(toolApprovals.workspaceId, workspaceId), eq(toolApprovals.toolId, toolId), isNull(toolApprovals.consumedAt), gt(toolApprovals.expiresAt, now))).returning({ id: toolApprovals.id });
-  if (grant) await recordAudit({ action: "tool_approval_consumed", resourceType: "tool_approval", resourceId: grant.id, userId, workspaceId, metadata: { toolId } });
-  return Boolean(grant);
-}
-
-export async function prepareToolExecution(toolId: string, context: ToolExecutionContext): Promise<ToolExecutionResult> {
-  const tool = getTool(toolId);
-  if (!tool) throw new Error("tool not found");
-  const workspaceId = context.workspaceId.trim();
-  if (!workspaceId || !await member(context.userId, workspaceId)) return { status: "unauthorized", tool };
-  if (context.permission && context.permission !== tool.permission) return { status: "unauthorized", tool };
-  const inputError = validateToolInput(tool, context.arguments ?? {});
-  if (inputError) return { status: "invalid_arguments", tool, reason: inputError };
-  if (!providerConfigured(tool.id)) return { status: "unavailable", tool, reason: "provider is not configured" };
-  if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool };
-  return { status: "ready", tool };
-}
-
+export type ToolExecutionResult = { status: "ready"; tool: BobTool } | { status: "approval_required"; tool: BobTool } | { status: "unauthorized"; tool: BobTool } | { status: "invalid_arguments"; tool: BobTool; reason: string } | { status: "unavailable"; tool: BobTool; reason: string };
+const APPROVAL_TTL_MS = 2 * 60_000; const MAX_APPROVAL_TOKEN_LENGTH = 256; const hashApprovalToken = (token: string) => createHash("sha256").update(token).digest("hex");
+type Member = { id: string; role: string; permissions: unknown };
+async function member(userId: string, workspaceId: string): Promise<Member | null> { const [row] = await db.select({ id: workspaceMembers.id, role: workspaceMembers.role, permissions: workspaceMembers.permissions }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId))).limit(1); return row ?? null; }
+function permissionAllowed(member: Member, permission: ToolPermission) { if (member.role === "owner" || member.role === "admin") return true; if (permission === "read") return true; const raw = member.permissions; if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false; const value = raw as Record<string, unknown>; const allowed = value.tools; if (!Array.isArray(allowed)) return false; return allowed.some((item) => item === permission || item === "*" || (typeof item === "string" && item.startsWith(`${permission}:`))); }
+export async function issueToolApproval(toolId: string, userId: string, workspaceId: string) { const tool = getTool(toolId); const current = await member(userId, workspaceId); if (!tool || !current || !permissionAllowed(current, tool.permission) || !tool.requiresUserApproval) return null; const token = randomBytes(32).toString("base64url"); const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS); await db.insert(toolApprovals).values({ userId, workspaceId, kind: "tool", toolId: tool.id, targetName: tool.name, tokenHash: hashApprovalToken(token), expiresAt }); await recordAudit({ action: "tool_approval_issued", resourceType: "tool_approval", userId, workspaceId, metadata: { toolId } }); return { token, expiresIn: APPROVAL_TTL_MS / 1000 }; }
+async function consumeApproval(token: string | undefined, toolId: string, userId: string, workspaceId: string) { if (!token || token.length > MAX_APPROVAL_TOKEN_LENGTH) return false; const now = new Date(); const [grant] = await db.update(toolApprovals).set({ consumedAt: now }).where(and(eq(toolApprovals.tokenHash, hashApprovalToken(token)), eq(toolApprovals.kind, "tool"), eq(toolApprovals.userId, userId), eq(toolApprovals.workspaceId, workspaceId), eq(toolApprovals.toolId, toolId), isNull(toolApprovals.consumedAt), gt(toolApprovals.expiresAt, now))).returning({ id: toolApprovals.id }); if (grant) await recordAudit({ action: "tool_approval_consumed", resourceType: "tool_approval", resourceId: grant.id, userId, workspaceId, metadata: { toolId } }); return Boolean(grant); }
+export async function prepareToolExecution(toolId: string, context: ToolExecutionContext): Promise<ToolExecutionResult> { const tool = getTool(toolId); if (!tool) throw new Error("tool not found"); const workspaceId = context.workspaceId.trim(); if (!workspaceId) return { status: "unauthorized", tool }; const current = await member(context.userId, workspaceId); if (!current || !permissionAllowed(current, tool.permission)) return { status: "unauthorized", tool }; if (context.permission && context.permission !== tool.permission) return { status: "unauthorized", tool }; const inputError = validateToolInput(tool, context.arguments ?? {}); if (inputError) return { status: "invalid_arguments", tool, reason: inputError }; if (!providerConfigured(tool.id)) return { status: "unavailable", tool, reason: "provider is not configured" }; if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool }; return { status: "ready", tool }; }
 export async function cleanupExpiredToolApprovals() { await db.delete(toolApprovals).where(lt(toolApprovals.expiresAt, new Date())); }
-
-function providerConfigured(toolId: string): boolean {
-  switch (toolId) {
-    case "research": return Boolean(process.env.BOBAI_RESEARCH_PROVIDER_URL);
-    case "browser": return Boolean(process.env.BOBAI_BROWSER_PROVIDER_URL);
-    case "coding": return Boolean(process.env.BOBAI_CODING_AGENT_KEY && process.env.BOBAI_CODING_AGENT_URL && (process.env.NODE_ENV !== "production" || process.env.BOBAI_CODING_AGENT_SANDBOX_ATTESTED === "true"));
-    case "website-test": return Boolean(process.env.BOBAI_BROWSER_PROVIDER_URL);
-    case "voice": return Boolean(process.env.BOBAI_VOICE_PROVIDER_URL);
-    case "image": return Boolean(process.env.BOBAI_IMAGE_PROVIDER_URL);
-    case "video": return Boolean(process.env.BOBAI_VIDEO_PROVIDER_URL);
-    case "music": return Boolean(process.env.BOBAI_MUSIC_PROVIDER_URL);
-    case "documents": return true;
-    case "knowledge": return true;
-    case "data-analysis": return true;
-    case "automation": return process.env.BOBAI_AUTOMATION_ENABLED === "true";
-    case "diagrams": return process.env.BOBAI_DIAGRAMS_ENABLED === "true";
-    case "sketch-to-ui": return process.env.BOBAI_SKETCH_TO_UI_ENABLED === "true";
-    default: return false;
-  }
-}
+function providerConfigured(toolId: string): boolean { switch (toolId) { case "research": return Boolean(process.env.BOBAI_RESEARCH_PROVIDER_URL); case "browser": return Boolean(process.env.BOBAI_BROWSER_PROVIDER_URL); case "coding": return Boolean(process.env.BOBAI_CODING_AGENT_KEY && process.env.BOBAI_CODING_AGENT_URL && (process.env.NODE_ENV !== "production" || process.env.BOBAI_CODING_AGENT_SANDBOX_ATTESTED === "true")); case "website-test": return Boolean(process.env.BOBAI_BROWSER_PROVIDER_URL); case "voice": return Boolean(process.env.BOBAI_VOICE_PROVIDER_URL); case "image": return Boolean(process.env.BOBAI_IMAGE_PROVIDER_URL); case "video": return Boolean(process.env.BOBAI_VIDEO_PROVIDER_URL); case "music": return Boolean(process.env.BOBAI_MUSIC_PROVIDER_URL); case "documents": case "knowledge": case "data-analysis": return true; case "automation": return process.env.BOBAI_AUTOMATION_ENABLED === "true"; case "diagrams": return process.env.BOBAI_DIAGRAMS_ENABLED === "true"; case "sketch-to-ui": return process.env.BOBAI_SKETCH_TO_UI_ENABLED === "true"; default: return false; } }
