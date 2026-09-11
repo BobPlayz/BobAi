@@ -1,5 +1,5 @@
 - [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
-- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive login/MFA backoff, cleanup workers, and deletion grace period
+- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive MFA/login backoff, cleanup workers, and deletion grace period
 - [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and optional PostgreSQL-backed distributed rate limiting
 - [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, model-backed long-context compaction with bounded fallback, and folder/label metadata primitives
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
@@ -13,18 +13,16 @@
 - [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, fail-closed review, timeout cancellation signaling, bounded diff validation, and production sandbox-attestation gating
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
-- [x] permanent account purge removes direct user-owned operational records and dependent records before final deletion
+- [x] permanent account purge removes user-owned operational records, dependent records, personal workspaces, local file objects, idempotency records, rate-limit records, invitations, shares, sessions, and user account data
 - [x] account export covers user profile, sessions, conversations/messages, memories/history, projects/files, settings, API-key metadata, notifications, reminders, workflows/runs, agents/runs, tasks, integrations without encrypted credentials, media, research, tool logs, memberships, webhooks without secrets/headers, deliveries, usage, and audit records
 - [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP actions
 - [x] workspace collaboration backend with role hierarchy, member management, invitation tokens, invitation expiry/revocation/acceptance, permission metadata, workspace membership listing, and audit events
-- [x] file sharing backend with workspace-member authorization, per-user read/write permission records, share listing/revocation, shared-file discovery, and authenticated shared downloads
 - [x] executor-side workspace role/permission enforcement for tool permissions, including explicit member permission grants and admin/owner privilege boundaries
-- [ ] complete deletion proof for every remaining user-owned table/storage provider, including external object-storage lifecycle verification
 - [ ] richer memory merge/update/conflict user workflows and provenance UI
 - [ ] user approval workflow for intentionally storing sensitive information and broader privacy classification across files/tool results
 - [ ] production embeddings and durable object storage deployment verification
 - [ ] conversation merge/split and multi-device merge UI
-- [ ] complete retention cleanup across every storage provider
+- [ ] complete retention proof for external object-storage providers
 - [ ] research claim-to-source mapping, stronger contradiction analysis, replay collections, saved research, scheduled briefs, and per-user quotas
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
@@ -35,7 +33,7 @@
 - [ ] strict per-tool result limits in every executor path, universal idempotency coverage for all remaining executable actions, and destructive-action confirmation audit
 - [ ] automation history API/UI completion
 - [ ] MCP OAuth/connector authorization and durable third-party secret handling
-- [ ] production distributed rate-limit deployment verification, security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
+- [ ] production security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
 - [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
 - [ ] trained Bob model weights and production model/provider credentials
 - [ ] production object storage, email, search, media, hosting, DNS, and deployment secrets
