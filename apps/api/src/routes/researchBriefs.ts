@@ -1,0 +1,8 @@
+import { Router } from "express";
+import { ensurePersonalWorkspace } from "../services/workspace.js";
+import { createResearchBrief, deleteResearchBrief, listResearchBriefs, normalizeBriefInterval } from "../services/researchBriefs.js";
+const router = Router();
+router.get("/", async (req, res) => { try { const workspace = await ensurePersonalWorkspace(req.user!.id); return res.json({ briefs: await listResearchBriefs(workspace.id, req.user!.id) }); } catch { return res.status(503).json({ error: "research brief storage unavailable" }); } });
+router.post("/", async (req, res) => { const name = typeof req.body?.name === "string" ? req.body.name.trim() : ""; const query = typeof req.body?.query === "string" ? req.body.query.trim() : ""; const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options) ? req.body.options : undefined; try { const intervalMs = normalizeBriefInterval(req.body?.intervalMs); const workspace = await ensurePersonalWorkspace(req.user!.id); const [brief] = await createResearchBrief({ workspaceId: workspace.id, userId: req.user!.id, name, query, options, intervalMs }); return res.status(201).json({ brief }); } catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : "invalid research brief" }); } });
+router.delete("/:id", async (req, res) => { if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(400).json({ error: "invalid brief id" }); try { const workspace = await ensurePersonalWorkspace(req.user!.id); return res.status(await deleteResearchBrief(req.params.id, workspace.id, req.user!.id) ? 204 : 404).send(); } catch { return res.status(503).json({ error: "research brief deletion unavailable" }); } });
+export default router;
