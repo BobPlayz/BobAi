@@ -32,6 +32,7 @@ import settingsRouter from "./settings.js";
 import promptsRouter from "./prompts.js";
 import messagesRouter from "./messages.js";
 import notificationsRouter from "./notifications.js";
+import webhooksRouter from "./webhooks.js";
 
 function buildApiRouter() {
   const router = Router();
@@ -67,6 +68,7 @@ function buildApiRouter() {
   router.use("/model-agents", modelAgentsRouter);
   router.use("/tools", toolsRouter);
   router.use("/projects", projectsRouter);
+  router.use("/webhooks", webhooksRouter);
   return router;
 }
 
