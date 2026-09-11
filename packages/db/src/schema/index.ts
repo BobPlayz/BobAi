@@ -35,6 +35,7 @@ export * from "./workflowRuns.js";
 export * from "./searchIndex.js";
 export * from "./webhooks.js";
 export * from "./webhookDeliveries.js";
+export * from "./researchSessions.js";
 export * from "./billingPlans.js";
 export * from "./subscriptions.js";
 export * from "./emailOtps.js";
