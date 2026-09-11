@@ -1,9 +1,9 @@
 - [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
-- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive login/MFA backoff, and deletion grace period
-- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, and cleanup workers
+- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive login/MFA backoff, cleanup workers, and deletion grace period
+- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, and maintenance cleanup
 - [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, and model-backed long-context compaction with bounded fallback
-- [x] project instructions, model/tool policy, project files, activity, ownership checks, and scoped chat context
-- [x] memory scoped retrieval, relevance/provenance foundations, expiration, maintenance cleanup, immutable history, normal/streaming injection, and sensitive-secret rejection
+- [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
+- [x] memory scoped retrieval, relevance/provenance foundations, expiration, cleanup, immutable history, normal/streaming injection, and sensitive-secret rejection
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
@@ -16,13 +16,13 @@
 - [x] major image, automation, and MCP execution paths have idempotency groundwork
 - [ ] complete export/deletion proof for every remaining user-owned table and storage layer
 - [ ] privacy classification, retention schedule, sensitive-memory approval, contradiction detection, merge/update/confidence/importance semantics, and provenance UI
-- [ ] production embedding provider and durable object storage
+- [ ] production embeddings and durable object storage
 - [ ] folders/labels, conversation merge/split, multi-device merge UI, and remaining message-version UX
 - [ ] file sharing and complete retention cleanup across every storage provider
 - [ ] research claim-to-source mapping, stronger credibility/contradiction analysis, replay, saved collections, scheduled briefs, and per-user quotas
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
-- [ ] complete project export/import and broader workspace roles/invitations/collaboration/shared conversations
+- [ ] broader workspace roles/invitations/collaboration/shared conversations beyond current project authorization
 - [ ] full agent dependency graph, budgets, confidence/escalation, human checkpoints, cancellation propagation, patch/diff validation, and persistent run artifacts
 - [ ] genuine disposable coding workspace with filesystem, command, process, CPU, memory, and time isolation
 - [ ] end-to-end sandbox tests and verified production autonomous coding runtime

@@ -1,74 +1,19 @@
-import { Router } from "express";
+import { randomUUID } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
-import { db, projects, workspaceMembers } from "@bobai/db";
+import { Router } from "express";
+import { db, projectFiles, projects, workspaceMembers } from "@bobai/db";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
-type Req = { user?: { id: string }; body?: unknown; query: Record<string, unknown>; params: Record<string, string> };
-
-async function workspaceFor(userId: string, requested?: string) {
-  if (!requested) return ensurePersonalWorkspace(userId);
-  if (!/^[0-9a-f-]{36}$/i.test(requested)) return null;
-  const [member] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
-    .where(and(eq(workspaceMembers.workspaceId, requested), eq(workspaceMembers.userId, userId))).limit(1);
-  return member ? { id: requested } : null;
-}
-
-function cleanProject(value: Record<string, unknown>) {
-  const name = typeof value.name === "string" ? value.name.trim() : "";
-  const description = typeof value.description === "string" ? value.description.trim().slice(0, 2000) : "";
-  const instructions = typeof value.instructions === "string" ? value.instructions.trim().slice(0, 12000) : "";
-  return { name, description, instructions };
-}
-
-router.get("/", async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: "authentication required" });
-    const body = req.query as Record<string, unknown>;
-    const workspace = await workspaceFor(userId, typeof body.workspaceId === "string" ? body.workspaceId : undefined);
-    if (!workspace) return res.status(403).json({ error: "workspace access denied" });
-    const rows = await db.select().from(projects).where(and(eq(projects.workspaceId, workspace.id), eq(projects.ownerId, userId), eq(projects.archived, false))).orderBy(desc(projects.updatedAt));
-    return res.json({ projects: rows });
-  } catch { return res.status(503).json({ error: "project storage unavailable" }); }
-});
-
-router.post("/", async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: "authentication required" });
-    const input = cleanProject((req.body || {}) as Record<string, unknown>);
-    if (!input.name || input.name.length > 200) return res.status(400).json({ error: "project name is required" });
-    const workspace = await workspaceFor(userId, typeof (req.body as Record<string, unknown> | undefined)?.workspaceId === "string" ? String((req.body as Record<string, unknown>).workspaceId) : undefined);
-    if (!workspace) return res.status(403).json({ error: "workspace access denied" });
-    const [project] = await db.insert(projects).values({ workspaceId: workspace.id, ownerId: userId, name: input.name, description: input.description || null, settings: { instructions: input.instructions } }).returning();
-    return res.status(201).json({ project });
-  } catch { return res.status(503).json({ error: "project storage unavailable" }); }
-});
-
-router.patch("/:id", async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    const id = req.params.id;
-    if (!userId || !/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: "valid project id is required" });
-    const [existing] = await db.select().from(projects).where(and(eq(projects.id, id), eq(projects.ownerId, userId), eq(projects.archived, false))).limit(1);
-    if (!existing) return res.status(404).json({ error: "project not found" });
-    const input = cleanProject({ ...existing, ...(req.body as Record<string, unknown>) });
-    if (!input.name || input.name.length > 200) return res.status(400).json({ error: "project name is required" });
-    const [project] = await db.update(projects).set({ name: input.name, description: input.description || null, settings: { ...(existing.settings && typeof existing.settings === "object" ? existing.settings : {}), instructions: input.instructions }, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
-    return res.json({ project });
-  } catch { return res.status(503).json({ error: "project storage unavailable" }); }
-});
-
-router.delete("/:id", async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    const id = req.params.id;
-    if (!userId || !/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: "valid project id is required" });
-    const result = await db.update(projects).set({ archived: true, deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(projects.id, id), eq(projects.ownerId, userId))).returning({ id: projects.id });
-    if (!result.length) return res.status(404).json({ error: "project not found" });
-    return res.json({ success: true });
-  } catch { return res.status(503).json({ error: "project storage unavailable" }); }
-});
-
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_IMPORT_FILES = 50;
+const MAX_IMPORT_TEXT = 1_000_000;
+async function workspaceFor(userId: string, requested?: string) { if (!requested) return ensurePersonalWorkspace(userId); if (!UUID.test(requested)) return null; const [member] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, requested), eq(workspaceMembers.userId, userId))).limit(1); return member ? { id: requested } : null; }
+function cleanProject(value: Record<string, unknown>) { const name = typeof value.name === "string" ? value.name.trim() : ""; const description = typeof value.description === "string" ? value.description.trim().slice(0, 2000) : ""; const instructions = typeof value.instructions === "string" ? value.instructions.trim().slice(0, 12000) : ""; return { name, description, instructions }; }
+router.get("/", async (req, res) => { try { const userId = req.user?.id; if (!userId) return res.status(401).json({ error: "authentication required" }); const body = req.query as Record<string, unknown>; const workspace = await workspaceFor(userId, typeof body.workspaceId === "string" ? body.workspaceId : undefined); if (!workspace) return res.status(403).json({ error: "workspace access denied" }); const rows = await db.select().from(projects).where(and(eq(projects.workspaceId, workspace.id), eq(projects.ownerId, userId), eq(projects.archived, false))).orderBy(desc(projects.updatedAt)); return res.json({ projects: rows }); } catch { return res.status(503).json({ error: "project storage unavailable" }); } });
+router.post("/", async (req, res) => { try { const userId = req.user?.id; if (!userId) return res.status(401).json({ error: "authentication required" }); const input = cleanProject((req.body || {}) as Record<string, unknown>); if (!input.name || input.name.length > 200) return res.status(400).json({ error: "project name is required" }); const workspace = await workspaceFor(userId, typeof (req.body as Record<string, unknown> | undefined)?.workspaceId === "string" ? String((req.body as Record<string, unknown>).workspaceId) : undefined); if (!workspace) return res.status(403).json({ error: "workspace access denied" }); const [project] = await db.insert(projects).values({ workspaceId: workspace.id, ownerId: userId, name: input.name, description: input.description || null, settings: { instructions: input.instructions } }).returning(); return res.status(201).json({ project }); } catch { return res.status(503).json({ error: "project storage unavailable" }); } });
+router.patch("/:id", async (req, res) => { try { const userId = req.user?.id; const id = req.params.id; if (!userId || !UUID.test(id)) return res.status(400).json({ error: "valid project id is required" }); const [existing] = await db.select().from(projects).where(and(eq(projects.id, id), eq(projects.ownerId, userId), eq(projects.archived, false))).limit(1); if (!existing) return res.status(404).json({ error: "project not found" }); const input = cleanProject({ ...existing, ...(req.body as Record<string, unknown>) }); if (!input.name || input.name.length > 200) return res.status(400).json({ error: "project name is required" }); const [project] = await db.update(projects).set({ name: input.name, description: input.description || null, settings: { ...(existing.settings && typeof existing.settings === "object" ? existing.settings : {}), instructions: input.instructions }, updatedAt: new Date() }).where(eq(projects.id, id)).returning(); return res.json({ project }); } catch { return res.status(503).json({ error: "project storage unavailable" }); } });
+router.get("/:id/export", async (req, res) => { try { const userId = req.user?.id; const id = req.params.id; if (!userId || !UUID.test(id)) return res.status(400).json({ error: "valid project id is required" }); const [project] = await db.select().from(projects).where(and(eq(projects.id, id), eq(projects.ownerId, userId))).limit(1); if (!project) return res.status(404).json({ error: "project not found" }); const files = await db.select({ id: projectFiles.id, name: projectFiles.name, path: projectFiles.path, mimeType: projectFiles.mimeType, size: projectFiles.size, checksum: projectFiles.checksum, extractedText: projectFiles.extractedText, metadata: projectFiles.metadata, createdAt: projectFiles.createdAt, updatedAt: projectFiles.updatedAt }).from(projectFiles).where(and(eq(projectFiles.projectId, id), eq(projectFiles.uploadedBy, userId))); return res.json({ version: 1, exportedAt: new Date().toISOString(), project: { name: project.name, description: project.description, settings: project.settings }, files }); } catch { return res.status(503).json({ error: "project export unavailable" }); } });
+router.post("/import", async (req, res) => { try { const userId = req.user?.id; if (!userId) return res.status(401).json({ error: "authentication required" }); const payload = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {}; const source = payload.project && typeof payload.project === "object" ? payload.project as Record<string, unknown> : payload; const input = cleanProject({ name: source.name, description: source.description, instructions: typeof source.settings === "object" && source.settings && !Array.isArray(source.settings) ? (source.settings as Record<string, unknown>).instructions : source.instructions }); if (!input.name || input.name.length > 200) return res.status(400).json({ error: "project name is required" }); const files = Array.isArray(payload.files) ? payload.files.slice(0, MAX_IMPORT_FILES) : []; const workspace = await workspaceFor(userId, typeof payload.workspaceId === "string" ? payload.workspaceId : undefined); if (!workspace) return res.status(403).json({ error: "workspace access denied" }); const [project] = await db.insert(projects).values({ workspaceId: workspace.id, ownerId: userId, name: input.name, description: input.description || null, settings: { instructions: input.instructions } }).returning(); if (!project) return res.status(503).json({ error: "project import failed" }); for (const item of files) { if (!item || typeof item !== "object") continue; const value = item as Record<string, unknown>; const name = typeof value.name === "string" ? value.name.trim().slice(0, 200) : ""; const path = typeof value.path === "string" ? value.path.trim().slice(0, 500) : name; const mimeType = typeof value.mimeType === "string" ? value.mimeType.slice(0, 200) : "text/plain"; const extractedText = typeof value.extractedText === "string" ? value.extractedText.slice(0, MAX_IMPORT_TEXT) : null; if (!name || !path) continue; await db.insert(projectFiles).values({ id: randomUUID(), projectId: project.id, uploadedBy: userId, name, path, mimeType, size: typeof value.size === "number" && Number.isSafeInteger(value.size) && value.size >= 0 ? value.size : extractedText?.length || 0, checksum: typeof value.checksum === "string" ? value.checksum.slice(0, 128) : null, metadata: value.metadata && typeof value.metadata === "object" ? value.metadata : null, extractedText }); } return res.status(201).json({ project }); } catch { return res.status(503).json({ error: "project import unavailable" }); } });
+router.delete("/:id", async (req, res) => { try { const userId = req.user?.id; const id = req.params.id; if (!userId || !UUID.test(id)) return res.status(400).json({ error: "valid project id is required" }); const result = await db.update(projects).set({ archived: true, deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(projects.id, id), eq(projects.ownerId, userId))).returning({ id: projects.id }); if (!result.length) return res.status(404).json({ error: "project not found" }); return res.json({ success: true }); } catch { return res.status(503).json({ error: "project storage unavailable" }); } });
 export default router;
