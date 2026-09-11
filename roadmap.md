@@ -3,9 +3,9 @@
 - [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and optional PostgreSQL-backed distributed rate limiting
 - [x] durable chat persistence with revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed search, long-context compaction, and folder/label metadata primitives
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped context, and authenticated project export/import
-- [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, sensitive-secret rejection, editable memories, merge, and history API
+- [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, sensitive-secret detection with explicit approval workflow, editable memories, merge, and history API
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
-- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, research quotas, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
+- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, durable per-user quotas, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
@@ -20,18 +20,17 @@
 - [x] executor-side workspace role/permission enforcement for tool permissions
 - [x] disposable coding sandbox executor contract using a rootless, network-disabled, capability-dropped, resource-limited Docker container with bounded files/output and hard timeout
 - [x] sandbox policy unit test covering network fail-closed and resource clamping
-- [x] generic OAuth 2.0 authorization-code + PKCE state handling, one-time state consumption, encrypted verifier storage, HTTPS provider validation, token exchange, and encrypted integration credential persistence
-- [ ] sensitive-memory approval policy for intentionally retained sensitive information
+- [x] generic OAuth 2.0 authorization-code + PKCE state handling, one-time state consumption, encrypted verifier storage, HTTPS provider validation, bounded token exchange, and encrypted integration credential persistence
+- [ ] richer research contradiction analysis, saved/scheduled briefs, and richer source-claim conflict explanations
 - [ ] production Docker sandbox runtime deployment and end-to-end verification
 - [ ] production embeddings and durable object-storage provider deployment verification
 - [ ] conversation merge/split and multi-device merge UI
 - [ ] complete retention proof for external object-storage providers
-- [ ] stronger research contradiction analysis, saved/scheduled briefs, and richer source-claim conflict explanations
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
 - [ ] confidence-based agent escalation and persistent cross-step artifacts beyond task JSON
 - [ ] universal executor result-size enforcement across every remaining executor path, universal idempotency coverage for every remaining executable action, and destructive-action confirmation audit
-- [ ] automation history API/UI completion
+- [ ] automation history UI completion
 - [ ] production security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
 - [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
 - [ ] trained Bob model weights and production model/provider credentials
