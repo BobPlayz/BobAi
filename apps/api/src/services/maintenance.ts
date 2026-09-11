@@ -4,6 +4,7 @@ import { cleanupExpiredSessions } from "./sessionManager.js";
 import { cleanupExpiredToolApprovals } from "./toolExecution.js";
 import { cleanupExpiredMemories } from "../store/memoryDb.js";
 import { runRetentionCleanup } from "./retention.js";
+import { startAutomationWorker } from "./automation.js";
 
 const INTERVAL_MS = 15 * 60_000;
 
@@ -24,6 +25,7 @@ async function runMaintenance() {
 
 export function startMaintenance() {
   void runMaintenance();
+  void startAutomationWorker().catch((error) => { if (process.env.NODE_ENV !== "production") console.warn("automation worker startup failed", error); });
   const timer = setInterval(() => { void runMaintenance(); }, INTERVAL_MS);
   timer.unref();
   return timer;
