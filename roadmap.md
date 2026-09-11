@@ -4,7 +4,7 @@
 - [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, model-backed long-context compaction with bounded fallback, and folder/label metadata primitives
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, and sensitive-secret rejection
-- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning before storage, bounded downloads, honest indexing/processing status, workspace sharing, per-user read/write permissions, shared-file discovery, and authorized shared downloads
+- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning before storage, bounded downloads, honest indexing/processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
@@ -18,6 +18,7 @@
 - [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP actions
 - [x] workspace collaboration backend with role hierarchy, member management, invitation tokens, invitation expiry/revocation/acceptance, permission metadata, workspace membership listing, and audit events
 - [x] file sharing backend with workspace-member authorization, per-user read/write permission records, share listing/revocation, shared-file discovery, and authenticated shared downloads
+- [x] executor-side workspace role/permission enforcement for tool permissions, including explicit member permission grants and admin/owner privilege boundaries
 - [ ] complete deletion proof for every remaining user-owned table/storage provider, including external object-storage lifecycle verification
 - [ ] richer memory merge/update/conflict user workflows and provenance UI
 - [ ] user approval workflow for intentionally storing sensitive information and broader privacy classification across files/tool results
