@@ -1,55 +1,33 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { memories, memoryEmbeddings } from "@bobai/db";
 import { generateEmbedding } from "../services/embeddings.js";
 let dbPromise: Promise<typeof import("@bobai/db").db | null> | null = null;
 async function getDb() { if (!process.env.DATABASE_URL) return null; if (!dbPromise) dbPromise = import("@bobai/db").then((module) => module.db).catch(() => null); return dbPromise; }
-export function isSensitiveMemory(value: string) { return /\b(password|passcode|otp|one[- ]time code|api key|secret key|private key|credit card|cvv|cvc|bank account|routing number|access token|refresh token)\b/i.test(value); }
+export function isSensitiveMemory(value: string) { return /\b(password|passcode|otp|one[- ]time code|api key|secret key|private key|credit card|cvv|cvc|bank account|routing number|access token|refresh token|seed phrase|recovery code)\b/i.test(value); }
+function activeMemoryScope(workspaceId: string, userId?: string, projectId?: string) { return and(eq(memories.workspaceId, workspaceId), userId ? eq(memories.userId, userId) : isNull(memories.userId), projectId ? eq(memories.projectId, projectId) : isNull(memories.projectId), eq(memories.isArchived, false), isNull(memories.deletedAt), or(isNull(memories.expiresAt), sql`${memories.expiresAt} > now()`)); }
+async function saveEmbedding(memoryId: string, content: string) { const db = await getDb(); if (!db) return false; const vector = await generateEmbedding(content); if (!vector) return false; await db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.memoryId, memoryId)); await db.insert(memoryEmbeddings).values({ memoryId, embedding: vector }); return true; }
 
-async function saveEmbedding(memoryId: string, content: string) {
-  const db = await getDb(); if (!db) return false;
-  const vector = await generateEmbedding(content); if (!vector) return false;
-  await db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.memoryId, memoryId));
-  await db.insert(memoryEmbeddings).values({ memoryId, embedding: vector });
-  return true;
-}
-
-export async function dbRemember(input: { workspaceId: string; userId?: string; projectId?: string; key: string; value: string; sourceMessageId?: string; sourceConversationId?: string; sourceType?: string; confidence?: number; importance?: number }) {
+export async function dbRemember(input: { workspaceId: string; userId?: string; projectId?: string; key: string; value: string; sourceMessageId?: string; sourceConversationId?: string; sourceType?: string; confidence?: number; importance?: number; expiresAt?: Date | null }) {
   if (isSensitiveMemory(input.value)) return false;
   const db = await getDb(); if (!db) return false;
-  const scope = and(eq(memories.workspaceId, input.workspaceId), input.userId ? eq(memories.userId, input.userId) : undefined, input.projectId ? eq(memories.projectId, input.projectId) : isNull(memories.projectId), eq(memories.content, input.value), isNull(memories.deletedAt));
+  const scope = and(eq(memories.workspaceId, input.workspaceId), input.userId ? eq(memories.userId, input.userId) : isNull(memories.userId), input.projectId ? eq(memories.projectId, input.projectId) : isNull(memories.projectId), eq(memories.content, input.value), isNull(memories.deletedAt));
   const existing = await db.select({ id: memories.id }).from(memories).where(scope).limit(1);
-  if (existing.length) {
-    await db.update(memories).set({ category: input.key, sourceMessageId: input.sourceMessageId, sourceConversationId: input.sourceConversationId, sourceType: input.sourceType || "chat", confidence: Math.max(0, Math.min(100, input.confidence ?? 100)), importance: Math.max(0, Math.min(100, input.importance ?? (input.key === "explicit memory" ? 70 : 50))), updatedAt: new Date(), lastAccessedAt: new Date() }).where(eq(memories.id, existing[0].id));
-    void saveEmbedding(existing[0].id, input.value);
-    return true;
-  }
-  const [created] = await db.insert(memories).values({ workspaceId: input.workspaceId, userId: input.userId, projectId: input.projectId, category: input.key, content: input.value, summary: input.key, confidence: Math.max(0, Math.min(100, input.confidence ?? 100)), importance: Math.max(0, Math.min(100, input.importance ?? (input.key === "explicit memory" ? 70 : 50))), sourceMessageId: input.sourceMessageId, sourceConversationId: input.sourceConversationId, sourceType: input.sourceType || "chat" }).returning({ id: memories.id });
-  if (created) void saveEmbedding(created.id, input.value);
-  return Boolean(created);
+  const expiresAt = input.expiresAt ?? null;
+  if (existing.length) { await db.update(memories).set({ category: input.key, sourceMessageId: input.sourceMessageId, sourceConversationId: input.sourceConversationId, sourceType: input.sourceType || "chat", confidence: Math.max(0, Math.min(100, input.confidence ?? 100)), importance: Math.max(0, Math.min(100, input.importance ?? (input.key === "explicit memory" ? 70 : 50))), expiresAt, updatedAt: new Date(), lastAccessedAt: new Date() }).where(eq(memories.id, existing[0].id)); void saveEmbedding(existing[0].id, input.value); return true; }
+  const [created] = await db.insert(memories).values({ workspaceId: input.workspaceId, userId: input.userId, projectId: input.projectId, category: input.key, content: input.value, summary: input.key, confidence: Math.max(0, Math.min(100, input.confidence ?? 100)), importance: Math.max(0, Math.min(100, input.importance ?? (input.key === "explicit memory" ? 70 : 50))), sourceMessageId: input.sourceMessageId, sourceConversationId: input.sourceConversationId, sourceType: input.sourceType || "chat", expiresAt }).returning({ id: memories.id });
+  if (created) void saveEmbedding(created.id, input.value); return Boolean(created);
 }
 
-export async function dbRecallAll(workspaceId: string, userId?: string, projectId?: string) {
-  const db = await getDb(); if (!db) return null;
-  const scope = and(eq(memories.workspaceId, workspaceId), userId ? eq(memories.userId, userId) : undefined, projectId ? eq(memories.projectId, projectId) : isNull(memories.projectId), eq(memories.isArchived, false), isNull(memories.deletedAt));
-  return db.select().from(memories).where(scope).orderBy(desc(memories.isPinned), desc(memories.importance), desc(memories.updatedAt));
-}
-
+export async function dbRecallAll(workspaceId: string, userId?: string, projectId?: string) { const db = await getDb(); if (!db) return null; return db.select().from(memories).where(activeMemoryScope(workspaceId, userId, projectId)).orderBy(desc(memories.isPinned), desc(memories.importance), desc(memories.updatedAt)); }
 export async function dbRecallRelevant(workspaceId: string, userId: string | undefined, query: string, limit = 12, projectId?: string) {
   const db = await getDb(); if (!db) return [];
-  const safeLimit = Math.min(50, Math.max(1, Math.floor(limit)));
-  const vector = await generateEmbedding(query);
+  const safeLimit = Math.min(50, Math.max(1, Math.floor(limit))); const vector = await generateEmbedding(query);
   if (!vector) return (await dbRecallAll(workspaceId, userId, projectId))?.slice(0, safeLimit) ?? [];
-  const userScope = userId ? sql`m.user_id = ${userId}` : sql`m.user_id is null`;
-  const projectScope = projectId ? sql`m.project_id = ${projectId}` : sql`m.project_id is null`;
-  const rows = await db.execute(sql`select m.*, 1 - (e.embedding <=> ${JSON.stringify(vector)}::vector) as similarity from memories m inner join memory_embeddings e on e.memory_id = m.id where m.workspace_id = ${workspaceId} and ${userScope} and ${projectScope} and m.is_archived = false and m.deleted_at is null order by e.embedding <=> ${JSON.stringify(vector)}::vector limit ${safeLimit}`);
+  const userScope = userId ? sql`m.user_id = ${userId}` : sql`m.user_id is null`; const projectScope = projectId ? sql`m.project_id = ${projectId}` : sql`m.project_id is null`;
+  const rows = await db.execute(sql`select m.*, 1 - (e.embedding <=> ${JSON.stringify(vector)}::vector) as similarity from memories m inner join memory_embeddings e on e.memory_id = m.id where m.workspace_id = ${workspaceId} and ${userScope} and ${projectScope} and m.is_archived = false and m.deleted_at is null and (m.expires_at is null or m.expires_at > now()) order by e.embedding <=> ${JSON.stringify(vector)}::vector limit ${safeLimit}`);
   return rows as unknown as Array<Record<string, unknown>>;
 }
-
-export async function dbUpdateMemory(id: string, workspaceId: string, userId: string, changes: { category?: string; content?: string; isPinned?: boolean; isArchived?: boolean; importance?: number; confidence?: number }) {
-  const db = await getDb(); if (!db || (changes.content && isSensitiveMemory(changes.content))) return null;
-  const [row] = await db.update(memories).set({ ...changes, updatedAt: new Date() }).where(and(eq(memories.id, id), eq(memories.workspaceId, workspaceId), eq(memories.userId, userId), isNull(memories.deletedAt))).returning();
-  if (row && changes.content) void saveEmbedding(row.id, changes.content);
-  return row ?? null;
-}
+export async function dbUpdateMemory(id: string, workspaceId: string, userId: string, changes: { category?: string; content?: string; isPinned?: boolean; isArchived?: boolean; importance?: number; confidence?: number; expiresAt?: Date | null }) { const db = await getDb(); if (!db || (changes.content && isSensitiveMemory(changes.content))) return null; const [row] = await db.update(memories).set({ ...changes, updatedAt: new Date() }).where(and(eq(memories.id, id), eq(memories.workspaceId, workspaceId), eq(memories.userId, userId), isNull(memories.deletedAt))).returning(); if (row && changes.content) void saveEmbedding(row.id, changes.content); return row ?? null; }
 export async function dbDeleteMemory(id: string, workspaceId: string, userId: string) { const db = await getDb(); if (!db) return false; const [row] = await db.update(memories).set({ deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(memories.id, id), eq(memories.workspaceId, workspaceId), eq(memories.userId, userId), isNull(memories.deletedAt))).returning({ id: memories.id }); return Boolean(row); }
-export async function dbClearMemory(workspaceId: string, userId?: string, projectId?: string) { const db = await getDb(); if (!db) return false; await db.update(memories).set({ deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(memories.workspaceId, workspaceId), userId ? eq(memories.userId, userId) : undefined, projectId ? eq(memories.projectId, projectId) : isNull(memories.projectId), isNull(memories.deletedAt))); return true; }
+export async function dbClearMemory(workspaceId: string, userId?: string, projectId?: string) { const db = await getDb(); if (!db) return false; await db.update(memories).set({ deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(memories.workspaceId, workspaceId), userId ? eq(memories.userId, userId) : isNull(memories.userId), projectId ? eq(memories.projectId, projectId) : isNull(memories.projectId), isNull(memories.deletedAt))); return true; }
+export async function cleanupExpiredMemories() { const db = await getDb(); if (!db) return 0; const rows = await db.update(memories).set({ deletedAt: new Date(), updatedAt: new Date() }).where(and(isNull(memories.deletedAt), sql`${memories.expiresAt} is not null and ${memories.expiresAt} <= now()`)).returning({ id: memories.id }); return rows.length; }
