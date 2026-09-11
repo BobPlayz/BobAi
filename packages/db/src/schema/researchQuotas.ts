@@ -1,0 +1,2 @@
+import { integer, pgTable, text, timestamp, uuid, primaryKey } from "drizzle-orm/pg-core";
+export const researchQuotas = pgTable("research_quotas", { userId: uuid("user_id").notNull(), windowStart: timestamp("window_start").notNull(), requestCount: integer("request_count").notNull().default(0), sourceCount: integer("source_count").notNull().default(0), updatedAt: timestamp("updated_at").defaultNow().notNull() }, (table) => ({ pk: primaryKey({ columns: [table.userId, table.windowStart] }) }));

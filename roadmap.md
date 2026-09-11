@@ -5,12 +5,12 @@
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped context, and authenticated project export/import
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, sensitive-secret rejection, editable memories, merge, and history API
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
-- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
+- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, research quotas, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
 - [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, and idempotent execution
-- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, fail-closed review, timeout cancellation signaling, bounded diff validation, and production sandbox-attestation gating
+- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, dependency graph validation/execution, token/time/step budgets, human checkpoints, cancellation endpoints, timeout cancellation signaling, bounded diff/result validation, persistent orchestration metadata/artifacts, and production sandbox-attestation gating
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
 - [x] permanent account purge removes user-owned operational records, dependent records, personal workspaces, local file objects, idempotency records, rate-limit records, invitations, shares, sessions, and user account data
@@ -20,19 +20,18 @@
 - [x] executor-side workspace role/permission enforcement for tool permissions
 - [x] disposable coding sandbox executor contract using a rootless, network-disabled, capability-dropped, resource-limited Docker container with bounded files/output and hard timeout
 - [x] sandbox policy unit test covering network fail-closed and resource clamping
-- [ ] production Docker sandbox runtime deployment and end-to-end verification
+- [x] generic OAuth 2.0 authorization-code + PKCE state handling, one-time state consumption, encrypted verifier storage, HTTPS provider validation, token exchange, and encrypted integration credential persistence
 - [ ] sensitive-memory approval policy for intentionally retained sensitive information
+- [ ] production Docker sandbox runtime deployment and end-to-end verification
 - [ ] production embeddings and durable object-storage provider deployment verification
 - [ ] conversation merge/split and multi-device merge UI
 - [ ] complete retention proof for external object-storage providers
-- [ ] research claim-to-source mapping, stronger contradiction analysis, saved/scheduled briefs, and per-user quotas
+- [ ] stronger research contradiction analysis, saved/scheduled briefs, and richer source-claim conflict explanations
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
-- [ ] full agent dependency graph execution, budgets, confidence/escalation, human checkpoints, cancellation propagation beyond timeout, patch application validation, and persistent run artifacts
-- [ ] end-to-end sandbox tests and verified production autonomous coding runtime
-- [ ] strict universal result-size enforcement across every executor path, universal idempotency coverage for every remaining executable action, and destructive-action confirmation audit
+- [ ] confidence-based agent escalation and persistent cross-step artifacts beyond task JSON
+- [ ] universal executor result-size enforcement across every remaining executor path, universal idempotency coverage for every remaining executable action, and destructive-action confirmation audit
 - [ ] automation history API/UI completion
-- [ ] MCP OAuth/connector authorization and durable third-party secret handling
 - [ ] production security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
 - [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
 - [ ] trained Bob model weights and production model/provider credentials

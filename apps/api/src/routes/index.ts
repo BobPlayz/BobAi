@@ -33,46 +33,6 @@ import promptsRouter from "./prompts.js";
 import messagesRouter from "./messages.js";
 import notificationsRouter from "./notifications.js";
 import webhooksRouter from "./webhooks.js";
-
-function buildApiRouter() {
-  const router = Router();
-  router.use("/auth", authRouter);
-  router.use("/account", accountRouter);
-  router.use("/api-keys", apiKeysRouter);
-  router.use(requireAuth);
-  router.use("/admin", adminRouter);
-  router.use("/chat", chatRouter);
-  router.use("/stream", streamRouter);
-  router.use("/conversations", conversationsRouter);
-  router.use("/messages", messagesRouter);
-  router.use("/search", searchRouter);
-  router.use("/reminders", remindersRouter);
-  router.use("/notifications", notificationsRouter);
-  router.use("/settings", settingsRouter);
-  router.use("/prompts", promptsRouter);
-  router.use("/images", imagesRouter);
-  router.use("/memory", memoryRouter);
-  router.use("/files", filesRouter);
-  router.use("/agents", agentsRouter);
-  router.use("/automation", automationRouter);
-  router.use("/agent-office", agentOfficeRouter);
-  router.use("/voice", voiceRouter);
-  router.use("/music", musicRouter);
-  router.use("/vision", visionRouter);
-  router.use("/research", researchRouter);
-  router.use("/deep-research", deepResearchRouter);
-  router.use("/study", studyRouter);
-  router.use("/mcp", mcpRouter);
-  router.use("/skills", skillsRouter);
-  router.use("/capabilities", capabilitiesRouter);
-  router.use("/model-agents", modelAgentsRouter);
-  router.use("/tools", toolsRouter);
-  router.use("/projects", projectsRouter);
-  router.use("/webhooks", webhooksRouter);
-  return router;
-}
-
-export const apiRouter = Router();
-apiRouter.use(healthRouter);
-apiRouter.use("/v1", healthRouter);
-apiRouter.use(buildApiRouter());
+import oauthRouter from "./oauth.js";
+function buildApiRouter() { const router = Router(); router.use("/auth", authRouter); router.use("/account", accountRouter); router.use("/api-keys", apiKeysRouter); router.use(requireAuth); router.use("/admin", adminRouter); router.use("/chat", chatRouter); router.use("/stream", streamRouter); router.use("/conversations", conversationsRouter); router.use("/messages", messagesRouter); router.use("/search", searchRouter); router.use("/reminders", remindersRouter); router.use("/notifications", notificationsRouter); router.use("/settings", settingsRouter); router.use("/prompts", promptsRouter); router.use("/images", imagesRouter); router.use("/memory", memoryRouter); router.use("/files", filesRouter); router.use("/agents", agentsRouter); router.use("/automation", automationRouter); router.use("/agent-office", agentOfficeRouter); router.use("/voice", voiceRouter); router.use("/music", musicRouter); router.use("/vision", visionRouter); router.use("/research", researchRouter); router.use("/deep-research", deepResearchRouter); router.use("/study", studyRouter); router.use("/mcp", mcpRouter); router.use("/skills", skillsRouter); router.use("/capabilities", capabilitiesRouter); router.use("/model-agents", modelAgentsRouter); router.use("/tools", toolsRouter); router.use("/projects", projectsRouter); router.use("/webhooks", webhooksRouter); router.use("/oauth", oauthRouter); return router; }
+export const apiRouter = Router(); apiRouter.use(healthRouter); apiRouter.use("/v1", healthRouter); apiRouter.use(buildApiRouter());
