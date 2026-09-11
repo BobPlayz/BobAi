@@ -1,30 +1,25 @@
-- [x] npm-workspaces monorepo with API, web, and database packages
-- [x] TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and development launcher
-- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, session revocation, password reset/change, OTP, email verification, MFA/TOTP, CSRF, secure cookies, rate limits, and account deletion/export foundations
-- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, and dependency vulnerability overrides
-- [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, pagination, deterministic cursors, revisions, restoration, archive/restore, offline conflict detection, and indexed full-text search
+- [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
+- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive login/MFA backoff, and deletion grace period
+- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, and cleanup workers
+- [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, and model-backed long-context compaction with bounded fallback
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, and scoped chat context
-- [x] memory scoped retrieval, relevance/provenance foundations, expiration, cleanup, immutable history, normal/streaming injection, and sensitive-secret rejection
-- [x] file validation/extraction, project ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
-- [x] provider-neutral research with authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, and deep-research prompt-injection isolation
+- [x] memory scoped retrieval, relevance/provenance foundations, expiration, maintenance cleanup, immutable history, normal/streaming injection, and sensitive-secret rejection
+- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
+- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
 - [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, and reminder workers
 - [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, fail-closed review, and production sandbox-attestation gating
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, and outbound-call revalidation
-- [x] adaptive in-process login/MFA abuse backoff layered over fixed auth rate limits
-- [x] expired OTP/password-reset/session cleanup runs through maintenance retention
-- [x] permanent account purge removes direct user-owned operational records and dependent conversation/memory/file/index records before final user deletion
-- [x] model-backed long-context compaction with bounded fallback and explicit untrusted-context handling
+- [x] permanent account purge removes direct user-owned operational records and dependent records before final deletion
 - [x] major image, automation, and MCP execution paths have idempotency groundwork
-- [ ] production distributed rate limiting and security monitoring
-- [ ] complete deletion/export proof for every remaining user-owned table and storage layer
-- [ ] privacy classification, retention schedule, sensitive-memory approval, contradiction detection, and provenance UI
-- [ ] advanced memory merge/dedup/confidence/importance ranking and production embeddings
+- [ ] complete export/deletion proof for every remaining user-owned table and storage layer
+- [ ] privacy classification, retention schedule, sensitive-memory approval, contradiction detection, merge/update/confidence/importance semantics, and provenance UI
+- [ ] production embedding provider and durable object storage
 - [ ] folders/labels, conversation merge/split, multi-device merge UI, and remaining message-version UX
-- [ ] durable object storage, production OCR verification, file sharing, and retention cleanup
-- [ ] research source ranking/credibility metadata, claim-to-source mapping, caching/replay/quotas, saved collections, and scheduled briefs
+- [ ] file sharing and complete retention cleanup across every storage provider
+- [ ] research claim-to-source mapping, stronger credibility/contradiction analysis, replay, saved collections, scheduled briefs, and per-user quotas
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
 - [ ] complete project export/import and broader workspace roles/invitations/collaboration/shared conversations
@@ -34,8 +29,8 @@
 - [ ] strict per-tool schemas, permission enforcement, result limits, retry/timeout policy, universal idempotency coverage, and destructive-action confirmation audit
 - [ ] automation history API/UI completion
 - [ ] MCP OAuth/connector authorization and durable third-party secret handling
+- [ ] production distributed rate limiting, security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
 - [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
-- [ ] dependency/license/supply-chain policy, secret rotation automation, penetration testing, and load testing
 - [ ] trained Bob model weights and production model/provider credentials
 - [ ] production object storage, email, search, media, hosting, DNS, and deployment secrets
 - [ ] post-code laptop build, API smoke tests, browser verification, provider connectivity, and sandbox verification
