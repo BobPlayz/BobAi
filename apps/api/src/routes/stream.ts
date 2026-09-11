@@ -5,22 +5,14 @@ import { db, settings } from "@bobai/db";
 import { initSSE } from "../utils/sse.js";
 import { isCodingTask, runCodingAgent } from "../services/codingAgent.js";
 import { prepareChat, runStream } from "../services/chatEngine.js";
-import { dbRemember, dbRecallAll, isSensitiveMemory } from "../store/memoryDb.js";
+import { dbRemember, dbRecallRelevant, isSensitiveMemory } from "../store/memoryDb.js";
 import { dbSaveConversation, dbUpdateMessageStatus } from "../store/conversationDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
-const STOP_WORDS = new Set(["the", "and", "that", "this", "with", "from", "what", "when", "where", "how", "why", "for", "are", "you", "about", "can", "could", "would", "please"]);
-type MemoryRecord = { content: string; key?: string | null; value?: string | null };
-function relevantMemories(memories: MemoryRecord[] | null, query: string) {
-  if (!memories?.length) return [];
-  const terms = query.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 2 && !STOP_WORDS.has(term));
-  const textFor = (memory: MemoryRecord) => memory.key && memory.value ? `${memory.key}: ${memory.value}` : memory.content;
-  if (!terms.length) return memories.slice(0, 8).map(textFor);
-  return memories.map((memory) => ({ memory, score: terms.reduce((total, term) => total + (textFor(memory).toLowerCase().includes(term) ? 1 : 0), 0) })).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 12).map((item) => textFor(item.memory));
-}
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
 function persistedInputMessages(messages: Array<{ role: string; content: string }>) { return messages.map((message) => ({ id: randomUUID(), role: message.role, content: message.content, model: null, status: "completed" })); }
+function memoryContext(memories: Array<Record<string, unknown>> | null) { return (memories || []).map((memory) => typeof memory.content === "string" ? memory.content : "").filter(Boolean).slice(0, 12); }
 
 router.post("/", async (req, res) => {
   const { send } = initSSE(res);
@@ -30,11 +22,11 @@ router.post("/", async (req, res) => {
   try {
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     workspaceId = workspace.id;
-    const rows = await db.select({ key: settings.key, value: settings.value }).from(settings).where(and(eq(settings.userId, req.user!.id), eq(settings.workspaceId, workspace.id))).limit(20);
+    const rows = await db.select({ key: settings.key, value: settings.value }).from(settings).where(and(eq(settings.userId, req.user!.id), eq(settings.workspaceId, workspace.id))).limit(50);
     const memoryEnabled = req.body?.memoryEnabled !== false && settingValue(rows, "memoryEnabled") !== false;
-    const latestText = Array.isArray(req.body?.messages) ? [...req.body.messages].reverse().find((message: any) => message?.role === "user")?.content || "" : "";
-    const memories = memoryEnabled ? await dbRecallAll(workspace.id, req.user!.id) : [];
-    const prepared = prepareChat({ messages: req.body?.messages, personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), memoryContext: relevantMemories(memories, typeof latestText === "string" ? latestText : "") });
+    const latestText = Array.isArray(req.body?.messages) ? [...req.body.messages].reverse().find((message: unknown) => typeof message === "object" && message !== null && (message as Record<string, unknown>).role === "user")?.content || "" : "";
+    const memories = memoryEnabled && typeof latestText === "string" ? await dbRecallRelevant(workspace.id, req.user!.id, latestText, 12) : [];
+    const prepared = prepareChat({ messages: req.body?.messages, personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), memoryContext: memoryContext(memories) });
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
     if (prepared.memoryRequest && prepared.latestUserMessage) {
       if (!memoryEnabled) { send("done", { reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); }
@@ -51,8 +43,10 @@ router.post("/", async (req, res) => {
     }
 
     assistantId = randomUUID();
-    await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedInputMessages(prepared.messages), { id: assistantId, role: "assistant", content: "", model: null, status: "pending" }] }).catch(() => false);
-    await dbUpdateMessageStatus({ conversationId, messageId: assistantId, userId: req.user!.id, workspaceId: workspace.id, status: "streaming" }).catch(() => false);
+    const initialMessages = [...persistedInputMessages(prepared.messages), { id: assistantId, role: "assistant", content: "", model: null, status: "pending" }];
+    const persisted = await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: initialMessages });
+    if (!persisted) throw new Error("persistent chat storage unavailable");
+    await dbUpdateMessageStatus({ conversationId, messageId: assistantId, userId: req.user!.id, workspaceId: workspace.id, status: "streaming" });
 
     let disconnected = false;
     const onClose = () => { disconnected = true; };
@@ -60,7 +54,7 @@ router.post("/", async (req, res) => {
     try {
       const result = await runStream(prepared.providerMessages, (token) => { if (!disconnected && !res.writableEnded) send("token", { token }); }, prepared.modelId);
       const finalStatus = disconnected ? "cancelled" : "completed";
-      await dbUpdateMessageStatus({ conversationId, messageId: assistantId!, userId: req.user!.id, workspaceId: workspace.id, status: finalStatus, content: result.content, model: result.model }).catch(() => false);
+      await dbUpdateMessageStatus({ conversationId, messageId: assistantId!, userId: req.user!.id, workspaceId: workspace.id, status: finalStatus, content: result.content, model: result.model });
       if (disconnected || res.writableEnded) return;
       send("done", { reply: result.content, title: prepared.title, model: result.model, provider: result.provider, conversationId, persisted: true, status: finalStatus });
       return res.end();
