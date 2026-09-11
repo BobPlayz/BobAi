@@ -14,10 +14,12 @@
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
 - [x] permanent account purge removes direct user-owned operational records and dependent records before final deletion
+- [x] account export covers user profile, sessions, conversations/messages, memories/history, projects/files, settings, API-key metadata, notifications, reminders, workflows/runs, agents/runs, tasks, integrations without encrypted credentials, media, research, tool logs, memberships, webhooks without secrets/headers, deliveries, usage, and audit records
 - [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP actions
-- [ ] complete export/deletion proof for every remaining user-owned table and storage layer
-- [ ] richer memory merge/update/confidence workflows, user approval for sensitive data, provenance UI, and broader privacy classification across files/tool results
-- [ ] production embeddings and durable object storage
+- [ ] complete deletion proof for every remaining user-owned table/storage provider, including external object-storage lifecycle verification
+- [ ] richer memory merge/update/conflict user workflows and provenance UI
+- [ ] user approval workflow for intentionally storing sensitive information and broader privacy classification across files/tool results
+- [ ] production embeddings and durable object storage deployment verification
 - [ ] conversation merge/split and multi-device merge UI
 - [ ] file sharing and complete retention cleanup across every storage provider
 - [ ] research claim-to-source mapping, stronger contradiction analysis, replay collections, saved research, scheduled briefs, and per-user quotas
