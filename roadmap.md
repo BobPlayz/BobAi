@@ -4,8 +4,8 @@
 - [x] durable chat persistence with revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed search, long-context compaction, and folder/label metadata primitives
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped context, and authenticated project export/import
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, sensitive-secret rejection, editable memories, merge, and history API
-- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permissions, shared-file discovery, and authenticated shared downloads
-- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
+- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
+- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
@@ -25,7 +25,7 @@
 - [ ] production embeddings and durable object-storage provider deployment verification
 - [ ] conversation merge/split and multi-device merge UI
 - [ ] complete retention proof for external object-storage providers
-- [ ] research claim-to-source mapping, stronger contradiction analysis, replay collections, saved research, scheduled briefs, and per-user quotas
+- [ ] research claim-to-source mapping, stronger contradiction analysis, saved/scheduled briefs, and per-user quotas
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
 - [ ] full agent dependency graph execution, budgets, confidence/escalation, human checkpoints, cancellation propagation beyond timeout, patch application validation, and persistent run artifacts
