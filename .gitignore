@@ -12,7 +12,10 @@ graphify-out/
 *.key
 *.p12
 *.pfx
-*.crt
+*.crt/
+
+# Local durable object storage
+storage/
 
 # Local Bob model training artifacts
 model-training/.venv/
