@@ -21,6 +21,11 @@
     "audit": "npm audit --workspaces --include-workspace-root",
     "smoke": "tsx scripts/smoke.ts"
   },
+  "overrides": {
+    "esbuild": "^0.28.2",
+    "js-yaml": "^4.3.2",
+    "qs": "^6.16.0"
+  },
   "devDependencies": {
     "@types/multer": "^2.2.0",
     "tsx": "^4.20.3"
