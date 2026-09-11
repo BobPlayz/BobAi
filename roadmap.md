@@ -3,7 +3,7 @@
 - [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and database-backed action idempotency
 - [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, and model-backed long-context compaction with bounded fallback
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
-- [x] memory scoped retrieval, relevance/provenance foundations, expiration, cleanup, immutable history, normal/streaming injection, and sensitive-secret rejection
+- [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, and sensitive-secret rejection
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
@@ -15,18 +15,18 @@
 - [x] permanent account purge removes direct user-owned operational records and dependent records before final deletion
 - [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP actions
 - [ ] complete export/deletion proof for every remaining user-owned table and storage layer
-- [ ] privacy classification, retention schedule, sensitive-memory approval, contradiction detection, merge/update/confidence/importance semantics, and provenance UI
+- [ ] richer memory merge/update/confidence workflows, user approval for sensitive data, provenance UI, and broader privacy classification across files/tool results
 - [ ] production embeddings and durable object storage
 - [ ] folders/labels, conversation merge/split, multi-device merge UI, and remaining message-version UX
 - [ ] file sharing and complete retention cleanup across every storage provider
-- [ ] research claim-to-source mapping, stronger credibility/contradiction analysis, replay, saved collections, scheduled briefs, and per-user quotas
+- [ ] research claim-to-source mapping, stronger contradiction analysis, replay collections, saved research, scheduled briefs, and per-user quotas
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
 - [ ] broader workspace roles/invitations/collaboration/shared conversations beyond current project authorization
 - [ ] full agent dependency graph, budgets, confidence/escalation, human checkpoints, cancellation propagation, patch/diff validation, and persistent run artifacts
 - [ ] genuine disposable coding workspace with filesystem, command, process, CPU, memory, and time isolation
 - [ ] end-to-end sandbox tests and verified production autonomous coding runtime
-- [ ] strict per-tool schemas, permission enforcement, result limits, retry/timeout policy, universal idempotency coverage for all remaining executable actions, and destructive-action confirmation audit
+- [ ] strict per-tool schema enforcement and result limits in every executor path, universal idempotency coverage for remaining executable actions, and destructive-action confirmation audit
 - [ ] automation history API/UI completion
 - [ ] MCP OAuth/connector authorization and durable third-party secret handling
 - [ ] production distributed rate limiting, security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
