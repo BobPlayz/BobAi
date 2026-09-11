@@ -1,7 +1,7 @@
 - [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
 - [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive login/MFA backoff, cleanup workers, and deletion grace period
 - [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and optional PostgreSQL-backed distributed rate limiting
-- [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, and model-backed long-context compaction with bounded fallback
+- [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, model-backed long-context compaction with bounded fallback, and folder/label metadata primitives
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, and sensitive-secret rejection
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
@@ -18,7 +18,7 @@
 - [ ] complete export/deletion proof for every remaining user-owned table and storage layer
 - [ ] richer memory merge/update/confidence workflows, user approval for sensitive data, provenance UI, and broader privacy classification across files/tool results
 - [ ] production embeddings and durable object storage
-- [ ] folders/labels, conversation merge/split, multi-device merge UI, and remaining message-version UX
+- [ ] conversation merge/split and multi-device merge UI
 - [ ] file sharing and complete retention cleanup across every storage provider
 - [ ] research claim-to-source mapping, stronger contradiction analysis, replay collections, saved research, scheduled briefs, and per-user quotas
 - [ ] production search-provider credentials and live external search capacity
