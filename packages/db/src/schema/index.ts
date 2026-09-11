@@ -33,6 +33,7 @@ export * from "./workflows.js";
 export * from "./workflowRuns.js";
 export * from "./searchIndex.js";
 export * from "./webhooks.js";
+export * from "./webhookDeliveries.js";
 export * from "./billingPlans.js";
 export * from "./subscriptions.js";
 export * from "./emailOtps.js";
