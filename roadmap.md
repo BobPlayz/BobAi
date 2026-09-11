@@ -4,7 +4,7 @@
 - [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, model-backed long-context compaction with bounded fallback, and folder/label metadata primitives
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, and sensitive-secret rejection
-- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
+- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning before storage, bounded downloads, and honest indexing/processing status
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
