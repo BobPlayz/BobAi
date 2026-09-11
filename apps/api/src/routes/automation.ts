@@ -1,49 +1,18 @@
 import { Router } from "express";
 import { createAutomation, createCodmContentAutomation, getAutomation, listAutomationRuns, listAutomations, runAutomation, type AutomationStep } from "../services/automation.js";
-import { agentAuth } from "../middleware/agentAuth.js";
+import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
 const allowedSteps = new Set<AutomationStep["type"]>(["research", "generate_image", "generate_video", "edit_video", "upload", "notify"]);
 type AutomationBody = { name?: unknown; description?: unknown; steps?: unknown; trigger?: unknown; enabled?: unknown };
+function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function parseSteps(value: unknown): AutomationStep[] | null { if (!Array.isArray(value) || value.length === 0 || value.length > 20) return null; const steps: AutomationStep[] = []; for (const step of value) { if (!isRecord(step) || typeof step.type !== "string" || !allowedSteps.has(step.type as AutomationStep["type"])) return null; const config = isRecord(step.config) ? step.config : {}; if (JSON.stringify(config).length > 32_000) return null; steps.push({ id: typeof step.id === "string" ? step.id.slice(0, 100) : undefined, type: step.type as AutomationStep["type"], config }); } return steps; }
+async function workspace(req: Parameters<typeof Router>[0] extends never ? never : any) { return ensurePersonalWorkspace(req.user!.id); }
 
-function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null; }
-function parseSteps(value: unknown): AutomationStep[] | null {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 20) return null;
-  const steps: AutomationStep[] = [];
-  for (const step of value) {
-    if (!isRecord(step) || typeof step.type !== "string" || !allowedSteps.has(step.type as AutomationStep["type"])) return null;
-    steps.push(step as unknown as AutomationStep);
-  }
-  return steps;
-}
-
-router.get("/", agentAuth, (_req, res) => res.json({ automations: listAutomations() }));
-router.get("/runs", agentAuth, (req, res) => {
-  const automationId = typeof req.query.automationId === "string" ? req.query.automationId : undefined;
-  return res.json({ runs: listAutomationRuns(automationId) });
-});
-
-router.post("/", agentAuth, (req, res) => {
-  const body = (isRecord(req.body) ? req.body : {}) as AutomationBody;
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const steps = parseSteps(body.steps);
-  if (!name || !steps) return res.status(400).json({ error: "name and valid steps are required" });
-  if (name.length > 200) return res.status(413).json({ error: "automation name is too large" });
-  const description = typeof body.description === "string" ? body.description.trim().slice(0, 2000) : undefined;
-  const trigger = isRecord(body.trigger) && (body.trigger.type === "cron" || body.trigger.type === "webhook") ? body.trigger : { type: "manual", config: {} };
-  return res.status(201).json(createAutomation({ name, description, trigger: trigger as Parameters<typeof createAutomation>[0]["trigger"], steps, enabled: body.enabled !== false }));
-});
-
-router.post("/codm-video", agentAuth, (_req, res) => res.status(201).json(createCodmContentAutomation()));
-router.post("/:id/run", agentAuth, async (req, res) => {
-  const automation = getAutomation(req.params.id as string);
-  if (!automation) return res.status(404).json({ error: "automation not found" });
-  try {
-    const run = await runAutomation(automation, isRecord(req.body) ? req.body : {});
-    return res.status(202).json({ id: run.id, automationId: run.automationId, status: run.status, createdAt: run.startedAt });
-  } catch (error) {
-    return res.status(502).json({ error: error instanceof Error ? error.message : "automation failed" });
-  }
-});
-
+router.get("/", async (req, res) => { try { const current = await workspace(req); return res.json({ automations: await listAutomations(current.id) }); } catch { return res.status(503).json({ error: "automation storage unavailable" }); } });
+router.get("/runs", async (req, res) => { try { const current = await workspace(req); const automationId = typeof req.query.automationId === "string" ? req.query.automationId : undefined; if (automationId && !/^[0-9a-f-]{36}$/i.test(automationId)) return res.status(400).json({ error: "invalid automation id" }); return res.json({ runs: await listAutomationRuns(current.id, automationId) }); } catch { return res.status(503).json({ error: "automation history unavailable" }); } });
+router.post("/", async (req, res) => { const body = (isRecord(req.body) ? req.body : {}) as AutomationBody; const name = typeof body.name === "string" ? body.name.trim() : ""; const steps = parseSteps(body.steps); if (!name || name.length > 200 || !steps) return res.status(400).json({ error: "name and valid steps are required" }); const description = typeof body.description === "string" ? body.description.trim().slice(0, 2000) : undefined; const trigger = isRecord(body.trigger) && (body.trigger.type === "interval" || body.trigger.type === "webhook" || body.trigger.type === "manual") ? { type: body.trigger.type as "interval" | "webhook" | "manual", config: isRecord(body.trigger.config) ? body.trigger.config : {} } : { type: "manual" as const, config: {} }; if (trigger.type === "interval") { const intervalMs = Number(trigger.config?.intervalMs); if (!Number.isFinite(intervalMs) || intervalMs < 10_000 || intervalMs > 31 * 24 * 60 * 60 * 1000) return res.status(400).json({ error: "intervalMs must be between 10000 and 2678400000" }); } try { const current = await workspace(req); const automation = await createAutomation({ name, description, trigger, steps, enabled: body.enabled !== false }, current.id, req.user!.id); return res.status(201).json(automation); } catch { return res.status(503).json({ error: "automation storage unavailable" }); } });
+router.post("/codm-video", async (req, res) => { try { const current = await workspace(req); return res.status(201).json(await createCodmContentAutomation(current.id, req.user!.id)); } catch { return res.status(503).json({ error: "automation storage unavailable" }); } });
+router.post("/:id/run", async (req, res) => { if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(400).json({ error: "invalid automation id" }); try { const current = await workspace(req); const automation = await getAutomation(req.params.id, current.id); if (!automation) return res.status(404).json({ error: "automation not found" }); const input = isRecord(req.body) ? req.body : {}; const run = await runAutomation(automation.id, current.id, req.user!.id, input); return res.status(202).json({ id: run.id, automationId: run.automationId, status: run.status, createdAt: run.startedAt }); } catch (error) { return res.status(502).json({ error: error instanceof Error ? error.message : "automation failed" }); } });
+router.delete("/:id", async (req, res) => { if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(400).json({ error: "invalid automation id" }); try { const current = await workspace(req); const { deleteAutomation } = await import("../services/automation.js"); return res.status(await deleteAutomation(req.params.id, current.id) ? 204 : 404).send(); } catch { return res.status(503).json({ error: "automation deletion unavailable" }); } });
 export default router;
