@@ -30,6 +30,7 @@ export * from "./notifications.js";
 export * from "./integrations.js";
 export * from "./modelProviders.js";
 export * from "./workflows.js";
+export * from "./workflowRuns.js";
 export * from "./searchIndex.js";
 export * from "./webhooks.js";
 export * from "./billingPlans.js";
