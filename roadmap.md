@@ -1,6 +1,6 @@
 - [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
 - [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive login/MFA backoff, cleanup workers, and deletion grace period
-- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and database-backed action idempotency
+- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and optional PostgreSQL-backed distributed rate limiting
 - [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, and model-backed long-context compaction with bounded fallback
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, and sensitive-secret rejection
@@ -30,7 +30,7 @@
 - [ ] strict per-tool result limits in every executor path, universal idempotency coverage for all remaining executable actions, and destructive-action confirmation audit
 - [ ] automation history API/UI completion
 - [ ] MCP OAuth/connector authorization and durable third-party secret handling
-- [ ] production distributed rate limiting, security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
+- [ ] production distributed rate-limit deployment verification, security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
 - [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
 - [ ] trained Bob model weights and production model/provider credentials
 - [ ] production object storage, email, search, media, hosting, DNS, and deployment secrets

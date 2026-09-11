@@ -1,71 +1,13 @@
 import type { NextFunction, Request, Response } from "express";
-
+import { checkDistributedRateLimit } from "../services/distributedRateLimit.js";
 type Bucket = { startedAt: number; count: number };
-
 const buckets = new Map<string, Bucket>();
 const windowMs = Math.max(1_000, Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000);
 const maxRequests = Math.max(1, Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 120);
 const maxBuckets = 10_000;
-
-function pruneExpired(now: number) {
-  for (const [key, bucket] of buckets) {
-    if (now - bucket.startedAt >= windowMs) buckets.delete(key);
-  }
-}
-
-const cleanupTimer = setInterval(() => pruneExpired(Date.now()), windowMs);
-cleanupTimer.unref();
-
-export function rateLimit(req: Request, res: Response, next: NextFunction) {
-  const key = req.ip || req.socket.remoteAddress || "unknown";
-  const now = Date.now();
-  const current = buckets.get(key);
-
-  if (!current || now - current.startedAt >= windowMs) {
-    if (buckets.size >= maxBuckets) pruneExpired(now);
-    if (buckets.size >= maxBuckets) return res.status(429).json({ error: "rate limit exceeded" });
-    buckets.set(key, { startedAt: now, count: 1 });
-    return next();
-  }
-
-  if (++current.count > maxRequests) {
-    const retryAfter = Math.max(1, Math.ceil((windowMs - (now - current.startedAt)) / 1_000));
-    res.setHeader("retry-after", retryAfter);
-    return res.status(429).json({ error: "rate limit exceeded", retryAfter });
-  }
-
-  return next();
-}
-
-export function createUserRateLimit(maxRequests: number, durationMs: number) {
-  const buckets = new Map<string, Bucket>();
-  const window = Math.max(1_000, durationMs);
-  const max = Math.max(1, maxRequests);
-  const maxEntries = 10_000;
-  const timer = setInterval(() => {
-    const now = Date.now();
-    for (const [key, bucket] of buckets) if (now - bucket.startedAt >= window) buckets.delete(key);
-  }, window);
-  timer.unref();
-
-  return (req: Request, res: Response, next: NextFunction) => {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: "authentication required" });
-    const now = Date.now();
-    const current = buckets.get(userId);
-    if (!current || now - current.startedAt >= window) {
-      if (buckets.size >= maxEntries) {
-        for (const [key, bucket] of buckets) if (now - bucket.startedAt >= window) buckets.delete(key);
-        if (buckets.size >= maxEntries) return res.status(429).json({ error: "rate limit exceeded" });
-      }
-      buckets.set(userId, { startedAt: now, count: 1 });
-      return next();
-    }
-    if (++current.count > max) {
-      const retryAfter = Math.max(1, Math.ceil((window - (now - current.startedAt)) / 1_000));
-      res.setHeader("retry-after", retryAfter);
-      return res.status(429).json({ error: "rate limit exceeded", retryAfter });
-    }
-    return next();
-  };
-}
+function pruneExpired(now: number) { for (const [key, bucket] of buckets) if (now - bucket.startedAt >= windowMs) buckets.delete(key); }
+const cleanupTimer = setInterval(() => pruneExpired(Date.now()), windowMs); cleanupTimer.unref();
+function localCheck(key: string, max: number, window: number) { const now = Date.now(); const current = buckets.get(key); if (!current || now - current.startedAt >= window) { if (buckets.size >= maxBuckets) pruneExpired(now); if (buckets.size >= maxBuckets) return { allowed: false, retryAfter: Math.max(1, Math.ceil(window / 1000)) }; buckets.set(key, { startedAt: now, count: 1 }); return { allowed: true, retryAfter: Math.max(1, Math.ceil(window / 1000)) }; } current.count += 1; return { allowed: current.count <= max, retryAfter: Math.max(1, Math.ceil((window - (now - current.startedAt)) / 1000)) }; }
+async function enforce(req: Request, key: string, max: number, window: number) { if (process.env.BOBAI_DISTRIBUTED_RATE_LIMIT !== "true") return localCheck(key, max, window); try { return await checkDistributedRateLimit(key, max, window); } catch { return localCheck(key, max, window); } }
+export async function rateLimit(req: Request, res: Response, next: NextFunction) { const key = req.ip || req.socket.remoteAddress || "unknown"; const result = await enforce(req, key, maxRequests, windowMs); if (!result.allowed) { res.setHeader("retry-after", result.retryAfter); return res.status(429).json({ error: "rate limit exceeded", retryAfter: result.retryAfter }); } return next(); }
+export function createUserRateLimit(maxRequests: number, durationMs: number) { const buckets = new Map<string, Bucket>(); const window = Math.max(1_000, durationMs); const max = Math.max(1, maxRequests); const maxEntries = 10_000; const timer = setInterval(() => { const now = Date.now(); for (const [key, bucket] of buckets) if (now - bucket.startedAt >= window) buckets.delete(key); }, window); timer.unref(); return async (req: Request, res: Response, next: NextFunction) => { const userId = req.user?.id; if (!userId) return res.status(401).json({ error: "authentication required" }); const result = process.env.BOBAI_DISTRIBUTED_RATE_LIMIT === "true" ? await enforce(req, `user:${userId}`, max, window) : (() => { const now = Date.now(); const current = buckets.get(userId); if (!current || now - current.startedAt >= window) { if (buckets.size >= maxEntries) { for (const [key, bucket] of buckets) if (now - bucket.startedAt >= window) buckets.delete(key); if (buckets.size >= maxEntries) return { allowed: false, retryAfter: Math.max(1, Math.ceil(window / 1000)) }; } buckets.set(userId, { startedAt: now, count: 1 }); return { allowed: true, retryAfter: Math.max(1, Math.ceil(window / 1000)) }; } current.count += 1; return { allowed: current.count <= max, retryAfter: Math.max(1, Math.ceil((window - (now - current.startedAt)) / 1000)) }; })(); if (!result.allowed) { res.setHeader("retry-after", result.retryAfter); return res.status(429).json({ error: "rate limit exceeded", retryAfter: result.retryAfter }); } return next(); }; }
