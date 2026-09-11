@@ -1,21 +1,13 @@
+import { randomUUID } from "node:crypto";
+import { and, desc, eq } from "drizzle-orm";
 import { Router } from "express";
+import { db, researchSessions } from "@bobai/db";
 import { webSearch } from "../services/research.js";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
+import { ensurePersonalWorkspace } from "../services/workspace.js";
 
-const router = Router();
-const limit = createUserRateLimit(20, 60_000);
-
-router.post("/search", limit, async (req, res) => {
-  const query = typeof req.body?.query === "string" ? req.body.query : "";
-  const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options) ? req.body.options as Record<string, unknown> : {};
-  try {
-    return res.json(await webSearch(query, options));
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") console.error("research failed", error);
-    const message = error instanceof Error ? error.message : "web search unavailable";
-    if (/query is required|query is too long/i.test(message)) return res.status(400).json({ error: message });
-    return res.status(503).json({ error: "web search unavailable" });
-  }
-});
-
+const router = Router(); const limit = createUserRateLimit(20, 60_000); const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+router.post("/search", limit, async (req, res) => { const query = typeof req.body?.query === "string" ? req.body.query : ""; const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options) ? req.body.options as Record<string, unknown> : {}; try { const result = await webSearch(query, options); const workspace = await ensurePersonalWorkspace(req.user!.id); const sessionId = randomUUID(); await db.insert(researchSessions).values({ id: sessionId, workspaceId: workspace.id, userId: req.user!.id, query: result.query, sources: result.sources, status: "completed" }); return res.json({ ...result, sessionId, citations: result.sources.map((source, index) => ({ id: `${sessionId}:${index + 1}`, index: index + 1, title: source.title, url: source.url, snippet: source.snippet, publishedAt: source.publishedAt })) }); } catch (error) { if (process.env.NODE_ENV !== "production") console.error("research failed", error); const message = error instanceof Error ? error.message : "web search unavailable"; if (/query is required|query is too long/i.test(message)) return res.status(400).json({ error: message }); return res.status(503).json({ error: "web search unavailable" }); } });
+router.get("/sessions", limit, async (req, res) => { try { const workspace = await ensurePersonalWorkspace(req.user!.id); const rows = await db.select({ id: researchSessions.id, query: researchSessions.query, sources: researchSessions.sources, status: researchSessions.status, createdAt: researchSessions.createdAt, updatedAt: researchSessions.updatedAt }).from(researchSessions).where(and(eq(researchSessions.workspaceId, workspace.id), eq(researchSessions.userId, req.user!.id))).orderBy(desc(researchSessions.createdAt)).limit(100); return res.json({ sessions: rows }); } catch { return res.status(503).json({ error: "research history unavailable" }); } });
+router.get("/sessions/:id", async (req, res) => { if (!UUID.test(req.params.id)) return res.status(400).json({ error: "invalid research session id" }); try { const workspace = await ensurePersonalWorkspace(req.user!.id); const [row] = await db.select().from(researchSessions).where(and(eq(researchSessions.id, req.params.id), eq(researchSessions.workspaceId, workspace.id), eq(researchSessions.userId, req.user!.id))).limit(1); return row ? res.json({ session: row }) : res.status(404).json({ error: "research session not found" }); } catch { return res.status(503).json({ error: "research history unavailable" }); } });
 export default router;
