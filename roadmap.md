@@ -5,7 +5,7 @@
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped context, and authenticated project export/import
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, sensitive-secret detection with explicit approval workflow, editable memories, merge, and history API
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
-- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, durable per-user quotas, scheduled research briefs, contradiction signals, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
+- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, durable per-user quotas with atomic increments, scheduled research briefs, contradiction signals, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, media input limits, automatic skill inference, and media safety policy
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
@@ -13,7 +13,7 @@
 - [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, dependency graph validation/execution, token/time/step budgets, confidence escalation, human checkpoints, cancellation endpoints, timeout cancellation signaling, bounded diff/result validation, persistent orchestration metadata and cross-step artifacts, and production sandbox-attestation gating
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
-- [x] permanent account purge removes user-owned operational records, dependent records, personal workspaces, local file objects, idempotency records, rate-limit records, invitations, shares, sessions, and user account data
+- [x] permanent account purge removes user-owned operational records, new research/agent records, dependent records, personal workspaces, local file objects, idempotency records, rate-limit records, invitations, shares, sessions, and user account data; shared owned workspaces transfer ownership to another member before the account is removed
 - [x] account export covers user profile, sessions, conversations/messages, memories/history, projects/files, settings, API-key metadata, notifications, reminders, workflows/runs, agents/runs, tasks, integrations without encrypted credentials, media, research, tool logs, memberships, webhooks without secrets/headers, deliveries, usage, and audit records
 - [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP/capability actions
 - [x] workspace collaboration backend with role hierarchy, member management, invitation tokens, invitation expiry/revocation/acceptance, permission metadata, workspace membership listing, and audit events
@@ -22,13 +22,13 @@
 - [x] sandbox policy unit test covering network fail-closed and resource clamping
 - [x] generic OAuth 2.0 authorization-code + PKCE state handling, one-time state consumption, encrypted verifier storage, HTTPS provider validation, bounded token exchange, and encrypted integration credential persistence
 - [x] pure policy tests for agent graph validation, budget clamping, dependency scheduling, and media safety
+- [x] scheduled research brief storage, execution worker, quota-aware replay, and claim conflict metadata
 - [ ] production Docker sandbox runtime deployment and end-to-end verification
 - [ ] production embeddings and durable object-storage provider deployment verification
 - [ ] conversation merge/split and multi-device merge UI
 - [ ] complete retention proof for external object-storage providers
 - [ ] production search-provider credentials and live external search capacity
-- [ ] production security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
-- [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
+- [ ] production security monitoring/backup drills and load/penetration verification
 - [ ] trained Bob model weights and production model/provider credentials
 - [ ] production object storage, email, search, media, hosting, DNS, and deployment secrets
-- [ ] post-code laptop build, API smoke tests, browser verification, provider connectivity, and sandbox verification
+- [ ] final repository build, full test suite, API smoke tests, browser verification, provider connectivity, and sandbox verification
