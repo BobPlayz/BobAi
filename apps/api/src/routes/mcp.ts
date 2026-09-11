@@ -2,10 +2,76 @@ import { Router } from "express";
 import { createMcpApproval, discoverMcpTools, executeApprovedMcpTool, listConfiguredMcpServers } from "../services/mcpGateway.js";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
+import { registerMcpServer, removeMcpServer, updateMcpServer } from "../services/mcpRegistry.js";
 
-const router = Router(); const limit = createUserRateLimit(20, 60_000);
-router.get("/servers", (_req, res) => res.json({ servers: listConfiguredMcpServers() }));
-router.get("/tools", limit, async (_req, res) => { try { return res.json({ tools: await discoverMcpTools() }); } catch { return res.status(503).json({ error: "MCP discovery unavailable" }); } });
-router.post("/approve", limit, async (req, res) => { const userId = req.user?.id; const serverId = typeof req.body?.serverId === "string" ? req.body.serverId.trim() : ""; const toolName = typeof req.body?.toolName === "string" ? req.body.toolName.trim() : ""; if (!userId || !serverId || !toolName) return res.status(400).json({ error: "serverId and toolName are required" }); try { const workspace = await ensurePersonalWorkspace(userId); return res.json({ approval: await createMcpApproval({ userId, workspaceId: workspace.id, serverId, toolName }) }); } catch { return res.status(400).json({ error: "MCP tool approval unavailable" }); } });
-router.post("/execute", limit, async (req, res) => { const userId = req.user?.id; const approvalToken = typeof req.body?.approvalToken === "string" ? req.body.approvalToken.trim() : ""; const serverId = typeof req.body?.serverId === "string" ? req.body.serverId.trim() : ""; const toolName = typeof req.body?.toolName === "string" ? req.body.toolName.trim() : ""; if (!userId || !approvalToken || !serverId || !toolName) return res.status(400).json({ error: "approvalToken, serverId and toolName are required" }); try { const workspace = await ensurePersonalWorkspace(userId); const result = await executeApprovedMcpTool({ userId, workspaceId: workspace.id, approvalToken, serverId, toolName, arguments: req.body?.arguments }); return res.json({ result }); } catch (error) { if (error instanceof Error && error.message === "MCP approval required") return res.status(403).json({ error: error.message }); return res.status(503).json({ error: "MCP tool execution unavailable" }); } });
+const router = Router();
+const limit = createUserRateLimit(20, 60_000);
+
+router.get("/servers", async (req, res) => {
+  try {
+    const workspace = await ensurePersonalWorkspace(req.user!.id);
+    return res.json({ servers: await listConfiguredMcpServers(workspace.id) });
+  } catch { return res.status(503).json({ error: "MCP server registry unavailable" }); }
+});
+
+router.post("/servers", limit, async (req, res) => {
+  const userId = req.user?.id;
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const url = typeof req.body?.url === "string" ? req.body.url.trim() : "";
+  if (!userId || !name || !url) return res.status(400).json({ error: "name and url are required" });
+  try {
+    const workspace = await ensurePersonalWorkspace(userId);
+    return res.status(201).json({ server: await registerMcpServer({ workspaceId: workspace.id, userId, name, url, scopes: req.body?.scopes }) });
+  } catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : "MCP server registration failed" }); }
+});
+
+router.patch("/servers/:id", limit, async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: "authentication required" });
+  try {
+    const workspace = await ensurePersonalWorkspace(userId);
+    return res.json({ server: await updateMcpServer({ workspaceId: workspace.id, userId, id: req.params.id, name: typeof req.body?.name === "string" ? req.body.name : undefined, url: typeof req.body?.url === "string" ? req.body.url : undefined, scopes: req.body && Object.prototype.hasOwnProperty.call(req.body, "scopes") ? req.body.scopes : undefined, isEnabled: typeof req.body?.isEnabled === "boolean" ? req.body.isEnabled : undefined }) });
+  } catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : "MCP server update failed" }); }
+});
+
+router.delete("/servers/:id", limit, async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.status(401).json({ error: "authentication required" });
+  try {
+    const workspace = await ensurePersonalWorkspace(userId);
+    return res.json(await removeMcpServer({ workspaceId: workspace.id, userId, id: req.params.id }));
+  } catch { return res.status(404).json({ error: "MCP server not found" }); }
+});
+
+router.get("/tools", limit, async (req, res) => {
+  try { const workspace = await ensurePersonalWorkspace(req.user!.id); return res.json({ tools: await discoverMcpTools(workspace.id) }); }
+  catch { return res.status(503).json({ error: "MCP discovery unavailable" }); }
+});
+
+router.post("/approve", limit, async (req, res) => {
+  const userId = req.user?.id;
+  const serverId = typeof req.body?.serverId === "string" ? req.body.serverId.trim() : "";
+  const toolName = typeof req.body?.toolName === "string" ? req.body.toolName.trim() : "";
+  if (!userId || !serverId || !toolName) return res.status(400).json({ error: "serverId and toolName are required" });
+  try { const workspace = await ensurePersonalWorkspace(userId); return res.json({ approval: await createMcpApproval({ userId, workspaceId: workspace.id, serverId, toolName }) }); }
+  catch { return res.status(400).json({ error: "MCP tool approval unavailable" }); }
+});
+
+router.post("/execute", limit, async (req, res) => {
+  const userId = req.user?.id;
+  const approvalToken = typeof req.body?.approvalToken === "string" ? req.body.approvalToken.trim() : "";
+  const serverId = typeof req.body?.serverId === "string" ? req.body.serverId.trim() : "";
+  const toolName = typeof req.body?.toolName === "string" ? req.body.toolName.trim() : "";
+  if (!userId || !approvalToken || !serverId || !toolName) return res.status(400).json({ error: "approvalToken, serverId and toolName are required" });
+  try {
+    const workspace = await ensurePersonalWorkspace(userId);
+    const result = await executeApprovedMcpTool({ userId, workspaceId: workspace.id, approvalToken, serverId, toolName, arguments: req.body?.arguments });
+    return res.json({ result });
+  } catch (error) {
+    if (error instanceof Error && error.message === "MCP approval required") return res.status(403).json({ error: error.message });
+    if (error instanceof Error && error.message === "MCP tool is not permitted") return res.status(403).json({ error: error.message });
+    return res.status(503).json({ error: "MCP tool execution unavailable" });
+  }
+});
+
 export default router;
