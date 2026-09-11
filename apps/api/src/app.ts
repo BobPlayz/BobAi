@@ -7,75 +7,14 @@ import { securityLog } from "./middleware/securityLog.js";
 import { validateRequestBody } from "./middleware/requestValidation.js";
 import { validateProductionConfig } from "./config/validateProduction.js";
 import { startMaintenance } from "./services/maintenance.js";
-
-validateProductionConfig();
-export const app = express();
-const isProduction = process.env.NODE_ENV === "production";
-const allowedOrigins = (process.env.CORS_ORIGIN || "*").split(",").map((origin) => origin.trim()).filter(Boolean);
-
-if (isProduction && (!allowedOrigins.length || allowedOrigins.includes("*"))) {
-  throw new Error("CORS_ORIGIN must explicitly list allowed origins in production");
-}
-
-app.disable("x-powered-by");
-const trustProxy = process.env.TRUST_PROXY === "true";
-const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
-app.set("trust proxy", trustProxy ? trustProxyHops : false);
-app.use(cors({
-  origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key", "X-CSRF-Protection"],
-}));
-
-app.use((req, res, next) => {
-  const headerBytes = req.rawHeaders.reduce((total, value) => total + Buffer.byteLength(value, "utf8"), 0);
-  if (headerBytes > 16 * 1024) return res.status(431).json({ error: "request headers too large" });
-  return next();
-});
-
-app.use((_req, res, next) => {
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
-  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
-  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
-  if (isProduction) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  next();
-});
-
-app.use((req, res, next) => {
-  const incoming = req.header("x-request-id");
-  const requestId = incoming && /^[A-Za-z0-9._:-]{1,128}$/.test(incoming) ? incoming : randomUUID();
-  res.setHeader("x-request-id", requestId);
-  next();
-});
-
-app.use(securityLog);
-app.use(rateLimit);
-app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb", strict: true, type: ["application/json", "application/*+json"] }));
-app.use(express.urlencoded({ extended: false, limit: "256kb", parameterLimit: 100 }));
-app.use(validateRequestBody);
-startMaintenance();
-
-app.use((req, res, next) => {
-  if (!isProduction || !["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
-  const hasSessionCookie = /(?:^|;)\s*bobai_(?:access|refresh)=/.test(req.header("cookie") || "");
-  if (!hasSessionCookie) return next();
-  const origin = req.header("origin");
-  const csrfHeader = req.header("x-csrf-protection");
-  if (!origin || !allowedOrigins.includes(origin) || csrfHeader !== "1") return res.status(403).json({ error: "request origin validation failed" });
-  return next();
-});
-
-app.get("/", (_req, res) => res.json({ name: "BobAI API", status: "ok" }));
-app.use(apiRouter);
-app.use((_req, res) => res.status(404).json({ error: "route not found" }));
-app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  if (process.env.NODE_ENV !== "production") console.error("API ERROR:", error);
-  if (!res.headersSent) return res.status(500).json({ error: "internal server error" });
-});
+import { executionResultLimit } from "./middleware/executionResultLimit.js";
+validateProductionConfig(); export const app = express(); const isProduction = process.env.NODE_ENV === "production"; const allowedOrigins = (process.env.CORS_ORIGIN || "*").split(",").map((origin) => origin.trim()).filter(Boolean);
+if (isProduction && (!allowedOrigins.length || allowedOrigins.includes("*"))) throw new Error("CORS_ORIGIN must explicitly list allowed origins in production");
+app.disable("x-powered-by"); const trustProxy = process.env.TRUST_PROXY === "true"; const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1); app.set("trust proxy", trustProxy ? trustProxyHops : false);
+app.use(cors({ origin: allowedOrigins.length === 1 && allowedOrigins[0] === "*" ? true : allowedOrigins, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-BobAI-Agent-Key", "X-CSRF-Protection", "Idempotency-Key"] }));
+app.use((req, res, next) => { const headerBytes = req.rawHeaders.reduce((total, value) => total + Buffer.byteLength(value, "utf8"), 0); if (headerBytes > 16 * 1024) return res.status(431).json({ error: "request headers too large" }); return next(); });
+app.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); res.setHeader("Pragma", "no-cache"); res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("X-Frame-Options", "DENY"); res.setHeader("Referrer-Policy", "no-referrer"); res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()"); res.setHeader("Cross-Origin-Resource-Policy", "same-site"); res.setHeader("X-Permitted-Cross-Domain-Policies", "none"); res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"); if (isProduction) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains"); next(); });
+app.use((req, res, next) => { const incoming = req.header("x-request-id"); const requestId = incoming && /^[A-Za-z0-9._:-]{1,128}$/.test(incoming) ? incoming : randomUUID(); res.setHeader("x-request-id", requestId); next(); });
+app.use(securityLog); app.use(rateLimit); app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "2mb", strict: true, type: ["application/json", "application/*+json"] })); app.use(express.urlencoded({ extended: false, limit: "256kb", parameterLimit: 100 })); app.use(validateRequestBody); app.use(executionResultLimit); startMaintenance();
+app.use((req, res, next) => { if (!isProduction || !["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next(); const hasSessionCookie = /(?:^|;)\s*bobai_(?:access|refresh)=/.test(req.header("cookie") || ""); if (!hasSessionCookie) return next(); const origin = req.header("origin"); const csrfHeader = req.header("x-csrf-protection"); if (!origin || !allowedOrigins.includes(origin) || csrfHeader !== "1") return res.status(403).json({ error: "request origin validation failed" }); return next(); });
+app.get("/", (_req, res) => res.json({ name: "BobAI API", status: "ok" })); app.use(apiRouter); app.use((_req, res) => res.status(404).json({ error: "route not found" })); app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => { if (process.env.NODE_ENV !== "production") console.error("API ERROR:", error); if (!res.headersSent) return res.status(500).json({ error: "internal server error" }); });
