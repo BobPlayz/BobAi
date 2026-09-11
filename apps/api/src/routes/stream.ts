@@ -11,6 +11,16 @@ import { ensurePersonalWorkspace } from "../services/workspace.js";
 
 const router = Router();
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
+function latestUserText(value: unknown) {
+  if (!Array.isArray(value)) return "";
+  for (let index = value.length - 1; index >= 0; index -= 1) {
+    const message = value[index];
+    if (!message || typeof message !== "object") continue;
+    const record = message as Record<string, unknown>;
+    if (record.role === "user" && typeof record.content === "string") return record.content;
+  }
+  return "";
+}
 function persistedInputMessages(messages: Array<{ role: string; content: string }>) { return messages.map((message) => ({ id: randomUUID(), role: message.role, content: message.content, model: null, status: "completed" })); }
 function memoryContext(memories: Array<Record<string, unknown>> | null) { return (memories || []).map((memory) => typeof memory.content === "string" ? memory.content : "").filter(Boolean).slice(0, 12); }
 
@@ -24,8 +34,8 @@ router.post("/", async (req, res) => {
     workspaceId = workspace.id;
     const rows = await db.select({ key: settings.key, value: settings.value }).from(settings).where(and(eq(settings.userId, req.user!.id), eq(settings.workspaceId, workspace.id))).limit(50);
     const memoryEnabled = req.body?.memoryEnabled !== false && settingValue(rows, "memoryEnabled") !== false;
-    const latestText = Array.isArray(req.body?.messages) ? [...req.body.messages].reverse().find((message: unknown) => typeof message === "object" && message !== null && (message as Record<string, unknown>).role === "user")?.content || "" : "";
-    const memories = memoryEnabled && typeof latestText === "string" ? await dbRecallRelevant(workspace.id, req.user!.id, latestText, 12) : [];
+    const latestText = latestUserText(req.body?.messages);
+    const memories = memoryEnabled && latestText ? await dbRecallRelevant(workspace.id, req.user!.id, latestText, 12) : [];
     const prepared = prepareChat({ messages: req.body?.messages, personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), memoryContext: memoryContext(memories) });
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
     if (prepared.memoryRequest && prepared.latestUserMessage) {
