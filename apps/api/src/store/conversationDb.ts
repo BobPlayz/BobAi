@@ -1,25 +1,39 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt, or, sql } from "drizzle-orm";
 
 export type DbConversationMessage = { id: string; role: string; content: string; model: string | null; status: string; attachments: unknown; createdAt: Date };
 export type DbConversation = { id: string; workspaceId: string; userId: string; title: string; updatedAt: Date; messages: DbConversationMessage[]; isPinned?: boolean; isArchived?: boolean };
 async function getDb() { if (!process.env.DATABASE_URL) return null; return import("@bobai/db"); }
 
+const CURSOR = /^([0-9T:.+-]+)\.([0-9a-f-]{36})$/i;
+function decodeCursor(value: string | undefined) {
+  if (!value) return null;
+  const match = CURSOR.exec(value);
+  if (!match) return null;
+  const date = new Date(match[1]);
+  if (Number.isNaN(date.getTime())) return null;
+  return { date, id: match[2] };
+}
+function encodeCursor(date: Date, id: string) { return `${date.toISOString()}.${id}`; }
+
 export async function dbListConversations(userId: string, workspaceId: string, includeArchived = false, limit = 50, cursor?: string) {
   const database = await getDb(); if (!database) return null;
   const { conversations, messages } = database;
   const safeLimit = Math.min(100, Math.max(1, Math.floor(limit)));
-  const where = includeArchived ? and(eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId)) : and(eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId), eq(conversations.isArchived, false));
+  const base = includeArchived ? and(eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId)) : and(eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId), eq(conversations.isArchived, false));
+  const decoded = decodeCursor(cursor);
+  const where = decoded ? and(base, or(lt(conversations.updatedAt, decoded.date), and(eq(conversations.updatedAt, decoded.date), lt(conversations.id, decoded.id)))) : base;
   const rows = await database.db.select().from(conversations).where(where).orderBy(desc(conversations.updatedAt), desc(conversations.id)).limit(safeLimit + 1);
-  const visible = cursor ? rows.filter((row) => row.updatedAt.toISOString() < cursor) : rows;
-  const page = visible.slice(0, safeLimit);
-  return { items: await Promise.all(page.map(async (conversation) => ({ ...conversation, messages: await database.db.select({ id: messages.id, role: messages.role, content: messages.content, model: messages.model, status: messages.status, attachments: messages.attachments, createdAt: messages.createdAt }).from(messages).where(eq(messages.conversationId, conversation.id)).orderBy(asc(messages.createdAt)) }))), nextCursor: visible.length > safeLimit ? page[page.length - 1]?.updatedAt.toISOString() ?? null : null };
+  const hasMore = rows.length > safeLimit;
+  const page = rows.slice(0, safeLimit);
+  return { items: await Promise.all(page.map(async (conversation) => ({ ...conversation, messages: await database.db.select({ id: messages.id, role: messages.role, content: messages.content, model: messages.model, status: messages.status, attachments: messages.attachments, createdAt: messages.createdAt }).from(messages).where(eq(messages.conversationId, conversation.id)).orderBy(asc(messages.createdAt)) }))), nextCursor: hasMore && page.length ? encodeCursor(page[page.length - 1].updatedAt, page[page.length - 1].id) : null };
 }
 
 export async function dbGetConversation(id: string, userId: string, workspaceId: string, messageLimit = 200, before?: string) {
   const database = await getDb(); if (!database) return null; const { conversations, messages } = database;
   const rows = await database.db.select().from(conversations).where(and(eq(conversations.id, id), eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId))).limit(1); const conversation = rows[0]; if (!conversation) return null;
   const safeLimit = Math.min(500, Math.max(1, Math.floor(messageLimit)));
-  const where = before ? and(eq(messages.conversationId, conversation.id), sql`${messages.createdAt} < ${new Date(before)}`) : eq(messages.conversationId, conversation.id);
+  const parsedBefore = before ? new Date(before) : null;
+  const where = parsedBefore && !Number.isNaN(parsedBefore.getTime()) ? and(eq(messages.conversationId, conversation.id), sql`${messages.createdAt} < ${parsedBefore}`) : eq(messages.conversationId, conversation.id);
   const conversationMessages = await database.db.select({ id: messages.id, role: messages.role, content: messages.content, model: messages.model, status: messages.status, attachments: messages.attachments, createdAt: messages.createdAt }).from(messages).where(where).orderBy(desc(messages.createdAt)).limit(safeLimit);
   conversationMessages.reverse();
   return { ...conversation, messages: conversationMessages } satisfies DbConversation;
