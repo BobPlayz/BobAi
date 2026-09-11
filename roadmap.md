@@ -1,6 +1,6 @@
 - [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
 - [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive login/MFA backoff, cleanup workers, and deletion grace period
-- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, and maintenance cleanup
+- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and database-backed action idempotency
 - [x] durable chat persistence with pending/streaming/completed/failed/cancelled states, revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed full-text search, and model-backed long-context compaction with bounded fallback
 - [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped chat context, and authenticated project export/import
 - [x] memory scoped retrieval, relevance/provenance foundations, expiration, cleanup, immutable history, normal/streaming injection, and sensitive-secret rejection
@@ -8,12 +8,12 @@
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
-- [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, and reminder workers
+- [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, and idempotent execution
 - [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, fail-closed review, and production sandbox-attestation gating
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
-- [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, and outbound-call revalidation
+- [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
 - [x] permanent account purge removes direct user-owned operational records and dependent records before final deletion
-- [x] major image, automation, and MCP execution paths have idempotency groundwork
+- [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, failure release, expiry cleanup, and protected image/automation/MCP actions
 - [ ] complete export/deletion proof for every remaining user-owned table and storage layer
 - [ ] privacy classification, retention schedule, sensitive-memory approval, contradiction detection, merge/update/confidence/importance semantics, and provenance UI
 - [ ] production embeddings and durable object storage
@@ -26,7 +26,7 @@
 - [ ] full agent dependency graph, budgets, confidence/escalation, human checkpoints, cancellation propagation, patch/diff validation, and persistent run artifacts
 - [ ] genuine disposable coding workspace with filesystem, command, process, CPU, memory, and time isolation
 - [ ] end-to-end sandbox tests and verified production autonomous coding runtime
-- [ ] strict per-tool schemas, permission enforcement, result limits, retry/timeout policy, universal idempotency coverage, and destructive-action confirmation audit
+- [ ] strict per-tool schemas, permission enforcement, result limits, retry/timeout policy, universal idempotency coverage for all remaining executable actions, and destructive-action confirmation audit
 - [ ] automation history API/UI completion
 - [ ] MCP OAuth/connector authorization and durable third-party secret handling
 - [ ] production distributed rate limiting, security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
