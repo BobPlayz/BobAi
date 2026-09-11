@@ -7,15 +7,15 @@
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, durable per-user quotas, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
 - [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
-- [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
+- [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, media input limits, automatic skill inference, and media safety policy
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
-- [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, and idempotent execution
-- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, dependency graph validation/execution, token/time/step budgets, human checkpoints, cancellation endpoints, timeout cancellation signaling, bounded diff/result validation, persistent orchestration metadata/artifacts, and production sandbox-attestation gating
+- [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, idempotent execution, and run-history API
+- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, dependency graph validation/execution, token/time/step budgets, confidence escalation, human checkpoints, cancellation endpoints, timeout cancellation signaling, bounded diff/result validation, persistent orchestration metadata and cross-step artifacts, and production sandbox-attestation gating
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
 - [x] permanent account purge removes user-owned operational records, dependent records, personal workspaces, local file objects, idempotency records, rate-limit records, invitations, shares, sessions, and user account data
 - [x] account export covers user profile, sessions, conversations/messages, memories/history, projects/files, settings, API-key metadata, notifications, reminders, workflows/runs, agents/runs, tasks, integrations without encrypted credentials, media, research, tool logs, memberships, webhooks without secrets/headers, deliveries, usage, and audit records
-- [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP actions
+- [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP/capability actions
 - [x] workspace collaboration backend with role hierarchy, member management, invitation tokens, invitation expiry/revocation/acceptance, permission metadata, workspace membership listing, and audit events
 - [x] executor-side workspace role/permission enforcement for tool permissions
 - [x] disposable coding sandbox executor contract using a rootless, network-disabled, capability-dropped, resource-limited Docker container with bounded files/output and hard timeout
@@ -26,11 +26,8 @@
 - [ ] production embeddings and durable object-storage provider deployment verification
 - [ ] conversation merge/split and multi-device merge UI
 - [ ] complete retention proof for external object-storage providers
+- [ ] full media retention/cleanup, broader OCR/layout extraction, and media-provider safety verification
 - [ ] production search-provider credentials and live external search capacity
-- [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
-- [ ] confidence-based agent escalation and persistent cross-step artifacts beyond task JSON
-- [ ] universal executor result-size enforcement across every remaining executor path, universal idempotency coverage for every remaining executable action, and destructive-action confirmation audit
-- [ ] automation history UI completion
 - [ ] production security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
 - [ ] production backup/restore drill, connection-pool/performance tuning, and deliberate RLS rollout if selected
 - [ ] trained Bob model weights and production model/provider credentials

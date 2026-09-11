@@ -25,6 +25,7 @@ export * from "./toolLogs.js";
 export * from "./toolApprovals.js";
 export * from "./agents.js";
 export * from "./agentRuns.js";
+export * from "./agentArtifacts.js";
 export * from "./auditLogs.js";
 export * from "./usageRecords.js";
 export * from "./notifications.js";
