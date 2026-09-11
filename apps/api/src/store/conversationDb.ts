@@ -4,16 +4,16 @@ export type DbConversationMessage = { id: string; role: string; content: string;
 export type DbConversation = { id: string; workspaceId: string; userId: string; title: string; updatedAt: Date; messages: DbConversationMessage[]; isPinned?: boolean; isArchived?: boolean };
 async function getDb() { if (!process.env.DATABASE_URL) return null; return import("@bobai/db"); }
 
-const CURSOR = /^([0-9T:.+-]+)\.([0-9a-f-]{36})$/i;
+const CURSOR = /^(\d+)_([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 function decodeCursor(value: string | undefined) {
   if (!value) return null;
   const match = CURSOR.exec(value);
   if (!match) return null;
-  const date = new Date(match[1]);
-  if (Number.isNaN(date.getTime())) return null;
-  return { date, id: match[2] };
+  const timestamp = Number(match[1]);
+  if (!Number.isSafeInteger(timestamp) || timestamp <= 0) return null;
+  return { date: new Date(timestamp), id: match[2] };
 }
-function encodeCursor(date: Date, id: string) { return `${date.toISOString()}.${id}`; }
+function encodeCursor(date: Date, id: string) { return `${date.getTime()}_${id}`; }
 
 export async function dbListConversations(userId: string, workspaceId: string, includeArchived = false, limit = 50, cursor?: string) {
   const database = await getDb(); if (!database) return null;
