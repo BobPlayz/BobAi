@@ -1,25 +1,29 @@
 import { sql } from "drizzle-orm";
-import { db } from "@bobai/db";
+import { db, uploads } from "@bobai/db";
+import { deleteObject } from "./objectStorage.js";
 
 export async function purgeUserOwnedData(userId: string) {
+  const files = await db.select({ storageKey: uploads.storageKey }).from(uploads).where(sql`uploaded_by = ${userId}`);
+  for (const file of files) await deleteObject(file.storageKey).catch(() => undefined);
   await db.transaction(async (tx) => {
     await tx.execute(sql`DELETE FROM webhook_deliveries WHERE webhook_id IN (SELECT id FROM webhooks WHERE created_by = ${userId})`);
     await tx.execute(sql`DELETE FROM webhook_deliveries WHERE workspace_id IN (SELECT id FROM workspaces WHERE owner_id = ${userId} AND type = 'personal')`);
     await tx.execute(sql`DELETE FROM webhooks WHERE created_by = ${userId}`);
+    await tx.execute(sql`DELETE FROM file_shares WHERE shared_with_user_id = ${userId} OR created_by = ${userId} OR workspace_id IN (SELECT id FROM workspaces WHERE owner_id = ${userId})`);
+    await tx.execute(sql`DELETE FROM workspace_invitations WHERE invited_by = ${userId} OR email = (SELECT email FROM users WHERE id = ${userId}) OR workspace_id IN (SELECT id FROM workspaces WHERE owner_id = ${userId})`);
     await tx.execute(sql`DELETE FROM tool_logs WHERE user_id = ${userId}`);
     await tx.execute(sql`DELETE FROM tool_approvals WHERE user_id = ${userId}`);
+    await tx.execute(sql`DELETE FROM action_idempotency WHERE user_id = ${userId}`);
+    await tx.execute(sql`DELETE FROM rate_limit_buckets WHERE user_id = ${userId}`);
     await tx.execute(sql`DELETE FROM document_chunks WHERE upload_id IN (SELECT id FROM uploads WHERE uploaded_by = ${userId})`);
     await tx.execute(sql`DELETE FROM project_files WHERE uploaded_by = ${userId}`);
     await tx.execute(sql`DELETE FROM project_files WHERE project_id IN (SELECT id FROM projects WHERE owner_id = ${userId})`);
     await tx.execute(sql`DELETE FROM search_index WHERE workspace_id IN (SELECT id FROM workspaces WHERE owner_id = ${userId} AND type = 'personal')`);
     await tx.execute(sql`DELETE FROM memory_embeddings WHERE memory_id IN (SELECT id FROM memories WHERE user_id = ${userId})`);
     await tx.execute(sql`DELETE FROM memory_history WHERE memory_id IN (SELECT id FROM memories WHERE user_id = ${userId}) OR user_id = ${userId}`);
+    await tx.execute(sql`DELETE FROM memories WHERE user_id = ${userId}`);
     await tx.execute(sql`DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user_id = ${userId})`);
     await tx.execute(sql`DELETE FROM conversations WHERE user_id = ${userId}`);
-    await tx.execute(sql`DELETE FROM memory_embeddings WHERE memory_id NOT IN (SELECT id FROM memories)`);
-    await tx.execute(sql`DELETE FROM memory_history WHERE memory_id NOT IN (SELECT id FROM memories)`);
-    await tx.execute(sql`DELETE FROM project_files WHERE project_id NOT IN (SELECT id FROM projects)`);
-    await tx.execute(sql`DELETE FROM document_chunks WHERE upload_id NOT IN (SELECT id FROM uploads)`);
     await tx.execute(sql`DELETE FROM workflow_runs WHERE started_by = ${userId}`);
     await tx.execute(sql`DELETE FROM workflows WHERE created_by = ${userId}`);
     await tx.execute(sql`DELETE FROM agent_runs WHERE created_by = ${userId}`);
@@ -36,6 +40,10 @@ export async function purgeUserOwnedData(userId: string) {
     await tx.execute(sql`DELETE FROM mfa_challenges WHERE user_id = ${userId}`);
     await tx.execute(sql`DELETE FROM email_otps WHERE user_id = ${userId}`);
     await tx.execute(sql`DELETE FROM password_resets WHERE user_id = ${userId}`);
+    await tx.execute(sql`DELETE FROM sessions WHERE user_id = ${userId}`);
+    await tx.execute(sql`DELETE FROM uploads WHERE uploaded_by = ${userId}`);
     await tx.execute(sql`DELETE FROM workspace_members WHERE user_id = ${userId}`);
+    await tx.execute(sql`DELETE FROM workspaces WHERE owner_id = ${userId}`);
+    await tx.execute(sql`DELETE FROM users WHERE id = ${userId}`);
   });
 }
