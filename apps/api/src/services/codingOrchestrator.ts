@@ -24,6 +24,7 @@ export async function runCodingOrchestration(task: string, maxReviewLoops = 2): 
     run.implementation = await generateForAgent("ben", `Task:\n${normalized}\n\nAlex's plan:\n${run.plan}`, "You are Ben, BobAI's coding specialist. Produce precise implementation instructions for the disposable coding executor. Do not claim you edited real files and do not invent repository state.");
     run.messages.push(message("ben", "ryan", run.implementation));
 
+    let approved = false;
     for (let attempt = 0; attempt < reviewLoops; attempt += 1) {
       run.status = "executing";
       const execution = await runCodingAgent(`Original task:\n${normalized}\n\nAlex plan:\n${run.plan}\n\nBen implementation instructions:\n${run.implementation}\n\nExecute the task in the authorized coding workspace. Make real changes, run relevant checks, and return a structured result containing what changed, checks performed, and remaining warnings. Never modify files outside the authorized workspace.`);
@@ -32,7 +33,8 @@ export async function runCodingOrchestration(task: string, maxReviewLoops = 2): 
       run.status = "reviewing";
       run.review = await generateForAgent("ryan", `Original task:\n${normalized}\n\nPlan:\n${run.plan}\n\nBen instructions:\n${run.implementation}\n\nActual executor result:\n${run.execution}`, "You are Ryan, BobAI's security and correctness reviewer. Review the actual executor result, not hypothetical code. Check authorization, workspace boundaries, command safety, secrets, validation, tests, regressions, and whether the requested change was actually performed. If sound, begin with APPROVED. Otherwise list exact corrective actions.");
       run.messages.push(message("ryan", "bob", run.review));
-      if (/^\s*approved\b/i.test(run.review)) break;
+      approved = /^\s*approved\b/i.test(run.review);
+      if (approved) break;
       if (attempt + 1 < reviewLoops) {
         run.status = "coding";
         run.implementation = await generateForAgent("ben", `Revise the implementation instructions using Ryan's review.\n\nTask:\n${normalized}\n\nCurrent instructions:\n${run.implementation}\n\nActual execution result:\n${run.execution}\n\nRyan review:\n${run.review}`, "You are Ben. Produce corrected implementation instructions only. Do not claim changes were made.");
@@ -40,6 +42,7 @@ export async function runCodingOrchestration(task: string, maxReviewLoops = 2): 
       }
     }
     if (!run.execution) throw new Error("coding executor produced no result");
+    if (!approved) { run.status = "failed"; run.error = "Ryan did not approve the coding run after the configured review loops"; run.completedAt = new Date().toISOString(); throw Object.assign(new Error(run.error), { run }); }
     run.status = "completed"; run.completedAt = new Date().toISOString(); return run;
-  } catch (error) { run.status = "failed"; run.error = error instanceof Error ? error.message : String(error); run.completedAt = new Date().toISOString(); throw Object.assign(new Error(run.error), { run }); }
+  } catch (error) { if (run.status !== "failed") { run.status = "failed"; run.error = error instanceof Error ? error.message : String(error); run.completedAt = new Date().toISOString(); } throw Object.assign(new Error(run.error || "coding orchestration failed"), { run }); }
 }
