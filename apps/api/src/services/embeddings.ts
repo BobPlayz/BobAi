@@ -1,35 +1,7 @@
 const MAX_INPUT = 8_000;
 const DIMENSIONS = 1_536;
-
-export function embeddingsConfigured() {
-  return Boolean(process.env.BOBAI_EMBEDDING_PROVIDER_URL?.trim());
-}
-
-export async function generateEmbedding(text: string): Promise<number[] | null> {
-  const url = process.env.BOBAI_EMBEDDING_PROVIDER_URL?.trim();
-  if (!url) return null;
-  const input = text.trim().slice(0, MAX_INPUT);
-  if (!input) return null;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
-  try {
-    const headers: Record<string, string> = { "content-type": "application/json" };
-    const token = process.env.BOBAI_EMBEDDING_PROVIDER_TOKEN?.trim();
-    if (token) headers.authorization = `Bearer ${token}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ model: process.env.BOBAI_EMBEDDING_MODEL?.trim(), input }),
-      signal: controller.signal,
-    });
-    if (!response.ok) return null;
-    const body = await response.json() as { data?: Array<{ embedding?: unknown }> };
-    const vector = body.data?.[0]?.embedding;
-    if (!Array.isArray(vector) || vector.length !== DIMENSIONS || vector.some((value) => typeof value !== "number" || !Number.isFinite(value))) return null;
-    return vector as number[];
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
+const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+const DEFAULT_TIMEOUT_MS = 30_000;
+function providerUrl() { const configured = process.env.BOBAI_EMBEDDING_PROVIDER_URL?.trim(); if (!configured) return null; try { const url = new URL(configured); const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname.toLowerCase()); if (url.protocol !== "https:" && !(process.env.NODE_ENV !== "production" && url.protocol === "http:" && loopback)) return null; if (url.username || url.password || url.hash) return null; return url.toString().replace(/\/$/, ""); } catch { return null; } }
+export function embeddingsConfigured() { return Boolean(providerUrl()); }
+export async function generateEmbedding(text: string): Promise<number[] | null> { const url = providerUrl(); if (!url) return null; const input = text.trim().slice(0, MAX_INPUT); if (!input) return null; const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS); try { const headers: Record<string, string> = { "content-type": "application/json" }; const token = process.env.BOBAI_EMBEDDING_PROVIDER_TOKEN?.trim(); if (token) headers.authorization = `Bearer ${token}`; const response = await fetch(url, { method: "POST", headers, body: JSON.stringify({ model: process.env.BOBAI_EMBEDDING_MODEL?.trim(), input }), signal: controller.signal, redirect: "error" }); const contentLength = Number(response.headers.get("content-length")); if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) return null; const bodyText = await response.text(); if (!response.ok || bodyText.length > MAX_RESPONSE_BYTES) return null; let body: unknown; try { body = JSON.parse(bodyText); } catch { return null; } const vector = body && typeof body === "object" && "data" in body && Array.isArray((body as { data?: unknown }).data) ? (body as { data: Array<{ embedding?: unknown }> }).data[0]?.embedding : undefined; if (!Array.isArray(vector) || vector.length !== DIMENSIONS || vector.some((value) => typeof value !== "number" || !Number.isFinite(value))) return null; return vector as number[]; } catch { return null; } finally { clearTimeout(timer); } }

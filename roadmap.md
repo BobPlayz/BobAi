@@ -6,6 +6,7 @@
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, and sensitive-secret rejection
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, authorized downloads, malware scanning boundary, and cross-file retrieval foundations
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
+- [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
 - [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, and idempotent execution
@@ -26,7 +27,7 @@
 - [ ] full agent dependency graph, budgets, confidence/escalation, human checkpoints, cancellation propagation, patch/diff validation, and persistent run artifacts
 - [ ] genuine disposable coding workspace with filesystem, command, process, CPU, memory, and time isolation
 - [ ] end-to-end sandbox tests and verified production autonomous coding runtime
-- [ ] strict per-tool schema enforcement and result limits in every executor path, universal idempotency coverage for remaining executable actions, and destructive-action confirmation audit
+- [ ] strict per-tool result limits in every executor path, universal idempotency coverage for all remaining executable actions, and destructive-action confirmation audit
 - [ ] automation history API/UI completion
 - [ ] MCP OAuth/connector authorization and durable third-party secret handling
 - [ ] production distributed rate limiting, security monitoring, secret rotation, dependency/license/supply-chain policy, penetration testing, and load testing
