@@ -13,7 +13,7 @@
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
 - [x] permanent account purge removes direct user-owned operational records and dependent records before final deletion
-- [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, failure release, expiry cleanup, and protected image/automation/MCP actions
+- [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP actions
 - [ ] complete export/deletion proof for every remaining user-owned table and storage layer
 - [ ] privacy classification, retention schedule, sensitive-memory approval, contradiction detection, merge/update/confidence/importance semantics, and provenance UI
 - [ ] production embeddings and durable object storage
