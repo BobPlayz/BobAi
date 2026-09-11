@@ -1,24 +1,29 @@
 import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { db, toolApprovals, workspaceMembers } from "@bobai/db";
-import { getTool, type BobTool } from "./toolRegistry.js";
+import { getTool, validateToolInput, type BobTool, type ToolPermission } from "./toolRegistry.js";
 import { recordAudit } from "./audit.js";
 
-export type ToolExecutionContext = { userId: string; workspaceId: string; approvalToken?: string };
+export type ToolExecutionContext = { userId: string; workspaceId: string; approvalToken?: string; permission?: ToolPermission; arguments?: unknown };
 export type ToolExecutionResult =
   | { status: "ready"; tool: BobTool }
   | { status: "approval_required"; tool: BobTool }
   | { status: "unauthorized"; tool: BobTool }
+  | { status: "invalid_arguments"; tool: BobTool; reason: string }
   | { status: "unavailable"; tool: BobTool; reason: string };
 
 const APPROVAL_TTL_MS = 2 * 60_000;
+const MAX_APPROVAL_TOKEN_LENGTH = 256;
 const hashApprovalToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
+async function member(userId: string, workspaceId: string) {
+  const [row] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId))).limit(1);
+  return Boolean(row);
+}
 
 export async function issueToolApproval(toolId: string, userId: string, workspaceId: string) {
   const tool = getTool(toolId);
-  if (!tool || !tool.requiresUserApproval) return null;
-  const [membership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId))).limit(1);
-  if (!membership) return null;
+  if (!tool || !tool.requiresUserApproval || !await member(userId, workspaceId)) return null;
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS);
   await db.insert(toolApprovals).values({ userId, workspaceId, kind: "tool", toolId: tool.id, targetName: tool.name, tokenHash: hashApprovalToken(token), expiresAt });
@@ -27,7 +32,7 @@ export async function issueToolApproval(toolId: string, userId: string, workspac
 }
 
 async function consumeApproval(token: string | undefined, toolId: string, userId: string, workspaceId: string) {
-  if (!token) return false;
+  if (!token || token.length > MAX_APPROVAL_TOKEN_LENGTH) return false;
   const now = new Date();
   const [grant] = await db.update(toolApprovals).set({ consumedAt: now }).where(and(eq(toolApprovals.tokenHash, hashApprovalToken(token)), eq(toolApprovals.kind, "tool"), eq(toolApprovals.userId, userId), eq(toolApprovals.workspaceId, workspaceId), eq(toolApprovals.toolId, toolId), isNull(toolApprovals.consumedAt), gt(toolApprovals.expiresAt, now))).returning({ id: toolApprovals.id });
   if (grant) await recordAudit({ action: "tool_approval_consumed", resourceType: "tool_approval", resourceId: grant.id, userId, workspaceId, metadata: { toolId } });
@@ -38,19 +43,16 @@ export async function prepareToolExecution(toolId: string, context: ToolExecutio
   const tool = getTool(toolId);
   if (!tool) throw new Error("tool not found");
   const workspaceId = context.workspaceId.trim();
-  if (!workspaceId) return { status: "unauthorized", tool };
-  try {
-    const [membership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, context.userId))).limit(1);
-    if (!membership) return { status: "unauthorized", tool };
-  } catch { return { status: "unavailable", tool, reason: "authorization service is unavailable" }; }
+  if (!workspaceId || !await member(context.userId, workspaceId)) return { status: "unauthorized", tool };
+  if (context.permission && context.permission !== tool.permission) return { status: "unauthorized", tool };
+  const inputError = validateToolInput(tool, context.arguments ?? {});
+  if (inputError) return { status: "invalid_arguments", tool, reason: inputError };
   if (!providerConfigured(tool.id)) return { status: "unavailable", tool, reason: "provider is not configured" };
   if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool };
   return { status: "ready", tool };
 }
 
-export async function cleanupExpiredToolApprovals() {
-  await db.delete(toolApprovals).where(lt(toolApprovals.expiresAt, new Date()));
-}
+export async function cleanupExpiredToolApprovals() { await db.delete(toolApprovals).where(lt(toolApprovals.expiresAt, new Date())); }
 
 function providerConfigured(toolId: string): boolean {
   switch (toolId) {
@@ -65,9 +67,9 @@ function providerConfigured(toolId: string): boolean {
     case "documents": return true;
     case "knowledge": return true;
     case "data-analysis": return true;
-    case "automation": return Boolean(process.env.BOBAI_AUTOMATION_ENABLED === "true");
-    case "diagrams": return Boolean(process.env.BOBAI_DIAGRAMS_ENABLED === "true");
-    case "sketch-to-ui": return Boolean(process.env.BOBAI_SKETCH_TO_UI_ENABLED === "true");
+    case "automation": return process.env.BOBAI_AUTOMATION_ENABLED === "true";
+    case "diagrams": return process.env.BOBAI_DIAGRAMS_ENABLED === "true";
+    case "sketch-to-ui": return process.env.BOBAI_SKETCH_TO_UI_ENABLED === "true";
     default: return false;
   }
 }
