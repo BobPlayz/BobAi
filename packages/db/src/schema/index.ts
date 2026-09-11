@@ -10,6 +10,7 @@ export * from "./memoryEmbeddings.js";
 export * from "./projects.js";
 export * from "./projectFiles.js";
 export * from "./uploads.js";
+export * from "./documentChunks.js";
 export * from "./images.js";
 export * from "./voices.js";
 export * from "./personalities.js";
