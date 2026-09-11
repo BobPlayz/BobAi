@@ -7,6 +7,7 @@ export * from "./conversations.js";
 export * from "./messages.js";
 export * from "./memories.js";
 export * from "./memoryEmbeddings.js";
+export * from "./memoryHistory.js";
 export * from "./projects.js";
 export * from "./projectFiles.js";
 export * from "./uploads.js";
