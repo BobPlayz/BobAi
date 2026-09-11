@@ -10,7 +10,7 @@
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, and media input limits
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
 - [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, and idempotent execution
-- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, fail-closed review, and production sandbox-attestation gating
+- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, zero-action rejection, fail-closed review, timeout cancellation signaling, bounded diff validation, and production sandbox-attestation gating
 - [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
 - [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
 - [x] permanent account purge removes direct user-owned operational records and dependent records before final deletion
@@ -24,7 +24,7 @@
 - [ ] production search-provider credentials and live external search capacity
 - [ ] automatic vision capability selection, full OCR/layout understanding, audio transcription, speaker labels, TTS, music, video jobs, media retention, and media safety policy
 - [ ] broader workspace roles/invitations/collaboration/shared conversations beyond current project authorization
-- [ ] full agent dependency graph, budgets, confidence/escalation, human checkpoints, cancellation propagation, patch/diff validation, and persistent run artifacts
+- [ ] full agent dependency graph, budgets, confidence/escalation, human checkpoints, cancellation propagation beyond timeout, patch/diff application validation, and persistent run artifacts
 - [ ] genuine disposable coding workspace with filesystem, command, process, CPU, memory, and time isolation
 - [ ] end-to-end sandbox tests and verified production autonomous coding runtime
 - [ ] strict per-tool result limits in every executor path, universal idempotency coverage for all remaining executable actions, and destructive-action confirmation audit
