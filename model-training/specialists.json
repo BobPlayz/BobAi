@@ -1,0 +1,12 @@
+{
+  "policy": "from-scratch local specialist training",
+  "models": [
+    {"id":"bob-embed-0.1","task":"embedding","status":"training-kit"},
+    {"id":"bob-reranker-0.1","task":"reranking","status":"training-kit"},
+    {"id":"bob-vision-0.1","task":"vision-encoding","status":"training-kit"},
+    {"id":"bob-asr-0.1","task":"speech-recognition","status":"training-kit"},
+    {"id":"bob-tts-0.1","task":"speech-synthesis-mel","status":"training-kit"},
+    {"id":"bob-image-0.1","task":"image-generation-32px","status":"research-baseline"}
+  ],
+  "note": "These specialist models are deliberately small, trainable from scratch on modest hardware, and are not presented as production replacements for large pretrained systems. Runtime integration and larger eligible datasets remain separate verification work."
+}
