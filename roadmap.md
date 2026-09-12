@@ -25,5 +25,6 @@
 - [x] pure policy tests for agent graph validation, budget clamping, dependency scheduling, and media safety
 - [x] scheduled research brief storage, execution worker, quota-aware replay, and claim conflict metadata
 - [x] first real local build/test validation pass was used to identify and patch repository type/runtime integration defects in account export, collaboration schemas, file indexing, MCP/research route params, malware scanner fetch bodies, research quota result handling, agent queue context typing, and local Ollama title generation dependency coupling
+- [x] second local validation pass identified and patched the remaining nullable project-ID search call and chat preparation compatibility/nullability behavior
 - [ ] production environment variables, provider credentials, object storage/email/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
 - [ ] final repository build, full test suite, API smoke tests, browser verification, provider connectivity, and sandbox end-to-end verification
