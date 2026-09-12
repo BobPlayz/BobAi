@@ -24,5 +24,8 @@ jobs:
       - name: Validate dataset policy helpers
         working-directory: model-training
         run: python -m unittest test_prepare_dataset.py
+      - name: Validate native training sources
+        working-directory: model-training
+        run: python -m py_compile native_model.py train.py evaluate.py prepare_dataset.py test_native_model.py
       - name: Prepare synthetic starter dataset
         run: python model-training/prepare_dataset.py --input model-training/data/source.jsonl --output-dir /tmp/bobai-training-data

@@ -1,7 +1,1 @@
-accelerate>=1.8,<2
-transformers>=4.51,<6
-trl>=0.18,<1
-datasets>=3.6,<5
-peft>=0.15,<1
 torch>=2.6,<3
-safetensors>=0.5,<1

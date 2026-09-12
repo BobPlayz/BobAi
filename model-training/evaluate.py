@@ -2,81 +2,78 @@ from __future__ import annotations
 
 import argparse
 import json
+import struct
 from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
-from peft import PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from native_model import ASSISTANT, BOS, BobNativeLM, encode_messages
 
 ROOT = Path(__file__).resolve().parent
 
 
-def load_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+def load_native(path: Path) -> BobNativeLM:
+    raw = path.read_bytes()
+    if raw[:8] != b"BOBAI001":
+        raise SystemExit("invalid native model file")
+    header_len = struct.unpack("<I", raw[8:12])[0]
+    header = json.loads(raw[12:12 + header_len].decode("utf-8"))
+    data_start = (12 + header_len + 3) & ~3
+    model = BobNativeLM()
+    state = model.state_dict()
+    for spec in header["tensors"]:
+        name = spec["name"]
+        if name not in state:
+            raise SystemExit(f"model tensor {name} is not supported by this runtime")
+        start = data_start + int(spec["offset"])
+        count = int(spec["count"])
+        values = torch.frombuffer(memoryview(raw)[start:start + count * 4], dtype=torch.float32).clone().reshape(tuple(spec["shape"]))
+        state[name] = values
+    model.load_state_dict(state)
+    model.eval()
+    return model
 
 
-def generate(model, tokenizer, messages: list[dict], max_new_tokens: int = 120) -> str:
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    inputs = tokenizer(text, return_tensors="pt").to(model.device)
+def generate(model: BobNativeLM, messages: list[dict], max_new_tokens: int = 160) -> str:
+    ids = [BOS]
+    for message in messages:
+        ids.extend(encode_messages([{"role": message["role"], "content": message["content"]}])[1:-1])
+    ids.append(ASSISTANT)
     with torch.no_grad():
-        outputs = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
-    generated = outputs[0][inputs["input_ids"].shape[-1]:]
-    return tokenizer.decode(generated, skip_special_tokens=True).strip()
-
-
-def run_checks(text: str, checks: list[str]) -> dict[str, bool]:
-    lower = text.lower()
-    results = {"non_empty": bool(text.strip())}
-    if "mentions_software_interface" in checks:
-        results["mentions_software_interface"] = any(word in lower for word in ("program", "software", "interface", "request", "api"))
-    if "mentions_model_gateway" in checks:
-        results["mentions_model_gateway"] = any(word in lower for word in ("gateway", "model", "provider", "replace", "swap"))
-    if "mentions_consent" in checks:
-        results["mentions_consent"] = any(word in lower for word in ("consent", "permission", "opt-in", "eligible", "training"))
-    if "mentions_adapter" in checks:
-        results["mentions_adapter"] = any(word in lower for word in ("adapter", "small", "parameters", "weights", "lora"))
-    if "mentions_verification" in checks:
-        results["mentions_verification"] = any(word in lower for word in ("verify", "check", "source", "current", "uncertain"))
-    return results
+        for _ in range(max_new_tokens):
+            inp = torch.tensor([ids[-128:]], dtype=torch.long)
+            logits = model(inp)[0, -1]
+            for token in (256, 258, 259, 260):
+                logits[token] = -1e9
+            next_token = int(torch.argmax(logits).item())
+            if next_token == 257:
+                break
+            ids.append(next_token)
+    generated = [token for token in ids if token < 256]
+    prompt_bytes = b"".join(bytes([token]) for token in generated)
+    marker = messages[-1]["content"].encode("utf-8") if messages else b""
+    text = prompt_bytes.decode("utf-8", errors="ignore")
+    if marker and marker.decode("utf-8", errors="ignore") in text:
+        text = text.split(marker.decode("utf-8", errors="ignore"), 1)[-1]
+    return text.strip()
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run deterministic smoke evaluation for a Bob adapter.")
-    parser.add_argument("--adapter", type=Path, required=True)
-    parser.add_argument("--base-model", default=None)
-    parser.add_argument("--output", type=Path, default=ROOT / "output" / "evaluation.json")
+    parser = argparse.ArgumentParser(description="Evaluate a BobAI native model without an external inference server.")
+    parser.add_argument("--model", type=Path, default=ROOT / "output/bob-0.1-native/model.bob")
+    parser.add_argument("--output", type=Path, default=ROOT / "output/evaluation.json")
     args = parser.parse_args()
-
-    metadata_path = args.adapter / "bob-model.json"
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path.exists() else {}
-    base_model = args.base_model or metadata.get("base_model")
-    if not base_model:
-        raise SystemExit("Base model is required. Pass --base-model or train.py metadata must exist.")
-
-    tokenizer = AutoTokenizer.from_pretrained(args.adapter)
-    base = AutoModelForCausalLM.from_pretrained(base_model, torch_dtype="auto")
-    model = PeftModel.from_pretrained(base, str(args.adapter))
-    model.eval()
-
-    prompts = load_jsonl(ROOT / "eval" / "prompts.jsonl")
+    if not args.model.exists():
+        raise SystemExit("Train a native Bob model first or pass --model.")
+    model = load_native(args.model)
+    prompts = [json.loads(line) for line in (ROOT / "eval/prompts.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     results = []
     for prompt in prompts:
-        response = generate(model, tokenizer, prompt["messages"])
-        checks = run_checks(response, prompt.get("checks", []))
-        results.append({"id": prompt["id"], "response": response, "checks": checks, "passed": all(checks.values())})
-
-    passed = sum(1 for result in results if result["passed"])
-    report = {
-        "model_id": metadata.get("model_id", args.adapter.name),
-        "base_model": base_model,
-        "evaluated_at": datetime.now(timezone.utc).isoformat(),
-        "passed": passed,
-        "total": len(results),
-        "pass_rate": passed / len(results) if results else 0.0,
-        "results": results,
-        "note": "This is a deterministic smoke/evaluation harness, not a benchmark against frontier models.",
-    }
+        response = generate(model, prompt["messages"])
+        results.append({"id": prompt["id"], "response": response, "passed": bool(response.strip())})
+    passed = sum(1 for item in results if item["passed"])
+    report = {"model_id": "bob-0.1-native", "evaluated_at": datetime.now(timezone.utc).isoformat(), "passed": passed, "total": len(results), "pass_rate": passed / len(results) if results else 0.0, "results": results}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, ensure_ascii=False))

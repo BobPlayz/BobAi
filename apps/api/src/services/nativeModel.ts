@@ -1,0 +1,53 @@
+import fs from "node:fs";
+import fsPromises from "node:fs/promises";
+import path from "node:path";
+
+export type NativeMessage = { role: "system" | "user" | "assistant"; content: string };
+type Tensor = { shape: number[]; offset: number; count: number; data: Float32Array };
+type NativeHeader = { format: string; version: number; model_id: string; vocab_size: number; context_size: number; d_model: number; n_heads: number; ffn_dim: number; n_layers: number; tokenizer: string; tensors: Array<{ name: string; shape: number[]; offset: number; count: number }> };
+const MAGIC = "BOBAI001";
+const BOS = 256, EOS = 257, USER = 258, ASSISTANT = 259, SYSTEM = 260;
+const MAX_PROMPT_CHARS = 120_000, MAX_GENERATED_BYTES = 8_000;
+const DEFAULT_MODEL_DIR = "model-training/output/bob-0.1-native";
+function tensor(buffer: Buffer, dataStart: number, spec: { shape: number[]; offset: number; count: number }): Tensor { const byteOffset = dataStart + spec.offset; if (byteOffset % 4 !== 0 || byteOffset + spec.count * 4 > buffer.length) throw new Error("native model tensor is outside the model file"); return { ...spec, data: new Float32Array(buffer.buffer, buffer.byteOffset + byteOffset, spec.count) }; }
+function matrix(t: Tensor, row: number, col: number) { return t.data[row * t.shape[1] + col]; }
+function vector(t: Tensor, index: number) { return t.data[index]; }
+function layerNorm(x: Float32Array, gamma: Tensor, beta: Tensor) { let mean = 0; for (const value of x) mean += value; mean /= x.length; let variance = 0; for (const value of x) { const delta = value - mean; variance += delta * delta; } variance /= x.length; const scale = 1 / Math.sqrt(variance + 1e-5); const out = new Float32Array(x.length); for (let i = 0; i < x.length; i += 1) out[i] = (x[i] - mean) * scale * vector(gamma, i) + vector(beta, i); return out; }
+function linear(x: Float32Array, weight: Tensor, bias: Tensor, outSize: number) { const out = new Float32Array(outSize); for (let row = 0; row < outSize; row += 1) { let value = vector(bias, row); for (let col = 0; col < x.length; col += 1) value += x[col] * matrix(weight, row, col); out[row] = value; } return out; }
+function gelu(x: number) { return 0.5 * x * (1 + Math.tanh(Math.sqrt(2 / Math.PI) * (x + 0.044715 * x * x * x))); }
+function softmax(values: Float32Array) { let max = -Infinity; for (const value of values) if (value > max) max = value; const out = new Float32Array(values.length); let sum = 0; for (let i = 0; i < values.length; i += 1) { out[i] = Math.exp(values[i] - max); sum += out[i]; } if (!Number.isFinite(sum) || sum <= 0) return out.fill(1 / values.length); for (let i = 0; i < out.length; i += 1) out[i] /= sum; return out; }
+function roleToken(role: NativeMessage["role"]) { return role === "assistant" ? ASSISTANT : role === "system" ? SYSTEM : USER; }
+function encode(messages: NativeMessage[]) { const ids = [BOS]; for (const message of messages) { ids.push(roleToken(message.role)); ids.push(...Buffer.from(message.content, "utf8")); } return ids; }
+function decode(ids: number[]) { return Buffer.from(ids.filter((id) => id >= 0 && id < 256)).toString("utf8"); }
+
+export class BobNativeModel {
+  private readonly modelDir: string;
+  private loaded?: { header: NativeHeader; tensors: Map<string, Tensor> };
+  constructor(modelDir = process.env.BOBAI_NATIVE_MODEL_DIR?.trim() || DEFAULT_MODEL_DIR) { this.modelDir = path.resolve(modelDir); }
+  isAvailable() { return fs.existsSync(path.join(this.modelDir, "model.bob")); }
+  async load() {
+    if (this.loaded) return;
+    const buffer = await fsPromises.readFile(path.join(this.modelDir, "model.bob"));
+    if (buffer.subarray(0, 8).toString("ascii") !== MAGIC) throw new Error("invalid BobAI native model magic");
+    const headerLength = buffer.readUInt32LE(8); if (headerLength <= 0 || headerLength > 1_000_000) throw new Error("invalid BobAI native model header");
+    const header = JSON.parse(buffer.subarray(12, 12 + headerLength).toString("utf8")) as NativeHeader;
+    if (header.format !== "bobai-native-transformer" || header.version !== 1 || header.vocab_size !== 261 || header.context_size > 512 || header.d_model % header.n_heads !== 0) throw new Error("unsupported BobAI native model format");
+    const dataStart = (12 + headerLength + 3) & ~3; const tensors = new Map<string, Tensor>(); for (const spec of header.tensors) tensors.set(spec.name, tensor(buffer, dataStart, spec));
+    for (const required of ["tok.weight", "pos.weight", "ln.weight", "ln.bias", "head.weight", "head.bias"]) if (!tensors.has(required)) throw new Error(`native model is missing ${required}`);
+    this.loaded = { header, tensors };
+  }
+  async status() { try { await this.load(); return { ready: true, modelId: this.loaded?.header.model_id || "bob-0.1-native", modelDir: this.modelDir }; } catch (error) { return { ready: false, modelId: "bob-0.1-native", modelDir: this.modelDir, error: error instanceof Error ? error.message : "native model unavailable" }; } }
+  private get(name: string) { const value = this.loaded?.tensors.get(name); if (!value) throw new Error(`native model tensor ${name} is missing`); return value; }
+  private forward(ids: number[]) {
+    if (!this.loaded) throw new Error("native model is not loaded"); const { header } = this.loaded; const selected = ids.slice(-Math.min(ids.length, header.context_size)); const length = selected.length; let states = new Array<Float32Array>(length); const tok = this.get("tok.weight"), pos = this.get("pos.weight");
+    for (let t = 0; t < length; t += 1) { const state = new Float32Array(header.d_model); for (let d = 0; d < header.d_model; d += 1) state[d] = matrix(tok, selected[t], d) + matrix(pos, t, d); states[t] = state; }
+    for (let layer = 0; layer < header.n_layers; layer += 1) { const prefix = `blocks.${layer}`, ln1 = this.get(`${prefix}.ln1.weight`), bn1 = this.get(`${prefix}.ln1.bias`), qkvW = this.get(`${prefix}.qkv.weight`), qkvB = this.get(`${prefix}.qkv.bias`), projW = this.get(`${prefix}.proj.weight`), projB = this.get(`${prefix}.proj.bias`), ln2 = this.get(`${prefix}.ln2.weight`), bn2 = this.get(`${prefix}.ln2.bias`), fc1W = this.get(`${prefix}.fc1.weight`), fc1B = this.get(`${prefix}.fc1.bias`), fc2W = this.get(`${prefix}.fc2.weight`), fc2B = this.get(`${prefix}.fc2.bias`); const normalized = states.map((state) => layerNorm(state, ln1, bn1)); const q: Float32Array[] = [], k: Float32Array[] = [], v: Float32Array[] = []; for (const state of normalized) { const packed = linear(state, qkvW, qkvB, header.d_model * 3); q.push(packed.slice(0, header.d_model)); k.push(packed.slice(header.d_model, header.d_model * 2)); v.push(packed.slice(header.d_model * 2)); } const next = new Array<Float32Array>(length), headDim = header.d_model / header.n_heads;
+      for (let t = 0; t < length; t += 1) { const combined = new Float32Array(header.d_model); for (let head = 0; head < header.n_heads; head += 1) { const scores = new Float32Array(t + 1); for (let j = 0; j <= t; j += 1) { let score = 0; for (let d = 0; d < headDim; d += 1) score += q[t][head * headDim + d] * k[j][head * headDim + d]; scores[j] = score / Math.sqrt(headDim); } const weights = softmax(scores); for (let d = 0; d < headDim; d += 1) { let value = 0; for (let j = 0; j <= t; j += 1) value += weights[j] * v[j][head * headDim + d]; combined[head * headDim + d] = value; } } const projected = linear(combined, projW, projB, header.d_model), residual = new Float32Array(header.d_model); for (let d = 0; d < header.d_model; d += 1) residual[d] = states[t][d] + projected[d]; const ffInput = layerNorm(residual, ln2, bn2); const ffHidden = linear(ffInput, fc1W, fc1B, header.ffn_dim); for (let i = 0; i < ffHidden.length; i += 1) ffHidden[i] = gelu(ffHidden[i]); const ffOutput = linear(ffHidden, fc2W, fc2B, header.d_model); for (let d = 0; d < header.d_model; d += 1) residual[d] += ffOutput[d]; next[t] = residual; } states = next; }
+    return linear(layerNorm(states[length - 1], this.get("ln.weight"), this.get("ln.bias")), this.get("head.weight"), this.get("head.bias"), header.vocab_size);
+  }
+  async generate(messages: NativeMessage[], options: { maxTokens?: number; temperature?: number; onToken?: (token: string) => void } = {}) { await this.load(); const clean = messages.filter((message) => message && typeof message.content === "string").map((message) => ({ role: message.role, content: message.content.slice(0, MAX_PROMPT_CHARS) })); if (!clean.length) throw new Error("native model requires at least one message"); const ids = encode(clean); ids.push(ASSISTANT); const maxTokens = Math.min(Math.max(options.maxTokens ?? 256, 1), 2048); const temperature = Math.min(Math.max(options.temperature ?? 0.65, 0.05), 1.5); const generated: number[] = [];
+    for (let step = 0; step < maxTokens && generated.length < MAX_GENERATED_BYTES; step += 1) { const logits = this.forward(ids); for (const blocked of [BOS, USER, ASSISTANT, SYSTEM]) logits[blocked] = -Infinity; const probs = softmax(Float32Array.from(logits, (value) => value / temperature)); let best = 0; for (let i = 1; i < probs.length; i += 1) if (probs[i] > probs[best]) best = i; const next = best; if (next === EOS) break; ids.push(next); generated.push(next); options.onToken?.(Buffer.from([next]).toString("utf8")); }
+    return decode(generated).trim();
+  }
+}
+export const bobNativeModel = new BobNativeModel();
