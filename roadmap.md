@@ -1,64 +1,19 @@
 - [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
-- [x] authentication with access/refresh tokens, hashing, rotation, reuse detection, revocation, password reset/change, OTP, verification, MFA, CSRF, secure cookies, fixed rate limits, adaptive MFA/login backoff, cleanup workers, and deletion grace period
-- [x] security headers, request IDs, sanitized production errors, audit logging, migration locking/checksums, CI security workflows, dependency overrides, maintenance cleanup, and optional PostgreSQL-backed distributed rate limiting
-- [x] durable chat persistence with revisions, restoration, archive/restore, pagination, deterministic cursors, offline conflict detection, indexed search, long-context compaction, and folder/label metadata primitives
-- [x] project instructions, model/tool policy, project files, activity, ownership checks, scoped context, and authenticated project export/import
-- [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, sensitive-secret detection with explicit approval workflow, editable memories, merge, and history API
-- [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
-- [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, durable per-user quotas with atomic increments, scheduled research briefs with multi-instance claim protection, contradiction signals, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
-- [x] local web research fallback using DuckDuckGo HTML directly with no search API key or provider URL
-- [x] local deterministic 1536-dimensional embeddings with no embedding provider, token, or model environment variables
-- [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, media input limits, automatic skill inference, and media safety policy
-- [x] local image generation fallback that renders safe deterministic SVG artwork without an image provider
-- [x] local diagram generation and sketch-to-UI specification capabilities without external provider configuration
-- [x] local Ollama defaults are exposed consistently by both model routing and model registry, including localhost use without an API key
-- [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
-- [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, idempotent execution, and run-history API
-- [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, dependency graph validation/execution, token/time/step budgets, confidence escalation, human checkpoints, cancellation endpoints, timeout cancellation signaling, bounded diff/result validation, persistent orchestration metadata and cross-step artifacts, and production sandbox-attestation gating
-- [x] MCP approvals are hashed, short-lived, atomic, and bound to authenticated user/workspace
-- [x] user-managed MCP registry with workspace ownership, enable/disable/delete, scope enforcement, HTTPS validation, DNS public-address checks, bounded discovery, outbound-call revalidation, and idempotent execution
-- [x] permanent account purge removes user-owned operational records, new research/agent records, dependent records, personal workspaces, local file objects, idempotency records, rate-limit records, invitations, shares, sessions, and user account data; shared owned workspaces transfer ownership to another member before the account is removed
-- [x] account export covers user profile, sessions, conversations/messages, memories/history, projects/files, settings, API-key metadata, notifications, reminders, workflows/runs, agents/runs, tasks, integrations without encrypted credentials, media, research, tool logs, memberships, webhooks without secrets, deliveries, usage, and audit records
-- [x] reusable database-backed idempotency layer with request-hash conflict detection, replay, abandoned-claim expiry, oversized-response protection, failure release, maintenance cleanup, and protected image/automation/MCP/capability actions
-- [x] workspace collaboration backend with role hierarchy, member management, invitation tokens, invitation expiry/revocation/acceptance, permission metadata, workspace membership listing, and audit events
-- [x] collaboration router is registered in the API
-- [x] executor-side workspace role/permission enforcement for tool permissions
-- [x] disposable coding sandbox executor contract using a rootless, network-disabled, capability-dropped, resource-limited Docker container with bounded files/output and hard timeout
-- [x] sandbox policy unit test covering network fail-closed and resource clamping
-- [x] generic OAuth 2.0 authorization-code + PKCE state handling, one-time state consumption, encrypted verifier storage, HTTPS provider validation, bounded token exchange, and encrypted integration credential persistence
-- [x] pure policy tests for agent graph validation, budget clamping, dependency scheduling, and media safety
-- [x] scheduled research brief storage, execution worker, quota-aware replay, and claim conflict metadata
-- [x] first real local build/test validation pass was used to identify and patch repository type/runtime integration defects in account export, collaboration schemas, file indexing, MCP/research route params, malware scanner fetch bodies, research quota result handling, agent queue context typing, and local Ollama title generation dependency coupling
-- [x] second local validation pass identified and patched the remaining nullable project-ID search call and chat preparation compatibility/nullability behavior
-- [x] security context test now awaits asynchronous chat preparation before asserting the prepared provider messages
-- [x] root environment template matches the current API/provider contract and web build configuration
-- [x] development launcher no longer depends on Ollama and starts the provider-agnostic API/web stack
-- [x] production MFA encryption-key validation requires exactly 32 decoded bytes, matching AES-256-GCM
-- [x] migration runner discovers zero-padded Drizzle migrations and safely records an already-existing baseline before applying later migrations
-- [x] idempotency maintenance cleanup binds timestamp predicates as database-compatible strings instead of passing Date objects through raw postgres-js SQL parameters
-- [x] research-quota maintenance cleanup binds its cutoff timestamp as a database-compatible string instead of passing a Date object through raw postgres-js SQL parameters
-- [x] registration maps nested PostgreSQL unique-violation errors to a safe account-conflict response instead of incorrectly returning account service unavailable
-- [x] account recovery supports purpose-scoped email OTP sign-in, preserves MFA after OTP authentication, and keeps OTP requests non-enumerating
-- [x] account passwords accept 6-128 characters and the external breached-password lookup/checklist has been removed from the account creation flow
-- [x] Google, Apple, and GitHub sign-in buttons use server-side OAuth authorization-code + PKCE flows with one-time state, encrypted verifier storage, provider identity linking, and provider-specific identity verification
-- [x] the public localhost root is now a clean BobAI landing page while the actual chat workspace remains at /chat, preventing unauthenticated chat overlays and 401 request spam on the public entry page
-- [x] login, signup, email verification, password recovery, and MFA are now one compact auth experience on the login page, with small provider icon buttons and no separate auth screens
-- [x] BobMail replaces the Resend runtime integration with a built-in SMTP client supporting implicit TLS, STARTTLS, authentication, bounded timeouts, OTP delivery, and password-reset email delivery
-- [x] BobMail refuses to send SMTP credentials over a non-TLS connection and correctly handles multiline EHLO capabilities
-- [x] production configuration now validates BobMail SMTP settings instead of requiring Resend credentials
-- [x] development OTP delivery works locally without SMTP by logging the code instead of requiring an email provider
-- [x] core and coding model configuration now defaults to a local Ollama server on 127.0.0.1:11434, with external model URLs remaining optional compatibility overrides
-- [x] obsolete external capability-provider, embedding-provider, local-media-provider, upload-provider, notification-provider, and video/image/voice/music/design provider variables have been removed from the environment templates
-- [x] BobHS v0.1 self-hosted controller and node-agent foundation with authenticated node bootstrap, hashed node credentials, persistent local state, heartbeat monitoring, deployment queue/claiming, Docker runtime execution, resource limits, capability dropping, no-new-privileges, read-only container roots, and bounded environment/deployment inputs
-- [x] local BobVoice TTS integration with Piper-compatible execution, bounded text/output, safe argument construction, model configuration, status reporting, and WAV response generation
-- [x] local whisper.cpp transcription integration with FFmpeg audio normalization, bounded input, model configuration, safe argument construction, transcript extraction, and status reporting
-- [x] local FFmpeg/ffprobe integration with bounded media conversion/probing, explicit output-format allowlist, metadata stripping, optional audio-only conversion, bounded image scaling, and status reporting
-- [x] local voice/media command-builder tests and explicit API documentation for BobVoice, whisper.cpp, FFmpeg, model paths, and runtime behavior
-- [x] root test command now includes the local voice/media contract tests alongside the existing security suite
-- [x] local media option handling rejects unsafe shapes by normalizing null and non-object option values before execution
-- [x] security override ranges now accept any fixed version at or above the patched js-yaml and qs versions
-- [x] apply npm audit lockfile fixes in CI
-- [ ] BobHS production ingress/TLS, persistent database-backed state, multi-controller coordination, resource-aware scheduling, persistent volumes, registry integration, rolling deployments, logs, backups, domains, and verified multi-node failover
-- [ ] production environment variables, provider credentials, object storage/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
-- [ ] final API smoke test against a running service, provider connectivity, browser verification, social-provider callback verification, real SMTP email delivery verification, and sandbox end-to-end verification
-- [ ] local hardware verification for Ollama model availability/performance and local video, speech, music, vision, or advanced raster image models
+- [x] authentication, account recovery, MFA, CSRF, secure cookies, rate limits, audit logging, migration locking, idempotency, deletion/export, and collaboration controls
+- [x] durable chat, revisions, search, context compaction, projects, scoped memory, file processing/sharing, research, automation, agents, MCP, media abstractions, and sandbox policy
+- [x] local research and deterministic embeddings without cloud provider requirements
+- [x] local image, diagram, and sketch-to-UI fallbacks without external AI credentials
+- [x] BobMail built-in SMTP delivery with TLS enforcement and development OTP fallback
+- [x] BobHS v0.1 authenticated controller/node foundation with bounded Docker execution
+- [x] native BobAI model architecture and inference gateway with no Ollama dependency in the chat path
+- [x] Bob-0.1-native decoder-only transformer definition, UTF-8 byte tokenizer, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, evaluation harness, and authenticated model status endpoint
+- [x] explicit training-data eligibility, consent, secret/PII sanitization, deterministic deduplication, and held-out validation/test splits
+- [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
+- [x] local BobVoice, whisper.cpp, and FFmpeg orchestration with bounded shell-free execution and status reporting
+- [x] local media option-shape hardening and command-builder contract tests
+- [x] security dependency overrides and one-time npm audit lockfile maintenance workflow
+- [ ] native model training on the target Windows machine with the user's expanded eligible dataset and generated model weights
+- [ ] BobHS production ingress/TLS, database-backed shared state, multi-controller coordination, resource-aware scheduling, persistent volumes, registry integration, rolling deployments, logs, backups, domains, and verified multi-node failover
+- [ ] production environment variables, hosting/DNS, trusted model-weight distribution, retention/backup proof, security monitoring, and external load/penetration verification
+- [ ] final API/browser smoke tests, social-provider callback verification, real SMTP delivery verification, media runtime verification, and sandbox end-to-end verification
+- [ ] target-hardware performance verification for the native model and local speech/media/vision runtimes
