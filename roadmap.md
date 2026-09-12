@@ -11,6 +11,7 @@
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, media input limits, automatic skill inference, and media safety policy
 - [x] local image generation fallback that renders safe deterministic SVG artwork without an image provider
 - [x] local diagram generation and sketch-to-UI specification capabilities without external provider configuration
+- [x] local Ollama defaults are exposed consistently by both model routing and model registry
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
 - [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, idempotent execution, and run-history API
 - [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, dependency graph validation/execution, token/time/step budgets, confidence escalation, human checkpoints, cancellation endpoints, timeout cancellation signaling, bounded diff/result validation, persistent orchestration metadata and cross-step artifacts, and production sandbox-attestation gating
