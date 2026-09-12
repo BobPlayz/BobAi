@@ -25,6 +25,7 @@ function config(): SmtpConfig {
 function readResponse(socket: net.Socket | tls.TLSSocket): Promise<string> {
   return new Promise((resolve, reject) => {
     let buffer = "";
+    const lines: string[] = [];
     const cleanup = () => {
       socket.off("data", onData);
       socket.off("error", onError);
@@ -32,12 +33,13 @@ function readResponse(socket: net.Socket | tls.TLSSocket): Promise<string> {
     };
     const onData = (chunk: Buffer | string) => {
       buffer += chunk.toString("utf8");
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop() || "";
-      for (const line of lines) {
-        if (/^\d{3} /.test(line)) { cleanup(); resolve(line); return; }
+      const parts = buffer.split(/\r?\n/);
+      buffer = parts.pop() || "";
+      for (const line of parts) {
+        lines.push(line);
+        if (/^\d{3} /.test(line)) { cleanup(); resolve(lines.join("\n")); return; }
       }
-      if (Buffer.byteLength(buffer, "utf8") > 64_000) { cleanup(); reject(new Error("SMTP response too large")); }
+      if (lines.join("\n").length + buffer.length > 64_000) { cleanup(); reject(new Error("SMTP response too large")); }
     };
     const onError = (error: Error) => { cleanup(); reject(error); };
     const onClose = () => { cleanup(); reject(new Error("SMTP connection closed unexpectedly")); };
@@ -50,7 +52,8 @@ function readResponse(socket: net.Socket | tls.TLSSocket): Promise<string> {
 function command(socket: net.Socket | tls.TLSSocket, value: string, expected: number[] = [250]) {
   socket.write(`${value}\r\n`);
   return readResponse(socket).then(response => {
-    const code = Number(response.slice(0, 3));
+    const finalLine = response.split("\n").at(-1) || "";
+    const code = Number(finalLine.slice(0, 3));
     if (!expected.includes(code)) throw new Error(`SMTP command failed (${code})`);
     return response;
   });
@@ -88,7 +91,7 @@ async function sendSmtp(to: string, subject: string, text: string) {
   try {
     let response = await readResponse(socket);
     if (!response.startsWith("220")) throw new Error("SMTP server rejected connection");
-    response = await command(socket, `EHLO bobai`, [250]);
+    response = await command(socket, "EHLO bobai", [250]);
 
     if (c.port !== 465 && /(^|\n)250[ -]STARTTLS/i.test(response)) {
       await command(socket, "STARTTLS", [220]);
@@ -98,12 +101,16 @@ async function sendSmtp(to: string, subject: string, text: string) {
         upgraded.once("secureConnect", () => { clearTimeout(timer); resolve(upgraded); });
         upgraded.once("error", error => { clearTimeout(timer); reject(error); });
       });
-      await command(socket, "EHLO bobai", [250]);
+      response = await command(socket, "EHLO bobai", [250]);
+    } else if (c.user && c.port !== 465) {
+      throw new Error("SMTP server did not advertise STARTTLS; refusing to send credentials without TLS");
     }
 
     if (c.user) {
-      await command(socket, "AUTH PLAIN", [334]);
-      await command(socket, Buffer.from(`\0${c.user}\0${c.password || ""}`).toString("base64"), [235]);
+      const authResponse = await command(socket, "AUTH PLAIN", [334, 235]);
+      if (authResponse.split("\n").at(-1)?.startsWith("334")) {
+        await command(socket, Buffer.from(`\0${c.user}\0${c.password || ""}`).toString("base64"), [235]);
+      }
     }
 
     await command(socket, `MAIL FROM:<${address(c.from)}>`, [250]);

@@ -40,6 +40,7 @@
 - [x] the public localhost root is now a clean BobAI landing page while the actual chat workspace remains at /chat, preventing unauthenticated chat overlays and 401 request spam on the public entry page
 - [x] login, signup, email verification, password recovery, and MFA are now one compact auth experience on the login page, with small provider icon buttons and no separate auth screens
 - [x] BobMail replaces the Resend runtime integration with a built-in SMTP client supporting implicit TLS, STARTTLS, authentication, bounded timeouts, OTP delivery, and password-reset email delivery
+- [x] BobMail refuses to send SMTP credentials over a non-TLS connection and correctly handles multiline EHLO capabilities
 - [x] production configuration now validates BobMail SMTP settings instead of requiring Resend credentials
 - [x] the environment templates remove the obsolete Resend and BOBDB variables and expose only the BobMail SMTP settings needed for email delivery
 - [ ] production environment variables, provider credentials, object storage/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
