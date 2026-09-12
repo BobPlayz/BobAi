@@ -1,7 +1,28 @@
+import { createHash } from "node:crypto";
+
 const MAX_INPUT = 8_000;
 const DIMENSIONS = 1_536;
-const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-const DEFAULT_TIMEOUT_MS = 30_000;
-function providerUrl() { const configured = process.env.BOBAI_EMBEDDING_PROVIDER_URL?.trim(); if (!configured) return null; try { const url = new URL(configured); const loopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname.toLowerCase()); if (url.protocol !== "https:" && !(process.env.NODE_ENV !== "production" && url.protocol === "http:" && loopback)) return null; if (url.username || url.password || url.hash) return null; return url.toString().replace(/\/$/, ""); } catch { return null; } }
-export function embeddingsConfigured() { return Boolean(providerUrl()); }
-export async function generateEmbedding(text: string): Promise<number[] | null> { const url = providerUrl(); if (!url) return null; const input = text.trim().slice(0, MAX_INPUT); if (!input) return null; const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS); try { const headers: Record<string, string> = { "content-type": "application/json" }; const token = process.env.BOBAI_EMBEDDING_PROVIDER_TOKEN?.trim(); if (token) headers.authorization = `Bearer ${token}`; const response = await fetch(url, { method: "POST", headers, body: JSON.stringify({ model: process.env.BOBAI_EMBEDDING_MODEL?.trim(), input }), signal: controller.signal, redirect: "error" }); const contentLength = Number(response.headers.get("content-length")); if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) return null; const bodyText = await response.text(); if (!response.ok || bodyText.length > MAX_RESPONSE_BYTES) return null; let body: unknown; try { body = JSON.parse(bodyText); } catch { return null; } const vector = body && typeof body === "object" && "data" in body && Array.isArray((body as { data?: unknown }).data) ? (body as { data: Array<{ embedding?: unknown }> }).data[0]?.embedding : undefined; if (!Array.isArray(vector) || vector.length !== DIMENSIONS || vector.some((value) => typeof value !== "number" || !Number.isFinite(value))) return null; return vector as number[]; } catch { return null; } finally { clearTimeout(timer); } }
+
+function localEmbedding(text: string): number[] {
+  const vector = new Float64Array(DIMENSIONS);
+  const normalized = text.normalize("NFKC").toLowerCase();
+  const terms = normalized.split(/\s+/).filter(Boolean);
+  for (const term of terms) {
+    const digest = createHash("sha256").update(term).digest();
+    for (let i = 0; i < 8; i++) {
+      const index = digest.readUInt16BE(i * 2) % DIMENSIONS;
+      vector[index] += digest[i] / 255 - 0.5;
+    }
+  }
+  if (!terms.length) return Array.from(vector);
+  let norm = 0;
+  for (const value of vector) norm += value * value;
+  norm = Math.sqrt(norm) || 1;
+  return Array.from(vector, (value) => value / norm);
+}
+
+export function embeddingsConfigured() { return true; }
+export async function generateEmbedding(text: string): Promise<number[] | null> {
+  const input = text.trim().slice(0, MAX_INPUT);
+  return input ? localEmbedding(input) : null;
+}

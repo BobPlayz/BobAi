@@ -2,21 +2,17 @@ import { setOtpSender } from "./otp.js";
 import { sendEmailOtp } from "./email.js";
 
 const isProduction = process.env.NODE_ENV === "production";
-const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
+const hasSmtp = Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim());
 
-/**
- * OTP delivery stays behind the OtpSender interface so the provider can be
- * replaced later without changing OTP generation or verification.
- */
 export function configureOtpDelivery() {
-  if (hasResend) {
+  if (hasSmtp) {
     setOtpSender(sendEmailOtp);
     return;
   }
 
   if (isProduction) {
     setOtpSender(async () => {
-      throw new Error("OTP email delivery is not configured");
+      throw new Error("SMTP email delivery is not configured");
     });
     return;
   }

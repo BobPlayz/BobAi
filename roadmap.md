@@ -6,8 +6,12 @@
 - [x] memory scoped retrieval, privacy classification, contradiction signals, confidence-aware relevance scoring, provenance/history, expiration, cleanup, normal/streaming injection, sensitive-secret detection with explicit approval workflow, editable memories, merge, and history API
 - [x] file validation/extraction, ownership, version lineage, chunking/indexing, ranked lexical search, OCR queue, malware scanning before storage, bounded downloads, honest processing status, workspace sharing, per-user read/write permission records, shared-file discovery, and authenticated shared downloads
 - [x] research provider abstraction, authenticated search, normalized citations, persistent sessions, replay/delete history operations, claim-to-source mapping, confidence metadata, durable per-user quotas with atomic increments, scheduled research briefs with multi-instance claim protection, contradiction signals, retries, timeouts, response limits, HTTPS validation, source deduplication, relevance/freshness/credibility ranking, short-lived public-result caching, and deep-research prompt-injection isolation
-- [x] embedding provider validation with HTTPS/local policy, credential/fragment rejection, timeout, redirect rejection, response-size bounds, and exact finite vector validation
+- [x] local web research fallback using DuckDuckGo HTML directly with no search API key or provider URL
+- [x] local deterministic 1536-dimensional embeddings with no embedding provider, token, or model environment variables
 - [x] vision/image/media provider abstractions, normal-chat image bridge, image history persistence, provider URL validation, media input limits, automatic skill inference, and media safety policy
+- [x] local image generation fallback that renders safe deterministic SVG artwork without an image provider
+- [x] local diagram generation and sketch-to-UI specification capabilities without external provider configuration
+- [x] local Ollama defaults are exposed consistently by both model routing and model registry, including localhost use without an API key
 - [x] settings persistence/validation/import-export foundations and Bob/Alex/Ben/Ryan/Violet role mapping
 - [x] durable automation runs, restart recovery, overlap protection, safe provider URLs, authenticated webhooks, signatures, replay protection, delivery records, reminder workers, idempotent execution, and run-history API
 - [x] durable agent queues/recovery/history, structured planner/coder/reviewer contracts, dependency graph validation/execution, token/time/step budgets, confidence escalation, human checkpoints, cancellation endpoints, timeout cancellation signaling, bounded diff/result validation, persistent orchestration metadata and cross-step artifacts, and production sandbox-attestation gating
@@ -39,5 +43,12 @@
 - [x] Google, Apple, and GitHub sign-in buttons use server-side OAuth authorization-code + PKCE flows with one-time state, encrypted verifier storage, provider identity linking, and provider-specific identity verification
 - [x] the public localhost root is now a clean BobAI landing page while the actual chat workspace remains at /chat, preventing unauthenticated chat overlays and 401 request spam on the public entry page
 - [x] login, signup, email verification, password recovery, and MFA are now one compact auth experience on the login page, with small provider icon buttons and no separate auth screens
-- [ ] production environment variables, provider credentials, object storage/email/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
-- [ ] final API smoke test against a running service, provider connectivity, browser verification, social-provider callback verification, email OTP delivery verification, and sandbox end-to-end verification
+- [x] BobMail replaces the Resend runtime integration with a built-in SMTP client supporting implicit TLS, STARTTLS, authentication, bounded timeouts, OTP delivery, and password-reset email delivery
+- [x] BobMail refuses to send SMTP credentials over a non-TLS connection and correctly handles multiline EHLO capabilities
+- [x] production configuration now validates BobMail SMTP settings instead of requiring Resend credentials
+- [x] development OTP delivery works locally without SMTP by logging the code instead of requiring an email provider
+- [x] core and coding model configuration now defaults to a local Ollama server on 127.0.0.1:11434, with external model URLs remaining optional compatibility overrides
+- [x] obsolete external capability-provider, embedding-provider, local-media-provider, upload-provider, notification-provider, and video/image/voice/music/design provider variables have been removed from the environment templates
+- [ ] production environment variables, provider credentials, object storage/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
+- [ ] final API smoke test against a running service, provider connectivity, browser verification, social-provider callback verification, real SMTP email delivery verification, and sandbox end-to-end verification
+- [ ] local hardware verification for Ollama model availability/performance and any future local video, speech, music, vision, or advanced raster image models
