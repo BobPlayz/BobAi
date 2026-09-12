@@ -7,23 +7,25 @@ const FFMPEG_COMMAND = process.env.BOBAI_FFMPEG_COMMAND || "ffmpeg";
 const FFPROBE_COMMAND = process.env.BOBAI_FFPROBE_COMMAND || "ffprobe";
 const FORMAT_RE = /^[a-z0-9]{1,12}$/;
 const ALLOWED_FORMATS = new Set(["wav", "mp3", "ogg", "opus", "m4a", "mp4", "webm", "gif", "png", "jpg", "jpeg"]);
+const asOptions = (value: Record<string, unknown> | undefined | null) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 
 export function buildFfmpegArgs(inputPath: string, outputPath: string, format: string): string[] {
   return ["-hide_banner", "-loglevel", "error", "-i", inputPath, "-map_metadata", "-1", "-y", "-f", format, outputPath];
 }
 
-export async function convertMedia(input: Buffer, format: string, options: Record<string, unknown> = {}) {
+export async function convertMedia(input: Buffer, format: string, options?: Record<string, unknown> | null) {
   if (input.length > 32 * 1024 * 1024) throw new Error("media exceeds 32 MB limit");
   const normalized = format.toLowerCase();
   if (!FORMAT_RE.test(normalized) || !ALLOWED_FORMATS.has(normalized)) throw new Error("unsupported output format");
+  const safeOptions = asOptions(options);
   const dir = await mkdtemp(join(tmpdir(), "bobai-ffmpeg-"));
   const source = join(dir, "input.bin");
   const output = join(dir, `output.${normalized}`);
   try {
     await writeFile(source, input, { mode: 0o600 });
     const args = buildFfmpegArgs(source, output, normalized);
-    if (options.audioOnly === true) args.splice(7, 0, "-vn");
-    if (typeof options.width === "number" && typeof options.height === "number" && Number.isInteger(options.width) && Number.isInteger(options.height) && options.width > 0 && options.height > 0 && options.width <= 4096 && options.height <= 4096) args.splice(7, 0, "-vf", `scale=${options.width}:${options.height}`);
+    if (safeOptions.audioOnly === true) args.splice(7, 0, "-vn");
+    if (typeof safeOptions.width === "number" && typeof safeOptions.height === "number" && Number.isInteger(safeOptions.width) && Number.isInteger(safeOptions.height) && safeOptions.width > 0 && safeOptions.height > 0 && safeOptions.width <= 4096 && safeOptions.height <= 4096) args.splice(7, 0, "-vf", `scale=${safeOptions.width}:${safeOptions.height}`);
     const result = await runCommand(FFMPEG_COMMAND, args, { timeoutMs: 180_000 });
     if (result.code !== 0) throw new Error(result.stderr.toString("utf8").slice(-2_000) || "ffmpeg conversion failed");
     const media = await readFile(output);
