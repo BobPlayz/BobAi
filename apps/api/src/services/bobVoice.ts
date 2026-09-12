@@ -5,6 +5,7 @@ import { commandAvailable, runCommand } from "./localCommand.js";
 
 const PIPER_COMMAND = process.env.BOBAI_PIPER_COMMAND || "piper";
 const PIPER_MODEL = process.env.BOBAI_PIPER_MODEL_PATH || "";
+const asOptions = (value: Record<string, unknown> | undefined | null) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 
 export function buildPiperArgs(modelPath: string, outputPath: string, lengthScale?: number): string[] {
   const args = ["--model", modelPath, "--output_file", outputPath];
@@ -12,13 +13,14 @@ export function buildPiperArgs(modelPath: string, outputPath: string, lengthScal
   return args;
 }
 
-export async function synthesizeLocal(text: string, options: Record<string, unknown> = {}) {
+export async function synthesizeLocal(text: string, options?: Record<string, unknown> | null) {
   if (!PIPER_MODEL) throw new Error("BOBAI_PIPER_MODEL_PATH is not configured");
   if (!text.trim() || text.length > 20_000) throw new Error("text exceeds 20,000 character limit");
+  const safeOptions = asOptions(options);
   const dir = await mkdtemp(join(tmpdir(), "bobai-piper-"));
   const output = join(dir, "speech.wav");
   try {
-    const rawScale = typeof options.lengthScale === "number" ? options.lengthScale : undefined;
+    const rawScale = typeof safeOptions.lengthScale === "number" ? safeOptions.lengthScale : undefined;
     const lengthScale = rawScale === undefined ? undefined : Math.min(Math.max(rawScale, 0.5), 2);
     const result = await runCommand(PIPER_COMMAND, buildPiperArgs(PIPER_MODEL, output, lengthScale), { input: text.trim(), timeoutMs: 180_000 });
     if (result.code !== 0) throw new Error(result.stderr.toString("utf8").slice(-2_000) || "local TTS failed");
