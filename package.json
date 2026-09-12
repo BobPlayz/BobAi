@@ -12,6 +12,8 @@
     "bobhs": "npm run dev --workspace=@bobai/bobhs",
     "bobhs:build": "npm run build --workspace=@bobai/bobhs",
     "bobhs:start": "npm run start --workspace=@bobai/bobhs",
+    "native:media:build": "node-gyp rebuild --directory native/media --release",
+    "native:media:clean": "node-gyp clean --directory native/media",
     "db:push": "npm run db:push --workspace=@bobai/db",
     "db:generate": "npm run db:generate --workspace=@bobai/db",
     "db:migrate": "tsx scripts/migrate.ts",
