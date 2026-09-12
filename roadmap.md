@@ -11,6 +11,7 @@
 - [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
 - [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
 - [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
+- [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
 - [x] security dependency overrides and one-time npm audit lockfile maintenance workflow
 - [x] CI audit-lock refresh verified with zero npm vulnerabilities
 - [x] CI-discovered email OTP schema drift fixed by aligning the Drizzle schema with the existing purpose migration
