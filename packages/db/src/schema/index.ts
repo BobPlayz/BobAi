@@ -41,6 +41,8 @@ export * from "./researchClaims.js";
 export * from "./researchQuotas.js";
 export * from "./researchBriefs.js";
 export * from "./oauthStates.js";
+export * from "./authIdentities.js";
+export * from "./authOAuthStates.js";
 export * from "./billingPlans.js";
 export * from "./subscriptions.js";
 export * from "./emailOtps.js";

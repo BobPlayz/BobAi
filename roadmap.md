@@ -34,5 +34,9 @@
 - [x] idempotency maintenance cleanup binds timestamp predicates as database-compatible strings instead of passing Date objects through raw postgres-js SQL parameters
 - [x] research-quota maintenance cleanup binds its cutoff timestamp as a database-compatible string instead of passing a Date object through raw postgres-js SQL parameters
 - [x] registration maps nested PostgreSQL unique-violation errors to a safe account-conflict response instead of incorrectly returning account service unavailable
+- [x] account recovery supports purpose-scoped email OTP sign-in, preserves MFA after OTP authentication, and keeps OTP requests non-enumerating
+- [x] account passwords accept 6-128 characters and the external breached-password lookup/checklist has been removed from the account creation flow
+- [x] Google, Apple, and GitHub sign-in buttons use server-side OAuth authorization-code + PKCE flows with one-time state, encrypted verifier storage, provider identity linking, and provider-specific identity verification
+- [x] the public localhost root is now a clean BobAI landing page while the actual chat workspace remains at /chat, preventing unauthenticated chat overlays and 401 request spam on the public entry page
 - [ ] production environment variables, provider credentials, object storage/email/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
-- [ ] final API smoke test against a running service, provider connectivity, browser verification, and sandbox end-to-end verification
+- [ ] final API smoke test against a running service, provider connectivity, browser verification, social-provider callback verification, email OTP delivery verification, and sandbox end-to-end verification
