@@ -55,6 +55,7 @@
 - [x] local FFmpeg/ffprobe integration with bounded media conversion/probing, explicit output-format allowlist, metadata stripping, optional audio-only conversion, bounded image scaling, and status reporting
 - [x] local voice/media command-builder tests and explicit API documentation for BobVoice, whisper.cpp, FFmpeg, model paths, and runtime behavior
 - [x] root test command now includes the local voice/media contract tests alongside the existing security suite
+- [x] local media option handling rejects unsafe shapes by normalizing null and non-object option values before execution
 - [ ] BobHS production ingress/TLS, persistent database-backed state, multi-controller coordination, resource-aware scheduling, persistent volumes, registry integration, rolling deployments, logs, backups, domains, and verified multi-node failover
 - [ ] production environment variables, provider credentials, object storage/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
 - [ ] final API smoke test against a running service, provider connectivity, browser verification, social-provider callback verification, real SMTP email delivery verification, and sandbox end-to-end verification
