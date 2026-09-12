@@ -1,32 +1,13 @@
 "use client";
 
-import ChatWindow from "@/components/ChatWindow";
-import ChatInput from "@/components/ChatInput";
-import AssistantHub from "@/components/AssistantHub";
-import { useChat } from "@/hooks/useChat";
+import Link from "next/link";
+
+const features = [
+  ["01", "Chat", "Think, write, code, plan and explore in one workspace."],
+  ["02", "Memory", "Keep useful context across conversations without the clutter."],
+  ["03", "Tools", "Work with files, research, projects and connected capabilities."],
+];
 
 export default function HomePage() {
-  const chat = useChat();
-
-  return (
-    <main className="flex h-screen flex-col bg-background text-text">
-      <AssistantHub personality={chat.settings.personality} onPersonalityChange={(value: string) => chat.setSettings((current) => ({ ...current, personality: value }))} />
-      <ChatWindow
-        messages={chat.activeConversation?.messages || []}
-        loading={chat.loading}
-        onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
-        onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
-        onRegenerate={chat.regenerateLastAssistant}
-      />
-      <ChatInput
-        input={chat.input}
-        setInput={chat.setInput}
-        onSend={chat.send}
-        onFiles={chat.handleFiles}
-        disabled={chat.loading}
-        uploadingFiles={chat.uploadingFiles}
-        uploadProgress={chat.uploadProgress}
-      />
-    </main>
-  );
+  return <main className="min-h-screen overflow-hidden bg-[#07090c] text-white"><div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(61,220,255,0.12),transparent_38%),radial-gradient(circle_at_90%_70%,rgba(45,110,255,0.08),transparent_30%)]" /><div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 sm:px-10"><header className="flex items-center justify-between border-b border-white/8 py-5"><Link href="/" className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/5 font-black text-cyan-300">B</span><span className="font-semibold tracking-tight">Bob AI</span></Link><nav className="hidden items-center gap-7 text-sm text-white/45 md:flex"><a href="#features" className="hover:text-white">features</a><Link href="/terms" className="hover:text-white">terms</Link><Link href="/privacy" className="hover:text-white">privacy</Link></nav><Link href="/login" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold hover:bg-white/[0.08]">sign in</Link></header><section className="flex flex-1 items-center py-20 sm:py-28"><div className="max-w-3xl"><div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/5 px-3 py-1.5 text-xs font-medium text-cyan-200/80"><span className="h-1.5 w-1.5 rounded-full bg-cyan-300" /> AI workspace</div><h1 className="text-5xl font-black tracking-[-0.04em] sm:text-7xl">One clean place for <span className="text-cyan-300">your AI work.</span></h1><p className="mt-6 max-w-2xl text-base leading-7 text-white/50 sm:text-lg">BobAI brings conversations, memory, projects, files and tools into one focused workspace. No fake chat wall. No dashboard soup.</p><div className="mt-9 flex flex-wrap gap-3"><Link href="/signup" className="rounded-2xl bg-cyan-300 px-6 py-3.5 font-bold text-black transition hover:bg-cyan-200">create account</Link><Link href="/login" className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-3.5 font-semibold text-white transition hover:bg-white/[0.08]">sign in</Link></div><p className="mt-5 text-xs text-white/30">Built for focused work. Your workspace starts when you do.</p></div></section><section id="features" className="grid gap-3 border-t border-white/8 py-8 md:grid-cols-3">{features.map(([number, title, text]) => <div key={number} className="rounded-2xl border border-white/8 bg-white/[0.025] p-5"><span className="text-xs text-cyan-300/60">{number}</span><h2 className="mt-5 text-lg font-semibold">{title}</h2><p className="mt-2 text-sm leading-6 text-white/40">{text}</p></div>)}</section></div></main>;
 }
