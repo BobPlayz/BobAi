@@ -8,6 +8,20 @@
       "when": 1788677449024,
       "tag": "0000_curvy_young_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789191469504,
+      "tag": "0001_worthless_nighthawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789192498969,
+      "tag": "0002_natural_lionheart",
+      "breakpoints": true
     }
   ]
 }
