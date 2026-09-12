@@ -70,8 +70,8 @@ async function main() {
     assert.equal(isSensitiveMemory("remember my password is abc123"), true);
     assert.equal(isSensitiveMemory("remember that I prefer concise answers"), false);
   });
-  test("chat context stays bounded while preserving the system prompt", () => {
-    const prepared = prepareChat({ messages: Array.from({ length: 100 }, (_, index) => ({ role: index % 2 ? "assistant" : "user", content: "x".repeat(2_000) })), personality: "be helpful" });
+  test("chat context stays bounded while preserving the system prompt", async () => {
+    const prepared = await prepareChat({ messages: Array.from({ length: 100 }, (_, index) => ({ role: index % 2 ? "assistant" : "user", content: "x".repeat(2_000) })), personality: "be helpful" });
     assert.equal(prepared.validationError, null);
     assert.equal(prepared.ollamaMessages[0].role, "system");
     assert.ok(prepared.ollamaMessages.reduce((total, message) => total + message.content.length, 0) <= 120_000);
