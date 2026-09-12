@@ -50,7 +50,11 @@
 - [x] core and coding model configuration now defaults to a local Ollama server on 127.0.0.1:11434, with external model URLs remaining optional compatibility overrides
 - [x] obsolete external capability-provider, embedding-provider, local-media-provider, upload-provider, notification-provider, and video/image/voice/music/design provider variables have been removed from the environment templates
 - [x] BobHS v0.1 self-hosted controller and node-agent foundation with authenticated node bootstrap, hashed node credentials, persistent local state, heartbeat monitoring, deployment queue/claiming, Docker runtime execution, resource limits, capability dropping, no-new-privileges, read-only container roots, and bounded environment/deployment inputs
+- [x] local BobVoice TTS integration with Piper-compatible execution, bounded text/output, safe argument construction, model configuration, status reporting, and WAV response generation
+- [x] local whisper.cpp transcription integration with FFmpeg audio normalization, bounded input, model configuration, safe argument construction, transcript extraction, and status reporting
+- [x] local FFmpeg/ffprobe integration with bounded media conversion/probing, explicit output-format allowlist, metadata stripping, optional audio-only conversion, bounded image scaling, and status reporting
+- [x] local voice/media command-builder tests and explicit API documentation for BobVoice, whisper.cpp, FFmpeg, model paths, and runtime behavior
 - [ ] BobHS production ingress/TLS, persistent database-backed state, multi-controller coordination, resource-aware scheduling, persistent volumes, registry integration, rolling deployments, logs, backups, domains, and verified multi-node failover
 - [ ] production environment variables, provider credentials, object storage/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
 - [ ] final API smoke test against a running service, provider connectivity, browser verification, social-provider callback verification, real SMTP email delivery verification, and sandbox end-to-end verification
-- [ ] local hardware verification for Ollama model availability/performance and any future local video, speech, music, vision, or advanced raster image models
+- [ ] local hardware verification for Ollama model availability/performance and local video, speech, music, vision, or advanced raster image models
