@@ -9,6 +9,8 @@
 - [x] Bob-0.2-native configurable decoder-only transformer with direct Node.js inference, top-k/top-p sampling, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, evaluation harness, and authenticated model status endpoint
 - [x] explicit training-data eligibility, consent, secret/PII sanitization, deterministic deduplication, and held-out validation/test splits
 - [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
+- [x] from-scratch CPU-friendly specialist training kit for embeddings, reranking, vision encoding, CTC speech recognition, text-to-mel speech synthesis, and tiny text-conditioned image generation
+- [x] specialist model metadata, tensor-dataset contracts, bounded training CLI, finite-loss checks, gradient clipping, and checkpoint export
 - [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
 - [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
 - [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
@@ -16,10 +18,12 @@
 - [x] CI audit-lock refresh verified with zero npm vulnerabilities
 - [x] CI-discovered email OTP schema drift fixed by aligning the Drizzle schema with the existing purpose migration
 - [x] CI-discovered social OAuth provider narrowing and Apple JWK typing defects fixed without weakening OAuth verification
+- [ ] specialist runtime integration into BobAI for vision, ASR, TTS, and image generation
 - [ ] native media libraries and model weights built on the target Windows machine and verified through BobAI's Node-API addon
 - [ ] native model training on the target Windows machine with the user's expanded eligible dataset and generated model weights
+- [ ] specialist model training on the target Windows machine with real eligible audio, image, paired-text, and retrieval datasets
 - [ ] broader native media codec support beyond PCM16 WAV without reintroducing child-process execution
 - [ ] BobHS production ingress/TLS, database-backed shared state, multi-controller coordination, resource-aware scheduling, persistent volumes, registry integration, rolling deployments, logs, backups, domains, and verified multi-node failover
 - [ ] production environment variables, hosting/DNS, trusted model-weight distribution, retention/backup proof, security monitoring, and external load/penetration verification
-- [ ] final API/browser smoke tests, social-provider callback verification, real SMTP delivery verification, media runtime verification, and sandbox end-to-end verification
-- [ ] target-hardware performance verification for the native model and local speech/media/vision runtimes
+- [ ] final API/browser smoke tests, social-provider callback verification, real SMTP delivery verification, media runtime verification, specialist runtime verification, and sandbox end-to-end verification
+- [ ] target-hardware performance verification for the native text model and local speech/media/vision runtimes
