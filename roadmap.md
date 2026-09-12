@@ -30,5 +30,6 @@
 - [x] root environment template matches the current API/provider contract and web build configuration
 - [x] development launcher no longer depends on Ollama and starts the provider-agnostic API/web stack
 - [x] production MFA encryption-key validation requires exactly 32 decoded bytes, matching AES-256-GCM
+- [x] migration runner discovers zero-padded Drizzle migrations and safely records an already-existing baseline before applying later migrations
 - [ ] production environment variables, provider credentials, object storage/email/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
 - [ ] final API smoke test against a running service, provider connectivity, browser verification, and sandbox end-to-end verification

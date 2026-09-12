@@ -5,6 +5,10 @@ import path from "node:path";
 import postgres from "postgres";
 
 async function migrationAlreadySatisfied(sql: ReturnType<typeof postgres>, id: string) {
+  if (id.startsWith("0000_")) {
+    const [row] = await sql`SELECT to_regclass('public.users') IS NOT NULL AS users, to_regclass('public.workspaces') IS NOT NULL AS workspaces, to_regclass('public.conversations') IS NOT NULL AS conversations, to_regclass('public.messages') IS NOT NULL AS messages`;
+    return Boolean(row?.users && row?.workspaces && row?.conversations && row?.messages);
+  }
   if (id.startsWith("0001_")) {
     const [tables] = await sql`SELECT to_regclass('public.users') IS NOT NULL AS users, to_regclass('public.sessions') IS NOT NULL AS sessions`;
     if (!tables?.users || !tables?.sessions) return false;
@@ -32,7 +36,7 @@ async function main() {
     await sql`SELECT pg_advisory_lock(hashtextextended(${migrationLock}, 0))`;
     await sql`CREATE TABLE IF NOT EXISTS bobai_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`;
     await sql`ALTER TABLE bobai_migrations ADD COLUMN IF NOT EXISTS checksum text`;
-    const files = (await readdir(migrationsDir)).filter((file) => /^(?:[1-9]\d*)_.*\.sql$/.test(file)).sort();
+    const files = (await readdir(migrationsDir)).filter((file) => /^\d+_.*\.sql$/.test(file)).sort();
     for (const file of files) {
       const id = file.replace(/\.sql$/, ""); const contents = await readFile(path.join(migrationsDir, file), "utf8"); const checksum = createHash("sha256").update(contents).digest("hex");
       const [existing] = await sql`SELECT checksum FROM bobai_migrations WHERE id = ${id} LIMIT 1`;
