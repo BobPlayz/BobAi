@@ -24,12 +24,5 @@
 - [x] generic OAuth 2.0 authorization-code + PKCE state handling, one-time state consumption, encrypted verifier storage, HTTPS provider validation, bounded token exchange, and encrypted integration credential persistence
 - [x] pure policy tests for agent graph validation, budget clamping, dependency scheduling, and media safety
 - [x] scheduled research brief storage, execution worker, quota-aware replay, and claim conflict metadata
-- [ ] production Docker sandbox runtime deployment and end-to-end verification
-- [ ] production embeddings and durable object-storage provider deployment verification
-- [ ] conversation merge/split and multi-device merge UI
-- [ ] complete retention proof for external object-storage providers
-- [ ] production search-provider credentials and live external search capacity
-- [ ] production security monitoring/backup drills and load/penetration verification
-- [ ] trained Bob model weights and production model/provider credentials
-- [ ] production object storage, email, search, media, hosting, DNS, and deployment secrets
-- [ ] final repository build, full test suite, API smoke tests, browser verification, provider connectivity, and sandbox verification
+- [ ] production environment variables, provider credentials, object storage/email/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
+- [ ] final repository build, full test suite, API smoke tests, browser verification, provider connectivity, and sandbox end-to-end verification
