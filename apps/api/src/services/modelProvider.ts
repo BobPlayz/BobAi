@@ -5,25 +5,26 @@ const MIN_TIMEOUT_MS = 5_000;
 const MAX_TIMEOUT_MS = 300_000;
 const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 const MAX_RESPONSE_CHARS = 200_000;
+const LOCAL_OLLAMA_URL = "http://127.0.0.1:11434";
+const DEFAULT_MODEL = "qwen2.5:3b";
+
 function config(provider: "bob" | "coding", modelOverride?: string): ProviderConfig {
   const prefix = provider === "bob" ? "BOBAI_MODEL" : "BOBAI_CODING_MODEL";
-  const baseUrl = (process.env[`${prefix}_URL`] || "").trim().replace(/\/$/, "");
+  const baseUrl = (process.env[`${prefix}_URL`] || LOCAL_OLLAMA_URL).trim().replace(/\/$/, "");
   const apiKey = (process.env[`${prefix}_KEY`] || "").trim();
-  const model = (modelOverride || process.env[`${prefix}_NAME`] || "").trim();
+  const model = (modelOverride || process.env[`${prefix}_NAME`] || DEFAULT_MODEL).trim();
   const timeout = Number(process.env.BOBAI_PROVIDER_TIMEOUT_MS || 120_000);
-  if (!baseUrl || !model) throw new Error(`${provider} model is not configured`);
-  let url: URL; try { url = new URL(baseUrl); } catch { throw new Error(`${provider} model URL is invalid`); }
+  let url: URL;
+  try { url = new URL(baseUrl); } catch { throw new Error(`${provider} model URL is invalid`); }
   const hostname = url.hostname.toLowerCase();
   const isLoopback = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname);
-  if (url.protocol !== "https:" && !(process.env.NODE_ENV !== "production" && url.protocol === "http:" && isLoopback)) throw new Error(`${provider} model URL must use HTTPS outside local development`);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLoopback)) throw new Error(`${provider} model URL must use HTTPS unless it points to localhost`);
   return { provider, baseUrl, apiKey, model, timeoutMs: Number.isFinite(timeout) ? Math.min(Math.max(timeout, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS) : 120_000 };
 }
 function headers(cfg: ProviderConfig) { return { "content-type": "application/json", ...(cfg.apiKey ? { authorization: `Bearer ${cfg.apiKey}` } : {}) }; }
 async function readJson(response: Response) {
-  const contentLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) throw new Error("model response exceeded the safety limit");
-  const text = await response.text();
-  if (Buffer.byteLength(text, "utf8") > MAX_RESPONSE_BYTES) throw new Error("model response exceeded the safety limit");
+  const contentLength = Number(response.headers.get("content-length")); if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) throw new Error("model response exceeded the safety limit");
+  const text = await response.text(); if (Buffer.byteLength(text, "utf8") > MAX_RESPONSE_BYTES) throw new Error("model response exceeded the safety limit");
   try { return JSON.parse(text) as unknown; } catch { throw new Error("model provider returned invalid JSON"); }
 }
 export class BobModelProvider {
