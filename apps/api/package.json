@@ -6,7 +6,8 @@
     "dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test:security": "tsx --test tests/security.test.ts"
+    "test:security": "tsx --test tests/security.test.ts",
+    "test:local-media": "tsx --test tests/local-media.test.ts"
   },
   "dependencies": {
     "@bobai/db": "*",
