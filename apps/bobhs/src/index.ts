@@ -1,0 +1,63 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import os from "node:os";
+
+const execFileAsync = promisify(execFile);
+const PORT = Number(process.env.BOBAHS_PORT || 8787);
+const HOST = process.env.BOBAHS_HOST || "127.0.0.1";
+const MODE = process.env.BOBAHS_MODE || "controller";
+const DATA_DIR = process.env.BOBAHS_DATA_DIR || "data/bobhs";
+const STATE_FILE = `${DATA_DIR}/state.json`;
+const CONTROLLER_TOKEN = process.env.BOBAHS_CONTROLLER_TOKEN || "";
+const JOIN_TOKEN = process.env.BOBAHS_JOIN_TOKEN || "";
+const CONTROLLER_URL = (process.env.BOBAHS_CONTROLLER_URL || "").replace(/\/$/, "");
+const NODE_TOKEN = process.env.BOBAHS_NODE_TOKEN || "";
+const NODE_ID = process.env.BOBAHS_NODE_ID || "";
+const POLL_MS = Math.max(2000, Number(process.env.BOBAHS_POLL_MS || 5000));
+
+if (MODE !== "controller" && MODE !== "node") throw new Error("BOBAHS_MODE must be controller or node");
+if (MODE === "controller" && (CONTROLLER_TOKEN.length < 32 || JOIN_TOKEN.length < 32)) throw new Error("controller requires BOBAHS_CONTROLLER_TOKEN and BOBAHS_JOIN_TOKEN, each at least 32 characters");
+if (MODE === "node" && (!CONTROLLER_URL || !NODE_ID || NODE_TOKEN.length < 32)) throw new Error("node mode requires BOBAHS_CONTROLLER_URL, BOBAHS_NODE_ID and BOBAHS_NODE_TOKEN");
+
+interface NodeRecord { id: string; name: string; tokenHash: string; status: "online" | "offline"; lastSeen: string; cpuCount: number; memoryMb: number; labels: string[]; }
+interface Deployment { id: string; name: string; image: string; replicas: number; memoryMb: number; cpus: number; containerPort?: number; hostPort?: number; env: Record<string,string>; status: "queued" | "running" | "error" | "stopped"; nodeId?: string; containerIds: string[]; error?: string; createdAt: string; updatedAt: string; }
+interface State { nodes: NodeRecord[]; deployments: Deployment[]; }
+
+async function loadState(): Promise<State> { try { return JSON.parse(await readFile(STATE_FILE, "utf8")) as State; } catch { return { nodes: [], deployments: [] }; }
+}
+async function saveState(state: State) { await mkdir(DATA_DIR, { recursive: true }); await writeFile(STATE_FILE, JSON.stringify(state, null, 2), { mode: 0o600 }); }
+function hashToken(token: string) { return createHash("sha256").update(token).digest("hex"); }
+function safeEqual(a: string, b: string) { const aa = Buffer.from(a); const bb = Buffer.from(b); return aa.length === bb.length && timingSafeEqual(aa, bb); }
+function json(res: ServerResponse, status: number, value: unknown) { const data = JSON.stringify(value); res.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(data), "cache-control": "no-store" }); res.end(data); }
+async function body(req: IncomingMessage) { let data = ""; for await (const chunk of req) { data += chunk; if (Buffer.byteLength(data) > 256 * 1024) throw new Error("body too large"); } return data ? JSON.parse(data) : {}; }
+function bearer(req: IncomingMessage) { const value = req.headers.authorization || ""; return value.startsWith("Bearer ") ? value.slice(7) : ""; }
+function authController(req: IncomingMessage) { return safeEqual(bearer(req), CONTROLLER_TOKEN); }
+function authJoin(req: IncomingMessage) { return safeEqual(bearer(req), JOIN_TOKEN); }
+function authNode(req: IncomingMessage, state: State) { const token = bearer(req); if (!token) return null; const hash = hashToken(token); return state.nodes.find(n => safeEqual(n.tokenHash, hash)) || null; }
+function validName(value: unknown) { return typeof value === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}$/.test(value); }
+function validImage(value: unknown) { return typeof value === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._\/-]{0,190}(:[a-zA-Z0-9._-]{1,100})?$/.test(value) && !value.includes("@") && !value.includes("$") && !value.includes("\\"); }
+function cleanEnv(input: unknown) { if (!input || typeof input !== "object" || Array.isArray(input)) return {}; const out: Record<string,string> = {}; for (const [k,v] of Object.entries(input as Record<string,unknown>)) { if (!/^[A-Z_][A-Z0-9_]{0,63}$/.test(k) || typeof v !== "string" || v.length > 4096) throw new Error("invalid environment variable"); out[k] = v; } return out; }
+async function docker(args: string[]) { return execFileAsync("docker", args, { timeout: 120_000, maxBuffer: 2 * 1024 * 1024, windowsHide: true }); }
+async function ensureDocker() { await docker(["version", "--format", "{{.Server.Version}}"]).catch(() => { throw new Error("Docker runtime is unavailable on this BobHS node"); }); }
+async function startContainer(d: Deployment, replica: number) { const args = ["run", "-d", "--restart", "unless-stopped", "--name", `bobhs-${d.id}-${replica}`, "--label", `bobhs.deployment=${d.id}`, "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--pids-limit", "128", "--memory", `${d.memoryMb}m`, "--cpus", String(d.cpus), "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m"]; for (const [k,v] of Object.entries(d.env)) args.push("-e", `${k}=${v}`); if (d.containerPort && d.hostPort) args.push("-p", `${d.hostPort}:${d.containerPort}`); args.push(d.image); return (await docker(args)).stdout.trim(); }
+
+async function controllerHandler(req: IncomingMessage, res: ServerResponse) {
+  const state = await loadState(); const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { status: "ok", service: "bobhs-controller", nodes: state.nodes.length, deployments: state.deployments.length });
+  if (req.method === "POST" && url.pathname === "/v1/nodes/register") { if (!authJoin(req)) return json(res, 401, { error: "unauthorized" }); const input = await body(req); if (!validName(input.name)) return json(res, 400, { error: "invalid node name" }); if (state.nodes.some(n => n.name === input.name)) return json(res, 409, { error: "node name already exists" }); const token = randomBytes(32).toString("base64url"); const node: NodeRecord = { id: randomUUID(), name: input.name, tokenHash: hashToken(token), status: "online", lastSeen: new Date().toISOString(), cpuCount: Math.min(256, Math.max(1, Number(input.cpuCount) || 1)), memoryMb: Math.min(1048576, Math.max(256, Number(input.memoryMb) || 256)), labels: Array.isArray(input.labels) ? input.labels.filter((x: unknown) => typeof x === "string").slice(0, 20) : [] }; state.nodes.push(node); await saveState(state); return json(res, 201, { node: { id: node.id, name: node.name, status: node.status, lastSeen: node.lastSeen, cpuCount: node.cpuCount, memoryMb: node.memoryMb, labels: node.labels }, token }); }
+  if (req.method === "POST" && url.pathname.startsWith("/v1/nodes/") && url.pathname.endsWith("/heartbeat")) { const id = url.pathname.split("/")[3]; const node = authNode(req, state); if (!node || node.id !== id) return json(res, 401, { error: "unauthorized" }); const input = await body(req); node.status = "online"; node.lastSeen = new Date().toISOString(); if (Number.isFinite(input.cpuCount)) node.cpuCount = Math.min(256, Math.max(1, Number(input.cpuCount))); if (Number.isFinite(input.memoryMb)) node.memoryMb = Math.min(1048576, Math.max(256, Number(input.memoryMb))); await saveState(state); return json(res, 200, { ok: true }); }
+  if (req.method === "GET" && url.pathname === "/v1/nodes") { if (!authController(req)) return json(res, 401, { error: "unauthorized" }); return json(res, 200, { nodes: state.nodes.map(({ tokenHash, ...n }) => n) }); }
+  if (req.method === "POST" && url.pathname === "/v1/deployments") { if (!authController(req)) return json(res, 401, { error: "unauthorized" }); const input = await body(req); if (!validName(input.name) || !validImage(input.image)) return json(res, 400, { error: "invalid deployment name or image" }); const replicas = Math.min(16, Math.max(1, Number(input.replicas) || 1)); const memoryMb = Math.min(4096, Math.max(128, Number(input.memoryMb) || 256)); const cpus = Math.min(8, Math.max(0.1, Number(input.cpus) || 0.5)); if (input.containerPort !== undefined && (!Number.isInteger(input.containerPort) || input.containerPort < 1 || input.containerPort > 65535)) return json(res,400,{error:"invalid container port"}); if (input.hostPort !== undefined && (!Number.isInteger(input.hostPort) || input.hostPort < 1 || input.hostPort > 65535)) return json(res,400,{error:"invalid host port"}); if (input.hostPort !== undefined && input.containerPort === undefined) return json(res,400,{error:"containerPort is required with hostPort"}); const d: Deployment = { id: randomUUID(), name: input.name, image: input.image, replicas, memoryMb, cpus, containerPort: input.containerPort, hostPort: input.hostPort, env: cleanEnv(input.env), status: "queued", containerIds: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; state.deployments.push(d); await saveState(state); return json(res, 201, { deployment: d }); }
+  if (req.method === "GET" && url.pathname === "/v1/deployments") { if (!authController(req)) return json(res,401,{error:"unauthorized"}); return json(res,200,{deployments:state.deployments}); }
+  if (req.method === "POST" && url.pathname.startsWith("/v1/deployments/") && url.pathname.endsWith("/stop")) { if (!authController(req)) return json(res,401,{error:"unauthorized"}); const id=url.pathname.split("/")[3]; const d=state.deployments.find(x=>x.id===id); if(!d)return json(res,404,{error:"not found"}); d.status="stopped"; d.updatedAt=new Date().toISOString(); await saveState(state); return json(res,200,{deployment:d}); }
+  if (req.method === "GET" && url.pathname === "/v1/node/assignments") { const node=authNode(req,state); if(!node)return json(res,401,{error:"unauthorized"}); for(const n of state.nodes) if(Date.now()-Date.parse(n.lastSeen)>30000)n.status="offline"; const available=state.deployments.filter(d=>d.status==="queued" && !d.nodeId).slice(0,4); for(const d of available) { d.nodeId=node.id; d.updatedAt=new Date().toISOString(); } await saveState(state); return json(res,200,{assignments:available}); }
+  if (req.method === "POST" && url.pathname.startsWith("/v1/node/deployments/") && url.pathname.endsWith("/status")) { const node=authNode(req,state); if(!node)return json(res,401,{error:"unauthorized"}); const id=url.pathname.split("/")[4]; const d=state.deployments.find(x=>x.id===id); if(!d || d.nodeId!==node.id)return json(res,404,{error:"not found"}); const input=await body(req); d.status=input.status==="running"?"running":input.status==="stopped"?"stopped":"error"; d.containerIds=Array.isArray(input.containerIds)?input.containerIds.filter((x:unknown)=>typeof x==="string").slice(0,16):d.containerIds; d.error=typeof input.error==="string"?input.error.slice(0,1000):undefined; d.updatedAt=new Date().toISOString(); await saveState(state); return json(res,200,{ok:true}); }
+  return json(res,404,{error:"route not found"});
+}
+
+async function nodeLoop() { await ensureDocker(); const headers = { authorization: `Bearer ${NODE_TOKEN}`, "content-type": "application/json" }; while(true) { try { const assignments = await fetch(`${CONTROLLER_URL}/v1/node/assignments`, { headers }).then(r=>r.ok?r.json() as Promise<{assignments:Deployment[]}>:Promise.reject(new Error(`assignment ${r.status}`))); for(const d of assignments.assignments) { try { const ids:string[]=[]; for(let i=0;i<d.replicas;i++) ids.push(await startContainer(d,i)); await fetch(`${CONTROLLER_URL}/v1/node/deployments/${d.id}/status`,{method:"POST",headers,body:JSON.stringify({status:"running",containerIds:ids})}); } catch(error) { await fetch(`${CONTROLLER_URL}/v1/node/deployments/${d.id}/status`,{method:"POST",headers,body:JSON.stringify({status:"error",error:error instanceof Error?error.message:"deployment failed"})}).catch(()=>undefined); } } await fetch(`${CONTROLLER_URL}/v1/nodes/${NODE_ID}/heartbeat`,{method:"POST",headers,body:JSON.stringify({cpuCount:os.cpus().length,memoryMb:Math.round(os.totalmem()/1024/1024)})}).catch(()=>undefined); } catch {} await new Promise(r=>setTimeout(r,POLL_MS)); } }
+
+if (MODE === "controller") createServer((req,res)=>controllerHandler(req,res).catch(e=>json(res,500,{error:e instanceof Error?e.message:"internal error"}))).listen(PORT,HOST,()=>console.log(`BobHS controller listening on http://${HOST}:${PORT}`)); else nodeLoop().catch(error=>{ console.error(error); process.exit(1); });
