@@ -5,17 +5,19 @@
 - [x] local image, diagram, and sketch-to-UI fallbacks without external AI credentials
 - [x] BobMail built-in SMTP delivery with TLS enforcement and development OTP fallback
 - [x] BobHS v0.1 authenticated controller/node foundation with bounded Docker execution
-- [x] native BobAI model architecture and inference gateway with no Ollama dependency in the chat path
-- [x] Bob-0.1-native decoder-only transformer definition, UTF-8 byte tokenizer, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, evaluation harness, and authenticated model status endpoint
+- [x] BobAI native model gateway with no Ollama dependency in the chat path
+- [x] Bob-0.2-native configurable decoder-only transformer with direct Node.js inference, top-k/top-p sampling, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, evaluation harness, and authenticated model status endpoint
 - [x] explicit training-data eligibility, consent, secret/PII sanitization, deterministic deduplication, and held-out validation/test splits
 - [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
-- [x] local BobVoice, whisper.cpp, and FFmpeg orchestration with bounded shell-free execution and status reporting
-- [x] local media option-shape hardening and command-builder contract tests
+- [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
+- [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
 - [x] security dependency overrides and one-time npm audit lockfile maintenance workflow
 - [x] CI audit-lock refresh verified with zero npm vulnerabilities
 - [x] CI-discovered email OTP schema drift fixed by aligning the Drizzle schema with the existing purpose migration
 - [x] CI-discovered social OAuth provider narrowing and Apple JWK typing defects fixed without weakening OAuth verification
+- [ ] native media libraries and model weights built on the target Windows machine and verified through BobAI's Node-API addon
 - [ ] native model training on the target Windows machine with the user's expanded eligible dataset and generated model weights
+- [ ] broader native media codec support beyond PCM16 WAV without reintroducing child-process execution
 - [ ] BobHS production ingress/TLS, database-backed shared state, multi-controller coordination, resource-aware scheduling, persistent volumes, registry integration, rolling deployments, logs, backups, domains, and verified multi-node failover
 - [ ] production environment variables, hosting/DNS, trusted model-weight distribution, retention/backup proof, security monitoring, and external load/penetration verification
 - [ ] final API/browser smoke tests, social-provider callback verification, real SMTP delivery verification, media runtime verification, and sandbox end-to-end verification
