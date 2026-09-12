@@ -27,5 +27,8 @@
 - [x] first real local build/test validation pass was used to identify and patch repository type/runtime integration defects in account export, collaboration schemas, file indexing, MCP/research route params, malware scanner fetch bodies, research quota result handling, agent queue context typing, and local Ollama title generation dependency coupling
 - [x] second local validation pass identified and patched the remaining nullable project-ID search call and chat preparation compatibility/nullability behavior
 - [x] security context test now awaits asynchronous chat preparation before asserting the prepared provider messages
+- [x] root environment template matches the current API/provider contract and web build configuration
+- [x] development launcher no longer depends on Ollama and starts the provider-agnostic API/web stack
+- [x] production MFA encryption-key validation requires exactly 32 decoded bytes, matching AES-256-GCM
 - [ ] production environment variables, provider credentials, object storage/email/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
-- [ ] final repository build, full test suite, API smoke tests, browser verification, provider connectivity, and sandbox end-to-end verification
+- [ ] final API smoke test against a running service, provider connectivity, browser verification, and sandbox end-to-end verification
