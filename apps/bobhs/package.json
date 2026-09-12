@@ -1,0 +1,12 @@
+{
+  "name": "@bobai/bobhs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "engines": { "node": ">=24" },
+  "devDependencies": { "tsx": "^4.20.3", "typescript": "^5.9.2" }
+}

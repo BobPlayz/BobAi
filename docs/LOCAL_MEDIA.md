@@ -1,0 +1,13 @@
+# BobAI local voice and media
+
+BobAI now has a local-first media layer with three command-line engines: BobVoice for speech synthesis, whisper.cpp for speech-to-text, and FFmpeg/ffprobe for media conversion and inspection. The API never invokes these programs through a shell. Inputs are written to private temporary files, output sizes and request sizes are bounded, and temporary directories are removed after each operation.
+
+BobVoice is the BobAI orchestration layer around a local Piper-compatible TTS executable and an ONNX voice model. The runtime is selected with `BOBAI_PIPER_COMMAND` and the model with `BOBAI_PIPER_MODEL_PATH`. The default command is `piper`, so a PATH-installed Piper runtime works without additional configuration. The synthesis endpoint is `POST /voice/synthesize` with `{ "text": "Hello" }`; it returns base64 WAV audio. Optional `lengthScale` is clamped to a safe range. `GET /voice/status` reports executable and model readiness.
+
+Whisper.cpp transcription accepts base64 audio at `POST /voice/transcribe`. BobAI first normalizes the input through FFmpeg to mono 16 kHz PCM WAV, then invokes `whisper-cli` with the configured model. Set `BOBAI_WHISPER_MODEL_PATH` to a downloaded whisper.cpp model file. An optional ISO-like short language code can be supplied as `options.language`. The response contains the transcript and engine metadata.
+
+FFmpeg is exposed separately at `POST /ffmpeg/convert` and `POST /ffmpeg/probe`. Conversion accepts base64 media plus a whitelisted output format. Supported output formats are WAV, MP3, OGG, Opus, M4A, MP4, WebM, GIF, PNG, JPG, and JPEG. Optional audio-only conversion and bounded image scaling are supported. `GET /ffmpeg/status` checks both `ffmpeg` and `ffprobe`.
+
+All three engines are optional to the BobAI core. If their executables or model paths are absent, the API remains usable and the status endpoints report exactly what is missing. No cloud voice, transcription, or media provider credential is required. The repository therefore contains the complete integration contract, local execution adapters, validation, limits, and tests, while actual speech/media execution still depends on the corresponding binaries and model weights being installed on the target machine.
+
+For a Windows development machine, install FFmpeg and ffprobe together, install whisper.cpp and download a CPU-sized model, and install a current Piper runtime plus a compatible voice model. Put the executables on PATH or set the four command variables explicitly. Set `BOBAI_PIPER_MODEL_PATH` and `BOBAI_WHISPER_MODEL_PATH`, then start BobAI normally with `npm run ai`. Check `GET /voice/status` and `GET /ffmpeg/status` through an authenticated session before using the feature endpoints.
