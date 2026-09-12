@@ -4,7 +4,6 @@ import { db, authIdentities, authOAuthStates, users } from "@bobai/db";
 import { issueSession } from "./auth.js";
 import { createMfaChallenge } from "./mfa.js";
 import { recordAudit } from "./audit.js";
-
 export type SocialProvider = "google" | "github" | "apple";
 type Profile = { subject: string; email: string; emailVerified: boolean; displayName?: string; avatarUrl?: string };
 type ProviderClientConfig = { clientId: string; clientSecret?: string; teamId?: string; keyId?: string; privateKey?: string };
@@ -19,15 +18,11 @@ const callbackUrl = (provider: SocialProvider) => `${redirectBase()}/auth/oauth/
 const verifier = () => base64url(randomBytes(32));
 const challenge = (value: string) => base64url(createHash("sha256").update(value).digest());
 const nonce = () => base64url(randomBytes(32));
-
 function config(provider: "google"): Required<Pick<ProviderClientConfig, "clientId" | "clientSecret">>;
 function config(provider: "github"): Required<Pick<ProviderClientConfig, "clientId" | "clientSecret">>;
 function config(provider: "apple"): Required<Pick<ProviderClientConfig, "clientId" | "teamId" | "keyId" | "privateKey">>;
-function config(provider: SocialProvider): ProviderClientConfig {
-  if (provider === "google") { const clientId = process.env.BOBAI_GOOGLE_CLIENT_ID?.trim(); const clientSecret = process.env.BOBAI_GOOGLE_CLIENT_SECRET?.trim(); if (!clientId || !clientSecret) throw new Error("Google sign-in is not configured"); return { clientId, clientSecret }; }
-  if (provider === "github") { const clientId = process.env.BOBAI_GITHUB_CLIENT_ID?.trim(); const clientSecret = process.env.BOBAI_GITHUB_CLIENT_SECRET?.trim(); if (!clientId || !clientSecret) throw new Error("GitHub sign-in is not configured"); return { clientId, clientSecret }; }
-  const clientId = process.env.BOBAI_APPLE_CLIENT_ID?.trim(); const teamId = process.env.BOBAI_APPLE_TEAM_ID?.trim(); const keyId = process.env.BOBAI_APPLE_KEY_ID?.trim(); const privateKey = process.env.BOBAI_APPLE_PRIVATE_KEY?.replace(/\\n/g, "\n").trim(); if (!clientId || !teamId || !keyId || !privateKey) throw new Error("Apple sign-in is not configured"); return { clientId, teamId, keyId, privateKey };
-}
+function config(provider: SocialProvider): ProviderClientConfig;
+function config(provider: SocialProvider): ProviderClientConfig { if (provider === "google") { const clientId = process.env.BOBAI_GOOGLE_CLIENT_ID?.trim(); const clientSecret = process.env.BOBAI_GOOGLE_CLIENT_SECRET?.trim(); if (!clientId || !clientSecret) throw new Error("Google sign-in is not configured"); return { clientId, clientSecret }; } if (provider === "github") { const clientId = process.env.BOBAI_GITHUB_CLIENT_ID?.trim(); const clientSecret = process.env.BOBAI_GITHUB_CLIENT_SECRET?.trim(); if (!clientId || !clientSecret) throw new Error("GitHub sign-in is not configured"); return { clientId, clientSecret }; } const clientId = process.env.BOBAI_APPLE_CLIENT_ID?.trim(); const teamId = process.env.BOBAI_APPLE_TEAM_ID?.trim(); const keyId = process.env.BOBAI_APPLE_KEY_ID?.trim(); const privateKey = process.env.BOBAI_APPLE_PRIVATE_KEY?.replace(/\\n/g, "\n").trim(); if (!clientId || !teamId || !keyId || !privateKey) throw new Error("Apple sign-in is not configured"); return { clientId, teamId, keyId, privateKey }; }
 function appleClientSecret(c: Required<Pick<ProviderClientConfig, "clientId" | "teamId" | "keyId" | "privateKey">>) { const now = Math.floor(Date.now() / 1000); const header = base64url(Buffer.from(JSON.stringify({ alg: "ES256", kid: c.keyId, typ: "JWT" }))); const payload = base64url(Buffer.from(JSON.stringify({ iss: c.teamId, iat: now, exp: now + 300, aud: "https://appleid.apple.com", sub: c.clientId }))); const unsigned = `${header}.${payload}`; const signer = createSign("SHA256"); signer.update(unsigned); signer.end(); const signature = signer.sign({ key: c.privateKey, dsaEncoding: "ieee-p1363" }); return `${unsigned}.${base64url(signature)}`; }
 async function jsonFetch(url: string, init: RequestInit, maxBytes = 256_000) { const response = await fetch(url, init); const text = await response.text(); if (Buffer.byteLength(text, "utf8") > maxBytes) throw new Error("OAuth provider response too large"); let data: unknown = {}; try { data = JSON.parse(text); } catch { throw new Error("invalid OAuth provider response"); } if (!response.ok) throw new Error("OAuth provider request failed"); return data as Record<string, unknown>; }
 const formBody = (values: Record<string, string>) => new URLSearchParams(values).toString();

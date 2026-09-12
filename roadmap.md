@@ -14,7 +14,7 @@
 - [x] security dependency overrides and one-time npm audit lockfile maintenance workflow
 - [x] CI audit-lock refresh verified with zero npm vulnerabilities
 - [x] CI-discovered email OTP schema drift fixed by aligning the Drizzle schema with the existing purpose migration
-- [x] CI-discovered social OAuth TypeScript narrowing and Apple JWK typing defects fixed without weakening OAuth verification
+- [x] CI-discovered social OAuth provider narrowing and Apple JWK typing defects fixed without weakening OAuth verification
 - [ ] native model training on the target Windows machine with the user's expanded eligible dataset and generated model weights
 - [ ] BobHS production ingress/TLS, database-backed shared state, multi-controller coordination, resource-aware scheduling, persistent volumes, registry integration, rolling deployments, logs, backups, domains, and verified multi-node failover
 - [ ] production environment variables, hosting/DNS, trusted model-weight distribution, retention/backup proof, security monitoring, and external load/penetration verification
