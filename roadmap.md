@@ -33,5 +33,6 @@
 - [x] migration runner discovers zero-padded Drizzle migrations and safely records an already-existing baseline before applying later migrations
 - [x] idempotency maintenance cleanup binds timestamp predicates as database-compatible strings instead of passing Date objects through raw postgres-js SQL parameters
 - [x] research-quota maintenance cleanup binds its cutoff timestamp as a database-compatible string instead of passing a Date object through raw postgres-js SQL parameters
+- [x] registration maps nested PostgreSQL unique-violation errors to a safe account-conflict response instead of incorrectly returning account service unavailable
 - [ ] production environment variables, provider credentials, object storage/email/search/media configuration, hosting/DNS, model weights, Docker runtime deployment, retention/backup proof, security monitoring, and external load/penetration verification
 - [ ] final API smoke test against a running service, provider connectivity, browser verification, and sandbox end-to-end verification
