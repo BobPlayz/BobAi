@@ -26,6 +26,7 @@ function extractJson(value: string): unknown {
 }
 
 export function validateToolDecision(value: unknown): ToolDecision {
+  if (process.env.BOBAI_TOOLS_ENABLED === "false") return { action: "respond", calls: [], reason: "tools are disabled" };
   if (!value || typeof value !== "object" || Array.isArray(value)) return { action: "respond", calls: [], reason: "invalid router output" };
   const record = value as Record<string, unknown>;
   if (record.action === "respond") return { action: "respond", calls: [] };

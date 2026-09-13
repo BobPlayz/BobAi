@@ -48,9 +48,11 @@
 - [x] Chat asks the same main model for a tool decision before direct response or tool execution
 - [x] Repository-side executor registry covers every currently registered tool with bounded local/provider adapters
 - [x] Tool results are fed back to the same main model for additional tool selection or final response
-- [x] Tool-loop tests cover result feedback, approval boundaries, and bounded serialization
+- [x] Tool-loop tests cover result feedback, approval boundaries, bounded serialization, and target URL safety
 - [x] Repository-side tool execution has a global disable switch and bounded provider response reads
-- [x] Browser and website-test targets reject URL credentials and production non-HTTPS targets
+- [x] Browser and website-test targets reject URL credentials, private network targets, and production non-HTTPS targets
+- [x] User-facing chat always selects the single Bob model for response and tool routing
+- [x] Repository environment templates expose one main model configuration and no obsolete user-facing specialist model names
 - [x] Canonical main tree restores the unified tool-loop implementation after repository write correction
 - [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities

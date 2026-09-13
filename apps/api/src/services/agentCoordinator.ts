@@ -3,12 +3,10 @@ import type { AgentSkillId } from "./agentSkills.js";
 import type { AgentTaskKind } from "./agentTasks.js";
 
 /**
- * Bob is the only conversational agent. Alex, Ben, Ryan, and Violet are
- * specialist employees managed by Bob and never address the user directly.
+ * Bob is the only conversational model. Background tasks are execution jobs,
+ * not separate user-facing model personalities.
  */
 export const USER_FACING_AGENT = "bob" as const;
-export const BOB_EMPLOYEES = ["alex", "ben", "ryan", "violet"] as const;
-export type BobEmployee = (typeof BOB_EMPLOYEES)[number];
 
 export type BackgroundTaskRequest = {
   description: string;
