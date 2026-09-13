@@ -12,15 +12,15 @@
 - [x] Local research and deterministic pre-training embeddings without cloud AI credentials
 
 ## Phase 3 — Specialist model family
-- [x] From-scratch training kits for Vector, Vanta, Echo, Flux, and reranking
+- [x] From-scratch training kits for text, retrieval, vision, speech, media generation, and reranking
 - [x] Specialist dataset contracts and preparation for text, paired text, retrieval, images, ASR, TTS, and image generation
 - [x] Specialist checkpoint serving, lazy loading, authentication, bounded requests/responses, lifecycle shutdown, and artifact existence checks
-- [x] Vector, Vanta, Echo, and Flux execution adapters with runtime leasing and safe pre-training behavior
-- [x] Echo PCM16 WAV ASR/TTS boundaries and CTC token handling
+- [x] Specialist execution adapters with runtime leasing and safe pre-training behavior
+- [x] Speech PCM16 WAV ASR/TTS boundaries and CTC token handling
 
 ## Phase 4 — Smart runtime and security
 - [x] Internal model runtime registry with resource-aware loading, idle eviction, request leasing, and task planning
-- [x] Hidden Bob Core with admin-only runtime inspection and no normal-user scheduler exposure
+- [x] Hidden internal orchestration with admin-only runtime inspection and no normal-user scheduler exposure
 - [x] Automatic leasing for native chat/coding and specialist execution paths
 - [x] Retrieval reranking wired after vector candidate retrieval with safe pre-training fallback
 - [x] Specialist worker loopback authentication and media request/response limits
@@ -42,16 +42,19 @@
 - [x] Wire the execution coordinator into the live BobHS node execution entrypoint
 - [ ] Verify multi-worker BobHS behavior in the target environment
 
-## Phase 6 — Train and verify every model
+## Phase 6 — Unified AI and verification
 - [x] Repository-side native Bob evaluator measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
 - [x] Repository-side specialist trainer supports deterministic validation splits, best/latest checkpoints, resume validation, early stopping, finite-data checks, and bounded dataset loading
 - [x] Repository-side specialist model smoke tests and CI compilation cover every declared specialist architecture and loss path
-- [x] Repository-side specialist data preparation handles variable-length TTS mel targets safely
-- [ ] Prepare the final eligible training datasets for Bob, Vector, Vanta, Echo, Flux, and reranking
-- [ ] Train Bob for the required long-running experiment window and keep the best verified checkpoint
-- [ ] Train every specialist with real eligible datasets and keep best verified checkpoints
-- [ ] Evaluate every model with held-out data and reject broken or regressed checkpoints
-- [ ] Verify automatic runtime selection and leasing through chat, coding, vision, speech, image, retrieval, and agent execution with real artifacts
+- [x] Repository-side specialist data preparation handles variable-length speech targets safely
+- [x] One user-facing native model is registered for chat, reasoning, coding, fast responses, and the future multimodal capability surface
+- [x] The same main model produces validated tool-selection requests against the central tool registry instead of exposing separate model personalities
+- [x] Tool-selection parsing fails closed on malformed output, unknown tools, invalid arguments, and bounded tool-call counts
+- [ ] Implement verified execution adapters for every registered tool and feed tool results back into the same model loop
+- [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
+- [ ] Train the unified model for the required long-running experiment window and keep the best verified checkpoint
+- [ ] Evaluate the unified model with held-out data and reject broken or regressed checkpoints
+- [ ] Verify automatic tool selection and execution through chat, coding, vision, speech, image, retrieval, and agent workflows with real artifacts
 - [ ] Build native media libraries and model weights on the target Windows machine and verify the Node-API addon
 
 ## Phase 7 — Native media and local multimodal runtime
