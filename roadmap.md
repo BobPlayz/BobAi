@@ -64,6 +64,7 @@
 - [x] Automation provider response reads use the shared bounded streaming HTTP safety layer
 - [x] Canonical main tree restores the unified tool-loop implementation after repository write correction
 - [x] Tool input schemas enforce explicit allowed values for enumerated operations instead of accepting arbitrary operation strings
+- [x] MCP response bodies use the shared bounded streaming HTTP safety layer instead of unbounded text reads
 - [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
 - [ ] Train the unified model for the required long-running experiment window and keep the best verified checkpoint
