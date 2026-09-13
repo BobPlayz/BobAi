@@ -3,12 +3,19 @@ import { isIP } from "node:net";
 
 function privateIp(address: string) {
   if (isIP(address) === 4) {
-    const [a, b] = address.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+    const parts = address.split(".").map(Number);
+    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
+    const [a, b] = parts;
+    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19 || b === 51)) || (a === 203 && b === 0) || a >= 224;
   }
   if (isIP(address) === 6) {
     const value = address.toLowerCase();
-    return value === "::" || value === "::1" || value.startsWith("fc") || value.startsWith("fd") || /^fe[89ab]/.test(value);
+    if (value === "::" || value === "::1" || value.startsWith("fc") || value.startsWith("fd") || /^fe[89ab]/.test(value) || value.startsWith("ff")) return true;
+    if (value.startsWith("::ffff:")) {
+      const mapped = value.slice(7);
+      if (isIP(mapped) === 4) return privateIp(mapped);
+    }
+    return value.startsWith("2001:db8:") || value.startsWith("2001:10:") || value.startsWith("2001:2:");
   }
   return true;
 }
