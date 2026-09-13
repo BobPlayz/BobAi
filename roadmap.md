@@ -11,6 +11,7 @@
 - [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
 - [x] from-scratch CPU-friendly specialist training kit for embeddings, reranking, vision encoding, CTC speech recognition, text-to-mel speech synthesis, and tiny text-conditioned image generation
 - [x] specialist model metadata, tensor-dataset contracts, bounded training CLI, finite-loss checks, gradient clipping, and checkpoint export
+- [x] local specialist worker bridge with loopback authentication, lazy checkpoint loading, lifecycle shutdown, and Node runtime integration primitives
 - [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
 - [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
 - [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
