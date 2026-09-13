@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { assertPublicTargetUrl, providerUrl, targetUrl } from "../src/services/httpSafety.js";
 import { runToolLoop, serializeToolResult } from "../src/services/toolLoop.js";
+import { validateToolDecision } from "../src/services/toolDecision.js";
 
 test("tool loop feeds results back to the same decision model", async () => {
   const seen: string[][] = [];
@@ -45,15 +46,29 @@ test("tool results are bounded and serialization is safe", () => {
 test("target URLs reject embedded credentials and private addresses", async () => {
   assert.throws(() => targetUrl("https://user:pass@example.com"), /credentials/);
   assert.throws(() => targetUrl("file:///etc/passwd"), /protocol/);
-  assert.rejects(() => assertPublicTargetUrl("http://127.0.0.1:3000"), /private/);
-  assert.rejects(() => assertPublicTargetUrl("http://localhost:3000"), /private/);
+  await assert.rejects(() => assertPublicTargetUrl("http://127.0.0.1:3000"), /private/);
+  await assert.rejects(() => assertPublicTargetUrl("http://localhost:3000"), /private/);
 });
 
 test("provider URLs only permit HTTPS except local development loopback", () => {
   const previous = process.env.NODE_ENV;
-  process.env.NODE_ENV = "production";
-  assert.throws(() => providerUrl("http://127.0.0.1:3456"), /HTTPS/);
-  assert.doesNotThrow(() => providerUrl("https://example.com"));
-  if (previous === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = previous;
+  try {
+    process.env.NODE_ENV = "production";
+    assert.throws(() => providerUrl("http://127.0.0.1:3456"), /HTTPS/);
+    assert.doesNotThrow(() => providerUrl("https://example.com"));
+  } finally {
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
+  }
+});
+
+test("tool routing fails closed when tools are globally disabled", () => {
+  const previous = process.env.BOBAI_TOOLS_ENABLED;
+  try {
+    process.env.BOBAI_TOOLS_ENABLED = "false";
+    assert.deepEqual(validateToolDecision({ action: "use_tools", calls: [{ tool: "research", arguments: { query: "x" } }] }), { action: "respond", calls: [], reason: "tools are disabled" });
+  } finally {
+    if (previous === undefined) delete process.env.BOBAI_TOOLS_ENABLED;
+    else process.env.BOBAI_TOOLS_ENABLED = previous;
+  }
 });

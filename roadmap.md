@@ -48,7 +48,7 @@
 - [x] Chat asks the same main model for a tool decision before direct response or tool execution
 - [x] Repository-side executor registry covers every currently registered tool with bounded local/provider adapters
 - [x] Tool results are fed back to the same main model for additional tool selection or final response
-- [x] Tool-loop tests cover result feedback, approval boundaries, bounded serialization, and target URL safety
+- [x] Tool-loop tests cover result feedback, approval boundaries, bounded serialization, target URL safety, and global tool disabling
 - [x] Repository-side tool execution has a global disable switch and bounded provider response reads
 - [x] Browser and website-test targets reject URL credentials, private network targets, and production non-HTTPS targets
 - [x] User-facing chat always selects the single Bob model for response and tool routing
