@@ -1,13 +1,13 @@
 export type ModelCapability = "chat" | "reasoning" | "coding" | "fast" | "vision";
 export type ModelProvider = "bob" | "coding";
-export type ModelDefinition = { id: string; provider: ModelProvider; model: string; capabilities: ModelCapability[]; description: string; visionReady: boolean };
+export type ModelDefinition = { id: string; name: string; provider: ModelProvider; model: string; capabilities: ModelCapability[]; description: string; visionReady: boolean };
 
 const NATIVE_MODEL = "bob-0.2-native";
 
 export const MODEL_REGISTRY: ModelDefinition[] = [
-  { id: "bob", provider: "bob", model: NATIVE_MODEL, capabilities: ["chat", "reasoning", "fast"], description: "BobAI's native from-scratch transformer assistant", visionReady: false },
-  { id: "coder", provider: "coding", model: NATIVE_MODEL, capabilities: ["coding", "reasoning", "fast"], description: "BobAI's native model for coding tasks", visionReady: false },
-  { id: "coder-fast", provider: "coding", model: NATIVE_MODEL, capabilities: ["coding", "fast"], description: "BobAI's native fast coding profile", visionReady: false },
+  { id: "bob", name: "Bob", provider: "bob", model: NATIVE_MODEL, capabilities: ["chat", "reasoning", "fast"], description: "BobAI's native from-scratch transformer assistant", visionReady: false },
+  { id: "coder", name: "Forge", provider: "coding", model: NATIVE_MODEL, capabilities: ["coding", "reasoning", "fast"], description: "BobAI's native coding model", visionReady: false },
+  { id: "coder-fast", name: "Forge", provider: "coding", model: NATIVE_MODEL, capabilities: ["coding", "fast"], description: "BobAI's fast coding profile", visionReady: false },
 ];
 
 export type BobAgentId = "bob" | "alex" | "ben" | "ryan" | "violet";
