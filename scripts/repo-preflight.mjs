@@ -2,9 +2,9 @@ import { readFile, access } from "node:fs/promises";
 
 const required = ["package.json", "package-lock.json", ".env.example", "ARCHITECTURE.md", "SECURITY.md", "roadmap.md", "docs/BOBAI-HANDOFF-2026-09-11.md", "apps/api", "apps/web", "apps/bobhs", "packages/db", "model-training"];
 const forbiddenSecret = /(?:sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
-async function exists(path: string) { try { await access(path); return true; } catch { return false; } }
+async function exists(path) { try { await access(path); return true; } catch { return false; } }
 async function main() {
-  const missing: string[] = [];
+  const missing = [];
   for (const path of required) if (!(await exists(path))) missing.push(path);
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   const requiredScripts = ["build", "test", "audit", "smoke", "bobhs", "bobhs:build", "bobhs:test", "model:train", "model:evaluate"];
