@@ -1,76 +1,13 @@
-import { access } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomBytes } from "node:crypto";
 
-const HOST = "127.0.0.1";
-const BASE_PORT = Math.min(65500, Math.max(1024, Number(process.env.BOBAI_SPECIALIST_BASE_PORT || 39700)));
-const PYTHON = process.env.BOBAI_PYTHON || "python";
-const ROOT = process.env.BOBAI_SPECIALIST_ROOT || "model-training/output";
-const TIMEOUT_MS = Math.min(120000, Math.max(5000, Number(process.env.BOBAI_SPECIALIST_TIMEOUT_MS || 30000)));
-const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
-const paths: Record<string, string | undefined> = {
-  embedding: process.env.BOBAI_VECTOR_MODEL_PATH || `${ROOT}/bob-embed-0.1.pt`,
-  reranking: process.env.BOBAI_VANTA_RERANKER_MODEL_PATH || `${ROOT}/bob-reranker-0.1.pt`,
-  vision: process.env.BOBAI_VANTA_MODEL_PATH || `${ROOT}/bob-vision-0.1.pt`,
-  asr: process.env.BOBAI_ECHO_ASR_MODEL_PATH || `${ROOT}/bob-asr-0.1.pt`,
-  tts: process.env.BOBAI_ECHO_TTS_MODEL_PATH || `${ROOT}/bob-tts-0.1.pt`,
-  image: process.env.BOBAI_FLUX_MODEL_PATH || `${ROOT}/bob-image-0.1.pt`,
-};
-const kinds = ["embedding", "reranking", "vision", "asr", "tts", "image"] as const;
-type Kind = typeof kinds[number];
-type Child = { process: ChildProcessWithoutNullStreams; port: number; token: string; ready: Promise<void> };
-const children = new Map<Kind, Child>();
-const ports = new Map<Kind, number>();
-
-function arg(kind: Kind) { return kind === "embedding" ? "embed" : kind === "reranking" ? "reranker" : kind; }
-function script(kind: Kind) { return kind === "tts" ? "model-training/speech_server.py" : kind === "asr" ? "model-training/specialist_server_audio.py" : "model-training/specialist_server.py"; }
-function port(kind: Kind) { if (!ports.has(kind)) ports.set(kind, BASE_PORT + kinds.indexOf(kind)); return ports.get(kind)!; }
-async function exists(path: string) { try { await access(path); return true; } catch { return false; } }
-
-async function wait(p: number, child: ChildProcessWithoutNullStreams) {
-  const end = Date.now() + TIMEOUT_MS;
-  while (Date.now() < end) {
-    if (child.exitCode !== null) throw new Error("specialist worker exited during startup");
-    try { if ((await fetch(`http://${HOST}:${p}/health`, { signal: AbortSignal.timeout(1000) })).ok) return; } catch {}
-    await new Promise(r => setTimeout(r, 150));
-  }
-  child.kill();
-  throw new Error("specialist worker startup timed out");
-}
-
-export async function ensureSpecialist(kind: Kind) {
-  const existing = children.get(kind);
-  if (existing) { await existing.ready; return existing; }
-  const model = paths[kind];
-  if (!model) throw new Error(`no ${kind} model path configured`);
-  if (!(await exists(model))) throw new Error(`no trained ${kind} checkpoint found at ${model}`);
-  const token = randomBytes(32).toString("base64url");
-  const p = port(kind);
-  const child = spawn(PYTHON, [script(kind), ...(kind === "tts" ? [] : [arg(kind)]), "--model", model, "--host", HOST, "--port", String(p), "--token", token], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
-  child.stderr.on("data", chunk => { if (process.env.NODE_ENV !== "production") process.stderr.write(`[${kind}] ${chunk}`); });
-  child.once("exit", () => { if (children.get(kind)?.process === child) children.delete(kind); });
-  const ready = wait(p, child).catch(e => { if (children.get(kind)?.process === child) children.delete(kind); throw e; });
-  const entry = { process: child, port: p, token, ready };
-  children.set(kind, entry);
-  await ready;
-  return entry;
-}
-
-export async function specialistInfer(kind: Kind, payload: Record<string, unknown>) {
-  const worker = await ensureSpecialist(kind);
-  const encoded = JSON.stringify(payload);
-  if (Buffer.byteLength(encoded) > 4 * 1024 * 1024) throw new Error("specialist request is too large");
-  const response = await fetch(`http://${HOST}:${worker.port}/infer`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${worker.token}` }, body: encoded, signal: AbortSignal.timeout(TIMEOUT_MS) });
-  const length = Number(response.headers.get("content-length") || 0);
-  if (length > MAX_RESPONSE_BYTES) throw new Error("specialist response is too large");
-  if (!response.ok) throw new Error(`specialist ${kind} returned ${response.status}`);
-  const data = await response.json() as Record<string, unknown>;
-  if (typeof data.error === "string") throw new Error(data.error);
-  return data;
-}
-
-export function specialistConfigured(kind: Kind) { return Boolean(paths[kind]); }
-export async function stopSpecialist(kind: Kind) { const child = children.get(kind); if (child) { child.process.kill(); children.delete(kind); } }
-export async function stopAllSpecialists() { await Promise.all(kinds.map(stopSpecialist)); }
-process.once("SIGTERM", () => { void stopAllSpecialists(); });
-process.once("SIGINT", () => { void stopAllSpecialists(); });
+const HOST="127.0.0.1"; const BASE_PORT=Math.min(65500,Math.max(1024,Number(process.env.BOBAI_SPECIALIST_BASE_PORT||39700))); const PYTHON=process.env.BOBAI_PYTHON||"python"; const ROOT=process.env.BOBAI_SPECIALIST_ROOT||"model-training/output"; const TIMEOUT_MS=Math.min(120000,Math.max(5000,Number(process.env.BOBAI_SPECIALIST_TIMEOUT_MS||30000))); const MAX_RESPONSE_BYTES=8*1024*1024;
+const paths:Record<string,string|undefined>={embedding:process.env.BOBAI_VECTOR_MODEL_PATH||`${ROOT}/bob-embed-0.1.pt`,reranking:process.env.BOBAI_VANTA_RERANKER_MODEL_PATH||`${ROOT}/bob-reranker-0.1.pt`,vision:process.env.BOBAI_VANTA_MODEL_PATH||`${ROOT}/bob-vision-0.1.pt`,asr:process.env.BOBAI_ECHO_ASR_MODEL_PATH||`${ROOT}/bob-asr-0.1.pt`,tts:process.env.BOBAI_ECHO_TTS_MODEL_PATH||`${ROOT}/bob-tts-0.1.pt`,image:process.env.BOBAI_FLUX_MODEL_PATH||`${ROOT}/bob-image-0.1.pt`};
+const kinds=["embedding","reranking","vision","asr","tts","image"] as const; type Kind=typeof kinds[number]; type Child={process:ChildProcessWithoutNullStreams;port:number;token:string;ready:Promise<void>}; const children=new Map<Kind,Child>(); const ports=new Map<Kind,number>();
+function arg(kind:Kind){return kind==="embedding"?"embed":kind==="reranking"?"reranker":kind;} function script(kind:Kind){return kind==="tts"?"model-training/speech_server.py":kind==="asr"?"model-training/specialist_server_audio.py":"model-training/specialist_server.py";} function port(kind:Kind){if(!ports.has(kind))ports.set(kind,BASE_PORT+kinds.indexOf(kind));return ports.get(kind)!;}
+async function wait(p:number,child:ChildProcessWithoutNullStreams){const end=Date.now()+TIMEOUT_MS;while(Date.now()<end){if(child.exitCode!==null)throw new Error("specialist worker exited during startup");try{if((await fetch(`http://${HOST}:${p}/health`,{signal:AbortSignal.timeout(1000)})).ok)return;}catch{}await new Promise(r=>setTimeout(r,150));}child.kill();throw new Error("specialist worker startup timed out");}
+export async function ensureSpecialist(kind:Kind){const existing=children.get(kind);if(existing){await existing.ready;return existing;}const model=paths[kind];if(!model)throw new Error(`no ${kind} model path configured`);if(!existsSync(model))throw new Error(`no trained ${kind} checkpoint found at ${model}`);const token=randomBytes(32).toString("base64url");const p=port(kind);const child=spawn(PYTHON,[script(kind),...(kind==="tts"?[]:[arg(kind)]),"--model",model,"--host",HOST,"--port",String(p),"--token",token],{cwd:process.cwd(),stdio:["ignore","pipe","pipe"],windowsHide:true});child.stderr.on("data",chunk=>{if(process.env.NODE_ENV!=="production")process.stderr.write(`[${kind}] ${chunk}`)});child.once("exit",()=>{if(children.get(kind)?.process===child)children.delete(kind)});const ready=wait(p,child).catch(e=>{if(children.get(kind)?.process===child)children.delete(kind);throw e});const entry={process:child,port:p,token,ready};children.set(kind,entry);await ready;return entry;}
+export async function specialistInfer(kind:Kind,payload:Record<string,unknown>){const worker=await ensureSpecialist(kind);const encoded=JSON.stringify(payload);if(Buffer.byteLength(encoded)>4*1024*1024)throw new Error("specialist request is too large");const response=await fetch(`http://${HOST}:${worker.port}/infer`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${worker.token}`},body:encoded,signal:AbortSignal.timeout(TIMEOUT_MS)});const length=Number(response.headers.get("content-length")||0);if(length>MAX_RESPONSE_BYTES)throw new Error("specialist response is too large");if(!response.ok)throw new Error(`specialist ${kind} returned ${response.status}`);const data=await response.json() as Record<string,unknown>;if(typeof data.error==="string")throw new Error(data.error);return data;}
+export function specialistConfigured(kind:Kind){const model=paths[kind];return Boolean(model&&existsSync(model));}
+export async function stopSpecialist(kind:Kind){const child=children.get(kind);if(child){child.process.kill();children.delete(kind);}} export async function stopAllSpecialists(){await Promise.all(kinds.map(stopSpecialist));} process.once("SIGTERM",()=>{void stopAllSpecialists()}); process.once("SIGINT",()=>{void stopAllSpecialists()});
