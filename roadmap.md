@@ -6,7 +6,7 @@
 - [x] BobMail built-in SMTP delivery with TLS enforcement and development OTP fallback
 - [x] BobHS authenticated controller/node foundation with bounded Docker execution, node heartbeats, capability/model inventory, resource-aware scheduling, deployment leases, draining, persistent Docker volume declarations, atomic local state writes, and deployment lifecycle controls
 - [x] BobAI native model gateway with no Ollama dependency in the chat path
-- [x] Bob-0.2-native configurable decoder-only transformer with direct Node.js inference, top-k/top-p sampling, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, evaluation harness, resumable checkpoints, gradient accumulation, cosine learning-rate scheduling, and authenticated model status endpoint
+- [x] Bob-0.2-native configurable decoder-only transformer with direct Node.js inference, top-k/top-p sampling, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, evaluation harness compatible with BOBAI002, resumable latest/best checkpoints, gradient accumulation, cosine learning-rate scheduling, and architecture validation
 - [x] explicit training-data eligibility, consent, secret/PII sanitization, deterministic deduplication, and held-out validation/test splits
 - [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
 - [x] from-scratch CPU-friendly specialist training kit for embeddings, reranking, vision encoding, CTC speech recognition, text-to-mel speech synthesis, and tiny text-conditioned image generation
@@ -14,7 +14,7 @@
 - [x] local specialist worker bridge with loopback authentication, lazy checkpoint loading, lifecycle shutdown, artifact existence checks, and bounded request/response handling
 - [x] specialist dataset preparation CLI for local text, image, audio, TTS, ASR, and multimodal training inputs
 - [x] Vector, Vanta, Echo, and Flux execution adapters with runtime leasing and safe pre-training behavior
-- [x] PCM16 WAV feature preparation and Echo ASR/TTS local execution boundaries, including a reserved CTC blank token and correct byte-token offsetting
+- [x] PCM16 WAV feature preparation and Echo ASR/TTS local execution boundaries, including a reserved CTC blank token, correct byte-token offsetting, and input/target length validation
 - [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
 - [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
 - [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
