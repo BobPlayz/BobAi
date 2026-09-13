@@ -25,6 +25,7 @@
 - [x] Retrieval reranking wired after vector candidate retrieval with safe pre-training fallback
 - [x] Specialist worker loopback authentication and media request/response limits
 - [x] Security dependency maintenance, audit workflow, OAuth typing/verification fixes, OTP schema alignment, and bounded local execution
+- [x] Production admin configuration accepts one or more distinct valid administrator addresses instead of enforcing an arbitrary fixed count
 
 ## Phase 5 — BobHS local orchestration
 - [x] Authenticated BobHS controller/node foundation
