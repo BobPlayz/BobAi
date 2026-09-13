@@ -4,7 +4,8 @@ export const MAX_EXECUTION_STRING_BYTES = 100_000;
 
 export function boundedExecutionResult<T>(value: T): T {
   const encoded = JSON.stringify(value);
-  if (encoded.length > MAX_EXECUTION_RESULT_BYTES) throw new Error("execution result exceeds the 2 MB limit");
+  if (typeof encoded !== "string") throw new Error("execution result must be JSON-serializable");
+  if (Buffer.byteLength(encoded, "utf8") > MAX_EXECUTION_RESULT_BYTES) throw new Error("execution result exceeds the 2 MB limit");
   if (Array.isArray(value) && value.length > MAX_EXECUTION_RESULT_ITEMS) throw new Error("execution result contains too many items");
   return value;
 }
