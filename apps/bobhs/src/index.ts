@@ -4,6 +4,9 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
+import { DurableJobQueue } from "./durableQueue.js";
+import { ModelLifecycleManager } from "./modelLifecycle.js";
+import { BobHSExecutionCoordinator, type ExecutionPayload } from "./executionCoordinator.js";
 
 const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.BOBAHS_PORT || 8787);
@@ -19,6 +22,8 @@ const NODE_ID = process.env.BOBAHS_NODE_ID || "";
 const POLL_MS = Math.max(2000, Number(process.env.BOBAHS_POLL_MS || 5000));
 const LEASE_MS = Math.max(10000, Number(process.env.BOBAHS_LEASE_MS || 30000));
 const OFFLINE_MS = Math.max(15000, Number(process.env.BOBAHS_OFFLINE_MS || 30000));
+const EXECUTION_QUEUE_FILE = process.env.BOBAHS_EXECUTION_QUEUE_FILE || `${DATA_DIR}/execution-queue.json`;
+const EXECUTION_LEASE_MS = Math.max(10000, Number(process.env.BOBAHS_EXECUTION_LEASE_MS || LEASE_MS));
 
 if (MODE !== "controller" && MODE !== "node") throw new Error("BOBAHS_MODE must be controller or node");
 if (MODE === "controller" && (CONTROLLER_TOKEN.length < 32 || JOIN_TOKEN.length < 32)) throw new Error("controller requires BOBAHS_CONTROLLER_TOKEN and BOBAHS_JOIN_TOKEN, each at least 32 characters");
@@ -29,7 +34,7 @@ interface Volume { name: string; mountPath: string; readOnly?: boolean; }
 interface Deployment { id: string; name: string; image: string; replicas: number; memoryMb: number; cpus: number; containerPort?: number; hostPort?: number; env: Record<string,string>; volumes: Volume[]; requiredLabels: string[]; requiredCapabilities: string[]; preferredNodeId?: string; status: "queued" | "running" | "error" | "stopped" | "draining"; nodeId?: string; leaseUntil?: string; containerIds: string[]; error?: string; createdAt: string; updatedAt: string; }
 interface State { version: number; nodes: NodeRecord[]; deployments: Deployment[]; }
 
-async function loadState(): Promise<State> { try { const raw = JSON.parse(await readFile(STATE_FILE, "utf8")) as Partial<State>; return { version: Number(raw.version) || 0, nodes: Array.isArray(raw.nodes) ? raw.nodes : [], deployments: Array.isArray(raw.deployments) ? raw.deployments : [] }; } catch { return { version: 0, nodes: [], deployments: [] }; } }
+async function loadState(): Promise<State> { try { const raw = JSON.parse(await readFile(STATE_FILE, "utf8")) as Partial<State>; return { version: Number(raw.version) || 0, nodes: Array.isArray(raw.nodes) ? raw.nodes : [], deployments: Array.isArray(raw.deployments) ? raw.deployments : [] }; } catch { return { version: 0, nodes: [], deployments: [] }; }
 async function saveState(state: State) { await mkdir(DATA_DIR, { recursive: true }); const tmp = `${STATE_FILE}.${process.pid}.tmp`; state.version++; await writeFile(tmp, JSON.stringify(state, null, 2), { mode: 0o600 }); await rename(tmp, STATE_FILE); }
 function hashToken(token: string) { return createHash("sha256").update(token).digest("hex"); }
 function safeEqual(a: string, b: string) { const aa = Buffer.from(a); const bb = Buffer.from(b); return aa.length === bb.length && timingSafeEqual(aa, bb); }
@@ -68,6 +73,44 @@ async function controllerHandler(req: IncomingMessage, res: ServerResponse) {
   return json(res,404,{error:"route not found"});
 }
 
-async function nodeLoop() { await ensureDocker(); const headers = { authorization: `Bearer ${NODE_TOKEN}`, "content-type": "application/json" }; while(true) { try { const memFree=Math.round(os.freemem()/1048576); const assignments = await fetch(`${CONTROLLER_URL}/v1/node/assignments`, { headers }).then(r=>r.ok?r.json() as Promise<{assignments:Deployment[]}>:Promise.reject(new Error(`assignment ${r.status}`))); for(const d of assignments.assignments) { try { const ids:string[]=[]; for(let i=0;i<d.replicas;i++) ids.push(await startContainer(d,i)); await fetch(`${CONTROLLER_URL}/v1/node/deployments/${d.id}/status`,{method:"POST",headers,body:JSON.stringify({status:"running",containerIds:ids})}); } catch(error) { await fetch(`${CONTROLLER_URL}/v1/node/deployments/${d.id}/status`,{method:"POST",headers,body:JSON.stringify({status:"error",error:error instanceof Error?error.message:"deployment failed"})}).catch(()=>undefined); } } await fetch(`${CONTROLLER_URL}/v1/nodes/${NODE_ID}/heartbeat`,{method:"POST",headers,body:JSON.stringify({cpuCount:os.cpus().length,memoryMb:Math.round(os.totalmem()/1048576),freeMemoryMb:memFree,load1:os.loadavg()[0]||0,activeJobs:0})}).catch(()=>undefined); } catch {} await new Promise(r=>setTimeout(r,POLL_MS)); } }
+const executionQueue = MODE === "node" ? new DurableJobQueue<ExecutionPayload>({ stateFile: EXECUTION_QUEUE_FILE, leaseMs: EXECUTION_LEASE_MS, maxAttempts: 3 }) : undefined;
+const executionModels = MODE === "node" ? new ModelLifecycleManager() : undefined;
+const executionCoordinator = MODE === "node" && executionQueue && executionModels ? new BobHSExecutionCoordinator(executionQueue, executionModels) : undefined;
+const executionWorkerId = MODE === "node" ? `${NODE_ID}:${process.pid}` : undefined;
+
+async function executeDeployment(job: { payload: ExecutionPayload }) {
+  const deployment = job.payload.deployment as Deployment;
+  const ids: string[] = [];
+  try {
+    for (let i = 0; i < deployment.replicas; i++) ids.push(await startContainer(deployment, i));
+    const response = await fetch(`${CONTROLLER_URL}/v1/node/deployments/${deployment.id}/status`, { method: "POST", headers: { authorization: `Bearer ${NODE_TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ status: "running", containerIds: ids }) });
+    if (!response.ok) throw new Error(`controller status update failed: ${response.status}`);
+    return { deploymentId: deployment.id, containerIds: ids };
+  } catch (error) {
+    await stopContainers(ids);
+    await fetch(`${CONTROLLER_URL}/v1/node/deployments/${deployment.id}/status`, { method: "POST", headers: { authorization: `Bearer ${NODE_TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ status: "error", error: error instanceof Error ? error.message : "deployment failed" }) }).catch(() => undefined);
+    throw error;
+  }
+}
+
+async function nodeLoop() {
+  await ensureDocker();
+  if (!executionQueue || !executionModels || !executionCoordinator || !executionWorkerId) throw new Error("execution coordinator unavailable in node mode");
+  await executionQueue.load();
+  executionModels.register("bobhs-docker-execution");
+  const headers = { authorization: `Bearer ${NODE_TOKEN}`, "content-type": "application/json" };
+  while(true) {
+    try {
+      const assignments = await fetch(`${CONTROLLER_URL}/v1/node/assignments`, { headers }).then(r=>r.ok?r.json() as Promise<{assignments:Deployment[]}>:Promise.reject(new Error(`assignment ${r.status}`)));
+      for (const deployment of assignments.assignments) {
+        await executionCoordinator.enqueue("docker-deployment", { model: "bobhs-docker-execution", deployment }, deployment.id);
+      }
+      await executionCoordinator.runOnce(executionWorkerId, executeDeployment);
+      const memFree=Math.round(os.freemem()/1048576);
+      await fetch(`${CONTROLLER_URL}/v1/nodes/${NODE_ID}/heartbeat`,{method:"POST",headers,body:JSON.stringify({cpuCount:os.cpus().length,memoryMb:Math.round(os.totalmem()/1048576),freeMemoryMb:memFree,load1:os.loadavg()[0]||0,activeJobs:0})}).catch(()=>undefined);
+    } catch {} 
+    await new Promise(r=>setTimeout(r,POLL_MS));
+  }
+}
 
 if (MODE === "controller") createServer((req,res)=>controllerHandler(req,res).catch(e=>json(res,500,{error:e instanceof Error?e.message:"internal error"}))).listen(PORT,HOST,()=>console.log(`BobHS controller listening on http://${HOST}:${PORT}`)); else nodeLoop().catch(error=>{ console.error(error); process.exit(1); });

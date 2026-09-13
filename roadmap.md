@@ -39,7 +39,8 @@
 - [x] Repository-side persistent shared-state adapter with optimistic SQL version checks
 - [x] Repository-side model bundle manifest and SHA-256 distribution validation
 - [x] Repository-side runtime counters and health-check helpers
-- [ ] Wire the execution coordinator into every live BobHS execution entrypoint and verify multi-worker behavior in the target environment
+- [x] Wire the execution coordinator into the live BobHS node execution entrypoint
+- [ ] Verify multi-worker BobHS behavior in the target environment
 
 ## Phase 6 — Train and verify every model
 - [x] Repository-side native Bob evaluator measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
