@@ -13,7 +13,7 @@
 - [x] specialist model metadata, tensor-dataset contracts, bounded training CLI, finite-loss checks, gradient clipping, and checkpoint export
 - [x] local specialist worker bridge with loopback authentication, lazy checkpoint loading, lifecycle shutdown, and Node runtime integration primitives
 - [x] specialist dataset preparation CLI for local text, image, audio, TTS, ASR, and multimodal training inputs
-- [x] Flux specialist execution adapter with runtime leasing and deterministic pre-training fallback
+- [x] Vector, Vanta, Echo, and Flux execution adapters with runtime leasing and safe pre-training behavior
 - [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
 - [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
 - [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
@@ -24,8 +24,8 @@
 - [x] internal model runtime registry with resource-aware loading, idle eviction, request leasing, task planning, and hidden admin-only runtime inspection
 - [x] Bob model family display names: Bob, Forge, Vanta, Echo, Flux, and Vector
 - [x] native chat/coding provider execution acquires and releases the appropriate runtime lease automatically
-- [ ] automatic runtime selection and leasing wired through every chat, vision, speech, image, retrieval, and agent execution path
-- [ ] specialist runtime integration into BobAI for vision, ASR, TTS, and image generation
+- [ ] automatic runtime selection and leasing verified through every chat, vision, speech, image, retrieval, and agent execution path
+- [ ] specialist runtime verification with real trained checkpoints
 - [ ] native media libraries and model weights built on the target Windows machine and verified through BobAI's Node-API addon
 - [ ] native model training on the target Windows machine with the user's expanded eligible dataset and generated model weights
 - [ ] specialist model training on the target Windows machine with real eligible audio, image, paired-text, and retrieval datasets
