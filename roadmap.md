@@ -20,6 +20,7 @@
 - [x] Public landing-page headings and navigation are crawlable and accessible, with contextual tooltips
 - [x] FAQ structured data is published from the same public FAQ content
 - [x] Distributed rate limiting has a database-backed implementation and is selectable for multi-instance deployments
+- [x] Public readiness endpoints avoid exposing deployment capability and model-detail information in production
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation
