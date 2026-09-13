@@ -29,19 +29,33 @@ def load_native(path: Path):
         raise SystemExit("invalid native model header JSON") from error
     if header.get("format") != "bobai-native-transformer" or int(header.get("version", 0)) != 2:
         raise SystemExit("unsupported native model format or version")
-    context = int(header["context_size"]); d_model = int(header["d_model"]); heads = int(header["n_heads"]); ffn = int(header["ffn_dim"]); layers = int(header["n_layers"])
+    try:
+        context = int(header["context_size"]); d_model = int(header["d_model"]); heads = int(header["n_heads"]); ffn = int(header["ffn_dim"]); layers = int(header["n_layers"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise SystemExit("native model architecture metadata is invalid") from error
+    if not 64 <= context <= 1024 or not 32 <= d_model <= 512 or not 1 <= heads <= 16 or d_model % heads or not 64 <= ffn <= 2048 or not 1 <= layers <= 12:
+        raise SystemExit("native model architecture is outside the supported safe range")
     model = BobNativeLM(context, d_model, heads, ffn, layers)
     state = model.state_dict()
     data_start = (12 + header_len + 3) & ~3
     if data_start > len(raw):
         raise SystemExit("native model has no tensor payload")
-    for spec in header.get("tensors", []):
+    specs = header.get("tensors")
+    if not isinstance(specs, list) or len(specs) != len(state):
+        raise SystemExit("native model tensor manifest is invalid")
+    seen: set[str] = set()
+    for spec in specs:
+        if not isinstance(spec, dict):
+            raise SystemExit("invalid tensor metadata")
         name = spec.get("name")
-        if name not in state:
-            raise SystemExit(f"model tensor {name} is not supported by this runtime")
-        shape = tuple(int(x) for x in spec.get("shape", []))
-        count = int(spec.get("count", -1)); offset = int(spec.get("offset", -1))
-        if count < 0 or offset < 0 or any(x < 0 for x in shape) or math.prod(shape) != count:
+        if not isinstance(name, str) or name not in state or name in seen:
+            raise SystemExit(f"invalid or duplicate model tensor: {name}")
+        seen.add(name)
+        try:
+            shape = tuple(int(x) for x in spec.get("shape", [])); count = int(spec.get("count", -1)); offset = int(spec.get("offset", -1))
+        except (TypeError, ValueError) as error:
+            raise SystemExit(f"invalid tensor metadata for {name}") from error
+        if count < 0 or offset < 0 or not shape or any(x <= 0 for x in shape) or math.prod(shape) != count:
             raise SystemExit(f"invalid tensor metadata for {name}")
         start = data_start + offset; end = start + count * 4
         if start < data_start or end > len(raw) or end < start:
@@ -133,7 +147,7 @@ def main():
         "prompt_pass_rate": pass_rate,
         "results": results,
     }
-    if args.max_test_loss is not None and (test_loss > args.max_test_loss):
+    if args.max_test_loss is not None and test_loss > args.max_test_loss:
         report["gate_failed"] = "max-test-loss"
     if args.baseline_report:
         baseline = json.loads(args.baseline_report.read_text(encoding="utf-8"))
@@ -147,5 +161,4 @@ def main():
         raise SystemExit(f"evaluation gate failed: {report['gate_failed']}")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
