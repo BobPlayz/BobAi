@@ -36,6 +36,10 @@
 - [x] WAV duration coverage stays below the byte-size ceiling so the duration guard is actually exercised
 - [x] Backend security tests do not require ambient NODE_ENV to be set by the shell
 - [x] BobHS state loading has balanced parser syntax and builds cleanly
+- [x] Tool-result serialization safely handles undefined and other non-stringifiable values
+- [x] Agent orchestration tests can load without a preconfigured external database connection
+- [x] BobHS controller request payloads narrow unknown values before constructing typed records
+- [x] BobHS model lifecycle checks preserve widened state after asynchronous transitions
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation

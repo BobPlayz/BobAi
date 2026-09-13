@@ -26,7 +26,8 @@ export class ModelLifecycleManager {
     if (entry.state === "error") throw new Error(entry.error || `model ${name} is unavailable`);
     if (entry.state === "stopping") {
       if (entry.stopPromise) await entry.stopPromise;
-      if (entry.state !== "unavailable") throw new Error(`model ${name} is stopping`);
+      const stateAfterStop: ModelState = entry.state;
+      if (stateAfterStop !== "unavailable") throw new Error(`model ${name} is stopping`);
     }
     if (entry.state === "unavailable") {
       entry.state = "starting";
@@ -45,7 +46,8 @@ export class ModelLifecycleManager {
       }
     } else if (entry.state === "starting") {
       if (entry.startPromise) await entry.startPromise;
-      if (entry.state !== "ready") throw new Error(entry.error || `model ${name} failed to start`);
+      const stateAfterStart: ModelState = entry.state;
+      if (stateAfterStart !== "ready") throw new Error(entry.error || `model ${name} failed to start`);
     }
     entry.refs++;
     entry.lastUsedAt = Date.now();
