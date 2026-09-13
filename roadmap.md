@@ -31,7 +31,10 @@
 - [x] Node registration, heartbeats, capability/model inventory, resource-aware placement, deployment leases, draining, lifecycle state, and atomic local state writes
 - [x] Bounded Docker execution and persistent Docker volume declarations
 - [x] Scheduler selection tests and root test wiring
-- [ ] Complete durable job queue, claim/retry/idempotency lifecycle, model load/unload coordination, and graceful worker drain across all execution types
+- [x] Repository-side durable queue primitive with idempotency, claims, leases, retry, cancellation, and worker draining
+- [x] Repository-side model lifecycle primitive with reference counting, idle eviction, and graceful shutdown
+- [x] Repository-side backpressure, retry-jitter, and bounded runtime event primitives
+- [ ] Integrate the durable lifecycle primitives across all BobHS execution types and verify multi-worker behavior in the target environment
 
 ## Phase 6 — Train and verify every model
 - [ ] Prepare the final eligible training datasets for Bob, Vector, Vanta, Echo, Flux, and reranking
