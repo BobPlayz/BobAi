@@ -14,6 +14,9 @@ type AuditInput = {
 
 const MAX_TEXT = 2000;
 const MAX_METADATA_BYTES = 32 * 1024;
+const MAX_ID = 256;
+const MAX_IP = 128;
+const MAX_USER_AGENT = 1024;
 const SENSITIVE_KEY = /(password|passwd|secret|token|authorization|cookie|api[-_]?key|private[-_]?key|credential|otp|code)/i;
 
 function sanitize(value: unknown, depth = 0): unknown {
@@ -31,24 +34,27 @@ function safeMetadata(metadata?: Record<string, unknown>) {
   const value = sanitize(metadata);
   try {
     const serialized = JSON.stringify(value);
-    if (serialized.length <= MAX_METADATA_BYTES) return value as Record<string, unknown>;
-    return { audit: "metadata truncated", originalSize: serialized.length };
+    const size = Buffer.byteLength(serialized, "utf8");
+    if (size <= MAX_METADATA_BYTES) return value as Record<string, unknown>;
+    return { audit: "metadata truncated", originalSize: size };
   } catch {
     return { audit: "metadata unavailable" };
   }
 }
+
+function boundedId(value: string | undefined) { return value?.slice(0, MAX_ID); }
 
 export async function recordAudit(input: AuditInput) {
   try {
     await db.insert(auditLogs).values({
       action: input.action.slice(0, MAX_TEXT),
       resourceType: input.resourceType.slice(0, MAX_TEXT),
-      resourceId: input.resourceId,
-      userId: input.userId,
-      workspaceId: input.workspaceId,
-      sessionId: input.sessionId,
-      ipAddress: input.ipAddress?.slice(0, 128),
-      userAgent: input.userAgent?.slice(0, 1024),
+      resourceId: boundedId(input.resourceId),
+      userId: boundedId(input.userId),
+      workspaceId: boundedId(input.workspaceId),
+      sessionId: boundedId(input.sessionId),
+      ipAddress: input.ipAddress?.slice(0, MAX_IP),
+      userAgent: input.userAgent?.slice(0, MAX_USER_AGENT),
       metadata: safeMetadata(input.metadata),
     });
   } catch (error) {
