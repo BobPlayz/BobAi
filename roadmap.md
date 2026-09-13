@@ -1,39 +1,69 @@
-- [x] npm-workspaces monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
-- [x] authentication, account recovery, MFA, CSRF, secure cookies, rate limits, audit logging, migration locking, idempotency, deletion/export, and collaboration controls
-- [x] durable chat, revisions, search, context compaction, projects, scoped memory, file processing/sharing, research, automation, agents, MCP, media abstractions, and sandbox policy
-- [x] local research and deterministic embeddings without cloud provider requirements
-- [x] local image, diagram, and sketch-to-UI fallbacks without external AI credentials
-- [x] BobMail built-in SMTP delivery with TLS enforcement and development OTP fallback
-- [x] BobHS authenticated controller/node foundation with bounded Docker execution, node heartbeats, capability/model inventory, resource-aware scheduling, deployment leases, draining, persistent Docker volume declarations, atomic local state writes, and deployment lifecycle controls
-- [x] BobAI native model gateway with no Ollama dependency in the chat path
-- [x] Bob-0.2-native configurable decoder-only transformer with direct Node.js inference, top-k/top-p sampling, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, BOBAI002 evaluation harness, resumable latest/best checkpoints, best-checkpoint export, gradient accumulation, cosine learning-rate scheduling, architecture validation, and explicit NumPy training dependency
-- [x] explicit training-data eligibility, consent, secret/PII sanitization, deterministic deduplication, and held-out validation/test splits
-- [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
-- [x] from-scratch CPU-friendly specialist training kit for embeddings, reranking, vision encoding, CTC speech recognition, text-to-mel speech synthesis, and tiny text-conditioned image generation
-- [x] specialist model metadata, tensor-dataset contracts, bounded training CLI, finite-loss checks, gradient clipping, resumable checkpoints, and checkpoint export
-- [x] local specialist worker bridge with loopback authentication, lazy checkpoint loading, lifecycle shutdown, artifact existence checks, and bounded request/response handling
-- [x] specialist dataset preparation CLI for local text, image, audio, TTS, ASR, and multimodal training inputs
+# BobAI roadmap
+
+## Phase 1 — Basic foundation
+- [x] Monorepo, API, web, database package, TypeScript, Node.js, Express, Next.js, PostgreSQL, Drizzle, pgvector groundwork, environment templates, and launcher
+- [x] Authentication, account recovery, MFA, CSRF, secure cookies, rate limits, audit logging, migration locking, idempotency, deletion/export, and collaboration controls
+- [x] Durable chat, revisions, search, projects, scoped memory, file processing/sharing, research, automation, agents, MCP, media abstractions, and sandbox policy
+
+## Phase 2 — Local-first AI core
+- [x] Native Bob model gateway with no Ollama dependency in the chat path
+- [x] Bob-0.2-native tokenizer, configurable decoder-only transformer, direct Node inference, sampling, portable model format, and model status
+- [x] CPU/CUDA training pipeline with dataset preparation, validation/test splits, resumable checkpoints, best-checkpoint export, gradient accumulation, cosine scheduling, architecture validation, evaluation, and explicit dependencies
+- [x] Local research and deterministic pre-training embeddings without cloud AI credentials
+
+## Phase 3 — Specialist model family
+- [x] From-scratch training kits for Vector, Vanta, Echo, Flux, and reranking
+- [x] Specialist dataset contracts and preparation for text, paired text, retrieval, images, ASR, TTS, and image generation
+- [x] Specialist checkpoint serving, lazy loading, authentication, bounded requests/responses, lifecycle shutdown, and artifact existence checks
 - [x] Vector, Vanta, Echo, and Flux execution adapters with runtime leasing and safe pre-training behavior
-- [x] retrieval reranking path wired after vector candidate retrieval, with safe fallback to vector ranking when Vector/Vanta reranker checkpoints are unavailable
-- [x] PCM16 WAV feature preparation and Echo ASR/TTS local execution boundaries, including a reserved CTC blank token, correct byte-token offsetting, and input/target length validation
-- [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
-- [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
-- [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
-- [x] security dependency overrides and one-time npm audit lockfile maintenance workflow
-- [x] CI audit-lock refresh verified with zero npm vulnerabilities
-- [x] CI-discovered email OTP schema drift fixed by aligning the Drizzle schema with the existing purpose migration
-- [x] CI-discovered social OAuth provider narrowing and Apple JWK typing defects fixed without weakening OAuth verification
-- [x] internal model runtime registry with resource-aware loading, idle eviction, request leasing, task planning, and hidden admin-only runtime inspection
-- [x] Bob model family display names: Bob, Forge, Vanta, Echo, Flux, and Vector
-- [x] native chat/coding provider execution acquires and releases the appropriate runtime lease automatically
-- [x] pure BobHS scheduler selection tests and root test wiring
-- [ ] automatic runtime selection and leasing verified through every chat, vision, speech, image, retrieval, and agent execution path with real trained artifacts
-- [ ] specialist runtime verification with real trained checkpoints
-- [ ] native media libraries and model weights built on the target Windows machine and verified through BobAI's Node-API addon
-- [ ] native model training on the target Windows machine with the user's expanded eligible dataset and generated model weights
-- [ ] specialist model training on the target Windows machine with real eligible audio, image, paired-text, and retrieval datasets
-- [ ] broader native media codec support beyond PCM16 WAV without reintroducing child-process execution
-- [ ] BobHS production ingress/TLS, database-backed shared state, multi-controller coordination, persistent production volumes, registry integration, rolling deployments, centralized logs, backups, domains, and verified multi-node failover
-- [ ] production environment variables, hosting/DNS, trusted model-weight distribution, retention/backup proof, security monitoring, and external load/penetration verification
-- [ ] final API/browser smoke tests, social-provider callback verification, real SMTP delivery verification, media runtime verification, specialist runtime verification, and sandbox end-to-end verification
-- [ ] target-hardware performance verification for the native text model and local speech/media/vision runtimes
+- [x] Echo PCM16 WAV ASR/TTS boundaries and CTC token handling
+
+## Phase 4 — Smart runtime and security
+- [x] Internal model runtime registry with resource-aware loading, idle eviction, request leasing, and task planning
+- [x] Hidden Bob Core with admin-only runtime inspection and no normal-user scheduler exposure
+- [x] Automatic leasing for native chat/coding and specialist execution paths
+- [x] Retrieval reranking wired after vector candidate retrieval with safe pre-training fallback
+- [x] Specialist worker loopback authentication and media request/response limits
+- [x] Security dependency maintenance, audit workflow, OAuth typing/verification fixes, OTP schema alignment, and bounded local execution
+
+## Phase 5 — BobHS local orchestration
+- [x] Authenticated BobHS controller/node foundation
+- [x] Node registration, heartbeats, capability/model inventory, resource-aware placement, deployment leases, draining, lifecycle state, and atomic local state writes
+- [x] Bounded Docker execution and persistent Docker volume declarations
+- [x] Scheduler selection tests and root test wiring
+- [ ] Complete durable job queue, claim/retry/idempotency lifecycle, model load/unload coordination, and graceful worker drain across all execution types
+
+## Phase 6 — Train and verify every model
+- [ ] Prepare the final eligible training datasets for Bob, Vector, Vanta, Echo, Flux, and reranking
+- [ ] Train Bob for the required long-running experiment window and keep the best verified checkpoint
+- [ ] Train every specialist with real eligible datasets and keep best verified checkpoints
+- [ ] Evaluate every model with held-out data and reject broken or regressed checkpoints
+- [ ] Verify automatic runtime selection and leasing through chat, coding, vision, speech, image, retrieval, and agent execution with real artifacts
+- [ ] Build native media libraries and model weights on the target Windows machine and verify the Node-API addon
+
+## Phase 7 — Native media and local multimodal runtime
+- [ ] Broader native media codec support beyond PCM16 WAV without reintroducing child-process execution
+- [ ] End-to-end local image, vision, speech, and media workflows verified on the target Windows machine
+- [ ] Target-hardware performance profiling, memory limits, queue behavior, model load times, and failure recovery verified
+- [ ] Real local-model quality evaluation completed against appropriate baselines
+
+## Phase 8 — Production BobHS platform
+- [ ] Production ingress and TLS
+- [ ] Database-backed shared state and multi-controller coordination
+- [ ] Persistent production volumes, model registry/inventory integration, rolling deployments, centralized logs, and backups
+- [ ] Domains, health checks, failover, graceful draining, retries, and recovery verified across multiple nodes
+- [ ] Portable model distribution so the same Bob family artifacts can move between laptop and production workers
+
+## Phase 9 — Production security and reliability
+- [ ] Production environment variables, secret handling, trusted model-weight distribution, retention, backups, and security monitoring verified
+- [ ] External load testing, abuse testing, penetration testing, rate-limit validation, and failure-injection testing completed
+- [ ] Final API/browser smoke tests, OAuth callback verification, real SMTP delivery verification, media verification, specialist verification, and sandbox end-to-end verification completed
+- [ ] Privacy, deletion/export, audit, workspace isolation, and model-data boundaries rechecked end to end
+
+## Phase 10 — Production scale
+- [ ] Resource-aware multi-node scheduling proven under sustained production load
+- [ ] Automatic capacity management, queue backpressure, priority handling, model warm/cold lifecycle, and recovery proven under load
+- [ ] Multi-region or geographically distributed workers evaluated where genuinely useful and affordable
+- [ ] Production observability, alerts, SLOs, backups, disaster recovery, and operational runbooks completed
+- [ ] Large-user workload, concurrency, latency, cost, and model-quality targets measured and tuned
+- [ ] BobAI production release signed off only after real environment, hardware, model, security, and scale verification
