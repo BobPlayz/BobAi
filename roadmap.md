@@ -18,6 +18,9 @@
 - [x] CI audit-lock refresh verified with zero npm vulnerabilities
 - [x] CI-discovered email OTP schema drift fixed by aligning the Drizzle schema with the existing purpose migration
 - [x] CI-discovered social OAuth provider narrowing and Apple JWK typing defects fixed without weakening OAuth verification
+- [x] internal model runtime registry with resource-aware loading, idle eviction, request leasing, task planning, and hidden admin-only runtime inspection
+- [x] Bob model family display names: Bob, Forge, Vanta, Echo, Flux, and Vector
+- [ ] automatic runtime selection and leasing wired through every chat, vision, speech, image, retrieval, and agent execution path
 - [ ] specialist runtime integration into BobAI for vision, ASR, TTS, and image generation
 - [ ] native media libraries and model weights built on the target Windows machine and verified through BobAI's Node-API addon
 - [ ] native model training on the target Windows machine with the user's expanded eligible dataset and generated model weights
