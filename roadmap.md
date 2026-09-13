@@ -31,6 +31,11 @@
 - [x] Legacy coding orchestration is retired to the unified Bob coding path
 - [x] Local-media tests match the native-media architecture and explicitly verify unsupported-format rejection
 - [x] Agent rules require actionable repo-side fixes to be implemented automatically instead of merely reported
+- [x] Tool-loop tests can exercise orchestration without importing database-backed runtime dependencies
+- [x] SSRF tests cover textual and hexadecimal IPv4-mapped IPv6 loopback addresses
+- [x] WAV duration coverage stays below the byte-size ceiling so the duration guard is actually exercised
+- [x] Backend security tests do not require ambient NODE_ENV to be set by the shell
+- [x] BobHS state loading has balanced parser syntax and builds cleanly
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation

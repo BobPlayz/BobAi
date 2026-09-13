@@ -1,10 +1,5 @@
-import { deepResearch } from "./deepResearch.js";
-import { executeProviderCapability } from "./capabilityProviders.js";
-import { runAutomation } from "./automation.js";
-import { queueBackgroundTask } from "./agentCoordinator.js";
 import { getTool, type BobTool } from "./toolRegistry.js";
-import { prepareToolExecution, type ToolExecutionContext } from "./toolExecution.js";
-import { recordAudit } from "./audit.js";
+import type { ToolExecutionContext } from "./toolExecution.js";
 import { assertPublicTargetUrl, boundedText, providerUrl, safeError } from "./httpSafety.js";
 
 export type ToolLoopMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -44,29 +39,31 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
 }
 
 const EXECUTORS: Record<string, Executor> = {
-  research: async (args) => deepResearch(args.query),
+  research: async (args) => (await import("./deepResearch.js")).deepResearch(args.query),
   browser: async (args) => { await assertPublicTargetUrl(args.url); return callConfiguredProvider(getTool("browser")!, args); },
   "website-test": async (args) => { await assertPublicTargetUrl(args.url); return callConfiguredProvider(getTool("website-test")!, args); },
   documents: async (args) => callConfiguredProvider(getTool("documents")!, args),
   knowledge: async (args) => callConfiguredProvider(getTool("knowledge")!, args),
   "data-analysis": async (args) => callConfiguredProvider(getTool("data-analysis")!, args),
-  diagrams: async (args) => executeProviderCapability("diagram_generation", args),
-  "sketch-to-ui": async (args) => executeProviderCapability("sketch_to_ui", args),
-  voice: async (args) => executeProviderCapability(args.operation === "transcribe" ? "speech_to_text" : "voice_synthesis", args),
-  image: async (args) => executeProviderCapability("image_editing", args),
-  video: async (args) => executeProviderCapability("video_generation", args),
-  music: async (args) => executeProviderCapability("music_generation", args),
+  diagrams: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("diagram_generation", args),
+  "sketch-to-ui": async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("sketch_to_ui", args),
+  voice: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability(args.operation === "transcribe" ? "speech_to_text" : "voice_synthesis", args),
+  image: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("image_editing", args),
+  video: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("video_generation", args),
+  music: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("music_generation", args),
   automation: async (args, context) => {
     const automationId = typeof args.automationId === "string" ? args.automationId.trim() : "";
     if (!automationId) throw new Error("automation id is required");
-    return runAutomation(automationId, context.workspaceId, context.userId);
+    return (await import("./automation.js")).runAutomation(automationId, context.workspaceId, context.userId);
   },
-  coding: async (args, context) => queueBackgroundTask({ description: String(args.task), mode: context.mode, context: { workspaceId: context.workspaceId, createdBy: context.userId } }),
+  coding: async (args, context) => (await import("./agentCoordinator.js")).queueBackgroundTask({ description: String(args.task), mode: context.mode, context: { workspaceId: context.workspaceId, createdBy: context.userId } }),
 };
 
 export function hasToolExecutor(toolId: string): boolean { return typeof EXECUTORS[toolId] === "function"; }
 
 export async function executeApprovedTool(toolId: string, args: Record<string, unknown>, context: ToolLoopContext): Promise<unknown> {
+  const { prepareToolExecution } = await import("./toolExecution.js");
+  const { recordAudit } = await import("./audit.js");
   const prepared = await prepareToolExecution(toolId, { ...context, arguments: args });
   if (prepared.status !== "ready") {
     await recordAudit({ action: "tool_execution_denied", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId, status: prepared.status } });
@@ -94,7 +91,7 @@ export function serializeToolResult(value: unknown): string {
   return text.slice(0, MAX_TOOL_RESULT_CHARS);
 }
 
-export async function runToolLoop(initialMessages: ToolLoopMessage[], context: ToolLoopContext, decide: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ action: "respond" | "use_tools"; calls: Array<{ tool: string; arguments: Record<string, unknown> }>; reason?: string }>, respond: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ content: string }>): Promise<ToolLoopResult> {
+export async function runToolLoop(initialMessages: ToolLoopMessage[], context: ToolLoopContext, decide: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ action: "respond" | "use_tools"; calls: Array<{ tool: string; arguments: Record<string, unknown> }>; reason?: string }>, respond: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ content: string }>, execute: (toolId: string, args: Record<string, unknown>, context: ToolLoopContext) => Promise<unknown> = executeApprovedTool): Promise<ToolLoopResult> {
   let messages = [...initialMessages];
   const usedTools: string[] = [];
   const backgroundJobIds: string[] = [];
@@ -116,7 +113,7 @@ export async function runToolLoop(initialMessages: ToolLoopMessage[], context: T
       if (!tool) return { status: "failed", message: "selected tool is unavailable", toolCalls, usedTools, backgroundJobIds };
       if (tool.requiresUserApproval && !context.approvalToken) return { status: "approval_required", message: `${tool.name} requires user approval before BobAI can execute it.`, toolCalls, usedTools: [...usedTools, tool.id], backgroundJobIds };
       try {
-        const result = await executeApprovedTool(tool.id, call.arguments, context);
+        const result = await execute(tool.id, call.arguments, context);
         if (result && typeof result === "object" && "status" in result && (result as { status?: string }).status === "approval_required") return { status: "approval_required", message: `${tool.name} requires user approval before BobAI can execute it.`, toolCalls, usedTools: [...usedTools, tool.id], backgroundJobIds };
         toolCalls += 1;
         usedTools.push(tool.id);

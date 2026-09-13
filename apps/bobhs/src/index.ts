@@ -34,7 +34,7 @@ interface Volume { name: string; mountPath: string; readOnly?: boolean; }
 interface Deployment { id: string; name: string; image: string; replicas: number; memoryMb: number; cpus: number; containerPort?: number; hostPort?: number; env: Record<string,string>; volumes: Volume[]; requiredLabels: string[]; requiredCapabilities: string[]; preferredNodeId?: string; status: "queued" | "running" | "error" | "stopped" | "draining"; nodeId?: string; leaseUntil?: string; containerIds: string[]; error?: string; createdAt: string; updatedAt: string; }
 interface State { version: number; nodes: NodeRecord[]; deployments: Deployment[]; }
 
-async function loadState(): Promise<State> { try { const raw = JSON.parse(await readFile(STATE_FILE, "utf8")) as Partial<State>; return { version: Number(raw.version) || 0, nodes: Array.isArray(raw.nodes) ? raw.nodes : [], deployments: Array.isArray(raw.deployments) ? raw.deployments : [] }; } catch { return { version: 0, nodes: [], deployments: [] }; }
+async function loadState(): Promise<State> { try { const raw = JSON.parse(await readFile(STATE_FILE, "utf8")) as Partial<State>; return { version: Number(raw.version) || 0, nodes: Array.isArray(raw.nodes) ? raw.nodes : [], deployments: Array.isArray(raw.deployments) ? raw.deployments : [] }; } catch { return { version: 0, nodes: [], deployments: [] }; } }
 async function saveState(state: State) { await mkdir(DATA_DIR, { recursive: true }); const tmp = `${STATE_FILE}.${process.pid}.tmp`; state.version++; await writeFile(tmp, JSON.stringify(state, null, 2), { mode: 0o600 }); await rename(tmp, STATE_FILE); }
 function hashToken(token: string) { return createHash("sha256").update(token).digest("hex"); }
 function safeEqual(a: string, b: string) { const aa = Buffer.from(a); const bb = Buffer.from(b); return aa.length === bb.length && timingSafeEqual(aa, bb); }
@@ -108,7 +108,7 @@ async function nodeLoop() {
       await executionCoordinator.runOnce(executionWorkerId, executeDeployment);
       const memFree=Math.round(os.freemem()/1048576);
       await fetch(`${CONTROLLER_URL}/v1/nodes/${NODE_ID}/heartbeat`,{method:"POST",headers,body:JSON.stringify({cpuCount:os.cpus().length,memoryMb:Math.round(os.totalmem()/1048576),freeMemoryMb:memFree,load1:os.loadavg()[0]||0,activeJobs:0})}).catch(()=>undefined);
-    } catch {} 
+    } catch {}
     await new Promise(r=>setTimeout(r,POLL_MS));
   }
 }
