@@ -68,6 +68,7 @@
 - [x] Model bundle manifests reject duplicate file names and enforce a bounded aggregate size
 - [x] Native audio entry points validate PCM16 WAV structure, sample-rate bounds, channel bounds, and duration before invoking native resampling/inference
 - [x] Execution-result byte limits count UTF-8 bytes and reject non-JSON-serializable results
+- [x] Repository preflight enforces the actual paragraph-only handoff format instead of checking for a nonexistent heading
 - [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
 - [ ] Train the unified model for the required long-running experiment window and keep the best verified checkpoint
