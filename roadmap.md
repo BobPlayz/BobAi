@@ -59,6 +59,7 @@
 - [x] Running agent jobs can be cancelled through their execution controller rather than only changing queue state
 - [x] Tool executions have repository audit events for denied, started, completed, unavailable, and failed outcomes
 - [x] Training dataset eligibility requires the exact approved consent scope rather than accepting an empty scope
+- [x] Automation tool execution resolves the requested workspace-owned automation instead of converting its ID into an arbitrary coding-agent task
 - [x] Canonical main tree restores the unified tool-loop implementation after repository write correction
 - [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
