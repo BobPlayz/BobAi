@@ -1,5 +1,6 @@
 import { deepResearch } from "./deepResearch.js";
 import { executeProviderCapability } from "./capabilityProviders.js";
+import { runAutomation } from "./automation.js";
 import { queueBackgroundTask } from "./agentCoordinator.js";
 import { getTool, type BobTool } from "./toolRegistry.js";
 import { prepareToolExecution, type ToolExecutionContext } from "./toolExecution.js";
@@ -56,8 +57,9 @@ const EXECUTORS: Record<string, Executor> = {
   video: async (args) => executeProviderCapability("video_generation", args),
   music: async (args) => executeProviderCapability("music_generation", args),
   automation: async (args, context) => {
-    const automationId = typeof args.automationId === "string" ? args.automationId : "";
-    return queueBackgroundTask({ description: `run approved automation ${automationId}`, mode: context.mode, context: { workspaceId: context.workspaceId, createdBy: context.userId } });
+    const automationId = typeof args.automationId === "string" ? args.automationId.trim() : "";
+    if (!automationId) throw new Error("automation id is required");
+    return runAutomation(automationId, context.workspaceId, context.userId);
   },
   coding: async (args, context) => queueBackgroundTask({ description: String(args.task), mode: context.mode, context: { workspaceId: context.workspaceId, createdBy: context.userId } }),
 };
