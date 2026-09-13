@@ -61,6 +61,7 @@
 - [x] Training dataset eligibility requires the exact approved consent scope rather than accepting an empty scope
 - [x] Automation tool execution resolves the requested workspace-owned automation instead of converting its ID into an arbitrary coding-agent task
 - [x] Remaining user-visible legacy vision/image capability labels are capability-neutral
+- [x] Automation provider response reads use the shared bounded streaming HTTP safety layer
 - [x] Canonical main tree restores the unified tool-loop implementation after repository write correction
 - [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
