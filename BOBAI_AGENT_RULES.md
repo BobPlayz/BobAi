@@ -261,7 +261,17 @@ Do not create feature branches or move work onto a separate branch unless the de
 
 ---
 
-## 12. Final Verification
+## 12. Autonomous Code-Side Completion
+
+If you identify anything in the repository that can be safely implemented, fixed, hardened, cleaned up, tested, or otherwise completed without requiring the developer's machine, credentials, accounts, deployment, hardware, or real-world decision, do it immediately.
+
+Do not merely tell the developer about such work and do not ask for permission for routine code-side fixes.
+
+When the requested task is clear, keep inspecting related code and continue completing actionable repository work until the remaining items genuinely require developer-side access, external credentials, deployment, hardware, or a real-world decision.
+
+---
+
+## 13. Final Verification
 
 After completing a task, do not stop immediately.
 

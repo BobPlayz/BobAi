@@ -25,6 +25,12 @@
 - [x] Dependabot is configured for weekly npm and GitHub Actions dependency update proposals
 - [x] Web security headers include CSP, COOP, CORP, HSTS, and restrictive browser permissions
 - [x] Development CSP explicitly permits the local web/API/WebSocket endpoints used by the repository's development workflow
+- [x] Native model lifecycle has a real unload operation and the runtime narrows specialist capabilities safely
+- [x] Specialist worker process typing matches spawn's nullable stdin contract
+- [x] Model status uses the provider's modelId field
+- [x] Obsolete unreferenced coding orchestration implementation removed
+- [x] Local-media tests match the native-media architecture and explicitly verify unsupported-format rejection
+- [x] Agent rules require actionable repo-side fixes to be implemented automatically instead of merely reported
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation
