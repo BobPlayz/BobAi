@@ -11,6 +11,7 @@
     "ai": "tsx scripts/start.ts",
     "bobhs": "npm run dev --workspace=@bobai/bobhs",
     "bobhs:build": "npm run build --workspace=@bobai/bobhs",
+    "bobhs:test": "npm run test --workspace=@bobai/bobhs",
     "bobhs:start": "npm run start --workspace=@bobai/bobhs",
     "native:media:build": "node-gyp rebuild --directory native/media --release",
     "native:media:clean": "node-gyp clean --directory native/media",
@@ -28,7 +29,7 @@
     "model:specialist": "python model-training/train_specialist.py",
     "model:specialist:serve": "python model-training/specialist_server.py",
     "build": "npm run build --workspace=@bobai/api && npm run build --workspace=@bobai/bobhs && npm run build --workspace=web",
-    "test": "npm run test:security --workspace=@bobai/api && npm run test:local-media --workspace=@bobai/api",
+    "test": "npm run test:security --workspace=@bobai/api && npm run test:local-media --workspace=@bobai/api && npm run test --workspace=@bobai/bobhs",
     "audit": "npm audit --workspaces --include-workspace-root",
     "smoke": "tsx scripts/smoke.ts"
   },
