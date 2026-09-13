@@ -14,6 +14,10 @@
 - [x] Backup verification output is bounded
 - [x] BobHS durable queue state, payload, result, and error sizes are bounded
 - [x] SSRF target checks reject mapped and reserved IP ranges
+- [x] Public web metadata includes canonical URLs, Open Graph/Twitter metadata, favicon, and structured application data
+- [x] Public sitemap.xml and robots.txt exclude private application routes
+- [x] Web app manifest and machine-readable llms.txt are published
+- [x] Public landing-page headings and navigation are crawlable and accessible, with contextual tooltips
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation

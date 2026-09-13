@@ -1,0 +1,24 @@
+# Bob AI
+
+Bob AI is an AI workspace for chat, research, creation, development, memory, files, tools, agents, and automations.
+
+## Public pages
+
+- `/` Product overview and sign-in entry point.
+- `/privacy` Privacy policy.
+- `/terms` Terms of service.
+
+## Product principles
+
+- One user-facing Bob model with capabilities selected through a central policy boundary.
+- Sensitive actions require authorization and, where configured, explicit approval.
+- External requests use bounded responses, timeouts, redirect rejection, and target validation.
+- User workspaces and stored content are access-controlled.
+
+## AI and accuracy
+
+Generated content can be incorrect. Important outputs should be reviewed before use.
+
+## Crawling
+
+Public pages are discoverable through `/robots.txt` and `/sitemap.xml`. Private application routes are excluded from crawling.
