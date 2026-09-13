@@ -27,9 +27,12 @@ jobs:
         run: python -m unittest test_prepare_dataset.py
       - name: Validate native and specialist sources
         working-directory: model-training
-        run: python -m py_compile native_model.py train.py evaluate.py prepare_dataset.py test_native_model.py specialist_models.py train_specialist.py prepare_specialist_data.py specialist_server.py
+        run: python -m py_compile native_model.py train.py evaluate.py prepare_dataset.py test_native_model.py specialist_models.py train_specialist.py prepare_specialist_data.py specialist_server.py test_specialist_models.py
       - name: Run native model unit tests
         working-directory: model-training
         run: python -m unittest test_native_model.py
+      - name: Run specialist model unit tests
+        working-directory: model-training
+        run: python -m unittest test_specialist_models.py
       - name: Prepare synthetic starter dataset
         run: python model-training/prepare_dataset.py --input model-training/data/source.jsonl --output-dir /tmp/bobai-training-data
