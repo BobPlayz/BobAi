@@ -24,6 +24,7 @@
 - [x] Machine-readable product documentation lists the same public pages exposed by the sitemap
 - [x] Dependabot is configured for weekly npm and GitHub Actions dependency update proposals
 - [x] Web security headers include CSP, COOP, CORP, HSTS, and restrictive browser permissions
+- [x] Development CSP explicitly permits the local web/API/WebSocket endpoints used by the repository's development workflow
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation
