@@ -31,7 +31,8 @@
     "build": "npm run build --workspace=@bobai/api && npm run build --workspace=@bobai/bobhs && npm run build --workspace=web",
     "test": "npm run test:security --workspace=@bobai/api && npm run test:local-media --workspace=@bobai/api && npm run test --workspace=@bobai/bobhs",
     "audit": "npm audit --workspaces --include-workspace-root",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "repo:preflight": "node scripts/repo-preflight.mjs"
   },
   "overrides": {
     "esbuild": "^0.28.2",

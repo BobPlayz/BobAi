@@ -36,11 +36,14 @@
 - [x] Repository-side backpressure, retry-jitter, and bounded runtime event primitives
 - [x] Repository-side regression coverage for queue concurrency, model lifecycle concurrency, shared-state conflicts, artifact verification, deployment planning, and runtime policy
 - [x] Repository-side execution coordinator combining durable queue claims, model lifecycle references, retry policy, cancellation/draining, and bounded runtime events
+- [x] Repository-side persistent shared-state adapter with optimistic SQL version checks
+- [x] Repository-side model bundle manifest and SHA-256 distribution validation
+- [x] Repository-side runtime counters and health-check helpers
 - [ ] Wire the execution coordinator into every live BobHS execution entrypoint and verify multi-worker behavior in the target environment
 
 ## Phase 6 — Train and verify every model
-- [x] Repository-side native Bob evaluator now measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
-- [x] Repository-side specialist trainer now supports deterministic validation splits, best/latest checkpoints, resume validation, early stopping, finite-data checks, and bounded dataset loading
+- [x] Repository-side native Bob evaluator measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
+- [x] Repository-side specialist trainer supports deterministic validation splits, best/latest checkpoints, resume validation, early stopping, finite-data checks, and bounded dataset loading
 - [x] Repository-side specialist model smoke tests and CI compilation cover every declared specialist architecture and loss path
 - [x] Repository-side specialist data preparation handles variable-length TTS mel targets safely
 - [ ] Prepare the final eligible training datasets for Bob, Vector, Vanta, Echo, Flux, and reranking
@@ -57,13 +60,18 @@
 - [ ] Real local-model quality evaluation completed against appropriate baselines
 
 ## Phase 8 — Production BobHS platform
-- [ ] Production ingress and TLS
-- [ ] Database-backed shared state and multi-controller coordination
-- [ ] Persistent production volumes, model registry/inventory integration, rolling deployments, centralized logs, and backups
+- [x] Repository-side persistent shared-state contract and atomic optimistic SQL adapter
+- [x] Repository-side portable model-bundle manifest and artifact integrity contract
+- [x] Repository-side rolling deployment planner and runtime health/metrics primitives
+- [ ] Production ingress and TLS configuration and live verification
+- [ ] Production database connection wiring and multi-controller coordination in the live BobHS process
+- [ ] Persistent production volumes, model registry/inventory integration, centralized logs, and backups wired to the live deployment
 - [ ] Domains, health checks, failover, graceful draining, retries, and recovery verified across multiple nodes
-- [ ] Portable model distribution so the same Bob family artifacts can move between laptop and production workers
+- [ ] Portable model distribution executed against real workers and artifacts
 
 ## Phase 9 — Production security and reliability
+- [x] Repository preflight validates required project structure, required scripts, handoff/roadmap format, and secret-shaped values in the example environment
+- [x] Repository CI preflight and model-training validation workflows are defined with least-privilege read permissions
 - [ ] Production environment variables, secret handling, trusted model-weight distribution, retention, backups, and security monitoring verified
 - [ ] External load testing, abuse testing, penetration testing, rate-limit validation, and failure-injection testing completed
 - [ ] Final API/browser smoke tests, OAuth callback verification, real SMTP delivery verification, media verification, specialist verification, and sandbox end-to-end verification completed
