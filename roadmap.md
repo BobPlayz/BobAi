@@ -23,6 +23,7 @@
 - [x] Public readiness endpoints avoid exposing deployment capability and model-detail information in production
 - [x] Machine-readable product documentation lists the same public pages exposed by the sitemap
 - [x] Dependabot is configured for weekly npm and GitHub Actions dependency update proposals
+- [x] Web security headers include CSP, COOP, CORP, HSTS, and restrictive browser permissions
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation
