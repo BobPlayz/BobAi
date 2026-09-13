@@ -21,6 +21,7 @@
 - [x] FAQ structured data is published from the same public FAQ content
 - [x] Distributed rate limiting has a database-backed implementation and is selectable for multi-instance deployments
 - [x] Public readiness endpoints avoid exposing deployment capability and model-detail information in production
+- [x] Machine-readable product documentation lists the same public pages exposed by the sitemap
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation

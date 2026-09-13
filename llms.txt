@@ -5,6 +5,10 @@ Bob AI is an AI workspace for chat, research, creation, development, memory, fil
 ## Public pages
 
 - `/` Product overview and sign-in entry point.
+- `/about` Product overview and project information.
+- `/faq` Frequently asked questions.
+- `/contact` Project contact information.
+- `/waitlist` Early-access waitlist entry point.
 - `/privacy` Privacy policy.
 - `/terms` Terms of service.
 
