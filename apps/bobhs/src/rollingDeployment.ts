@@ -16,13 +16,15 @@ export function planRollingDeployment(input: RollingDeploymentInput): Deployment
   const unavailable = Math.max(0, Math.floor(input.maxUnavailable));
   const surge = Math.max(0, Math.floor(input.maxSurge));
   if (target === current) return [];
+  if (target > current && surge === 0) throw new Error("maxSurge must be at least 1 when scaling up");
+  if (target < current && unavailable === 0) throw new Error("maxUnavailable must be at least 1 when scaling down");
 
   const steps: DeploymentStep[] = [];
   let running = current;
   if (target > current) {
     let remaining = target - current;
     while (remaining > 0) {
-      const start = Math.min(remaining, Math.max(1, surge || 1));
+      const start = Math.min(remaining, surge);
       steps.push({ action: "start", count: start });
       running += start;
       remaining -= start;
@@ -32,9 +34,8 @@ export function planRollingDeployment(input: RollingDeploymentInput): Deployment
   }
 
   let remaining = current - target;
-  const safeStop = Math.max(1, unavailable || 1);
   while (remaining > 0) {
-    const stop = Math.min(remaining, safeStop, Math.max(1, running - target));
+    const stop = Math.min(remaining, unavailable, Math.max(1, running - target));
     steps.push({ action: "stop", count: stop });
     running -= stop;
     remaining -= stop;
