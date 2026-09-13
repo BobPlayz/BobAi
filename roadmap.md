@@ -35,7 +35,8 @@
 - [x] Repository-side model lifecycle primitive with reference counting, idle eviction, and graceful shutdown
 - [x] Repository-side backpressure, retry-jitter, and bounded runtime event primitives
 - [x] Repository-side regression coverage for queue concurrency, model lifecycle concurrency, shared-state conflicts, artifact verification, deployment planning, and runtime policy
-- [ ] Integrate the durable lifecycle primitives across all BobHS execution types and verify multi-worker behavior in the target environment
+- [x] Repository-side execution coordinator combining durable queue claims, model lifecycle references, retry policy, cancellation/draining, and bounded runtime events
+- [ ] Wire the execution coordinator into every live BobHS execution entrypoint and verify multi-worker behavior in the target environment
 
 ## Phase 6 — Train and verify every model
 - [x] Repository-side native Bob evaluator now measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
