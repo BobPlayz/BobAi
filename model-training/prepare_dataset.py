@@ -17,6 +17,7 @@ PII_PATTERNS = [
     re.compile(r"\b(?:\+?\d[\d ()-]{7,}\d)\b"),
 ]
 ALLOWED_ROLES = {"system", "user", "assistant"}
+REQUIRED_CONSENT_SCOPE = "preferences-and-conversations"
 MAX_MESSAGE_CHARS = 50_000
 MAX_MESSAGES = 64
 
@@ -31,10 +32,7 @@ def sanitize(text: str) -> str:
 
 
 def eligible(row: dict[str, Any]) -> bool:
-    return (
-        row.get("eligible_for_training") is True
-        and row.get("consent_scope") in {"preferences-and-conversations", ""}
-    )
+    return row.get("eligible_for_training") is True and row.get("consent_scope") == REQUIRED_CONSENT_SCOPE
 
 
 def normalize(row: dict[str, Any]) -> dict[str, Any] | None:
@@ -120,7 +118,7 @@ def main() -> None:
         "accepted": len(accepted),
         "rejected_or_duplicate": rejected,
         "splits": {"train": len(train), "validation": len(validation), "test": len(test)},
-        "policy": "explicit eligibility + consent scope + secret/PII sanitization + deterministic deduplication",
+        "policy": "explicit eligibility + exact consent scope + secret/PII sanitization + deterministic deduplication",
     }
     (args.output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(manifest, indent=2))
