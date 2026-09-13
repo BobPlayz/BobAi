@@ -17,6 +17,7 @@ test("tool loop feeds results back to the same decision model", async () => {
       return { action: "respond", calls: [] };
     },
     async (messages) => ({ content: messages.at(-1)?.content || "done" }),
+    async (toolId) => ({ toolId, value: "ok" }),
   );
   assert.equal(result.status, "completed");
   assert.equal(result.toolCalls, 1);
@@ -26,15 +27,18 @@ test("tool loop feeds results back to the same decision model", async () => {
 });
 
 test("approval-required tools stop before execution", async () => {
+  let executed = false;
   const result = await runToolLoop(
     [{ role: "user", content: "open a site" }],
     { userId: "u", workspaceId: "w", maxRounds: 2 },
     async () => ({ action: "use_tools", calls: [{ tool: "browser", arguments: { url: "https://example.com" } }] }),
     async () => ({ content: "should not run" }),
+    async () => { executed = true; return {}; },
   );
   assert.equal(result.status, "approval_required");
   assert.deepEqual(result.usedTools, ["browser"]);
   assert.equal(result.toolCalls, 0);
+  assert.equal(executed, false);
 });
 
 test("tool results are bounded and serialization is safe", () => {

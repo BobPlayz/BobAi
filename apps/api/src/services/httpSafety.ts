@@ -5,8 +5,8 @@ function privateIp(address: string) {
   if (isIP(address) === 4) {
     const parts = address.split(".").map(Number);
     if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
-    const [a, b] = parts;
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0) || (a === 198 && (b === 18 || b === 19 || b === 51)) || (a === 203 && b === 0) || a >= 224;
+    const [a, b, c] = parts;
+    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 0) || (a === 192 && b === 168) || (a === 192 && b === 2) || (a === 198 && (b === 18 || b === 19 || b === 51)) || (a === 203 && (b === 0 && c === 113)) || a >= 224;
   }
   if (isIP(address) === 6) {
     const value = address.toLowerCase();
@@ -14,6 +14,12 @@ function privateIp(address: string) {
     if (value.startsWith("::ffff:")) {
       const mapped = value.slice(7);
       if (isIP(mapped) === 4) return privateIp(mapped);
+      const parts = mapped.split(":");
+      if (parts.length === 2 && parts.every((part) => /^[0-9a-f]{1,4}$/.test(part))) {
+        const n = Number.parseInt(parts[0], 16) * 0x10000 + Number.parseInt(parts[1], 16);
+        const ipv4 = `${n >>> 24}.${(n >>> 16) & 255}.${(n >>> 8) & 255}.${n & 255}`;
+        return privateIp(ipv4);
+      }
     }
     return value.startsWith("2001:db8:") || value.startsWith("2001:10:") || value.startsWith("2001:2:");
   }

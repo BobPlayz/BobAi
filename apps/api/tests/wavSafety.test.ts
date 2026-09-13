@@ -7,7 +7,7 @@ function wav(sampleRate: number, frames: number, channels = 1) { const dataBytes
 test("PCM16 WAV validation rejects pathological sample rates and duration", () => {
   assert.equal(validatePcm16Wav(wav(16_000, 16_000), 25 * 1024 * 1024).sampleRate, 16_000);
   assert.throws(() => validatePcm16Wav(wav(1, 1), 25 * 1024 * 1024), /supported sample rate/);
-  assert.throws(() => validatePcm16Wav(wav(48_000, 48_000 * 16 * 60), 25 * 1024 * 1024), /15 minute/);
+  assert.throws(() => validatePcm16Wav(wav(8_000, 8_000 * 15 * 60 + 1), 25 * 1024 * 1024), /15 minute/);
 });
 
 test("PCM16 WAV validation rejects malformed chunks and channel counts", () => {
