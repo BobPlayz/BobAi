@@ -53,6 +53,8 @@
 - [x] Browser and website-test targets reject URL credentials, private network targets, and production non-HTTPS targets
 - [x] User-facing chat always selects the single Bob model for response and tool routing
 - [x] Repository environment templates expose one main model configuration and no obsolete user-facing specialist model names
+- [x] Background agent APIs expose Bob plus capabilities instead of separate employee identities
+- [x] Vision analysis uses a capability-neutral service name instead of an old model-personality name
 - [x] Canonical main tree restores the unified tool-loop implementation after repository write correction
 - [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
