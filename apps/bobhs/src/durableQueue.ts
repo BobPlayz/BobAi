@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { withFileLock } from "./fileLock.js";
 
@@ -23,6 +23,22 @@ export interface DurableJob<T = unknown> {
 }
 
 interface QueueState { version: number; jobs: DurableJob[]; }
+
+const MAX_STATE_BYTES = 16 * 1024 * 1024;
+const MAX_JOBS = 2_000;
+const MAX_TYPE_LENGTH = 128;
+const MAX_IDEMPOTENCY_KEY_LENGTH = 256;
+const MAX_WORKER_ID_LENGTH = 128;
+const MAX_PAYLOAD_BYTES = 256 * 1024;
+const MAX_RESULT_BYTES = 256 * 1024;
+const MAX_ERROR_BYTES = 8 * 1024;
+
+function serializedBytes(value: unknown, label: string, maxBytes: number) {
+  let text: string;
+  try { text = JSON.stringify(value); } catch { throw new Error(`${label} must be JSON-serializable`); }
+  if (Buffer.byteLength(text, "utf8") > maxBytes) throw new Error(`${label} exceeds the ${maxBytes} byte limit`);
+  return text;
+}
 
 export class DurableJobQueue<T = unknown> {
   private readonly stateFile: string;
@@ -51,13 +67,14 @@ export class DurableJobQueue<T = unknown> {
   private ensureLoaded() { if (!this.loaded) throw new Error("queue must be loaded first"); }
 
   private async readState(): Promise<QueueState> {
-    try {
-      const parsed = JSON.parse(await readFile(this.stateFile, "utf8")) as Partial<QueueState>;
-      const jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
-      return { version: Number(parsed.version) || 0, jobs };
-    } catch {
-      return { version: 0, jobs: [] };
-    }
+    const info = await stat(this.stateFile).catch(() => null);
+    if (!info) return { version: 0, jobs: [] };
+    if (!info.isFile() || info.size > MAX_STATE_BYTES) throw new Error("queue state file exceeds the 16 MB safety limit");
+    let parsed: Partial<QueueState>;
+    try { parsed = JSON.parse(await readFile(this.stateFile, "utf8")) as Partial<QueueState>; } catch { throw new Error("queue state file is invalid JSON"); }
+    const jobs = Array.isArray(parsed.jobs) ? parsed.jobs : [];
+    if (jobs.length > MAX_JOBS) throw new Error("queue contains too many jobs");
+    return { version: Number(parsed.version) || 0, jobs };
   }
 
   private async refresh() {
@@ -69,7 +86,8 @@ export class DurableJobQueue<T = unknown> {
     await mkdir(dirname(this.stateFile), { recursive: true });
     const temp = `${this.stateFile}.${process.pid}.${randomUUID()}.tmp`;
     this.state.version++;
-    await writeFile(temp, JSON.stringify(this.state, null, 2), { mode: 0o600 });
+    const text = serializedBytes(this.state, "queue state", MAX_STATE_BYTES);
+    await writeFile(temp, text, { mode: 0o600 });
     await rename(temp, this.stateFile);
   }
 
@@ -88,17 +106,22 @@ export class DurableJobQueue<T = unknown> {
 
   async enqueue(type: string, payload: T, options: { idempotencyKey?: string; maxAttempts?: number; availableAt?: number } = {}) {
     this.ensureLoaded();
+    if (typeof type !== "string" || type.trim().length === 0 || type.length > MAX_TYPE_LENGTH) throw new Error("invalid job type");
+    if (options.idempotencyKey !== undefined && (typeof options.idempotencyKey !== "string" || options.idempotencyKey.length > MAX_IDEMPOTENCY_KEY_LENGTH)) throw new Error("invalid idempotency key");
+    serializedBytes(payload, "job payload", MAX_PAYLOAD_BYTES);
     return withFileLock(this.lockPath, async () => {
       await this.refresh();
       if (options.idempotencyKey) {
         const existing = this.state.jobs.find(j => j.idempotencyKey === options.idempotencyKey);
         if (existing) return { ...existing } as DurableJob<T>;
       }
+      if (this.state.jobs.length >= MAX_JOBS) throw new Error("durable queue is full");
       const now = Date.now();
       const job: DurableJob<T> = {
         id: randomUUID(), type, payload, status: "queued", attempts: 0,
-        maxAttempts: Math.max(1, options.maxAttempts ?? this.maxAttempts),
-        availableAt: options.availableAt ?? now, idempotencyKey: options.idempotencyKey,
+        maxAttempts: Math.min(20, Math.max(1, options.maxAttempts ?? this.maxAttempts)),
+        availableAt: Number.isFinite(options.availableAt) ? Math.max(now, options.availableAt!) : now,
+        idempotencyKey: options.idempotencyKey,
         createdAt: now, updatedAt: now,
       };
       this.state.jobs.push(job);
@@ -109,6 +132,8 @@ export class DurableJobQueue<T = unknown> {
 
   async claim(workerId: string, now = Date.now()): Promise<DurableJob<T> | undefined> {
     this.ensureLoaded();
+    if (typeof workerId !== "string" || !workerId || workerId.length > MAX_WORKER_ID_LENGTH) throw new Error("invalid worker id");
+    if (!Number.isFinite(now)) throw new Error("invalid claim timestamp");
     return withFileLock(this.lockPath, async () => {
       await this.refresh();
       this.requeueExpired(now);
@@ -128,6 +153,7 @@ export class DurableJobQueue<T = unknown> {
 
   async heartbeat(jobId: string, workerId: string, now = Date.now()): Promise<boolean> {
     this.ensureLoaded();
+    if (!Number.isFinite(now)) return false;
     return withFileLock(this.lockPath, async () => {
       await this.refresh();
       const job = this.state.jobs.find(j => j.id === jobId);
@@ -140,11 +166,13 @@ export class DurableJobQueue<T = unknown> {
   }
 
   async succeed(jobId: string, workerId: string, result: unknown): Promise<boolean> {
+    serializedBytes(result, "job result", MAX_RESULT_BYTES);
     return this.finish(jobId, workerId, "succeeded", result);
   }
 
   async fail(jobId: string, workerId: string, error: string, retryDelayMs = 0): Promise<boolean> {
     this.ensureLoaded();
+    if (typeof error !== "string" || Buffer.byteLength(error, "utf8") > MAX_ERROR_BYTES) return false;
     return withFileLock(this.lockPath, async () => {
       await this.refresh();
       const job = this.state.jobs.find(j => j.id === jobId);
@@ -152,7 +180,7 @@ export class DurableJobQueue<T = unknown> {
       const now = Date.now();
       if (job.attempts < job.maxAttempts) {
         job.status = "queued";
-        job.availableAt = now + Math.max(0, retryDelayMs);
+        job.availableAt = now + Math.max(0, Math.min(86_400_000, retryDelayMs));
         job.error = error;
       } else {
         job.status = "failed";
