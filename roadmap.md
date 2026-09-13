@@ -49,7 +49,7 @@
 - [x] Chat asks the same main model for a tool decision before direct response or tool execution
 - [x] Repository-side executor registry covers every currently registered tool with bounded local/provider adapters
 - [x] Tool results are fed back to the same main model for additional tool selection or final response
-- [x] Tool-loop tests cover result feedback, approval boundaries, bounded serialization, target URL safety, HTTPS enforcement, and global tool disabling
+- [x] Tool-loop tests cover result feedback, approval boundaries, bounded serialization, target URL safety, HTTPS enforcement, global tool disabling, and multi-approval bundling rejection
 - [x] Repository-side tool execution has a global disable switch and bounded provider response reads
 - [x] Browser and website-test targets reject URL credentials, private network targets, and production non-HTTPS targets
 - [x] User-facing chat always selects the single Bob model for response and tool routing
@@ -57,6 +57,7 @@
 - [x] Background agent APIs expose Bob plus capabilities instead of separate employee identities
 - [x] Vision analysis uses a capability-neutral service name instead of an old model-personality name
 - [x] Running agent jobs can be cancelled through their execution controller rather than only changing queue state
+- [x] Tool executions have repository audit events for denied, started, completed, unavailable, and failed outcomes
 - [x] Canonical main tree restores the unified tool-loop implementation after repository write correction
 - [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
