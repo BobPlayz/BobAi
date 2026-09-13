@@ -38,6 +38,7 @@
 - [ ] Integrate the durable lifecycle primitives across all BobHS execution types and verify multi-worker behavior in the target environment
 
 ## Phase 6 — Train and verify every model
+- [x] Repository-side native Bob evaluator now measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
 - [ ] Prepare the final eligible training datasets for Bob, Vector, Vanta, Echo, Flux, and reranking
 - [ ] Train Bob for the required long-running experiment window and keep the best verified checkpoint
 - [ ] Train every specialist with real eligible datasets and keep best verified checkpoints
