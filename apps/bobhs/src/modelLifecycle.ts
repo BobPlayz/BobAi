@@ -8,6 +8,8 @@ type Entry = {
   start?: () => Promise<void>;
   stop?: () => Promise<void>;
   error?: string;
+  startPromise?: Promise<void>;
+  stopPromise?: Promise<void>;
 };
 
 export class ModelLifecycleManager {
@@ -22,18 +24,28 @@ export class ModelLifecycleManager {
     const entry = this.entries.get(name);
     if (!entry) throw new Error(`unknown model: ${name}`);
     if (entry.state === "error") throw new Error(entry.error || `model ${name} is unavailable`);
+    if (entry.state === "stopping") {
+      if (entry.stopPromise) await entry.stopPromise;
+      if (entry.state !== "unavailable") throw new Error(`model ${name} is stopping`);
+    }
     if (entry.state === "unavailable") {
       entry.state = "starting";
+      const start = entry.start?.() ?? Promise.resolve();
+      entry.startPromise = start;
       try {
-        await entry.start?.();
+        await start;
         entry.state = "ready";
+        entry.error = undefined;
       } catch (error) {
         entry.state = "error";
         entry.error = error instanceof Error ? error.message : "model start failed";
         throw error;
+      } finally {
+        entry.startPromise = undefined;
       }
-    } else if (entry.state === "stopping") {
-      throw new Error(`model ${name} is stopping`);
+    } else if (entry.state === "starting") {
+      if (entry.startPromise) await entry.startPromise;
+      if (entry.state !== "ready") throw new Error(entry.error || `model ${name} failed to start`);
     }
     entry.refs++;
     entry.lastUsedAt = Date.now();
@@ -47,19 +59,32 @@ export class ModelLifecycleManager {
     entry.lastUsedAt = Date.now();
   }
 
+  recover(name: string) {
+    const entry = this.entries.get(name);
+    if (!entry) return false;
+    if (entry.state !== "error" || entry.refs !== 0) return false;
+    entry.state = "unavailable";
+    entry.error = undefined;
+    return true;
+  }
+
   async evictIdle(maxIdleMs: number, now = Date.now()) {
     const evicted: string[] = [];
     for (const entry of this.entries.values()) {
       if (entry.state !== "ready" || entry.refs !== 0 || now - entry.lastUsedAt < maxIdleMs) continue;
       entry.state = "stopping";
+      const stop = entry.stop?.() ?? Promise.resolve();
+      entry.stopPromise = stop;
       try {
-        await entry.stop?.();
+        await stop;
         entry.state = "unavailable";
         entry.error = undefined;
         evicted.push(entry.name);
       } catch (error) {
         entry.state = "error";
         entry.error = error instanceof Error ? error.message : "model stop failed";
+      } finally {
+        entry.stopPromise = undefined;
       }
     }
     return evicted;
@@ -69,17 +94,22 @@ export class ModelLifecycleManager {
     for (const entry of this.entries.values()) {
       if (entry.refs !== 0 || entry.state !== "ready") continue;
       entry.state = "stopping";
+      const stop = entry.stop?.() ?? Promise.resolve();
+      entry.stopPromise = stop;
       try {
-        await entry.stop?.();
+        await stop;
         entry.state = "unavailable";
+        entry.error = undefined;
       } catch (error) {
         entry.state = "error";
         entry.error = error instanceof Error ? error.message : "model stop failed";
+      } finally {
+        entry.stopPromise = undefined;
       }
     }
   }
 
   snapshot() {
-    return [...this.entries.values()].map(({ start, stop, ...entry }) => ({ ...entry }));
+    return [...this.entries.values()].map(({ start, stop, startPromise, stopPromise, ...entry }) => ({ ...entry }));
   }
 }
