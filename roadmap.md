@@ -40,6 +40,8 @@
 ## Phase 6 — Train and verify every model
 - [x] Repository-side native Bob evaluator now measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
 - [x] Repository-side specialist trainer now supports deterministic validation splits, best/latest checkpoints, resume validation, early stopping, finite-data checks, and bounded dataset loading
+- [x] Repository-side specialist model smoke tests and CI compilation cover every declared specialist architecture and loss path
+- [x] Repository-side specialist data preparation handles variable-length TTS mel targets safely
 - [ ] Prepare the final eligible training datasets for Bob, Vector, Vanta, Echo, Flux, and reranking
 - [ ] Train Bob for the required long-running experiment window and keep the best verified checkpoint
 - [ ] Train every specialist with real eligible datasets and keep best verified checkpoints
