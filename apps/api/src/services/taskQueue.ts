@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { executeAgentTask, type AgentTaskKind } from "./agentTasks.js";
+import { executeAgentTask, cancelAgentTask, type AgentTaskKind } from "./agentTasks.js";
 import type { AgentSkillId } from "./agentSkills.js";
 import { listRecoverableAgentTasks, markInterruptedAgentTasks } from "../store/agentTaskDb.js";
 import type { AgentBudget, AgentStep } from "./agentOrchestration.js";
@@ -9,7 +9,7 @@ const concurrency = Math.max(1, Math.min(4, Number(process.env.BOBAI_AGENT_CONCU
 export function enqueueAgentTask(input: Omit<QueueJob, "id" | "attempts" | "status" | "createdAt">) { if (queue.length >= 100) throw new Error("agent queue is full"); const job: QueueJob = { ...input, id: randomUUID(), attempts: 0, status: "queued", createdAt: new Date().toISOString() }; queue.push(job); jobs.set(job.id, job); void drain(); return job; }
 export function getQueueJob(id: string) { return jobs.get(id) || null; }
 export function listQueueJobs() { return [...jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
-export function cancelQueueJob(id: string) { const job = jobs.get(id); if (!job || !["queued", "running", "waiting"].includes(job.status)) return false; job.status = "cancelled"; job.error = "agent task cancelled"; return true; }
+export function cancelQueueJob(id: string) { const job = jobs.get(id); if (!job || !["queued", "running", "waiting"].includes(job.status)) return false; if (job.status === "running") cancelAgentTask(job.id); job.status = "cancelled"; job.error = "agent task cancelled"; return true; }
 export function wakeAgentQueue() { void drain(); }
 async function recoverPersistedJobs() { if (recoveryStarted) return; recoveryStarted = true; try { await markInterruptedAgentTasks(); const persisted = await listRecoverableAgentTasks(); for (const task of persisted) { if (!task.description || jobs.has(task.id)) continue; const payload = task.payload && typeof task.payload === "object" && !Array.isArray(task.payload) ? task.payload as Record<string, unknown> : {}; const skills = Array.isArray(payload.skills) ? payload.skills.filter((value): value is AgentSkillId => typeof value === "string") : undefined; const mode = typeof payload.mode === "string" ? payload.mode : undefined; const kind = ["coding", "automation", "project", "media", "database"].includes(task.type) ? task.type as AgentTaskKind : undefined; const job: QueueJob = { id: task.id, description: task.description, kind, skills, mode, context: { workspaceId: task.workspaceId, createdBy: task.createdBy ?? undefined, plan: Array.isArray(payload.plan) ? payload.plan as AgentStep[] : undefined, budget: payload.budget && typeof payload.budget === "object" && !Array.isArray(payload.budget) ? payload.budget as Partial<AgentBudget> : undefined, checkpointToken: typeof payload.checkpointToken === "string" ? payload.checkpointToken : undefined }, attempts: 0, status: "queued", createdAt: task.createdAt.toISOString() }; jobs.set(job.id, job); queue.push(job); } } catch {} }
 const recoveryPromise = recoverPersistedJobs();
