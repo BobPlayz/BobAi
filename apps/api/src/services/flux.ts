@@ -8,7 +8,7 @@ export async function fluxGenerate(prompt: string, count: number) {
     const results = [];
     for (let index = 0; index < count; index++) {
       const result = await specialistInfer("image", { prompt });
-      if (typeof result.imageBase64 !== "string") throw new Error("Flux returned invalid output");
+      if (typeof result.imageBase64 !== "string") throw new Error("image capability returned invalid output");
       results.push({ url: `data:image/png;base64,${result.imageBase64}`, prompt, index });
     }
     return results;
