@@ -28,7 +28,7 @@
 - [x] Native model lifecycle has a real unload operation and the runtime narrows specialist capabilities safely
 - [x] Specialist worker process typing matches spawn's nullable stdin contract
 - [x] Model status uses the provider's modelId field
-- [x] Obsolete unreferenced coding orchestration implementation removed
+- [x] Legacy coding orchestration is retired to the unified Bob coding path
 - [x] Local-media tests match the native-media architecture and explicitly verify unsupported-format rejection
 - [x] Agent rules require actionable repo-side fixes to be implemented automatically instead of merely reported
 - [ ] Verify target-environment BobHS workers
