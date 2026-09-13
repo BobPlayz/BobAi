@@ -12,6 +12,10 @@ type Entry = {
   stopPromise?: Promise<void>;
 };
 
+function readState(entry: Entry): ModelState {
+  return entry.state;
+}
+
 export class ModelLifecycleManager {
   private readonly entries = new Map<string, Entry>();
 
@@ -26,7 +30,7 @@ export class ModelLifecycleManager {
     if (entry.state === "error") throw new Error(entry.error || `model ${name} is unavailable`);
     if (entry.state === "stopping") {
       if (entry.stopPromise) await entry.stopPromise;
-      const stateAfterStop: ModelState = entry.state;
+      const stateAfterStop = readState(entry);
       if (stateAfterStop !== "unavailable") throw new Error(`model ${name} is stopping`);
     }
     if (entry.state === "unavailable") {
@@ -46,7 +50,7 @@ export class ModelLifecycleManager {
       }
     } else if (entry.state === "starting") {
       if (entry.startPromise) await entry.startPromise;
-      const stateAfterStart: ModelState = entry.state;
+      const stateAfterStart = readState(entry);
       if (stateAfterStart !== "ready") throw new Error(entry.error || `model ${name} failed to start`);
     }
     entry.refs++;
