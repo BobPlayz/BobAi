@@ -6,7 +6,7 @@
 - [x] BobMail built-in SMTP delivery with TLS enforcement and development OTP fallback
 - [x] BobHS authenticated controller/node foundation with bounded Docker execution, node heartbeats, capability/model inventory, resource-aware scheduling, deployment leases, draining, persistent Docker volume declarations, atomic local state writes, and deployment lifecycle controls
 - [x] BobAI native model gateway with no Ollama dependency in the chat path
-- [x] Bob-0.2-native configurable decoder-only transformer with direct Node.js inference, top-k/top-p sampling, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, BOBAI002 evaluation harness, resumable latest/best checkpoints, best-checkpoint export, gradient accumulation, cosine learning-rate scheduling, and architecture validation
+- [x] Bob-0.2-native configurable decoder-only transformer with direct Node.js inference, top-k/top-p sampling, portable model.bob format, CPU/CUDA training pipeline, deterministic dataset preparation, BOBAI002 evaluation harness, resumable latest/best checkpoints, best-checkpoint export, gradient accumulation, cosine learning-rate scheduling, architecture validation, and explicit NumPy training dependency
 - [x] explicit training-data eligibility, consent, secret/PII sanitization, deterministic deduplication, and held-out validation/test splits
 - [x] root model preparation/training/evaluation commands and CI syntax validation for the native training kit
 - [x] from-scratch CPU-friendly specialist training kit for embeddings, reranking, vision encoding, CTC speech recognition, text-to-mel speech synthesis, and tiny text-conditioned image generation
