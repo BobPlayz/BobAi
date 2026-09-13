@@ -7,7 +7,6 @@
 - [x] Obsolete lockfile write workflows removed
 - [x] CI executes the full checked-in API test suite
 - [x] Automated lockfile synchronization keeps roadmap and handoff in the same commit
-- [x] Automated lockfile synchronization keeps roadmap and handoff in the same commit
 - [x] GitHub Actions model-training dependencies are pinned to immutable action commits
 - [x] Lighthouse CI uses a pinned Node runtime and exact CLI version
 - [x] Production OAuth redirect base is explicitly validated as HTTPS and canonical
@@ -41,6 +40,8 @@
 - [x] Agent orchestration tests can load without a preconfigured external database connection
 - [x] BobHS controller request payloads narrow unknown values before constructing typed records
 - [x] BobHS model lifecycle checks preserve widened state after asynchronous transitions
+- [x] Agent-plan duration estimates that exceed the configured budget are classified as budget violations while non-finite/negative estimates remain invalid
+- [x] BobHS volume names are narrowed to strings before constructing typed deployment volumes
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation
