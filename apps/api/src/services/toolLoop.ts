@@ -3,6 +3,7 @@ import { executeProviderCapability } from "./capabilityProviders.js";
 import { queueBackgroundTask } from "./agentCoordinator.js";
 import { getTool, type BobTool } from "./toolRegistry.js";
 import { prepareToolExecution, type ToolExecutionContext } from "./toolExecution.js";
+import { recordAudit } from "./audit.js";
 import { assertPublicTargetUrl, boundedText, providerUrl, safeError } from "./httpSafety.js";
 
 export type ToolLoopMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -65,10 +66,24 @@ export function hasToolExecutor(toolId: string): boolean { return typeof EXECUTO
 
 export async function executeApprovedTool(toolId: string, args: Record<string, unknown>, context: ToolLoopContext): Promise<unknown> {
   const prepared = await prepareToolExecution(toolId, { ...context, arguments: args });
-  if (prepared.status !== "ready") return prepared;
+  if (prepared.status !== "ready") {
+    await recordAudit({ action: "tool_execution_denied", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId, status: prepared.status } });
+    return prepared;
+  }
   const executor = EXECUTORS[toolId];
-  if (!executor) return { status: "unavailable", tool: prepared.tool, reason: "no executor registered" };
-  return executor(args, context);
+  if (!executor) {
+    await recordAudit({ action: "tool_execution_unavailable", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId } });
+    return { status: "unavailable", tool: prepared.tool, reason: "no executor registered" };
+  }
+  await recordAudit({ action: "tool_execution_started", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId } });
+  try {
+    const result = await executor(args, context);
+    await recordAudit({ action: "tool_execution_completed", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId } });
+    return result;
+  } catch (error) {
+    await recordAudit({ action: "tool_execution_failed", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId, error: safeError(error) } });
+    throw error;
+  }
 }
 
 export function serializeToolResult(value: unknown): string {

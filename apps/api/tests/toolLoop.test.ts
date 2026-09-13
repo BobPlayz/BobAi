@@ -72,3 +72,12 @@ test("tool routing fails closed when tools are globally disabled", () => {
     else process.env.BOBAI_TOOLS_ENABLED = previous;
   }
 });
+
+test("tool routing does not bundle multiple approval-required actions", () => {
+  const decision = validateToolDecision({ action: "use_tools", calls: [
+    { tool: "browser", arguments: { url: "https://example.com" } },
+    { tool: "website-test", arguments: { url: "https://example.com" } },
+  ] });
+  assert.equal(decision.action, "respond");
+  assert.match(decision.reason || "", /multiple approval-required/);
+});

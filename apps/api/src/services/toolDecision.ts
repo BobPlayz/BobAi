@@ -43,6 +43,7 @@ export function validateToolDecision(value: unknown): ToolDecision {
     if (validation) return { action: "respond", calls: [], reason: `${tool.id}: ${validation}` };
     calls.push({ tool: tool.id, arguments: args });
   }
+  if (calls.filter((call) => getTool(call.tool)?.requiresUserApproval).length > 1) return { action: "respond", calls: [], reason: "multiple approval-required tools cannot be bundled into one decision" };
   return { action: "use_tools", calls };
 }
 
