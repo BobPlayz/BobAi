@@ -47,7 +47,7 @@
 - [x] expired auth/session/approval cleanup worker
 - [x] TOTP MFA enrollment, encrypted secret storage, login challenge and step-up disable flow
 - [x] permanent account-deletion worker with a 30-day retention window; shared-workspace owners are held for explicit ownership resolution
-- [ ] distributed rate limiting for multi-instance production
+- [x] distributed rate limiting for multi-instance production
 - [ ] production RLS authorization audit and integration tests
 - [ ] durable production object storage
 - [ ] production AI/media provider configuration

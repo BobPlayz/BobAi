@@ -1,1 +1,57 @@
 # BobAI roadmap
+
+## Repo-side
+- [x] Unified Bob runtime and bounded tool loop
+- [x] Input, approval, audit, cancellation, network, provider, media, bundle, result, and agent-plan safeguards
+- [x] Repository preflight and CI validation
+- [x] Obsolete lockfile write workflows removed
+- [x] CI executes the full checked-in API test suite
+- [x] Automated lockfile synchronization keeps roadmap and handoff in the same commit
+- [x] GitHub Actions model-training dependencies are pinned to immutable action commits
+- [x] Lighthouse CI uses a pinned Node runtime and exact CLI version
+- [x] Production OAuth redirect base is explicitly validated as HTTPS and canonical
+- [x] Malware scanner responses are bounded before parsing
+- [x] Backup verification output is bounded
+- [x] BobHS durable queue state, payload, result, and error sizes are bounded
+- [x] SSRF target checks reject mapped and reserved IP ranges
+- [x] Public web metadata includes canonical URLs, Open Graph/Twitter metadata, favicon, and structured application data
+- [x] Public sitemap.xml and robots.txt cover public pages and exclude private application routes
+- [x] Web app manifest and machine-readable llms.txt are published
+- [x] Public landing-page headings and navigation are crawlable and accessible, with contextual tooltips
+- [x] FAQ structured data is published from the same public FAQ content
+- [x] Distributed rate limiting has a database-backed implementation and is selectable for multi-instance deployments
+- [x] Public readiness endpoints avoid exposing deployment capability and model-detail information in production
+- [x] Machine-readable product documentation lists the same public pages exposed by the sitemap
+- [x] Dependabot is disabled because the repository intentionally keeps only main as its maintained branch
+- [x] Web security headers include CSP, COOP, CORP, HSTS, and restrictive browser permissions
+- [x] Development CSP explicitly permits the local web/API/WebSocket endpoints used by the repository's development workflow
+- [x] Native model lifecycle has a real unload operation and the runtime narrows specialist capabilities safely
+- [x] Specialist worker process typing matches spawn's nullable stdin contract
+- [x] Model status uses the provider's modelId field
+- [x] Legacy coding orchestration is retired to the unified Bob coding path
+- [x] Local-media tests match the native-media architecture and explicitly verify unsupported-format rejection
+- [x] Agent rules require actionable repo-side fixes to be implemented automatically instead of merely reported
+- [x] Tool-loop tests can exercise orchestration without importing database-backed runtime dependencies
+- [x] SSRF tests cover textual and hexadecimal IPv4-mapped IPv6 loopback addresses
+- [x] WAV duration coverage stays below the byte-size ceiling so the duration guard is actually exercised
+- [x] Backend security tests do not require ambient NODE_ENV to be set by the shell
+- [x] BobHS state loading has balanced parser syntax and builds cleanly
+- [x] Tool-result serialization safely handles undefined and other non-stringifiable values
+- [x] Agent orchestration tests can load without a preconfigured external database connection
+- [x] BobHS controller request payloads narrow unknown values before constructing typed records
+- [x] BobHS model lifecycle checks preserve widened state after asynchronous transitions
+- [x] Agent-plan duration estimates that exceed the configured budget are classified as budget violations while non-finite/negative estimates remain invalid
+- [x] BobHS volume names are narrowed to strings before constructing typed deployment volumes
+- [x] FAQ JSX class attributes use className so the web production build can parse the page
+- [x] Dependency-lock metadata synchronization is idempotent and does not duplicate roadmap or handoff entries
+- [x] Repository preflight is valid JavaScript and its handoff-format check matches the documented paragraph-only format
+- [x] CodeQL init, autobuild, and analyze use the same verified v4.38.0 commit
+- [x] Model-training CI installs the Python dependencies required by its tests
+- [ ] Verify target-environment BobHS workers
+- [ ] Verify real/local providers
+- [ ] Final training and model evaluation
+- [ ] Real artifact workflow verification
+- [ ] Native media build on target Windows
+
+## Environment
+- [ ] Production and scale verification
