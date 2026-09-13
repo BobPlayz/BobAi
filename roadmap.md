@@ -11,12 +11,12 @@
 - [x] CPU/CUDA training pipeline with dataset preparation, validation/test splits, resumable checkpoints, best-checkpoint export, gradient accumulation, cosine scheduling, architecture validation, evaluation, and explicit dependencies
 - [x] Local research and deterministic pre-training embeddings without cloud AI credentials
 
-## Phase 3 — Specialist model family
-- [x] From-scratch training kits for text, retrieval, vision, speech, media generation, and reranking
-- [x] Specialist dataset contracts and preparation for text, paired text, retrieval, images, ASR, TTS, and image generation
+## Phase 3 — Unified capability runtime
+- [x] One user-facing native model is registered for chat, reasoning, coding, fast responses, and the future multimodal capability surface
+- [x] Specialist capability packages are treated as internal capabilities rather than user-facing model personalities
 - [x] Specialist checkpoint serving, lazy loading, authentication, bounded requests/responses, lifecycle shutdown, and artifact existence checks
 - [x] Specialist execution adapters with runtime leasing and safe pre-training behavior
-- [x] Speech PCM16 WAV ASR/TTS boundaries and CTC token handling
+- [x] Speech PCM16 WAV boundaries and CTC token handling
 
 ## Phase 4 — Smart runtime and security
 - [x] Internal model runtime registry with resource-aware loading, idle eviction, request leasing, and task planning
@@ -43,13 +43,9 @@
 - [ ] Verify multi-worker BobHS behavior in the target environment
 
 ## Phase 6 — Unified AI and verification
-- [x] Repository-side native Bob evaluator measures held-out test loss/perplexity, prompt smoke-test pass rate, malformed-artifact rejection, and optional regression gates
-- [x] Repository-side specialist trainer supports deterministic validation splits, best/latest checkpoints, resume validation, early stopping, finite-data checks, and bounded dataset loading
-- [x] Repository-side specialist model smoke tests and CI compilation cover every declared specialist architecture and loss path
-- [x] Repository-side specialist data preparation handles variable-length speech targets safely
-- [x] One user-facing native model is registered for chat, reasoning, coding, fast responses, and the future multimodal capability surface
 - [x] The same main model produces validated tool-selection requests against the central tool registry instead of exposing separate model personalities
 - [x] Tool-selection parsing fails closed on malformed output, unknown tools, invalid arguments, and bounded tool-call counts
+- [x] Chat now asks the same main model for a tool decision before direct response or coding dispatch
 - [ ] Implement verified execution adapters for every registered tool and feed tool results back into the same model loop
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
 - [ ] Train the unified model for the required long-running experiment window and keep the best verified checkpoint
