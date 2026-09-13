@@ -14,6 +14,7 @@
 - [x] local specialist worker bridge with loopback authentication, lazy checkpoint loading, lifecycle shutdown, and Node runtime integration primitives
 - [x] specialist dataset preparation CLI for local text, image, audio, TTS, ASR, and multimodal training inputs
 - [x] Vector, Vanta, Echo, and Flux execution adapters with runtime leasing and safe pre-training behavior
+- [x] PCM16 WAV feature preparation and Echo ASR/TTS local execution boundaries
 - [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
 - [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
 - [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
