@@ -22,7 +22,7 @@
 - [x] Distributed rate limiting has a database-backed implementation and is selectable for multi-instance deployments
 - [x] Public readiness endpoints avoid exposing deployment capability and model-detail information in production
 - [x] Machine-readable product documentation lists the same public pages exposed by the sitemap
-- [x] Dependabot is configured for weekly npm and GitHub Actions dependency update proposals
+- [x] Dependabot is disabled because the repository intentionally keeps only main as its maintained branch
 - [x] Web security headers include CSP, COOP, CORP, HSTS, and restrictive browser permissions
 - [x] Development CSP explicitly permits the local web/API/WebSocket endpoints used by the repository's development workflow
 - [x] Native model lifecycle has a real unload operation and the runtime narrows specialist capabilities safely
