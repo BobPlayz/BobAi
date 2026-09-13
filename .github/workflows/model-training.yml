@@ -16,16 +16,20 @@ permissions:
 jobs:
   dataset-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Validate dataset policy helpers
         working-directory: model-training
         run: python -m unittest test_prepare_dataset.py
-      - name: Validate native training sources
+      - name: Validate native and specialist sources
         working-directory: model-training
-        run: python -m py_compile native_model.py train.py evaluate.py prepare_dataset.py test_native_model.py
+        run: python -m py_compile native_model.py train.py evaluate.py prepare_dataset.py test_native_model.py specialist_models.py train_specialist.py prepare_specialist_data.py specialist_server.py
+      - name: Run native model unit tests
+        working-directory: model-training
+        run: python -m unittest test_native_model.py
       - name: Prepare synthetic starter dataset
         run: python model-training/prepare_dataset.py --input model-training/data/source.jsonl --output-dir /tmp/bobai-training-data
