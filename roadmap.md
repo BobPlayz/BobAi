@@ -13,6 +13,7 @@
 - [x] specialist model metadata, tensor-dataset contracts, bounded training CLI, finite-loss checks, gradient clipping, and checkpoint export
 - [x] local specialist worker bridge with loopback authentication, lazy checkpoint loading, lifecycle shutdown, and Node runtime integration primitives
 - [x] specialist dataset preparation CLI for local text, image, audio, TTS, ASR, and multimodal training inputs
+- [x] Flux specialist execution adapter with runtime leasing and deterministic pre-training fallback
 - [x] BobMedia native Node-API architecture with in-process Piper and whisper.cpp integration and native PCM16 WAV probing, with no Piper/Whisper/FFmpeg child-process fallback
 - [x] native media build contract, environment templates, bounded media API, and target-machine build documentation
 - [x] repository-side Ollama removal, native-model upgrade, and in-process media migration pass
