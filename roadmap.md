@@ -45,8 +45,12 @@
 ## Phase 6 — Unified AI and verification
 - [x] The same main model produces validated tool-selection requests against the central tool registry instead of exposing separate model personalities
 - [x] Tool-selection parsing fails closed on malformed output, unknown tools, invalid arguments, and bounded tool-call counts
-- [x] Chat now asks the same main model for a tool decision before direct response or coding dispatch
-- [ ] Implement verified execution adapters for every registered tool and feed tool results back into the same model loop
+- [x] Chat asks the same main model for a tool decision before direct response or tool execution
+- [x] Repository-side executor registry covers every currently registered tool with bounded local/provider adapters
+- [x] Tool results are fed back to the same main model for additional tool selection or final response
+- [x] Tool-loop tests cover result feedback, approval boundaries, and bounded serialization
+- [x] Canonical main tree restores the unified tool-loop implementation after repository write correction
+- [ ] Verify every tool adapter against its real provider or local implementation
 - [ ] Prepare the final eligible training datasets for the unified model and supporting capabilities
 - [ ] Train the unified model for the required long-running experiment window and keep the best verified checkpoint
 - [ ] Evaluate the unified model with held-out data and reject broken or regressed checkpoints

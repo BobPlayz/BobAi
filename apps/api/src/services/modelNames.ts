@@ -1,12 +1,12 @@
 export const BOBAI_MODEL_NAMES = {
-  bob: "Bob",
-  coder: "Forge",
-  vision: "Vanta",
-  asr: "Echo",
-  tts: "Echo",
-  image: "Flux",
-  embedding: "Vector",
-  reranking: "Vanta",
+  bob: "BobAI",
+  coder: "coding",
+  vision: "vision",
+  asr: "speech recognition",
+  tts: "speech generation",
+  image: "image generation",
+  embedding: "embeddings",
+  reranking: "reranking",
 } as const;
 
 export function getBobModelName(id: string) {
