@@ -42,6 +42,7 @@
 - [x] BobHS model lifecycle checks preserve widened state after asynchronous transitions
 - [x] Agent-plan duration estimates that exceed the configured budget are classified as budget violations while non-finite/negative estimates remain invalid
 - [x] BobHS volume names are narrowed to strings before constructing typed deployment volumes
+- [x] FAQ JSX class attributes use className so the web production build can parse the page
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation
