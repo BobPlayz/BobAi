@@ -58,13 +58,20 @@
 - [x] Multimodal manifest builder validates licensed image, audio, video, 3D, music, document, table, and screenshot assets with hashing and deduplication
 - [x] Teacher-distillation builder supports user-authorized OpenAI-compatible teacher models with mandatory rights confirmation and provenance
 - [x] Production capability map enumerates the complete text, agent, desktop, media, memory, security, data, deployment, and 3D training/runtime targets
-- [x] Model-training CI compiles and tests the capability curriculum and new dataset builders
+- [x] Model-training CI compiles and tests the capability curriculum and dataset builders
+- [x] Scalable bob-production architecture adds RoPE, RMSNorm, SwiGLU, grouped-query attention, SDPA/Flash Attention support, gradient checkpointing, and tied embeddings
+- [x] Production BPE tokenizer training is separate from the tiny byte-level development tokenizer
+- [x] Production trainer supports profile scaling through 3B parameters, mixed precision, gradient accumulation, cosine warmup/decay, resumable checkpoints, validation, and torchrun/DDP multi-GPU training
+- [x] Local production model worker loads trained checkpoints on localhost with bearer-token authentication and bounded request/response sizes
+- [x] Node model provider automatically routes to bob-production when trained artifacts exist and keeps bob-0.2-native as a development fallback
+- [x] Model-training CI compiles and unit-tests the production model architecture
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers, including the desktop/computer provider used for Paint and Blender
-- [ ] Final training and model evaluation on the selected production hardware/model scale
+- [ ] Final production training and model evaluation on selected hardware/model scale
 - [ ] Real artifact workflow verification
 - [ ] Native media build on target Windows
 
 ## Environment
 - [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run
+- [ ] Run the selected production-scale training profile with sufficient compute/storage
 - [ ] Production and scale verification

@@ -2,3 +2,4 @@ torch>=2.6,<3
 Pillow>=11,<12
 numpy>=2.0,<3
 datasets>=4,<5
+tokenizers>=0.20,<1

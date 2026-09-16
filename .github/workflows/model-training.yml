@@ -30,9 +30,12 @@ jobs:
       - name: Validate capability curriculum
         working-directory: model-training
         run: python -m unittest test_capability_curriculum.py
-      - name: Validate native, dataset, and specialist sources
+      - name: Validate production model architecture
         working-directory: model-training
-        run: python -m py_compile native_model.py train.py evaluate.py prepare_dataset.py build_final_dataset.py capability_curriculum.py build_multimodal_manifest.py build_teacher_dataset.py test_native_model.py test_capability_curriculum.py specialist_models.py train_specialist.py prepare_specialist_data.py specialist_server.py test_specialist_models.py
+        run: python -m unittest test_production_model.py
+      - name: Validate native, production, dataset, and specialist sources
+        working-directory: model-training
+        run: python -m py_compile native_model.py train.py evaluate.py prepare_dataset.py build_final_dataset.py capability_curriculum.py build_multimodal_manifest.py build_teacher_dataset.py production_model.py train_production.py train_tokenizer.py production_model_server.py test_native_model.py test_capability_curriculum.py test_production_model.py specialist_models.py train_specialist.py prepare_specialist_data.py specialist_server.py test_specialist_models.py
       - name: Run native model unit tests
         working-directory: model-training
         run: python -m unittest test_native_model.py
