@@ -22,6 +22,9 @@
 - [x] Training capability map explicitly covers knowledge pretraining, UI/UX design, multilingual behavior, coding, voice, media, desktop, memory, security, and recovery
 - [x] Model-training CI compiles and tests production, tokenizer, pretraining-split, and capability sources
 - [x] Web/API builds and repository security tests were previously validated on the development environment
+- [x] Controllable training supervisor supports checkpointed pause/stop, resume from latest checkpoint, and persistent run metadata
+- [x] Training-control CLI exposes pause, stop, resume requests, and status inspection
+- [x] Training runbook documents laptop setup, dataset preparation, tokenizer training, pretraining, pause/resume, checkpoint chat, instruction tuning, evaluation, and multi-GPU commands
 
 ## Environment
 - [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run
