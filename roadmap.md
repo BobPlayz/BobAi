@@ -4,80 +4,32 @@
 - [x] Unified Bob runtime and bounded tool loop
 - [x] Input, approval, audit, cancellation, network, provider, media, bundle, result, and agent-plan safeguards
 - [x] Repository preflight and CI validation
-- [x] Obsolete lockfile write workflows removed
-- [x] CI executes the full checked-in API test suite
-- [x] Automated lockfile synchronization keeps roadmap and handoff in the same commit
-- [x] GitHub Actions model-training dependencies are pinned to immutable action commits
-- [x] Lighthouse CI uses a pinned Node runtime and exact CLI version
-- [x] Production OAuth redirect base is explicitly validated as HTTPS and canonical
-- [x] Malware scanner responses are bounded before parsing
-- [x] Backup verification output is bounded
-- [x] BobHS durable queue state, payload, result, and error sizes are bounded
-- [x] SSRF target checks reject mapped and reserved IP ranges
-- [x] Public web metadata includes canonical URLs, Open Graph/Twitter metadata, favicon, and structured application data
-- [x] Public sitemap.xml and robots.txt cover public pages and exclude private application routes
-- [x] Web app manifest and machine-readable llms.txt are published
-- [x] Public landing-page headings and navigation are crawlable and accessible, with contextual tooltips
-- [x] FAQ structured data is published from the same public FAQ content
-- [x] Distributed rate limiting has a database-backed implementation and is selectable for multi-instance deployments
-- [x] Public readiness endpoints avoid exposing deployment capability and model-detail information in production
-- [x] Machine-readable product documentation lists the same public pages exposed by the sitemap
-- [x] Dependabot is disabled because the repository intentionally keeps only main as its maintained branch
-- [x] Web security headers include CSP, COOP, CORP, HSTS, and restrictive browser permissions
-- [x] Development CSP explicitly permits the local web/API/WebSocket endpoints used by the repository's development workflow
-- [x] Native model lifecycle has a real unload operation and the runtime narrows specialist capabilities safely
-- [x] Specialist worker process typing matches spawn's nullable stdin contract
-- [x] Model status uses the provider's modelId field
-- [x] Legacy coding orchestration is retired to the unified Bob coding path
-- [x] Local-media tests match the native-media architecture and explicitly verify unsupported-format rejection
-- [x] Agent rules require actionable repo-side fixes to be implemented automatically instead of merely reported
-- [x] Tool-loop tests can exercise orchestration without importing database-backed runtime dependencies
-- [x] SSRF tests cover textual and hexadecimal IPv4-mapped IPv6 loopback addresses
-- [x] WAV duration coverage stays below the byte-size ceiling so the duration guard is actually exercised
-- [x] Backend security tests do not require ambient NODE_ENV to be set by the shell
-- [x] BobHS state loading has balanced parser syntax and builds cleanly
-- [x] Tool-result serialization safely handles undefined and other non-stringifiable values
-- [x] Agent orchestration tests can load without a preconfigured external database connection
-- [x] BobHS controller request payloads narrow unknown values before constructing typed records
-- [x] BobHS model lifecycle checks preserve widened state after asynchronous transitions
-- [x] Agent-plan duration estimates that exceed the configured budget are classified as budget violations while non-finite/negative estimates remain invalid
-- [x] BobHS volume names are narrowed to strings before constructing typed deployment volumes
-- [x] FAQ JSX class attributes use className so the web production build can parse the page
-- [x] Dependency-lock metadata synchronization is idempotent and does not duplicate roadmap or handoff entries
-- [x] Repository preflight is valid JavaScript and its handoff-format check matches the documented paragraph-only format
-- [x] CodeQL init, autobuild, and analyze use the same verified v4.38.0 commit
-- [x] Model-training CI installs the Python dependencies required by its tests
-- [x] Capability-oriented final training corpus builder streams eligible multilingual, conversational, evaluation, agent, security, recovery, coding, memory, API, and sandbox data with provenance and deterministic deduplication
-- [x] Dataset preparation accepts approved public-dataset and original synthetic-curriculum scopes while preserving provenance metadata
-- [x] Training documentation describes the final corpus boundary and multimodal data/model separation
-- [x] Core behavior policy trains and prompts source checking, calibrated uncertainty, disagreement with false premises, anti-glazing, and emotional attunement without fake praise
-- [x] First-class computer-use tool is integrated with approval, audit, timeout, bounded result, and untrusted-output handling
-- [x] First-class MS Paint creation/editing tool is integrated through the authorized desktop provider boundary
-- [x] First-class Blender/3D tool supports create, edit, render, export, and verify operations through the authorized desktop provider boundary
-- [x] Capability curriculum includes Paint, Blender/3D, computer use, software-factory, research, media, multilingual, recovery, verification, security, emotional-attunement, anti-sycophancy, and tool-abstention traces
-- [x] Multimodal manifest builder validates licensed image, audio, video, 3D, music, document, table, and screenshot assets with hashing and deduplication
-- [x] Teacher-distillation builder supports user-authorized OpenAI-compatible teacher models with mandatory rights confirmation and provenance
-- [x] Production capability map enumerates text, reasoning, multilingual, UI/UX, coding, agents, desktop, media, memory, security, data, deployment, and 3D targets
-- [x] Model-training CI compiles and tests the capability curriculum and dataset builders
-- [x] Scalable bob-production architecture adds RoPE, RMSNorm, SwiGLU, grouped-query attention, SDPA/Flash Attention support, gradient checkpointing, and tied embeddings
-- [x] Production BPE tokenizer training accepts both raw knowledge text and instruction conversations
-- [x] Production trainer supports pretraining and instruction stages, weight transfer, mixed precision, gradient accumulation, cosine warmup/decay, resumable checkpoints, validation, and torchrun/DDP multi-GPU training
-- [x] Production training pipeline can orchestrate corpus preparation, tokenizer training, pretraining, instruction tuning, and checkpoint handoff from one command
-- [x] Production model evaluation supports held-out loss, perplexity, and prompt smoke tests
-- [x] Local production model worker safely falls back from best.pt to latest.pt and supports bounded worker pools
-- [x] Node production runtime supports configurable local production-model worker pools and explicit production-model paths
-- [x] Voice runtime automatically uses the configured HTTP voice provider before local/echo fallbacks
-- [x] Voice, image, video, music, and design provider configuration is exposed consistently through environment examples
-- [x] Training capability map explicitly covers knowledge pretraining and UI/UX design
-- [x] Training docs describe the complete production pipeline and distinguish repo readiness from external compute/provider execution
+- [x] Memory, research, documents, data, coding, browser, agents, automation, multimodal, and deployment foundations
+- [x] First-class computer, MS Paint, and Blender/3D tool boundaries with approvals and verification
+- [x] Source checking, calibrated uncertainty, anti-sycophancy, emotional attunement, failure recovery, and untrusted tool-output behavior
+- [x] Licensed-data provenance, deterministic deduplication, multimodal manifest validation, and rights-gated teacher distillation
+- [x] Scalable from-scratch production Transformer with RoPE, RMSNorm, SwiGLU, GQA, SDPA/Flash Attention, tied embeddings, checkpointing, mixed precision, DDP, validation, and resumability
+- [x] Production BPE tokenizer accepts raw knowledge text and instruction conversations
+- [x] Production pretraining and instruction-tuning stages with weight transfer
+- [x] Deterministic pretraining split and production checkpoint evaluation
+- [x] One-command production training pipeline and npm shortcuts
+- [x] Production model local worker with bearer auth and configurable bounded worker pool
+- [x] Node runtime auto-selects production artifacts and supports explicit production paths
+- [x] Voice runtime uses configured voice provider before local/echo fallbacks
+- [x] Web voice input records microphone audio, sends it through authenticated transcription, and places the transcript into the composer
+- [x] Web voice output path can synthesize and play provider-returned audio
+- [x] Voice, image, video, music, design, computer, and desktop provider environment contracts are documented
+- [x] Training capability map explicitly covers knowledge pretraining, UI/UX design, multilingual behavior, coding, voice, media, desktop, memory, security, and recovery
+- [x] Model-training CI compiles and tests production, tokenizer, pretraining-split, and capability sources
+- [x] Web/API builds and repository security tests were previously validated on the development environment
 
 ## Environment
 - [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run
-- [ ] Run the selected production-scale training profile with sufficient compute/storage
+- [ ] Run the selected production-scale training profile with sufficient GPU compute/storage
 - [ ] Configure and verify the real/local desktop/computer provider, including Paint and Blender execution
-- [ ] Configure and verify production voice, image, video, music, search, and other external providers selected for launch
+- [ ] Configure and verify production voice, search, image, video, music, design, and other external providers selected for launch
 - [ ] Verify target-environment BobHS workers and distributed deployment
-- [ ] Verify real artifact storage and production backups
-- [ ] Production load, resilience, security, and scale verification for the target of roughly 2,000 daily users
-- [ ] Native Windows media build and target-device verification
-- [ ] Final model quality evaluation and release gating on the trained artifacts
+- [ ] Verify real artifact/object storage and production backups
+- [ ] Run load, resilience, security, and concurrency verification for roughly 2,000 daily users
+- [ ] Build/verify native Windows media components on the target machine
+- [ ] Run final model quality/evaluation gates on the trained artifacts
