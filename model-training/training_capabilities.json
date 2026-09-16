@@ -1,13 +1,16 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "BobAI production capability training map",
+  "stages": ["tokenizer", "knowledge_pretraining", "instruction", "specialists", "evaluation"],
   "capabilities": [
+    {"id":"knowledge_pretraining","training":"raw_text","runtime":"core","dataset":"licensed multilingual web and educational corpora with provenance"},
     {"id":"conversation","training":"text","runtime":"core","dataset":"multilingual + original behavior curriculum"},
     {"id":"epistemics","training":"text","runtime":"research","dataset":"source-checking, uncertainty, disagreement, anti-glazing"},
     {"id":"emotional_attunement","training":"text","runtime":"core","dataset":"emotion-aware response examples without fake praise"},
-    {"id":"multilingual","training":"text","runtime":"core","dataset":"Aya + OASST + code-switch curriculum"},
+    {"id":"multilingual","training":"text","runtime":"core","dataset":"Aya + OASST + multilingual pretraining + code-switch curriculum"},
     {"id":"reasoning","training":"text","runtime":"core","dataset":"planning, verification, correction, problem solving"},
     {"id":"coding","training":"text+agent_traces","runtime":"coding","dataset":"software factory, repo repair, tests, security, deploy"},
+    {"id":"ui_ux_design","training":"text+screenshots+agent_traces","runtime":"design+coding","dataset":"UI critique, design systems, accessibility, screenshot-to-code and iterative refinement"},
     {"id":"research","training":"tool_traces","runtime":"research","dataset":"source comparison, current/niche verification"},
     {"id":"browser","training":"tool_traces","runtime":"browser","dataset":"navigation, extraction, hostile-content resistance"},
     {"id":"computer_use","training":"tool_traces+screenshots","runtime":"computer","dataset":"desktop execution and verification trajectories"},
@@ -33,13 +36,5 @@
     {"id":"teaching","training":"text","runtime":"core","dataset":"beginner/intermediate/advanced adaptive explanations"},
     {"id":"teacher_distillation","training":"synthetic_text","runtime":"offline_training","dataset":"user-authorized teacher-model outputs with provenance and rights confirmation"}
   ],
-  "rules": {
-    "private_chat_history_auto_ingest": false,
-    "teacher_rights_confirmation_required": true,
-    "tool_output_is_untrusted": true,
-    "claims_require_verification_when_current_niche_or_uncertain": true,
-    "success_requires_result_verification": true,
-    "anti_sycophancy": true,
-    "emotional_attunement_without_fake_praise": true
-  }
+  "rules": {"private_chat_history_auto_ingest":false,"teacher_rights_confirmation_required":true,"upstream_terms_confirmation_required":true,"tool_output_is_untrusted":true,"claims_require_verification_when_current_niche_or_uncertain":true,"success_requires_result_verification":true,"anti_sycophancy":true,"emotional_attunement_without_fake_praise":true}
 }

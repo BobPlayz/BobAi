@@ -57,21 +57,27 @@
 - [x] Capability curriculum includes Paint, Blender/3D, computer use, software-factory, research, media, multilingual, recovery, verification, security, emotional-attunement, anti-sycophancy, and tool-abstention traces
 - [x] Multimodal manifest builder validates licensed image, audio, video, 3D, music, document, table, and screenshot assets with hashing and deduplication
 - [x] Teacher-distillation builder supports user-authorized OpenAI-compatible teacher models with mandatory rights confirmation and provenance
-- [x] Production capability map enumerates the complete text, agent, desktop, media, memory, security, data, deployment, and 3D training/runtime targets
+- [x] Production capability map enumerates text, reasoning, multilingual, UI/UX, coding, agents, desktop, media, memory, security, data, deployment, and 3D targets
 - [x] Model-training CI compiles and tests the capability curriculum and dataset builders
 - [x] Scalable bob-production architecture adds RoPE, RMSNorm, SwiGLU, grouped-query attention, SDPA/Flash Attention support, gradient checkpointing, and tied embeddings
-- [x] Production BPE tokenizer training is separate from the tiny byte-level development tokenizer
-- [x] Production trainer supports profile scaling through 3B parameters, mixed precision, gradient accumulation, cosine warmup/decay, resumable checkpoints, validation, and torchrun/DDP multi-GPU training
-- [x] Local production model worker loads trained checkpoints on localhost with bearer-token authentication and bounded request/response sizes
-- [x] Node model provider automatically routes to bob-production when trained artifacts exist and keeps bob-0.2-native as a development fallback
-- [x] Model-training CI compiles and unit-tests the production model architecture
-- [ ] Verify target-environment BobHS workers
-- [ ] Verify real/local providers, including the desktop/computer provider used for Paint and Blender
-- [ ] Final production training and model evaluation on selected hardware/model scale
-- [ ] Real artifact workflow verification
-- [ ] Native media build on target Windows
+- [x] Production BPE tokenizer training accepts both raw knowledge text and instruction conversations
+- [x] Production trainer supports pretraining and instruction stages, weight transfer, mixed precision, gradient accumulation, cosine warmup/decay, resumable checkpoints, validation, and torchrun/DDP multi-GPU training
+- [x] Production training pipeline can orchestrate corpus preparation, tokenizer training, pretraining, instruction tuning, and checkpoint handoff from one command
+- [x] Production model evaluation supports held-out loss, perplexity, and prompt smoke tests
+- [x] Local production model worker safely falls back from best.pt to latest.pt and supports bounded worker pools
+- [x] Node production runtime supports configurable local production-model worker pools and explicit production-model paths
+- [x] Voice runtime automatically uses the configured HTTP voice provider before local/echo fallbacks
+- [x] Voice, image, video, music, and design provider configuration is exposed consistently through environment examples
+- [x] Training capability map explicitly covers knowledge pretraining and UI/UX design
+- [x] Training docs describe the complete production pipeline and distinguish repo readiness from external compute/provider execution
 
 ## Environment
 - [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run
 - [ ] Run the selected production-scale training profile with sufficient compute/storage
-- [ ] Production and scale verification
+- [ ] Configure and verify the real/local desktop/computer provider, including Paint and Blender execution
+- [ ] Configure and verify production voice, image, video, music, search, and other external providers selected for launch
+- [ ] Verify target-environment BobHS workers and distributed deployment
+- [ ] Verify real artifact storage and production backups
+- [ ] Production load, resilience, security, and scale verification for the target of roughly 2,000 daily users
+- [ ] Native Windows media build and target-device verification
+- [ ] Final model quality evaluation and release gating on the trained artifacts
