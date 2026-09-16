@@ -47,6 +47,9 @@
 - [x] Repository preflight is valid JavaScript and its handoff-format check matches the documented paragraph-only format
 - [x] CodeQL init, autobuild, and analyze use the same verified v4.38.0 commit
 - [x] Model-training CI installs the Python dependencies required by its tests
+- [x] Capability-oriented final training corpus builder streams eligible multilingual, conversational, evaluation, agent, security, recovery, coding, memory, API, and sandbox data with provenance and deterministic deduplication
+- [x] Dataset preparation accepts approved public-dataset and original synthetic-curriculum scopes while preserving provenance metadata
+- [x] Training documentation describes the final corpus boundary and multimodal data/model separation
 - [ ] Verify target-environment BobHS workers
 - [ ] Verify real/local providers
 - [ ] Final training and model evaluation
