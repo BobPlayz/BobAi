@@ -47,11 +47,24 @@
 - [x] Repository preflight is valid JavaScript and its handoff-format check matches the documented paragraph-only format
 - [x] CodeQL init, autobuild, and analyze use the same verified v4.38.0 commit
 - [x] Model-training CI installs the Python dependencies required by its tests
+- [x] Capability-oriented final training corpus builder streams eligible multilingual, conversational, evaluation, agent, security, recovery, coding, memory, API, and sandbox data with provenance and deterministic deduplication
+- [x] Dataset preparation accepts approved public-dataset and original synthetic-curriculum scopes while preserving provenance metadata
+- [x] Training documentation describes the final corpus boundary and multimodal data/model separation
+- [x] Core behavior policy trains and prompts source checking, calibrated uncertainty, disagreement with false premises, anti-glazing, and emotional attunement without fake praise
+- [x] First-class computer-use tool is integrated with approval, audit, timeout, bounded result, and untrusted-output handling
+- [x] First-class MS Paint creation/editing tool is integrated through the authorized desktop provider boundary
+- [x] First-class Blender/3D tool supports create, edit, render, export, and verify operations through the authorized desktop provider boundary
+- [x] Capability curriculum includes Paint, Blender/3D, computer use, software-factory, research, media, multilingual, recovery, verification, security, emotional-attunement, anti-sycophancy, and tool-abstention traces
+- [x] Multimodal manifest builder validates licensed image, audio, video, 3D, music, document, table, and screenshot assets with hashing and deduplication
+- [x] Teacher-distillation builder supports user-authorized OpenAI-compatible teacher models with mandatory rights confirmation and provenance
+- [x] Production capability map enumerates the complete text, agent, desktop, media, memory, security, data, deployment, and 3D training/runtime targets
+- [x] Model-training CI compiles and tests the capability curriculum and new dataset builders
 - [ ] Verify target-environment BobHS workers
-- [ ] Verify real/local providers
-- [ ] Final training and model evaluation
+- [ ] Verify real/local providers, including the desktop/computer provider used for Paint and Blender
+- [ ] Final training and model evaluation on the selected production hardware/model scale
 - [ ] Real artifact workflow verification
 - [ ] Native media build on target Windows
 
 ## Environment
+- [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run
 - [ ] Production and scale verification
