@@ -25,6 +25,8 @@
     "model:prepare": "python model-training/prepare_dataset.py",
     "model:train": "python model-training/train.py",
     "model:evaluate": "python model-training/evaluate.py",
+    "model:production": "python model-training/pipeline.py",
+    "model:production:evaluate": "python model-training/evaluate_production.py",
     "model:specialist:prepare": "python model-training/prepare_specialist_data.py",
     "model:specialist": "python model-training/train_specialist.py",
     "model:specialist:serve": "python model-training/specialist_server.py",
@@ -35,26 +37,7 @@
     "smoke": "tsx scripts/smoke.ts",
     "repo:preflight": "node scripts/repo-preflight.mjs"
   },
-  "overrides": {
-    "esbuild": "^0.28.2",
-    "js-yaml": ">=4.3.2",
-    "qs": ">=6.16.0"
-  },
-  "devDependencies": {
-    "@types/multer": "^2.2.0",
-    "tsx": "^4.20.3"
-  },
-  "dependencies": {
-    "@react-three/drei": "^10.7.8",
-    "@react-three/fiber": "^9.7.0",
-    "gsap": "^3.15.0",
-    "lucide-react": "^1.31.1",
-    "motion": "^13.2.0",
-    "multer": "^2.3.0",
-    "pdf-parse": "^2.4.5",
-    "postgres": "^3.4.9",
-    "react-icons": "^5.7.0",
-    "tesseract.js": "^7.0.0",
-    "three": "^0.186.0"
-  }
+  "overrides": {"esbuild": "^0.28.2","js-yaml": ">=4.3.2","qs": ">=6.16.0"},
+  "devDependencies": {"@types/multer": "^2.2.0","tsx": "^4.20.3"},
+  "dependencies": {"@react-three/drei": "^10.7.8","@react-three/fiber": "^9.7.0","gsap": "^3.15.0","lucide-react": "^1.31.1","motion": "^13.2.0","multer": "^2.3.0","pdf-parse": "^2.4.5","postgres": "^3.4.9","react-icons": "^5.7.0","tesseract.js": "^7.0.0","three": "^0.186.0"}
 }

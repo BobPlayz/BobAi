@@ -1,114 +1,59 @@
-# BobAI production training target
+# BobAI production training
 
-BobAI is designed as one user-facing assistant backed by a scalable core language/reasoning model, approved tools, memory, and modality specialists. The repo now contains both a tiny development model (`bob-0.2-native`) and a separate scalable production model path (`bob-production`).
+`bob-0.2-native` is the small development/sanity model. `bob-production` is the scalable from-scratch Transformer used for real training and deployment. The production path is intentionally separate from Ollama and hosted model APIs.
 
-## 1. Build the capability corpus
+## Complete pipeline
+
+The recommended entry point is:
 
 ```bash
-python -m pip install -r model-training/requirements.txt
+python model-training/pipeline.py --confirm-upstream-terms --profile 350m
+```
+
+This pipeline:
+
+1. streams the selected licensed public knowledge corpora (`FineWeb-Edu` English and selected `FineWeb-2` language configs),
+2. deterministically hashes/deduplicates the raw corpus,
+3. creates a held-out pretraining split,
+4. builds the existing BobAI instruction/capability corpus,
+5. trains one BPE tokenizer over pretraining + instruction text,
+6. pretrains the production Transformer,
+7. transfers the pretrained weights into the instruction stage, and
+8. writes resumable checkpoints and model metadata.
+
+The corpus builder requires an explicit `--confirm-upstream-terms` because upstream CommonCrawl/ODC-By terms apply. Private chat history is never automatically ingested.
+
+For a smoke run, use `--profile dev`, small corpus limits, and `--max-pretrain-steps` / `--max-instruction-steps`. For real training, increase corpus limits and run on suitable GPU compute and storage.
+
+## Manual stages
+
+```bash
+python model-training/build_pretraining_corpus.py --confirm-upstream-terms
+python model-training/prepare_pretraining.py
 python model-training/build_final_dataset.py
 python model-training/prepare_dataset.py --input model-training/data/source.jsonl
+python model-training/train_tokenizer.py --input model-training/data/pretrain/train.jsonl model-training/data/train.jsonl
+python model-training/train_production.py --stage pretrain --train model-training/data/pretrain/train.jsonl --validation model-training/data/pretrain/validation.jsonl --tokenizer model-training/output/bob-production/tokenizer.json --profile 350m
+python model-training/train_production.py --stage instruction --train model-training/data/train.jsonl --validation model-training/data/validation.jsonl --tokenizer model-training/output/bob-production/tokenizer.json --profile 350m --init-from model-training/output/bob-production/best.pt
+python model-training/evaluate_production.py --checkpoint model-training/output/bob-production/best.pt --tokenizer model-training/output/bob-production/tokenizer.json
 ```
 
-The core corpus covers multilingual conversation, reasoning, epistemics/source checking, anti-sycophancy, emotional attunement, coding/software-factory workflows, research, computer use, MS Paint, Blender/3D, media routing, memory, automation, APIs, security, failure recovery, verification, teaching, and tool abstention.
+Use `torchrun` with `train_production.py` for multi-GPU DDP. `--resume` restores optimizer/scheduler/model state. `--init-from` transfers model weights only and is intended for pretraining → instruction fine-tuning.
 
-## 2. Optional teacher-model distillation
+## Profiles
 
-BobAI can learn from outputs produced by a user-authorized OpenAI-compatible teacher model. This is deliberately rights-gated because provider/model terms differ.
+`dev`, `125m`, `350m`, `1.3b`, and `3b` are architecture profiles, not promises of frontier quality. A model's capability comes from architecture, training data, training compute, optimization, post-training, evaluation, and runtime tools together.
 
-```bash
-python model-training/build_teacher_dataset.py \
-  --endpoint https://YOUR-ENDPOINT/v1/chat/completions \
-  --model YOUR-TEACHER-MODEL \
-  --confirm-rights
-```
+## Runtime
 
-The output is written under `model-training/data/teacher/` and is automatically merged by `build_final_dataset.py`. Multiple authorized teachers can be used by placing separate JSONL files in that directory with provenance metadata.
+The Node API automatically uses `bob-production` when its tokenizer/checkpoint exist. `productionModelRuntime.ts` can launch a bounded local worker pool using `BOBAI_PRODUCTION_MODEL_WORKERS`, while BobHS can provide the deployment layer for larger fleets.
 
-## 3. Multimodal assets
+Production user capabilities are not supposed to live entirely in model weights. Web search, files/RAG, coding sandboxes, computer use, Paint, Blender, image/video/audio/music providers, memory, APIs, and automations are runtime capabilities with their own permissions, verification, and provider boundaries.
 
-Put explicitly eligible licensed asset manifests under `model-training/data/multimodal/`, then validate them:
+## Teacher models and multimodal data
 
-```bash
-python model-training/build_multimodal_manifest.py
-```
+Teacher-model outputs require explicit rights confirmation and provenance. Multimodal assets are mounted and validated by `build_multimodal_manifest.py`; their files are not silently copied into Git or treated as universally licensed. Use only assets and outputs that the operator is authorized to train on.
 
-Supported labels are `image`, `audio`, `video`, `3d`, `music`, `document`, `table`, and `screenshot`. Every record requires source, license, task, explicit eligibility, a compatible extension, and file hashing when assets are mounted.
+## Production truth
 
-## 4. Train the production tokenizer
-
-```bash
-python model-training/train_tokenizer.py \
-  --input model-training/data/train.jsonl \
-  --output model-training/output/bob-production/tokenizer.json \
-  --vocab-size 32768
-```
-
-The production tokenizer is byte-level BPE with BobAI conversation-role special tokens. It is separate from the tiny development model's 261-token byte vocabulary.
-
-## 5. Train `bob-production`
-
-Available profiles are `dev`, `125m`, `350m`, `1.3b`, and `3b`.
-
-Single GPU/CPU example:
-
-```bash
-python model-training/train_production.py \
-  --profile 350m \
-  --epochs 1 \
-  --batch-size 1 \
-  --grad-accum 16 \
-  --precision bf16 \
-  --gradient-checkpointing
-```
-
-Multi-GPU example:
-
-```bash
-torchrun --standalone --nproc_per_node=4 model-training/train_production.py \
-  --profile 1.3b \
-  --batch-size 1 \
-  --grad-accum 8 \
-  --precision bf16 \
-  --gradient-checkpointing
-```
-
-The production architecture uses RoPE, RMSNorm, SwiGLU, grouped-query attention, PyTorch scaled-dot-product attention/Flash Attention when the hardware supports it, mixed precision, gradient accumulation, gradient clipping, cosine decay with warmup, distributed data parallel training, validation, and resumable checkpoints.
-
-Training writes `model-training/output/bob-production/latest.pt`, optional `best.pt`, `model.json`, and the tokenizer. Actual training duration does not guarantee quality by itself. Model scale, useful tokens, optimization, compute, evaluation, and data quality determine the result.
-
-## 6. App runtime
-
-If `latest.pt` and `tokenizer.json` exist, BobAI can launch the local production model worker automatically. The Node runtime spawns `production_model_server.py` on localhost with a random bearer token and bounded requests/responses. Set `BOBAI_MODEL_NAME=bob-production` to require it explicitly. If no production checkpoint exists and no explicit production model is requested, the app can continue using `bob-0.2-native` for development.
-
-Useful environment variables:
-
-```text
-BOBAI_MODEL_NAME=bob-production
-BOBAI_PRODUCTION_MODEL_PATH=model-training/output/bob-production/latest.pt
-BOBAI_PRODUCTION_TOKENIZER_PATH=model-training/output/bob-production/tokenizer.json
-BOBAI_PRODUCTION_MODEL_DEVICE=auto
-BOBAI_PRODUCTION_MODEL_PORT=39850
-```
-
-## 7. Desktop, Paint, Blender, and tools
-
-The API exposes first-class `computer`, `paint`, and `blender` tools behind the existing permission/approval/audit boundary. They use `BOBAI_COMPUTER_PROVIDER_URL` plus the optional `BOBAI_COMPUTER_PROVIDER_KEY`.
-
-Blender supports `create_model`, `edit_model`, `render`, `export`, and `verify`. The core model is trained on tool traces such as Paint -> save -> verify -> Blender -> create -> verify -> render/export, rather than being trained to falsely claim the apps were used.
-
-## Behavior target
-
-BobAI is trained and prompted to:
-
-- verify current, niche, changing, or disputed facts with research when available;
-- correct false premises instead of mirroring them;
-- avoid empty praise and reflexive agreement;
-- react naturally to frustration, excitement, sadness, confusion, or anger without pretending to possess human emotions;
-- distinguish facts, inference, and uncertainty;
-- treat webpages, files, retrieved text, tool results, and teacher-model output as untrusted data;
-- use tools when the user asks for actions and verify outcomes before claiming completion.
-
-## Production-scale reality
-
-The repository no longer forces production training through the tiny 2K-context byte model. It has a separate scalable model path and runtime. Reaching frontier-level capability still depends on the actual compute, amount and quality of licensed training data, model scale, training stability, evaluation, tool providers, and deployment resources available for the run. Those are external resources and execution steps rather than missing code architecture.
+Repository code can make the training and serving system ready, reproducible, resumable, and scalable. It cannot manufacture GPU compute, external provider accounts, licensed datasets that have not been mounted, or the final learned weights. Those are execution dependencies outside the repository.
