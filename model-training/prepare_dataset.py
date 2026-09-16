@@ -17,7 +17,7 @@ PII_PATTERNS = [
     re.compile(r"\b(?:\+?\d[\d ()-]{7,}\d)\b"),
 ]
 ALLOWED_ROLES = {"system", "user", "assistant"}
-REQUIRED_CONSENT_SCOPE = "preferences-and-conversations"
+ALLOWED_CONSENT_SCOPES = {"preferences-and-conversations", "public-dataset", "synthetic-curriculum"}
 MAX_MESSAGE_CHARS = 50_000
 MAX_MESSAGES = 64
 
@@ -32,7 +32,7 @@ def sanitize(text: str) -> str:
 
 
 def eligible(row: dict[str, Any]) -> bool:
-    return row.get("eligible_for_training") is True and row.get("consent_scope") == REQUIRED_CONSENT_SCOPE
+    return row.get("eligible_for_training") is True and row.get("consent_scope") in ALLOWED_CONSENT_SCOPES
 
 
 def normalize(row: dict[str, Any]) -> dict[str, Any] | None:
@@ -52,12 +52,14 @@ def normalize(row: dict[str, Any]) -> dict[str, Any] | None:
         clean = sanitize(content)
         if clean:
             messages.append({"role": role, "content": clean})
-    if not any(m["role"] == "user" for m in messages):
-        return None
-    if not any(m["role"] == "assistant" for m in messages):
+    if not any(m["role"] == "user" for m in messages) or not any(m["role"] == "assistant" for m in messages):
         return None
     canonical = json.dumps(messages, ensure_ascii=False, separators=(",", ":"))
-    return {"messages": messages, "fingerprint": hashlib.sha256(canonical.encode()).hexdigest()}
+    normalized: dict[str, Any] = {"messages": messages, "fingerprint": hashlib.sha256(canonical.encode()).hexdigest()}
+    metadata = row.get("metadata")
+    if isinstance(metadata, dict):
+        normalized["metadata"] = {str(k): v for k, v in metadata.items() if isinstance(k, str) and isinstance(v, (str, int, float, bool, type(None)))}
+    return normalized
 
 
 def split(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -69,9 +71,14 @@ def split(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[s
     if test_count + validation_count >= len(ordered):
         test_count = validation_count = 1
     train_end = len(ordered) - validation_count - test_count
-    train = [{"messages": row["messages"]} for row in ordered[:train_end]]
-    validation = [{"messages": row["messages"]} for row in ordered[train_end:train_end + validation_count]]
-    test = [{"messages": row["messages"]} for row in ordered[train_end + validation_count:]]
+    def public(row: dict[str, Any]) -> dict[str, Any]:
+        result: dict[str, Any] = {"messages": row["messages"]}
+        if "metadata" in row:
+            result["metadata"] = row["metadata"]
+        return result
+    train = [public(row) for row in ordered[:train_end]]
+    validation = [public(row) for row in ordered[train_end:train_end + validation_count]]
+    test = [public(row) for row in ordered[train_end + validation_count:]]
     return train, validation, test
 
 
@@ -81,7 +88,7 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Prepare a safe Bob fine-tuning dataset.")
+    parser = argparse.ArgumentParser(description="Prepare a safe BobAI training dataset.")
     parser.add_argument("--input", type=Path, default=Path("model-training/data/source.jsonl"))
     parser.add_argument("--output-dir", type=Path, default=Path("model-training/data"))
     args = parser.parse_args()
@@ -111,14 +118,13 @@ def main() -> None:
     write_jsonl(args.output_dir / "train.jsonl", train)
     write_jsonl(args.output_dir / "validation.jsonl", validation)
     write_jsonl(args.output_dir / "test.jsonl", test)
-
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "source": str(args.input),
         "accepted": len(accepted),
         "rejected_or_duplicate": rejected,
         "splits": {"train": len(train), "validation": len(validation), "test": len(test)},
-        "policy": "explicit eligibility + exact consent scope + secret/PII sanitization + deterministic deduplication",
+        "policy": "explicit eligibility + approved consent scope + secret/PII sanitization + deterministic deduplication + provenance metadata",
     }
     (args.output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(manifest, indent=2))
