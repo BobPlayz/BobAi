@@ -13,6 +13,7 @@ from production_model import BobProductionLM, ProductionConfig, parameter_count
 
 PROFILES={"dev":{"context_size":512,"d_model":256,"n_heads":8,"n_kv_heads":4,"n_layers":8,"ffn_dim":768},"125m":{"context_size":2048,"d_model":768,"n_heads":12,"n_kv_heads":4,"n_layers":12,"ffn_dim":2048},"350m":{"context_size":4096,"d_model":1024,"n_heads":16,"n_kv_heads":4,"n_layers":24,"ffn_dim":2816},"1.3b":{"context_size":8192,"d_model":2048,"n_heads":32,"n_kv_heads":8,"n_layers":24,"ffn_dim":5504},"3b":{"context_size":8192,"d_model":2560,"n_heads":32,"n_kv_heads":8,"n_layers":32,"ffn_dim":6912}}
 ROLES={"system":"<|system|>","user":"<|user|>","assistant":"<|assistant|>"}
+PAUSE_EXIT=75; STOP_EXIT=76
 
 class JsonlDataset(Dataset):
  def __init__(self,path:Path,tok:Tokenizer,context:int):
@@ -49,6 +50,12 @@ def unwrap(m): return m.module if isinstance(m,DDP) else m
 def atomic_json(path:Path,value:dict):
  path.parent.mkdir(parents=True,exist_ok=True); tmp=path.with_suffix(path.suffix+".tmp"); tmp.write_text(json.dumps(value,indent=2)+"\n",encoding="utf-8"); os.replace(tmp,path)
 
+def read_control(path:Path)->str:
+ try:
+  if not path.exists(): return "idle"
+  value=json.loads(path.read_text(encoding="utf-8")); return value.get("command","idle") if isinstance(value,dict) else "idle"
+ except (OSError,json.JSONDecodeError): return "idle"
+
 def save(path,model,opt,sched,step,epoch,config,tok,best,stage):
  path.parent.mkdir(parents=True,exist_ok=True); torch.save({"format":"bob-production-v2","stage":stage,"model":unwrap(model).state_dict(),"optimizer":opt.state_dict(),"scheduler":sched.state_dict(),"step":step,"epoch":epoch,"config":config.to_dict(),"tokenizer":str(tok),"best_validation_loss":best},path)
 
@@ -65,10 +72,10 @@ def evaluate(model,loader,device,amp,dtype,max_batches):
 
 def main():
  p=argparse.ArgumentParser(description="Train BobAI's scalable production Transformer. Use pretrain first, then instruction with --init-from.")
- p.add_argument("--stage",choices=["pretrain","instruction"],default="instruction"); p.add_argument("--train",type=Path,required=True); p.add_argument("--validation",type=Path,required=True); p.add_argument("--tokenizer",type=Path,required=True); p.add_argument("--output-dir",type=Path,default=Path("model-training/output/bob-production")); p.add_argument("--profile",choices=sorted(PROFILES),default="350m"); p.add_argument("--epochs",type=int,default=1); p.add_argument("--batch-size",type=int,default=1); p.add_argument("--grad-accum",type=int,default=16); p.add_argument("--learning-rate",type=float,default=3e-4); p.add_argument("--weight-decay",type=float,default=.1); p.add_argument("--warmup-steps",type=int,default=100); p.add_argument("--max-steps",type=int,default=0); p.add_argument("--save-every",type=int,default=500); p.add_argument("--eval-every",type=int,default=500); p.add_argument("--eval-batches",type=int,default=50); p.add_argument("--seed",type=int,default=42); p.add_argument("--precision",choices=["fp32","fp16","bf16"],default="bf16"); p.add_argument("--gradient-checkpointing",action="store_true"); p.add_argument("--resume",type=Path); p.add_argument("--init-from",type=Path)
+ p.add_argument("--stage",choices=["pretrain","instruction"],default="instruction"); p.add_argument("--train",type=Path,required=True); p.add_argument("--validation",type=Path,required=True); p.add_argument("--tokenizer",type=Path,required=True); p.add_argument("--output-dir",type=Path,default=Path("model-training/output/bob-production")); p.add_argument("--profile",choices=sorted(PROFILES),default="350m"); p.add_argument("--epochs",type=int,default=1); p.add_argument("--batch-size",type=int,default=1); p.add_argument("--grad-accum",type=int,default=16); p.add_argument("--learning-rate",type=float,default=3e-4); p.add_argument("--weight-decay",type=float,default=.1); p.add_argument("--warmup-steps",type=int,default=100); p.add_argument("--max-steps",type=int,default=0); p.add_argument("--save-every",type=int,default=25); p.add_argument("--eval-every",type=int,default=500); p.add_argument("--eval-batches",type=int,default=50); p.add_argument("--seed",type=int,default=42); p.add_argument("--precision",choices=["fp32","fp16","bf16"],default="bf16"); p.add_argument("--gradient-checkpointing",action="store_true"); p.add_argument("--resume",type=Path); p.add_argument("--init-from",type=Path)
  a=p.parse_args()
  if not a.train.exists() or not a.validation.exists() or not a.tokenizer.exists(): raise SystemExit("train, validation, and tokenizer paths must exist")
- rank,local,world,distributed=setup(); status_path=a.output_dir/"training-status.json"; started=time.time()
+ rank,local,world,distributed=setup(); status_path=a.output_dir/"training-status.json"; control_path=a.output_dir/"training-control.json"; started=time.time()
  try:
   random.seed(a.seed+rank); torch.manual_seed(a.seed+rank); device=torch.device("cuda",local) if torch.cuda.is_available() else torch.device("cpu")
   if device.type=="cuda": torch.cuda.set_device(local)
@@ -117,11 +124,18 @@ def main():
       if improved: save(a.output_dir/"best.pt",model,opt,sched,step,epoch,config,a.tokenizer,best,a.stage)
       print(json.dumps({"step":step,"validation_loss":val_loss,"best_validation_loss":best}))
     elif rank==0 and step%max(1,a.save_every)==0: save(a.output_dir/"latest.pt",model,opt,sched,step,epoch,config,a.tokenizer,best,a.stage)
+    elapsed=max(.001,time.time()-started); rate=max(1,step)/elapsed; eta=max(0,(total-step)/rate) if rate>0 else None
     if rank==0:
-     elapsed=max(.001,time.time()-started); completed=max(1,step); rate=completed/elapsed; eta=max(0,(total-step)/rate) if rate>0 else None
      payload={"state":"training","stage":a.stage,"profile":a.profile,"epoch":epoch+1,"epochs":a.epochs,"step":step,"total_steps":total,"progress":min(1,step/max(1,total)),"loss":loss_value,"learning_rate":opt.param_groups[0]["lr"],"elapsed_seconds":elapsed,"eta_seconds":eta,"checkpoint":str(a.output_dir/"latest.pt"),"updated_at":time.time()}
      if last_val is not None: payload["validation_loss"]=last_val
      atomic_json(status_path,payload)
+    requested=read_control(control_path)
+    if requested in {"pause","stop"}:
+     if rank==0:
+      save(a.output_dir/"latest.pt",model,opt,sched,step,epoch,config,a.tokenizer,best,a.stage)
+      atomic_json(status_path,{"state":"paused" if requested=="pause" else "stopped","stage":a.stage,"profile":a.profile,"step":step,"total_steps":total,"progress":min(1,step/max(1,total)),"loss":loss_value,"elapsed_seconds":elapsed,"eta_seconds":eta,"checkpoint":str(a.output_dir/"latest.pt"),"updated_at":time.time()})
+     if distributed: dist.barrier()
+     raise SystemExit(PAUSE_EXIT if requested=="pause" else STOP_EXIT)
     if step>=total: stop=True; break
    if stop: break
   if rank==0:
