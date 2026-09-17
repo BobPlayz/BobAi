@@ -12,11 +12,15 @@
 - [x] Production BPE tokenizer accepts raw knowledge text and instruction conversations
 - [x] Production pretraining and instruction-tuning stages with weight transfer
 - [x] Deterministic pretraining split and production checkpoint evaluation
-- [x] One-command production training pipeline from corpus preparation through tokenizer, pretraining, and instruction tuning
-- [x] One-command continuation after a prepared pretraining split
-- [x] Long-running training supervisor safely checkpoints before pause/stop and exposes persistent status
-- [x] Training control CLI supports pause, stop, resume, and status inspection
-- [x] Training runbook reduced to one start command plus pause/status/resume/stop controls
+- [x] Fresh-run production pipeline installs dependencies, prepares corpora/splits, trains the tokenizer, pretrains, and automatically continues into instruction tuning
+- [x] Fresh-run pipeline bug fixed so instruction tuning is no longer skipped after successful pretraining
+- [x] Resume pipeline restores the saved stage/profile/settings without requiring the operator to re-enter them
+- [x] Long-running training checkpoints after every optimizer step when launched by the managed pipeline
+- [x] Persistent live training status includes stage, profile, step/total, progress, loss, validation loss, elapsed time, ETA, and checkpoint path
+- [x] Training control CLI supports pause, stop, resume guidance, and human-readable or JSON status inspection
+- [x] Windows `bob-training.cmd` provides one-command start plus pause/status/resume/stop and roots itself to the repo directory
+- [x] Training/control paths are repository-relative so the project can be relocated to a USB drive such as `D:` without editing hard-coded drive paths
+- [x] npm shortcuts expose `model:start`, `model:pause`, `model:status`, `model:resume`, and `model:stop`
 - [x] Production model local worker with bearer auth and configurable bounded worker pool
 - [x] Node runtime auto-selects production artifacts and supports explicit production paths
 - [x] Voice runtime uses configured voice provider before local/echo fallbacks
@@ -28,8 +32,9 @@
 - [x] Web/API builds and repository security tests were previously validated on the development environment
 
 ## Environment
+- [ ] Copy/clone the repository to its final USB location and run the fresh-start command from there
 - [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run
-- [ ] Run the selected production-scale training profile with sufficient GPU compute/storage
+- [ ] Run the selected training profile on the available hardware and observe actual throughput/ETA
 - [ ] Configure and verify the real/local desktop/computer provider, including Paint and Blender execution
 - [ ] Configure and verify production voice, search, image, video, music, design, and other external providers selected for launch
 - [ ] Verify target-environment BobHS workers and distributed deployment
