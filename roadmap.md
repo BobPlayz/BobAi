@@ -13,13 +13,14 @@
 - [x] Production pretraining and instruction-tuning stages with weight transfer
 - [x] Deterministic pretraining split and production checkpoint evaluation
 - [x] Fresh-run production pipeline installs dependencies, prepares corpora/splits, trains the tokenizer, pretrains, and automatically continues into instruction tuning
-- [x] Fresh-run pipeline bug fixed so instruction tuning is no longer skipped after successful pretraining
-- [x] Resume pipeline restores the saved stage/profile/settings without requiring the operator to re-enter them
-- [x] Long-running training checkpoints after every optimizer step when launched by the managed pipeline
-- [x] Persistent live training status includes stage, profile, step/total, progress, loss, validation loss, elapsed time, ETA, and checkpoint path
-- [x] Training control CLI supports pause, stop, resume guidance, and human-readable or JSON status inspection
+- [x] Fresh-run stage-transition bug fixed so instruction tuning is not skipped after successful pretraining
+- [x] Resume pipeline restores saved stage/profile/settings automatically
+- [x] Live training status includes stage, profile, step/total, progress, loss, validation loss, elapsed time, ETA, and checkpoint path
+- [x] Training control supports pause, status, resume, and stop
+- [x] Cooperative pause/stop now checkpoints cleanly from inside the trainer instead of force-killing the process
+- [x] Normal checkpoint cadence reduced to limit unnecessary large writes on USB storage, while pause/stop always force an immediate latest checkpoint
 - [x] Windows `bob-training.cmd` provides one-command start plus pause/status/resume/stop and roots itself to the repo directory
-- [x] Training/control paths are repository-relative so the project can be relocated to a USB drive such as `D:` without editing hard-coded drive paths
+- [x] Training/control paths are repository-relative so the project can move to a USB drive such as `D:` without hard-coded drive edits
 - [x] npm shortcuts expose `model:start`, `model:pause`, `model:status`, `model:resume`, and `model:stop`
 - [x] Production model local worker with bearer auth and configurable bounded worker pool
 - [x] Node runtime auto-selects production artifacts and supports explicit production paths
@@ -29,16 +30,15 @@
 - [x] Voice, image, video, music, design, computer, and desktop provider environment contracts are documented
 - [x] Training capability map explicitly covers knowledge pretraining, UI/UX design, multilingual behavior, coding, voice, media, desktop, memory, security, and recovery
 - [x] Model-training CI compiles and tests production, tokenizer, pretraining-split, and capability sources
-- [x] Web/API builds and repository security tests were previously validated on the development environment
 
 ## Environment
-- [ ] Copy/clone the repository to its final USB location and run the fresh-start command from there
-- [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run
-- [ ] Run the selected training profile on the available hardware and observe actual throughput/ETA
-- [ ] Configure and verify the real/local desktop/computer provider, including Paint and Blender execution
-- [ ] Configure and verify production voice, search, image, video, music, design, and other external providers selected for launch
+- [ ] Finish copying/cloning the repository to its final USB location on `D:`
+- [ ] Run `D:\BobAi\bob-training.cmd start` (adjust folder name if needed)
+- [ ] Observe actual throughput/ETA on the laptop before deciding whether to change profile/corpus size
+- [ ] Acquire/mount licensed multimodal assets and any authorized teacher outputs selected for later training
+- [ ] Configure and verify real/local desktop/computer, voice, search, image, video, music, design, and other production providers
 - [ ] Verify target-environment BobHS workers and distributed deployment
-- [ ] Verify real artifact/object storage and production backups
+- [ ] Verify artifact/object storage and production backups
 - [ ] Run load, resilience, security, and concurrency verification for roughly 2,000 daily users
 - [ ] Build/verify native Windows media components on the target machine
-- [ ] Run final model quality/evaluation gates on the trained artifacts
+- [ ] Run final model quality/evaluation gates on trained artifacts
