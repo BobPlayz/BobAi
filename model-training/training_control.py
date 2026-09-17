@@ -3,7 +3,8 @@ from __future__ import annotations
 import argparse, json, os, time
 from pathlib import Path
 
-DEFAULT_DIR = Path("model-training/output/bob-production")
+ROOT = Path(__file__).resolve().parent
+DEFAULT_DIR = ROOT / "output" / "bob-production"
 CONTROL = "training-control.json"
 STATUS = "training-status.json"
 
@@ -29,16 +30,37 @@ def read_status(directory: Path) -> dict:
         return {"state": "unknown", "message": "status file is unavailable or being replaced"}
 
 
+def pretty_status(status: dict) -> str:
+    if status.get("state") == "not_started":
+        return "BobAI training has not started yet."
+    parts = [f"state: {status.get('state', 'unknown')}"]
+    if status.get("stage"): parts.append(f"stage: {status['stage']}")
+    if status.get("profile"): parts.append(f"profile: {status['profile']}")
+    step, total = status.get("step"), status.get("total_steps")
+    if isinstance(step, int) and isinstance(total, int) and total > 0:
+        parts.append(f"progress: {step}/{total} ({step / total * 100:.2f}%)")
+    if isinstance(status.get("loss"), (int, float)): parts.append(f"loss: {status['loss']:.4f}")
+    if isinstance(status.get("validation_loss"), (int, float)): parts.append(f"validation_loss: {status['validation_loss']:.4f}")
+    if isinstance(status.get("elapsed_seconds"), (int, float)): parts.append(f"elapsed: {status['elapsed_seconds'] / 3600:.2f}h")
+    if isinstance(status.get("eta_seconds"), (int, float)) and status["eta_seconds"] >= 0: parts.append(f"eta: {status['eta_seconds'] / 3600:.2f}h")
+    if status.get("checkpoint"): parts.append(f"checkpoint: {status['checkpoint']}")
+    return "\n".join(parts)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Control or inspect a resumable BobAI training run.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_DIR)
-    parser.add_argument("action", choices=["pause", "resume", "stop", "status", "clear-stop"])
+    parser.add_argument("action", choices=["pause", "resume", "stop", "status", "json"])
     args = parser.parse_args()
-    if args.action == "status":
-        print(json.dumps(read_status(args.output_dir), indent=2))
+    if args.action in {"status", "json"}:
+        status = read_status(args.output_dir)
+        print(json.dumps(status, indent=2) if args.action == "json" else pretty_status(status))
         return
-    set_command(args.output_dir, "resume" if args.action == "clear-stop" else args.action)
-    print(f"training command set to {args.action}; the trainer will checkpoint and acknowledge it safely")
+    set_command(args.output_dir, args.action)
+    if args.action == "resume":
+        print("resume requested. If the training process already exited after pausing, run `npm run model:resume` from the BobAI folder.")
+    else:
+        print(f"training command set to {args.action}; the pipeline will acknowledge it at a checkpoint boundary")
 
 
 if __name__ == "__main__":

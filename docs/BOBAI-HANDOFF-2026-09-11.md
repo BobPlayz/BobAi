@@ -1,32 +1,17 @@
-BobAI handoff: the repository-side production AI architecture and long-running training controls are implemented. The operator flow is intentionally reduced to one training command plus separate controls.
+BobAI handoff: the repository-side production AI architecture, one-command training flow, and long-running training controls are implemented. The user did not complete the earlier manual training steps and is relocating the repository to a USB drive on `D:`. The training stack is now repository-relative so moving the repo does not require changing hard-coded drive paths.
 
-If the user has already completed `prepare_pretraining.py`, the next command is:
-
-```powershell
-python model-training/pipeline.py --skip-corpus --profile dev
-```
-
-For a fresh run from the selected public corpora:
+For a fresh repo at `D:\BobAi`, the operator command is:
 
 ```powershell
-python model-training/pipeline.py --confirm-upstream-terms --profile dev
+D:\BobAi\bob-training.cmd start
 ```
 
-That single pipeline command handles instruction/capability dataset preparation, tokenizer training, pretraining, pretrained-to-instruction checkpoint transfer, and final checkpoints. The current default `dev` profile is the laptop-oriented configuration. It is not a promise of frontier quality or a guaranteed 7–20 day runtime.
+That one command changes to the repository directory automatically, installs the Python training requirements, confirms the selected upstream corpus terms flag, builds the public multilingual knowledge corpus, creates the pretraining split, builds the instruction/capability corpus, creates the instruction split, trains the production BPE tokenizer, runs pretraining, then automatically continues into instruction tuning. The fresh-run stage-transition bug that could previously skip instruction tuning after pretraining has been fixed. The bundled default is the laptop-oriented `dev` profile; it is a real trainable model profile but not a promise of frontier quality or a guaranteed 7–20 day runtime.
 
-During the long run, use another terminal for:
+Training controls are separate commands: `D:\BobAi\bob-training.cmd status`, `pause`, `resume`, and `stop`. Status now persists stage, profile, step/total, progress percentage, loss, validation loss when available, elapsed time, ETA, and checkpoint path. Pause stops the active training child after the latest completed optimizer step has been checkpointed, freeing laptop resources. Resume reads the saved pipeline stage and original profile/settings from `training-pipeline.json`, so the operator does not have to remember them. `latest.pt` is the resumable checkpoint; `best.pt` is the best validation checkpoint when available. The normal BobAI serving/chat process is separate, so a paused checkpoint can be loaded for interactive use, although a checkpoint paused during raw pretraining may still be poor at conversation until instruction tuning progresses.
 
-```powershell
-python model-training/training_control.py status
-python model-training/training_control.py pause
-python model-training/pipeline.py --resume --profile dev
-python model-training/training_control.py stop
-```
+The production architecture includes a scalable from-scratch Transformer, multilingual knowledge pretraining, instruction/capability tuning, tokenizer training, validation, resumability, DDP/mixed precision support, production evaluation, bounded model workers, and broad tool/provider boundaries. User-focused targets explicitly include text, coding, UI/UX design, voice, research, files, agents, computer use, Paint, Blender/3D, vision, image/video/audio/music, memory, APIs, databases, automation, deployment, security, recovery, multilingual conversation, and teaching. Runtime tools remain separate from model weights so current web information, file retrieval, desktop control, and external media providers can be permissioned and verified.
 
-Pause/stop preserves `model-training/output/bob-production/latest.pt`. The pipeline records its current stage in `training-pipeline.json`; resume continues from that stage/checkpoint. Status is persistent JSON in `training-status.json`. The training process is separate from the normal BobAI serving/chat process, so when training is paused the latest completed checkpoint can be used for interactive chat while the training resources are free.
+Current repo-side work is complete for the requested training/control architecture. Remaining work is environment execution: finish copying/cloning the repo to its final `D:` location, run the fresh-start command, obtain/mount any licensed multimodal assets and permitted teacher outputs selected for later training, observe the actual laptop throughput/ETA, configure real providers and BobHS infrastructure, build native Windows media components, and perform final quality/load/security/resilience verification. Moving to USB changes storage location only; it does not increase CPU/GPU/RAM capability.
 
-The production architecture includes a scalable from-scratch Transformer, multilingual knowledge pretraining, instruction/capability training, BPE tokenizer training, checkpointing, validation, DDP, mixed precision, production evaluation, bounded model workers, and broad runtime tool boundaries. User-focused targets explicitly include text, coding, UI/UX design, voice, research, files, agents, computer use, Paint, Blender/3D, vision, image/video/audio/music, memory, APIs, databases, automation, deployment, security, recovery, multilingual conversation, and teaching. Runtime tools remain separate from model weights so current web information, file retrieval, desktop control, and external media providers can be permissioned and verified.
-
-The repository-side work is complete for this architecture. Remaining work is external execution: licensed training/multimodal assets and permitted teacher outputs, sufficient compute/storage, actual training/evaluation, real provider configuration, BobHS infrastructure, native Windows media builds, and final load/security/resilience verification for roughly 2,000 daily users. A fixed number of training days cannot guarantee a frontier-equivalent model.
-
-Future work must inspect `main` first, keep `roadmap.md` and this handoff synchronized in the same commit, and implement actionable repo-side fixes rather than merely reporting them.
+Future changes must inspect `main` first, keep `roadmap.md` and this handoff synchronized in the same commit, preserve repository-relative paths, and implement actionable repo-side fixes rather than merely reporting them.

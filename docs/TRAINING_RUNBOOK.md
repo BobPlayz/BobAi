@@ -1,61 +1,47 @@
 # BobAI production training runbook
 
-## Minimal operator flow
+## Fresh start after moving the repo
 
-If `prepare_pretraining.py` has already finished, you do **not** need to manually run every dataset/tokenizer/training command.
+If BobAI is now on a USB drive such as `D:\BobAi`, no training step needs to be manually repeated. The training scripts resolve paths from the repository itself, so moving the repo does not require editing hard-coded `C:` paths.
 
-Run one command:
-
-```powershell
-python model-training/pipeline.py --skip-corpus --profile dev
-```
-
-For a completely fresh run, including the public-corpus preparation:
+From anywhere in Command Prompt or PowerShell, run:
 
 ```powershell
-python model-training/pipeline.py --confirm-upstream-terms --profile dev
+D:\BobAi\bob-training.cmd start
 ```
 
-The pipeline builds the instruction/capability data, trains one tokenizer over knowledge + instruction text, pretrains the production model, transfers the best pretrained checkpoint into instruction tuning, and keeps `latest.pt` and `best.pt` under `model-training/output/bob-production/`.
+If your folder name is different, replace `D:\BobAi` with the actual folder path. `start` is the complete fresh-run command. It installs the Python training requirements, builds the public knowledge corpus, prepares the train/validation splits, builds the instruction/capability corpus, trains the tokenizer, runs pretraining, then automatically continues into instruction tuning. You do not need to separately run `prepare_pretraining.py`, `prepare_dataset.py`, or `train_tokenizer.py`.
 
-`dev` is the practical profile for a laptop. Larger profiles require substantially stronger compute. Training duration is hardware/data dependent, so a 7–20 day estimate is not a guarantee.
+The bundled laptop preset uses the `dev` profile. That is the only profile we can reasonably treat as a default on the current low-memory laptop. It produces a real trainable model but is not a guarantee of big-model quality or a fixed 7–20 day runtime.
 
-## Pause, inspect, resume
+Running the fresh-start command passes the upstream-terms confirmation flag. Only run it after reviewing the dataset terms used by the corpus builder.
 
-Leave the training command running. From another terminal:
+## Pause, inspect, resume, stop
+
+Use a second terminal while training is active:
 
 ```powershell
-python model-training/training_control.py status
+D:\BobAi\bob-training.cmd status
+D:\BobAi\bob-training.cmd pause
+D:\BobAi\bob-training.cmd resume
+D:\BobAi\bob-training.cmd stop
 ```
 
-To pause safely:
+`status` reports the current stage, profile, step count, percentage, loss, validation loss when available, elapsed time, ETA, and checkpoint path. The raw JSON is stored at `model-training/output/bob-production/training-status.json`.
 
-```powershell
-python model-training/training_control.py pause
-```
+`pause` terminates the active training child only after the latest completed optimizer step has already been checkpointed. This frees the laptop's training resources. `resume` reads the saved pipeline state and original training configuration automatically, so you do not have to remember the profile or stage. `stop` preserves the latest checkpoint but leaves the run stopped.
 
-The pipeline stops the training child and preserves the latest checkpoint. You can then run BobAI separately against the latest completed checkpoint while the training GPU/CPU is free.
+## Talking to BobAI while paused
 
-Resume the same pipeline stage from `latest.pt`:
+Training and serving are separate processes. After pausing, the normal BobAI app can use the latest completed production checkpoint if the production model runtime is configured to point at it. A checkpoint paused during pretraining may still be poor at conversation; checkpoints become meaningfully chat-oriented after instruction tuning has progressed.
 
-```powershell
-python model-training/pipeline.py --resume --profile dev
-```
+## Checkpoints
 
-To stop while preserving the latest checkpoint:
-
-```powershell
-python model-training/training_control.py stop
-```
-
-`status` reads `training-status.json`; the checkpoint is `latest.pt`; the best validation checkpoint is `best.pt`. The pipeline state records whether it was in pretraining or instruction tuning so `--resume` knows what stage to continue.
-
-## What the production model does
-
-The model is the language/reasoning core. BobAI runtime tools provide capabilities that should not be forced into model weights: current web research, file retrieval, coding sandboxes, browser/computer control, Paint, Blender, memory, APIs, deployment, and external image/video/audio/music/voice providers. These remain permissioned, bounded, audited, and verified.
-
-The training target includes natural conversation, reasoning, multilingual and code-switching behavior, source checking, coding, UI/UX design, software-factory workflows, voice/turn-taking, vision, media, computer use, Paint, Blender/3D, memory, security, recovery, APIs, databases, automation, deployment, and teaching.
+- `model-training/output/bob-production/latest.pt` is the resume checkpoint.
+- `model-training/output/bob-production/best.pt` is the best validation checkpoint when one has been produced.
+- `model-training/output/bob-production/training-pipeline.json` stores the current stage and saved training settings.
+- `model-training/output/bob-production/training-status.json` stores live progress.
 
 ## Production reality
 
-The repository supplies the architecture and reproducible training/serving machinery. It does not supply the external GPU compute, storage, licensed multimodal assets, permitted teacher-model outputs, provider accounts, or the final trained weights. Those must exist in the execution environment. The repository therefore does not promise that a fixed number of days or a fixed parameter profile will produce frontier-level intelligence.
+The repository now supplies the complete reproducible laptop training flow and controls. Training time and resulting intelligence still depend on the actual hardware, amount/quality of data, parameter profile, optimization, and evaluation. Moving the repository to `D:` changes storage location, not the laptop's available RAM/compute.

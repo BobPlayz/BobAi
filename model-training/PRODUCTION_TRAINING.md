@@ -1,59 +1,30 @@
 # BobAI production training
 
-`bob-0.2-native` is the small development/sanity model. `bob-production` is the scalable from-scratch Transformer used for real training and deployment. The production path is intentionally separate from Ollama and hosted model APIs.
+The production training flow is now designed to be started as one command on Windows and to survive relocation of the repository between drives.
 
-## Complete pipeline
+For a repo copied to `D:\BobAi`, run:
 
-The recommended entry point is:
-
-```bash
-python model-training/pipeline.py --confirm-upstream-terms --profile 350m
+```powershell
+D:\BobAi\bob-training.cmd start
 ```
 
-This pipeline:
+This performs the complete fresh pipeline: dependency install, multilingual knowledge-corpus preparation, deterministic pretraining split, instruction/capability dataset build, tokenizer training, pretraining, and instruction tuning. Paths are resolved relative to the repository, so moving BobAI from `C:` to a USB drive on `D:` does not require editing training scripts.
 
-1. streams the selected licensed public knowledge corpora (`FineWeb-Edu` English and selected `FineWeb-2` language configs),
-2. deterministically hashes/deduplicates the raw corpus,
-3. creates a held-out pretraining split,
-4. builds the existing BobAI instruction/capability corpus,
-5. trains one BPE tokenizer over pretraining + instruction text,
-6. pretrains the production Transformer,
-7. transfers the pretrained weights into the instruction stage, and
-8. writes resumable checkpoints and model metadata.
+Controls:
 
-The corpus builder requires an explicit `--confirm-upstream-terms` because upstream CommonCrawl/ODC-By terms apply. Private chat history is never automatically ingested.
-
-For a smoke run, use `--profile dev`, small corpus limits, and `--max-pretrain-steps` / `--max-instruction-steps`. For real training, increase corpus limits and run on suitable GPU compute and storage.
-
-## Manual stages
-
-```bash
-python model-training/build_pretraining_corpus.py --confirm-upstream-terms
-python model-training/prepare_pretraining.py
-python model-training/build_final_dataset.py
-python model-training/prepare_dataset.py --input model-training/data/source.jsonl
-python model-training/train_tokenizer.py --input model-training/data/pretrain/train.jsonl model-training/data/train.jsonl
-python model-training/train_production.py --stage pretrain --train model-training/data/pretrain/train.jsonl --validation model-training/data/pretrain/validation.jsonl --tokenizer model-training/output/bob-production/tokenizer.json --profile 350m
-python model-training/train_production.py --stage instruction --train model-training/data/train.jsonl --validation model-training/data/validation.jsonl --tokenizer model-training/output/bob-production/tokenizer.json --profile 350m --init-from model-training/output/bob-production/best.pt
-python model-training/evaluate_production.py --checkpoint model-training/output/bob-production/best.pt --tokenizer model-training/output/bob-production/tokenizer.json
+```powershell
+D:\BobAi\bob-training.cmd status
+D:\BobAi\bob-training.cmd pause
+D:\BobAi\bob-training.cmd resume
+D:\BobAi\bob-training.cmd stop
 ```
 
-Use `torchrun` with `train_production.py` for multi-GPU DDP. `--resume` restores optimizer/scheduler/model state. `--init-from` transfers model weights only and is intended for pretraining → instruction fine-tuning.
+Status includes stage, profile, step count, percentage, loss, validation loss when available, elapsed time, ETA, and checkpoint path. `latest.pt` is the resumable checkpoint. `best.pt` is the best validation checkpoint when available. Resume restores the saved stage/profile/settings from `training-pipeline.json`.
 
-## Profiles
+The bundled laptop default is `dev`. Larger profiles remain available through `model-training/pipeline.py`, but their memory and compute requirements are much higher. A fixed number of training days does not guarantee big-model quality.
 
-`dev`, `125m`, `350m`, `1.3b`, and `3b` are architecture profiles, not promises of frontier quality. A model's capability comes from architecture, training data, training compute, optimization, post-training, evaluation, and runtime tools together.
+The production model architecture is a separate scalable from-scratch Transformer with RoPE, RMSNorm, SwiGLU, grouped-query attention, SDPA/Flash Attention support where available, tied embeddings, gradient checkpointing, mixed precision, validation, resumable checkpoints, and torchrun/DDP support. The tokenizer is byte-level BPE trained across raw knowledge and instruction text.
 
-## Runtime
+The system's full user-facing capabilities are broader than the core model weights. Web research, files/RAG, coding sandboxes, computer control, Paint, Blender/3D, voice, image/video/audio/music providers, memory, APIs, databases, automations, and deployment remain runtime capabilities with permissions, safety boundaries, and result verification.
 
-The Node API automatically uses `bob-production` when its tokenizer/checkpoint exist. `productionModelRuntime.ts` can launch a bounded local worker pool using `BOBAI_PRODUCTION_MODEL_WORKERS`, while BobHS can provide the deployment layer for larger fleets.
-
-Production user capabilities are not supposed to live entirely in model weights. Web search, files/RAG, coding sandboxes, computer use, Paint, Blender, image/video/audio/music providers, memory, APIs, and automations are runtime capabilities with their own permissions, verification, and provider boundaries.
-
-## Teacher models and multimodal data
-
-Teacher-model outputs require explicit rights confirmation and provenance. Multimodal assets are mounted and validated by `build_multimodal_manifest.py`; their files are not silently copied into Git or treated as universally licensed. Use only assets and outputs that the operator is authorized to train on.
-
-## Production truth
-
-Repository code can make the training and serving system ready, reproducible, resumable, and scalable. It cannot manufacture GPU compute, external provider accounts, licensed datasets that have not been mounted, or the final learned weights. Those are execution dependencies outside the repository.
+Repository code can make the training/serving flow reproducible and controllable. It cannot create extra GPU/RAM, supply external provider accounts, or guarantee a particular intelligence level from a fixed hardware/time budget.
