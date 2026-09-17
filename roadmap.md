@@ -12,7 +12,11 @@
 - [x] Production BPE tokenizer accepts raw knowledge text and instruction conversations
 - [x] Production pretraining and instruction-tuning stages with weight transfer
 - [x] Deterministic pretraining split and production checkpoint evaluation
-- [x] One-command production training pipeline and npm shortcuts
+- [x] One-command production training pipeline from corpus preparation through tokenizer, pretraining, and instruction tuning
+- [x] One-command continuation after a prepared pretraining split
+- [x] Long-running training supervisor safely checkpoints before pause/stop and exposes persistent status
+- [x] Training control CLI supports pause, stop, resume, and status inspection
+- [x] Training runbook reduced to one start command plus pause/status/resume/stop controls
 - [x] Production model local worker with bearer auth and configurable bounded worker pool
 - [x] Node runtime auto-selects production artifacts and supports explicit production paths
 - [x] Voice runtime uses configured voice provider before local/echo fallbacks
@@ -22,9 +26,6 @@
 - [x] Training capability map explicitly covers knowledge pretraining, UI/UX design, multilingual behavior, coding, voice, media, desktop, memory, security, and recovery
 - [x] Model-training CI compiles and tests production, tokenizer, pretraining-split, and capability sources
 - [x] Web/API builds and repository security tests were previously validated on the development environment
-- [x] Controllable training supervisor supports checkpointed pause/stop, resume from latest checkpoint, and persistent run metadata
-- [x] Training-control CLI exposes pause, stop, resume requests, and status inspection
-- [x] Training runbook documents laptop setup, dataset preparation, tokenizer training, pretraining, pause/resume, checkpoint chat, instruction tuning, evaluation, and multi-GPU commands
 
 ## Environment
 - [ ] Acquire/mount the licensed multimodal assets and any authorized teacher-model outputs selected for the production run

@@ -1,116 +1,61 @@
-# BobAI training runbook
+# BobAI production training runbook
 
-This is the practical laptop runbook for the production-model pipeline. Training and serving are separate processes so the latest checkpoint can be used for a chat session after training is paused.
+## Minimal operator flow
 
-## 1. Install dependencies
+If `prepare_pretraining.py` has already finished, you do **not** need to manually run every dataset/tokenizer/training command.
 
-```powershell
-python -m pip install -r model-training\requirements.txt
-```
-
-## 2. Build the datasets
-
-Review the upstream dataset terms first, then run:
+Run one command:
 
 ```powershell
-python model-training\build_pretraining_corpus.py --confirm-upstream-terms
-python model-training\prepare_pretraining.py
-python model-training\build_final_dataset.py
-python model-training\prepare_dataset.py --input model-training\data\source.jsonl
+python model-training/pipeline.py --skip-corpus --profile dev
 ```
 
-## 3. Train the tokenizer
+For a completely fresh run, including the public-corpus preparation:
 
 ```powershell
-python model-training\train_tokenizer.py --input model-training\data\pretrain\train.jsonl model-training\data\train.jsonl --output model-training\output\bob-production\tokenizer.json
+python model-training/pipeline.py --confirm-upstream-terms --profile dev
 ```
 
-## 4. Start controllable pretraining
+The pipeline builds the instruction/capability data, trains one tokenizer over knowledge + instruction text, pretrains the production model, transfers the best pretrained checkpoint into instruction tuning, and keeps `latest.pt` and `best.pt` under `model-training/output/bob-production/`.
 
-For the laptop/dev profile:
+`dev` is the practical profile for a laptop. Larger profiles require substantially stronger compute. Training duration is hardware/data dependent, so a 7–20 day estimate is not a guarantee.
+
+## Pause, inspect, resume
+
+Leave the training command running. From another terminal:
 
 ```powershell
-python model-training\training_supervisor.py start --stage pretrain --train model-training\data\pretrain\train.jsonl --validation model-training\data\pretrain\validation.jsonl --tokenizer model-training\output\bob-production\tokenizer.json --profile dev --epochs 1 --batch-size 1 --grad-accum 16 --precision fp32
+python model-training/training_control.py status
 ```
 
-The supervisor launches the trainer with a checkpoint after every optimizer step. This trades some I/O for much safer long-running pause/recovery behavior.
-
-## 5. Check progress
-
-Open another terminal:
+To pause safely:
 
 ```powershell
-python model-training\training_control.py status
+python model-training/training_control.py pause
 ```
 
-The detailed status is stored at `model-training/output/bob-production/training-status.json`. Checkpoints are `latest.pt` and, after validation improvement, `best.pt`.
+The pipeline stops the training child and preserves the latest checkpoint. You can then run BobAI separately against the latest completed checkpoint while the training GPU/CPU is free.
 
-## 6. Pause
+Resume the same pipeline stage from `latest.pt`:
 
 ```powershell
-python model-training\training_control.py pause
+python model-training/pipeline.py --resume --profile dev
 ```
 
-The supervisor stops the training child after the latest completed checkpoint and records the run as paused. Do not delete `latest.pt`.
-
-## 7. Talk to Bob while paused
-
-Start BobAI normally and use the production checkpoint through the normal local model runtime. Because the training child has stopped, it no longer holds the training process resources.
-
-On a low-memory laptop, a large checkpoint may not fit comfortably alongside the web/API stack. The `dev` profile is the practical local interactive profile; larger profiles are intended for machines with suitable VRAM/RAM.
-
-## 8. Resume
-
-After the chat session is finished:
+To stop while preserving the latest checkpoint:
 
 ```powershell
-python model-training\training_supervisor.py resume --stage pretrain --train model-training\data\pretrain\train.jsonl --validation model-training\data\pretrain\validation.jsonl --tokenizer model-training\output\bob-production\tokenizer.json --profile dev --epochs 1 --batch-size 1 --grad-accum 16 --precision fp32
+python model-training/training_control.py stop
 ```
 
-`latest.pt` restores the model, optimizer, scheduler, step, epoch, and validation state.
+`status` reads `training-status.json`; the checkpoint is `latest.pt`; the best validation checkpoint is `best.pt`. The pipeline state records whether it was in pretraining or instruction tuning so `--resume` knows what stage to continue.
 
-## 9. Stop cleanly
+## What the production model does
 
-```powershell
-python model-training\training_control.py stop
-```
+The model is the language/reasoning core. BobAI runtime tools provide capabilities that should not be forced into model weights: current web research, file retrieval, coding sandboxes, browser/computer control, Paint, Blender, memory, APIs, deployment, and external image/video/audio/music/voice providers. These remain permissioned, bounded, audited, and verified.
 
-The latest completed checkpoint remains available for a later resume.
+The training target includes natural conversation, reasoning, multilingual and code-switching behavior, source checking, coding, UI/UX design, software-factory workflows, voice/turn-taking, vision, media, computer use, Paint, Blender/3D, memory, security, recovery, APIs, databases, automation, deployment, and teaching.
 
-## 10. Instruction tuning
+## Production reality
 
-After pretraining is complete and evaluated:
-
-```powershell
-python model-training\training_supervisor.py start --stage instruction --train model-training\data\train.jsonl --validation model-training\data\validation.jsonl --tokenizer model-training\output\bob-production\tokenizer.json --profile dev --epochs 2 --batch-size 1 --grad-accum 16 --precision fp32 --init-from model-training\output\bob-production\best.pt
-```
-
-## 11. Evaluate
-
-```powershell
-python model-training\evaluate_production.py --checkpoint model-training\output\bob-production\best.pt --tokenizer model-training\output\bob-production\tokenizer.json
-```
-
-## 12. One-command pipeline
-
-For an unattended run:
-
-```powershell
-python model-training\pipeline.py --confirm-upstream-terms --profile dev
-```
-
-For suitable larger hardware:
-
-```powershell
-python model-training\pipeline.py --confirm-upstream-terms --profile 350m
-```
-
-Use the supervisor when you want reliable pause/resume and checkpoint control.
-
-## 13. Multi-GPU
-
-The production trainer supports `torchrun`/DDP. A laptop normally uses one process.
-
-## Important reality
-
-Seven to twenty days is a runtime estimate, not a model-quality guarantee. Actual time depends on hardware, corpus size, profile, context length, batch size, and tokens processed. Serving roughly 2,000 daily users also requires separate inference capacity, storage, monitoring, provider infrastructure, and load testing.
+The repository supplies the architecture and reproducible training/serving machinery. It does not supply the external GPU compute, storage, licensed multimodal assets, permitted teacher-model outputs, provider accounts, or the final trained weights. Those must exist in the execution environment. The repository therefore does not promise that a fixed number of days or a fixed parameter profile will produce frontier-level intelligence.
