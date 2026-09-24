@@ -29,3 +29,8 @@ model-training/data/test.jsonl
 *.bin
 # Local-only BobAI build rules and internal project docs
 .bobai-internal/
+
+# Local-only internal Markdown and agent instructions
+*.md
+!README.md
+.agent/
