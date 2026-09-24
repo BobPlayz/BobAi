@@ -11,7 +11,7 @@ export function validateChat(messages: ChatMessage[], personality: string) { if 
 export function getLatestUserMessage(messages: ChatMessage[]) { return [...messages].reverse().find((message) => message.role === "user"); }
 export function getPersonality(input: unknown) { return typeof input === "string" ? input.trim() : ""; }
 export function getRequestedModelId(input: unknown) { if (typeof input !== "string") return undefined; const value = input.trim(); return value || undefined; }
-export function buildSystemPrompt(personality: string, memoryContext: string[] = [], language = "english", responseStyle = "natural", responseLength = "balanced", tone = "natural", customInstructions = ""): ChatMessage {
+export function buildSystemPrompt(personality: string, memoryContext: string[] = [], language = "english", responseStyle = "natural", responseLength = "balanced", tone = "natural", customInstructions = "", knowledgeContext: string[] = []): ChatMessage {
   const memories = memoryContext.filter((memory) => typeof memory === "string" && memory.trim()).slice(0, MAX_MEMORIES).map((memory) => memory.trim().slice(0, MAX_MEMORY_LENGTH));
   const knowledge = knowledgeContext.filter((item) => typeof item === "string" && item.trim()).slice(0, 8).map((item) => item.trim().slice(0, 5_000));
   const memoryBlock = memories.length ? memories.map((memory, index) => `${index + 1}. ${memory}`).join("\n") : "none";
