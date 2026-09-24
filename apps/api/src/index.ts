@@ -2,9 +2,6 @@ import "dotenv/config";
 import { createServer } from "node:http";
 import { app } from "./app.js";
 import { configureOtpDelivery } from "./services/otpDelivery.js";
-import { runRetentionCleanup, startRetentionWorker } from "./services/retention.js";
-import { startReminderWorker } from "./services/reminderWorker.js";
-import { startAutomationWorker } from "./services/automation.js";
 
 const PORT = Number(process.env.PORT || 3001);
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -14,13 +11,6 @@ const KEEP_ALIVE_TIMEOUT_MS = Math.min(Math.max(Number(process.env.API_KEEP_ALIV
 const MAX_HEADER_SIZE = 16 * 1024;
 
 configureOtpDelivery();
-void runRetentionCleanup().catch((error) => {
-  if (process.env.NODE_ENV !== "production") console.warn("initial retention cleanup failed", error);
-});
-
-const retentionWorker = startRetentionWorker();
-const reminderWorker = startReminderWorker();
-void startAutomationWorker();
 const server = createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
 server.listen(PORT, () => {
   console.log(`BobAI API listening on http://localhost:${PORT}`);
@@ -35,8 +25,6 @@ let shuttingDown = false;
 async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
-  clearInterval(retentionWorker);
-  clearInterval(reminderWorker);
   console.log(`BobAI API received ${signal}; shutting down gracefully`);
   const timeout = setTimeout(() => {
     console.error("BobAI API shutdown timed out; forcing exit");
