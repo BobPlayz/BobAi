@@ -20,7 +20,7 @@ void runRetentionCleanup().catch((error) => {
 
 const retentionWorker = startRetentionWorker();
 const reminderWorker = startReminderWorker();
-const automationWorker = startAutomationWorker();
+void startAutomationWorker();
 const server = createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
 server.listen(PORT, () => {
   console.log(`BobAI API listening on http://localhost:${PORT}`);
@@ -37,7 +37,6 @@ async function shutdown(signal: string) {
   shuttingDown = true;
   clearInterval(retentionWorker);
   clearInterval(reminderWorker);
-  clearInterval(automationWorker);
   console.log(`BobAI API received ${signal}; shutting down gracefully`);
   const timeout = setTimeout(() => {
     console.error("BobAI API shutdown timed out; forcing exit");
