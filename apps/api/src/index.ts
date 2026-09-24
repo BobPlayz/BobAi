@@ -2,6 +2,7 @@ import "dotenv/config";
 import { createServer } from "node:http";
 import { app } from "./app.js";
 import { configureOtpDelivery } from "./services/otpDelivery.js";
+import { dbClient } from "@bobai/db";
 
 const PORT = Number(process.env.PORT || 3001);
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -11,6 +12,9 @@ const KEEP_ALIVE_TIMEOUT_MS = Math.min(Math.max(Number(process.env.API_KEEP_ALIV
 const MAX_HEADER_SIZE = 16 * 1024;
 
 configureOtpDelivery();
+process.on("uncaughtException", (error) => { console.error("BobAI uncaught exception", error); });
+process.on("unhandledRejection", (reason) => { console.error("BobAI unhandled rejection", reason); });
+
 const server = createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
 server.listen(PORT, () => {
   console.log(`BobAI API listening on http://localhost:${PORT}`);
@@ -31,13 +35,14 @@ async function shutdown(signal: string) {
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS);
   timeout.unref();
-  server.close((error) => {
+  server.close(async (error) => {
     clearTimeout(timeout);
     if (error) {
       console.error("BobAI API shutdown failed", error);
       process.exitCode = 1;
       return;
     }
+    try { await dbClient.end({ timeout: 5 }); } catch (dbError) { console.error("BobAI database shutdown failed", dbError); process.exitCode = 1; return; }
     process.exitCode = 0;
   });
 }
