@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { tasks } from "@bobai/db";
 
 let dbPromise: Promise<typeof import("@bobai/db").db | null> | null = null;
@@ -36,3 +36,16 @@ export async function cancelPersistedAgentTask(id: string, userId: string) {
 
 export async function markInterruptedAgentTasks() { const db = await getDb(); if (!db) return false; const now = new Date(); await db.update(tasks).set({ status: "failed", failedAt: now, updatedAt: now, metadata: { error: "agent worker restarted before the task completed" } }).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "running"))); return true; }
 export async function listRecoverableAgentTasks() { const db = await getDb(); if (!db) return []; return db.select({ id: tasks.id, workspaceId: tasks.workspaceId, createdBy: tasks.createdBy, title: tasks.title, description: tasks.description, type: tasks.type, status: tasks.status, payload: tasks.payload, createdAt: tasks.createdAt }).from(tasks).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "queued"))); }
+
+export async function recoverAgentTasks() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.transaction(async (tx) => {
+    const lock = await tx.execute(sql`select pg_try_advisory_xact_lock(773244118)`);
+    const acquired = Boolean((lock[0] as { pg_try_advisory_xact_lock?: boolean } | undefined)?.pg_try_advisory_xact_lock);
+    if (!acquired) return [];
+    const now = new Date();
+    await tx.update(tasks).set({ status: "queued", updatedAt: now, metadata: { error: "agent worker restarted; task returned to durable queue" } }).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "running")));
+    return tx.select({ id: tasks.id, workspaceId: tasks.workspaceId, createdBy: tasks.createdBy, title: tasks.title, description: tasks.description, type: tasks.type, status: tasks.status, payload: tasks.payload, createdAt: tasks.createdAt }).from(tasks).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "queued")));
+  });
+}
