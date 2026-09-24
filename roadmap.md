@@ -30,6 +30,19 @@
 - [x] Voice, image, video, music, design, computer, and desktop provider environment contracts are documented
 - [x] Training capability map explicitly covers knowledge pretraining, UI/UX design, multilingual behavior, coding, voice, media, desktop, memory, security, and recovery
 - [x] Model-training CI compiles and tests production, tokenizer, pretraining-split, and capability sources
+- [x] Conversation listing uses bounded cursor pagination and conversation message reads use bounded time cursors
+- [x] Streamed assistant messages persist pending, streaming, completed, failed, and cancelled states
+- [x] Semantic memory retrieval combines similarity, importance, confidence, and recency
+- [x] Semantic duplicate memories are refreshed instead of creating near-identical records
+- [x] File uploads are chunked, embedded, reranked when available, and searchable with ownership/workspace isolation
+- [x] Retrieved file chunks are now injected into normal chat as explicitly untrusted evidence
+- [x] Research sources are normalized, ranked, deduplicated, persisted, and exposed with stable citation identifiers
+- [x] Agent plans have dependency validation, budgets, checkpoints, cancellation, persistence, artifacts, and confidence gates
+- [x] Consequential tool execution uses workspace authorization, scoped permissions, single-use approvals, expiry, and audit logging
+- [x] Account export covers implemented user-owned backend records without exporting secret key material
+- [x] Scheduled account deletion reuses the complete purge path instead of relying on direct user-row deletion
+- [x] Retention, cleanup, automation, reminder, research-brief, webhook, idempotency, OAuth, memory, and distributed-rate-limit maintenance workers are wired into backend startup
+- [x] Docker sandbox boundary is implemented with no-network, read-only root filesystem, dropped capabilities, resource limits, and bounded output
 
 ## Environment
 - [ ] Finish copying/cloning the repository to its final USB location on `D:`
@@ -42,3 +55,4 @@
 - [ ] Run load, resilience, security, and concurrency verification for roughly 2,000 daily users
 - [ ] Build/verify native Windows media components on the target machine
 - [ ] Run final model quality/evaluation gates on trained artifacts
+- [ ] Run the isolated Neon authorization/security suite and production-build verification before claiming production security completion
