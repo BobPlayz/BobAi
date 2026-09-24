@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const required = ["README.md", "package.json", "package-lock.json", ".env.example", "apps/api", "apps/web", "apps/bobhs", "packages/db", "model-training"];
-const forbiddenSecret = /(?:sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
+const forbiddenSecret = /(?:sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
 const allowedEnv = new Set([".env.example", "apps/api/.env.example"]);
 
 async function exists(path) {
@@ -38,13 +38,21 @@ async function main() {
     if (forbiddenSecret.test(content)) throw new Error(`${path} contains a secret-shaped value`);
   }
 
+  try {
+    await execFileAsync("git", ["grep", "-I", "-n", "-E", "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}", "--", "."]);
+  } catch (error) {
+    const code = error?.code;
+    if (code === 0) throw new Error("tracked files contain a known secret-shaped value");
+    if (code !== 1) throw error;
+  }
+
   if (missing.length || missingScripts.length) {
     console.error(JSON.stringify({ ok: false, missing, missingScripts }));
     process.exitCode = 1;
     return;
   }
 
-  console.log(JSON.stringify({ ok: true, requiredPaths: required.length, requiredScripts: requiredScripts.length, markdownPolicy: "README.md only", trackedEnvironmentPolicy: "example files only" }));
+  console.log(JSON.stringify({ ok: true, requiredPaths: required.length, requiredScripts: requiredScripts.length, markdownPolicy: "README.md only", trackedEnvironmentPolicy: "example files only", secretPatternScan: "enabled" }));
 }
 
 main().catch((error) => {
