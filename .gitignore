@@ -27,9 +27,6 @@ model-training/data/validation.jsonl
 model-training/data/test.jsonl
 *.safetensors
 *.bin
-# Local-only BobAI build rules and internal project docs
-.bobai-internal/
-
 # Local-only internal Markdown and agent instructions
 *.md
 !README.md
