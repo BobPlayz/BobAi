@@ -12,7 +12,7 @@ const KEEP_ALIVE_TIMEOUT_MS = Math.min(Math.max(Number(process.env.API_KEEP_ALIV
 const MAX_HEADER_SIZE = 16 * 1024;
 
 configureOtpDelivery();
-process.on("uncaughtException", (error) => { console.error("BobAI uncaught exception", error); });
+process.on("uncaughtException", (error) => { console.error("BobAI uncaught exception", error); process.exitCode = 1; void shutdown("uncaughtException"); });
 process.on("unhandledRejection", (reason) => { console.error("BobAI unhandled rejection", reason); });
 
 const server = createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
