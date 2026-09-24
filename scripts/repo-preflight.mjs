@@ -39,7 +39,7 @@ async function main() {
   }
 
   try {
-    await execFileAsync("git", ["grep", "-I", "-n", "-E", "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}", "--", "."]);
+    await execFileAsync("git", ["grep", "-I", "-n", "-E", "-e", "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}", "--", "."]);
   } catch (error) {
     const code = error?.code;
     if (code === 0) throw new Error("tracked files contain a known secret-shaped value");
