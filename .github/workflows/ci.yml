@@ -42,4 +42,7 @@ jobs:
         run: npm test
 
       - name: Dependency audit
-        run: npm audit --workspaces --include-workspace-root
+        run: npm audit --workspaces --include-workspace-root --audit-level=high
+
+      - name: Smoke test
+        run: npm run smoke
