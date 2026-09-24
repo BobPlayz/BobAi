@@ -32,23 +32,17 @@ router.post("/", async (req, res) => {
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
     if (prepared.memoryRequest && prepared.latestUserMessage) { if (!memoryEnabled) { send("done", { reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } if (isSensitiveMemory(prepared.latestUserMessage.content)) { send("done", { reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() }); if (!stored) { send("error", { message: "memory storage unavailable" }); return res.end(); } send("done", { reply: "got it. i will remember that for future conversations.", title: prepared.title, memoryStored: true, conversationId }); return res.end(); }
     if (prepared.latestUserMessage && isCodingTask(prepared.latestUserMessage.content) && process.env.BOBAI_CODING_AGENTS_DIR) { const result = await runCodingAgent(prepared.latestUserMessage.content); const reply = result.output || "the coding agent completed without output."; const persisted = await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedInputMessages(prepared.messages), { id: randomUUID(), role: "assistant", content: reply, model: "coding-agent", status: "completed" }] }).catch(() => false); send("done", { reply, title: prepared.title, agent: "coding", warnings: result.warnings, conversationId, persisted }); return res.end(); }
-    if (prepared.latestUserMessage && process.env.BOBAI_TOOLS_ENABLED !== "false" && shouldRouteTools(prepared.latestUserMessage.content)) {
+    if (prepared.latestUserMessage && process.env.BOBAI_TOOLS_ENABLED !== "false") {
       const toolContext = { userId: req.user!.id, workspaceId: workspace.id, modelId: prepared.modelId, mode: "chat" } as const;
       const toolResult = await runToolLoop(prepared.providerMessages, toolContext, decideTools, async (messages, modelId) => {
-        const result = await (await import("../services/chatEngine.js")).runChat(messages, modelId);
+        const result = await runChat(messages, modelId);
         return { content: result.message.content };
       });
-      if (toolResult.status === "approval_required") {
-        send("done", { reply: toolResult.message, title: prepared.title, conversationId, status: toolResult.status, toolCalls: toolResult.toolCalls, tools: toolResult.usedTools });
-        return res.end();
-      }
-      if (toolResult.status === "completed") {
-        const persisted = await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedInputMessages(prepared.messages), { id: randomUUID(), role: "assistant", content: toolResult.message, model: prepared.modelId || "bob", status: "completed" }] }).catch(() => false);
-        send("done", { reply: toolResult.message, title: prepared.title, conversationId, status: "completed", toolCalls: toolResult.toolCalls, tools: toolResult.usedTools, persisted });
-        return res.end();
-      }
-      if (toolResult.status === "failed" || toolResult.status === "limit_reached") {
-        send("done", { reply: toolResult.message, title: prepared.title, conversationId, status: toolResult.status, toolCalls: toolResult.toolCalls, tools: toolResult.usedTools });
+      if (toolResult.status === "approval_required" || toolResult.status === "completed" || toolResult.status === "failed" || toolResult.status === "limit_reached") {
+        const persisted = toolResult.status === "completed"
+          ? await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedInputMessages(prepared.messages), { id: randomUUID(), role: "assistant", content: toolResult.message, model: prepared.modelId || "bob", status: "completed" }] }).catch(() => false)
+          : false;
+        send("done", { reply: toolResult.message, title: prepared.title, conversationId, status: toolResult.status, toolCalls: toolResult.toolCalls, tools: toolResult.usedTools, backgroundJobIds: toolResult.backgroundJobIds, persisted });
         return res.end();
       }
     }
