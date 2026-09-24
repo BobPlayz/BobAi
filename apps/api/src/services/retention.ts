@@ -27,7 +27,7 @@ export async function runRetentionCleanup(now = new Date()) {
       const deleted = await db.delete(users).where(eq(users.id, account.id)).returning({ id: users.id });
       if (deleted.length) accountsDeleted += 1;
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") console.warn("account purge deferred", error);
+      console.error("account purge deferred", error);
     }
   }
 
@@ -36,7 +36,7 @@ export async function runRetentionCleanup(now = new Date()) {
 
 export function startRetentionWorker(intervalMs = 60 * 60 * 1000) {
   const safeInterval = Math.max(60_000, intervalMs);
-  const timer = setInterval(() => { void runRetentionCleanup().catch((error) => { if (process.env.NODE_ENV !== "production") console.warn("retention cleanup failed", error); }); }, safeInterval);
+  const timer = setInterval(() => { void runRetentionCleanup().catch((error) => { console.error("retention cleanup failed", error); }); }, safeInterval);
   timer.unref();
   return timer;
 }
