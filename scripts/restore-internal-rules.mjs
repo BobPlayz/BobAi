@@ -34,8 +34,7 @@ const files = [
   "scripts/bobredis/README.md"
 ];
 
-const root = ".bobai-internal";
-mkdirSync(root, { recursive: true });
+const root = ".";
 
 for (const source of files) {
   const target = join(root, source);
@@ -44,5 +43,5 @@ for (const source of files) {
   writeFileSync(target, data, "utf8");
 }
 
-console.log(`Restored ${files.length} local-only BobAI internal files into ${root}/`);
+console.log(`Restored ${files.length} local-only BobAI internal files to their original local paths.`);
 console.log("They are ignored by .gitignore and are not part of the public repository.");
