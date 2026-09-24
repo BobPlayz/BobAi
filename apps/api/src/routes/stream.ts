@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db, settings } from "@bobai/db";
 import { initSSE } from "../utils/sse.js";
 import { isCodingTask, runCodingAgent } from "../services/codingAgent.js";
-import { prepareChat, runStream } from "../services/chatEngine.js";
+import { prepareChat, runChat, runStream } from "../services/chatEngine.js";
 import { dbRemember, dbRecallRelevant, isSensitiveMemory } from "../store/memoryDb.js";
 import { dbSaveConversation, dbUpdateMessageStatus } from "../store/conversationDb.js";
 import { searchDocumentChunks } from "../services/documentIndexer.js";
