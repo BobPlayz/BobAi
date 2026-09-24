@@ -4,6 +4,7 @@ import { app } from "./app.js";
 import { configureOtpDelivery } from "./services/otpDelivery.js";
 import { runRetentionCleanup, startRetentionWorker } from "./services/retention.js";
 import { startReminderWorker } from "./services/reminderWorker.js";
+import { startAutomationWorker } from "./services/automation.js";
 
 const PORT = Number(process.env.PORT || 3001);
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -19,6 +20,7 @@ void runRetentionCleanup().catch((error) => {
 
 const retentionWorker = startRetentionWorker();
 const reminderWorker = startReminderWorker();
+const automationWorker = startAutomationWorker();
 const server = createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
 server.listen(PORT, () => {
   console.log(`BobAI API listening on http://localhost:${PORT}`);
@@ -35,6 +37,7 @@ async function shutdown(signal: string) {
   shuttingDown = true;
   clearInterval(retentionWorker);
   clearInterval(reminderWorker);
+  clearInterval(automationWorker);
   console.log(`BobAI API received ${signal}; shutting down gracefully`);
   const timeout = setTimeout(() => {
     console.error("BobAI API shutdown timed out; forcing exit");
