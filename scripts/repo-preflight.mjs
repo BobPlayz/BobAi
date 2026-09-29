@@ -26,8 +26,15 @@ async function main() {
 
   const files = await trackedFiles();
   const markdown = files.filter((path) => path.toLowerCase().endsWith(".md"));
-  const nonRootMarkdown = markdown.filter((path) => path !== "README.md");
-  if (nonRootMarkdown.length) throw new Error(`Public repository may only contain README.md as Markdown: ${nonRootMarkdown.join(", ")}`);
+  const allowedMarkdown = new Set([
+    "README.md",
+    "docs/API.md",
+    "docs/DATABASE.md",
+    "docs/CODE_STYLE.md",
+    "docs/SECURITY.md",
+  ]);
+  const disallowedMarkdown = markdown.filter((path) => !allowedMarkdown.has(path));
+  if (disallowedMarkdown.length) throw new Error(`Public repository contains unapproved Markdown files: ${disallowedMarkdown.join(", ")}`);
 
   const trackedEnv = files.filter((path) => /(^|\/)\.env(?:\.|$)/i.test(path) && !allowedEnv.has(path));
   if (trackedEnv.length) throw new Error(`Tracked environment files are forbidden: ${trackedEnv.join(", ")}`);
@@ -52,7 +59,7 @@ async function main() {
     return;
   }
 
-  console.log(JSON.stringify({ ok: true, requiredPaths: required.length, requiredScripts: requiredScripts.length, markdownPolicy: "README.md only", trackedEnvironmentPolicy: "example files only", secretPatternScan: "enabled" }));
+  console.log(JSON.stringify({ ok: true, requiredPaths: required.length, requiredScripts: requiredScripts.length, markdownPolicy: "README.md plus approved engineering guides", trackedEnvironmentPolicy: "example files only", secretPatternScan: "enabled" }));
 }
 
 main().catch((error) => {
