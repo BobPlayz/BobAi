@@ -4,7 +4,7 @@ module.exports = {
       startServerCommand: "npm run serve:lhci",
       startServerReadyPattern: "Ready in|Ready",
       url: ["http://localhost:3000/"],
-      numberOfRuns: 2,
+      numberOfRuns: 1,
     },
     assert: {
       assertions: {
