@@ -4,6 +4,10 @@ module.exports = {
       startServerCommand: "npm run serve:lhci",
       startServerReadyPattern: "Ready in|Ready",
       url: ["http://localhost:3000/"],
+      settings: {
+        chromeFlags: "--no-sandbox --disable-dev-shm-usage --disable-gpu",
+        maxWaitForLoad: 45000,
+      },
       numberOfRuns: 1,
     },
     assert: {
