@@ -1,17 +1,29 @@
-# BobAI
+# BobAI 🤖
 
-BobAI is a self-hostable AI platform built around a modular API, model providers, memory, file understanding, agents, automations, and optional local services.
+Hey! Welcome to **BobAI**, my attempt at building an AI platform of my own.
 
-## Requirements
+The idea is to bring a bunch of useful AI features into one project: model providers, memory, file understanding, agents, automations, and an API that ties things together. It's a big project, and it's still a work in progress, so expect things to change as I keep building and learning.
 
-- Node.js 24+
+## What's in here?
+
+- **Model providers** for connecting AI models
+- **Memory** and file-understanding features
+- **Agents and automations** for getting tasks done
+- **An API** and optional supporting services
+- **Self-hosting support**, so you can run your own instance
+
+Not every feature works without extra setup. Some need provider credentials, a database, or local services.
+
+## Getting started
+
+You'll need:
+
+- Node.js 24 or newer
 - npm
-- PostgreSQL with the required extensions for your deployment
-- Optional provider credentials or local model services, depending on the features you enable
+- PostgreSQL, with the extensions required by your setup
+- Credentials for whichever providers or services you want to use
 
-## Download
-
-Clone the repository:
+Clone the repo and install its dependencies:
 
 ```bash
 git clone https://github.com/BobPlayz/BobAi.git
@@ -19,52 +31,38 @@ cd BobAi
 npm ci
 ```
 
-Create your environment file from the example:
+Make a local environment file:
 
-```bash
+**Windows (Command Prompt):**
+```bat
 copy .env.example .env
 ```
 
-On macOS/Linux:
-
+**macOS / Linux:**
 ```bash
 cp .env.example .env
 ```
 
-Fill in only the credentials and service settings required for the features you use.
+Open `.env` and fill in the settings needed for the features you want to try. Don't put real secrets in the repo.
 
-## Run
-
-Install dependencies:
+## Useful commands
 
 ```bash
-npm ci
+npm run ai     # Start the development services
+npm run build  # Build the project
+npm test       # Run tests
 ```
 
-Start the development services:
+If something doesn't work right away, check the environment settings first. This project has a few moving parts, and I'm still improving how they fit together.
 
-```bash
-npm run ai
-```
+## A quick security note
 
-Build the project:
+Never commit API keys, bot tokens, private keys, database URLs, or your real `.env` file. Before putting an instance on the public internet, configure HTTPS, authentication, CORS, and a production-ready database properly.
 
-```bash
-npm run build
-```
+## Still building 🚧
 
-Run tests:
-
-```bash
-npm test
-```
-
-## Security
-
-Never commit real credentials, private keys, tokens, database URLs, model artifacts, or local environment files. Keep secrets in environment variables or your deployment platform's secret store.
-
-Before exposing an instance to the internet, configure production environment values, HTTPS, an explicit CORS origin, strong authentication secrets, and a production database.
+BobAI is a personal project that I'm growing over time. Suggestions, bug reports, and ideas are welcome!
 
 ## License
 
-See the repository metadata for the current licensing terms.
+Check the repository's license information for the current terms.
