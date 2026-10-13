@@ -62,10 +62,10 @@
 - [x] Remove the unused sci-fi intro/scene components and decorative beams/particles as recorded in the change log.
 - [x] Establish a conversation-first shell and a restrained visual direction.
 - [x] Add a persistent Light/Dark theme preference and visible chat-header toggle for the chat workspace.
-- [ ] Audit all routes and shared components for fixed dark-only colors, including the public landing/legal pages, message menus, markdown/code, uploads, dialogs, and error states. The chat composer, sidebar, empty state, and main message text now adapt to Light/Dark; a full visual audit is still required.
+- [ ] Audit all routes and shared components for fixed dark-only colors, including message menus, markdown/code, uploads, dialogs, and error states. Public navigation and landing page now use the shared Light/Dark preference, and global compatibility rules normalize several legacy dark utility classes, but visual verification remains required.
 - [ ] Remove unused theme variants, theme pickers, decorative-only components, and obsolete CSS after checking imports and tests.
 - [ ] Make settings plain and consistent with the main app; avoid animated dashboard-card layouts.
-- [ ] Ensure mobile navigation is usable and the chat composer is not obscured by the keyboard.
+- [x] Add a compact mobile navigation menu to public pages. Keyboard-overlay behavior in the chat composer still requires device testing.
 - [ ] Check contrast, visible focus, text scaling, and reduced-motion behavior.
 
 **Exit criteria:** Light and Dark both work throughout the app; no sci-fi-only visual system remains; no broken navigation or unreadable content.
@@ -254,8 +254,9 @@
 - **2026-10-13:** Updated Next.js to 16.4.0 and refreshed compatible dependency fixes for proxy-addr, sharp, source-map-js, and brace-expansion. Build and tests passed on the security branch; npm audit still reports the upstream braces GHSA-vfj7-8cjw-p6xm, for which no patched upstream release is published as of this run. The remaining finding is in development lint tooling and is not silently suppressed.
 - **2026-10-13:** Deep Research now renders source links as clickable entries with available snippets and publication dates, aligns the displayed source list to the exact fetched evidence used for citation numbering, and requests explicit Findings / Interpretation / Uncertainty sections.
 - **2026-10-13:** Added `docs/FEATURE_INVENTORY.md`, a static route/API/schema/feature/control inventory and explicit external launch-blocker list. It is not a substitute for browser or runtime verification.
+- **2026-10-13:** Added Light/Dark support to public navigation and the landing page, made the shared analytics consent banner use the selected theme, and removed the unconnected waitlist form so it cannot falsely imply that an email was saved. The waitlist is now explicitly closed until a real endpoint is connected.
 - **2026-10-13:** Removed the root package `model:*` commands and retired the standalone training workflow after checking that it was separate from CI/deployment. Retained model-training sources because the optional native inference runtime still expects a prebuilt artifact under that path.
-- **2026-10-13:** Propagated client-disconnect cancellation from the API stream route through the chat engine into hosted and Ollama provider requests. Added a three-active-agent-task per-user limit; durable distributed quotas and hard provider-side monetary limits still require production configuration.
+- **2026-10-13:** Propagated client-disconnect cancellation from the API stream route through the chat engine into hosted and Ollama provider requests. Corrected disconnect error handling so a cancelled response is not subsequently overwritten as failed. Added a three-active-agent-task per-user limit; durable distributed quotas and hard provider-side monetary limits still require production configuration.
 - **2026-10-13:** Added editable voice dictation to the active neural composer, per-file upload cancellation/progress controls, consistent supported image formats, and an agent Stop control wired to the server queue-cancel route. These code paths remain pending final build/test verification.
 - **2026-10-13:** Added email-OTP reauthentication and a clear confirmation flow for account deletion, and hardened the existing 30-day retention cleanup to skip users who still own shared workspaces. Build/runtime verification remains pending.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
