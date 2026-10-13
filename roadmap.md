@@ -1,229 +1,228 @@
-# BobAI UI Merge Roadmap
+# BobAI: 10-Phase Product Roadmap
 
-> **Purpose:** Merge the useful visual language and interaction ideas from the AI-Glasses dashboard into BobAI's existing website, while keeping BobAI's familiar ChatGPT-like conversation experience. This is the canonical plan for the UI merge and production hardening.
+> **Product goal:** Build a polished, trustworthy, ChatGPT-style AI website that feels familiar and uncluttered, with useful privacy, research, voice, memory, and file features. This is a product roadmap, not a claim that every feature is already implemented.
 >
-> **Status:** Planning baseline created on 2026-10-13. The local Ollama integration is already committed to `main`; this document does not claim the UI merge is complete. Update phase checkboxes only after the work is implemented and verified.
+> **Budget assumption:** ₹2,000 INR is the initial total budget for a domain and early running costs. Keep the first version inexpensive and avoid paid usage by default. Domain renewal and AI API usage are recurring costs, so check prices before purchasing.
+>
+> **Model decision:** Do **not** train a model for BobAI. Use a hosted AI provider through an adapter, with optional local Ollama support for users who choose it. Keep provider/model choices configurable so BobAI is not locked to one vendor.
 
-## Product decisions (keep these stable)
+## Product and design contract
 
-### The intended experience
-- Keep BobAI as the single website, app shell, API, authentication system, conversation store, and memory system.
-- Preserve a familiar ChatGPT-like layout: a compact left sidebar, clear conversation history, a central conversation area, and a bottom message composer.
-- Use a clean, neat, presentable layout inspired by the AI-Glasses dashboard's straightforward organization, while keeping BobAI's ChatGPT-like conversation flow. Support exactly two themes: light and dark. Keep effects minimal and cyan as a restrained accent.
-- Keep the interface responsive and usable on desktop, tablet, and mobile.
-- Make real chat the primary screen. Feature discovery should not push the conversation off-screen or turn the app into a dashboard.
-- Keep the design consistent in both light and dark mode, with readable text, neutral surfaces, simple borders, and one restrained accent. A light/dark toggle is required.
+### Visual direction
+- Use a neat, calm, conversation-first layout inspired by the usability of ChatGPT.
+- Keep **exactly two themes: Light and Dark**, with a visible toggle and a remembered preference.
+- Use readable typography, consistent spacing, quiet borders, restrained accent color, and clear focus states.
+- No sci-fi/HUD/JARVIS aesthetic, reactor/orb centerpiece, decorative particle scenes, fake hardware telemetry, terminal decoration, anime theme, or theme marketplace.
+- No unnecessary dashboard cards. The chat is the home screen; settings should be plain, organized, and easy to scan.
+- Responsive on mobile, tablet, and desktop; keyboard accessible; respect reduced-motion preferences.
+- Keep real, useful interactions. No dead buttons, fake statuses, or controls for features that do not exist.
 
-### UI features to retain or adapt
-- Sidebar navigation and conversation history.
-- New chat and existing conversation selection.
-- Streaming assistant responses.
-- A clean message composer with send/stop states and accessible keyboard behavior.
-- Account/session controls that match BobAI's actual authentication routes.
-- Useful file/image attachment controls only where the backend route exists and is tested.
-- Clear loading, empty, offline, error, and retry states.
-- Small service/model status only where it reflects actual backend status.
-- Settings for capabilities that are implemented and genuinely user-configurable.
-- Optional local Ollama text and vision, shown as available only when configured.
-- Existing BobAI memory, research, speech, and file capabilities through their existing APIs and stores. Do not duplicate their backends.
+### Core feature goals
+1. **AI chat and intelligence:** provider-based chat, streaming responses, sensible error handling, context limits, and transparent provider status.
+2. **Age-appropriate controls:** age-aware safety settings and content boundaries appropriate for the service's intended audience. Never market a toggle as a way to bypass provider safety protections. Age verification or parental controls must be designed around applicable laws and platform policies before implementation.
+3. **Source preferences:** let users choose research source types (for example, official documentation, academic material, reputable news, or general web sources) and clearly distinguish cited evidence from model-generated explanation. Preferences must actually affect the research pipeline.
+4. **Research and agents:** research with source links, summaries, and traceable steps; agents should ask before consequential actions and have bounded tools, budgets, and timeouts.
+5. **Natural voice-to-voice:** microphone input, speech recognition, model response, and natural spoken output with interruption/stop controls. Show microphone permission state clearly. Voice is optional, never silently always-listening.
+6. **Image and file understanding:** secure uploads, supported file types, text extraction/OCR where useful, image understanding through the selected provider, upload progress, and clear size/type errors.
+7. **Conversations and memory:** persistent conversation history and user-controlled memory. Explain what is saved, allow viewing/deleting memories when implemented, and keep user data separated.
+8. **Account and privacy:** secure sign-in, account/session management, data deletion path, secrets kept server-side, and concise privacy explanations.
+9. **Deployment and domain:** deploy to a stable HTTPS host and connect a purchased `.com` or `.ai` domain only after checking the full first-year and renewal price. Do not spend the whole ₹2,000 on the domain if that leaves no room for essential hosting.
+10. **No model training:** use an existing hosted model API for the default path. Keep local Ollama as optional, not a requirement. Remove or archive unused training workflows only after confirming they are not used by CI, deployment, or other features.
 
-### Remove or do not import
-- All theme variants except light and dark, including legacy, glass, anime, futuristic, and per-feature theme modes.
-- Sci-fi-only visuals and code: JARVIS branding, robot intro, reactor/orb centerpiece, perspective-grid HUD, corner brackets, fake CPU/RAM meters, decorative terminal logs, ambient beams, particles, and intro animations.
-- Hardware-specific controls: physical glasses pairing, ESP32 status/firmware, device camera/microphone switches, glasses speaker, hardware wake phrase, and firmware/BOM/wiring UI.
-- The AI-Glasses Android-phone-camera workflow and device-specific live-capture flows.
-- The separate AI-Glasses dashboard, SQLite memory/conversation store, and duplicate research implementation.
-- Placeholder controls, fake integrations, mock metrics, or buttons that do not have a working, verified action.
-- Redundant settings, duplicate navigation, and unnecessary dashboard cards.
-
-### Implementation guardrails
-- Reuse BobAI's existing routes, database, auth, design system, and components wherever possible.
-- Do not replace working backend logic merely to copy the old dashboard.
-- Do not introduce a second source of truth for conversations or memories.
-- Do not expose Ollama or other local services to the public internet; local Ollama remains opt-in and loopback-only.
-- Keep accessibility, reduced-motion preferences, keyboard navigation, mobile layouts, privacy, and upload validation in scope.
-- Never label a feature “working” just because its code or API exists. Verify the actual end-to-end user journey.
+### Important implementation rules
+- Existing BobAI APIs, auth, database, conversation store, memory, research, and speech integrations remain the source of truth when they work.
+- The optional Ollama integration remains disabled by default and loopback-only.
+- Never expose provider keys to the browser or commit secrets.
+- Research citations must point to sources actually retrieved; do not fabricate sources.
+- Keep upload validation, rate limits, timeouts, cost caps, and abuse protections server-side.
+- Do not claim age verification, parental controls, real-time voice, or research quality is complete until implemented and tested end to end.
+- Treat ₹2,000 as a tight initial budget. Prefer free tiers and provider limits, and ask before enabling any paid API usage.
 
 ---
 
-## Phase 1/10 — Zero baseline and inventory
+## Phase 1/10 — Zero: audit and baseline
 
-**Goal:** Establish the exact current state before changing the UI.
+**Goal:** Know exactly what exists before making product claims.
 
-- [ ] Record the current `main` commit and ensure the working tree/branch is known before local work.
-- [ ] Inventory BobAI web routes, shared layouts, chat components, styles, settings, auth, upload routes, and existing tests.
-- [ ] Inventory AI-Glasses visual elements and classify each as: useful design reference, reusable interaction pattern, hardware-only, decorative-only, or duplicate backend.
-- [ ] Capture baseline screenshots at desktop and mobile widths.
-- [ ] Run the current build, lint/type checks, tests, repository preflight, and dependency audit; save existing failures separately from regressions.
-- [ ] Map every visible UI control to the real route or handler it invokes.
-- [ ] Confirm that the target is the BobAI website, not a new app or separate dashboard.
+- [x] Record the intended product direction and exclude physical-glasses features from the website.
+- [x] Create this 10-phase roadmap in the repository root.
+- [x] Remove unused sci-fi intro components and decorative cinematic effects as recorded in the change log.
+- [ ] Inventory all web routes, components, API routes, database tables, provider adapters, auth flows, research tools, voice paths, and file upload paths.
+- [ ] Classify each feature as working, partial, stubbed, broken, or planned.
+- [ ] Map every visible control to a real handler and endpoint.
+- [ ] Capture desktop and mobile baseline screenshots for both themes.
+- [ ] Run build, lint/type checks, tests, repository preflight, and dependency audit; record existing failures separately.
 
-**Exit criteria:** A verified file/route map, baseline screenshots, and a list of current failures. No product behavior changed in this phase.
+**Exit criteria:** A verified feature inventory, screenshots, and a baseline CI report. Do not call unverified features complete.
 
-## Phase 2/10 — Visual system and design contract
+## Phase 2/10 — Clean UI and theme foundation
 
-**Goal:** Define one stable design language before moving components.
+**Goal:** Make BobAI neat, calm, and easy to use.
 
-- [ ] Establish design tokens for background, surfaces, borders, primary text, muted text, cyan accent, focus rings, spacing, and radii.
-- [ ] Use neutral surfaces and thin borders in both light and dark mode; use cyan sparingly for primary actions and focus.
-- [ ] Keep typography clean and readable; avoid excessive letter spacing, all-caps labels, or terminal-style body text.
-- [ ] Keep animations subtle and optional; honor `prefers-reduced-motion`.
-- [ ] Keep only light and dark themes, with a persistent user choice and a visible toggle; remove every other theme branch.
-- [ ] Define consistent button, input, textarea, menu, dialog, tooltip, message, and status styles.
-- [ ] Check contrast and visible focus states.
+- [x] Remove the unused sci-fi intro/scene components and decorative beams/particles as recorded in the change log.
+- [x] Establish a conversation-first shell and a restrained visual direction.
+- [x] Add a persistent Light/Dark theme preference and visible chat-header toggle.
+- [ ] Audit all routes and shared components for fixed dark-only colors, including messages, markdown/code, composer, settings, menus, dialogs, uploads, and empty/error states.
+- [ ] Remove unused theme variants, theme pickers, decorative-only components, and obsolete CSS after checking imports and tests.
+- [ ] Make settings plain and consistent with the main app; avoid animated dashboard-card layouts.
+- [ ] Ensure mobile navigation is usable and the chat composer is not obscured by the keyboard.
+- [ ] Check contrast, visible focus, text scaling, and reduced-motion behavior.
 
-**Exit criteria:** One default theme, shared tokens, no theme picker, and a short design reference in the repository.
+**Exit criteria:** Light and Dark both work throughout the app; no sci-fi-only visual system remains; no broken navigation or unreadable content.
 
-## Phase 3/10 — App shell and navigation
+## Phase 3/10 — Provider-based AI chat, without training
 
-**Goal:** Bring the AI-Glasses UI's useful layout ideas into BobAI without copying its hardware dashboard.
+**Goal:** Use an existing chatbot model rather than training BobAI's own model.
 
-- [ ] Create or refine a compact left sidebar inspired by the familiar ChatGPT layout.
-- [ ] Include only working destinations, such as new chat, conversation history, projects/library if supported, and account/settings.
-- [ ] Add a clear collapse/expand behavior for the sidebar where supported.
-- [ ] Keep account actions in a predictable location and respect existing auth routes.
-- [ ] On narrow screens, turn the sidebar into a usable drawer rather than shrinking the chat.
-- [ ] Preserve navigation state and avoid losing a draft when opening/closing the sidebar.
-- [ ] Remove redundant dashboard cards and duplicate navigation.
-- [ ] Remove unused sci-fi-only components and decorative CSS rather than merely hiding them.
+- [ ] Choose a default hosted provider based on current quality, supported modalities, privacy terms, and cost. Keep the provider adapter replaceable.
+- [ ] Keep provider API keys server-side in environment secrets; never send them to browser code.
+- [ ] Implement/verify streaming, cancel/stop behavior, retry, timeouts, rate limits, and useful error messages.
+- [ ] Provide a model/provider settings area only for providers that are genuinely implemented.
+- [ ] Add per-user and global cost/usage safeguards before enabling paid API calls.
+- [ ] Keep optional local Ollama as a separate opt-in path; do not require downloading a local model.
+- [ ] Remove model-training commands from the normal user-facing setup instructions. Audit training scripts and references before deleting or archiving them.
+- [ ] Add tests for missing keys, provider errors, malformed responses, streaming disconnects, and budget/rate limits.
 
-**Exit criteria:** All visible navigation destinations work, the shell is responsive, and no hardware-only entry remains.
+**Exit criteria:** A new user can configure one supported provider and complete a streamed chat safely, without training a model.
 
-## Phase 4/10 — Chat surface and composer
+## Phase 4/10 — Conversations, accounts, and memory
 
-**Goal:** Make conversation the visual center of BobAI.
+**Goal:** Make chat history reliable and memory transparent.
 
-- [ ] Keep a centered, readable message column with appropriate width and spacing.
-- [ ] Make user and assistant messages easy to distinguish without oversized bubble chrome.
-- [ ] Preserve streaming output, markdown, code blocks, links, and long-response readability already supported by the app.
-- [ ] Build a bottom composer with multiline input, send state, disabled/loading state, and keyboard behavior.
-- [ ] Add stop/cancel only if the underlying request can actually be cancelled safely.
-- [ ] Add attachment affordances only for file types and routes supported by the backend.
-- [ ] Keep an empty-state greeting and optional starter prompts understated and useful.
-- [ ] Ensure errors preserve the user's draft and offer a real retry path.
-- [ ] Test long conversations, narrow windows, browser zoom, and mobile keyboard behavior.
+- [ ] Verify sign-up/sign-in/sign-out and session expiry end to end.
+- [ ] Persist conversations and messages under the correct authenticated user.
+- [ ] Support new chat, history loading, conversation switching, search, rename, pin, and deletion where endpoints exist.
+- [ ] Ensure refresh/reopen does not duplicate conversations or lose messages.
+- [ ] Add clear empty, loading, offline, and failure states.
+- [ ] Decide and document what “memory” means: saved user facts, conversation retrieval, or both.
+- [ ] Add user-visible memory review/edit/delete controls only when backed by secure database operations.
+- [ ] Make memory opt-in or clearly configurable, and explain what is stored and why.
+- [ ] Test user isolation and authorization for every conversation and memory endpoint.
 
-**Exit criteria:** A complete basic chat journey works with real APIs at desktop and mobile widths.
+**Exit criteria:** Conversation history and memory persist reliably, are user-scoped, and can be controlled without exposing another user's data.
 
-## Phase 5/10 — Conversation history and account flows
+## Phase 5/10 — Image and file understanding
 
-**Goal:** Connect the UI to BobAI's existing persistence rather than introducing new storage.
+**Goal:** Let users work with useful files and images safely.
 
-- [ ] Load and render the authenticated user's real conversations.
-- [ ] Support opening a conversation and starting a new one.
-- [ ] Verify rename/delete actions only if they are backed by real endpoints and authorization checks.
-- [ ] Include useful loading, empty, unavailable, and error states.
-- [ ] Ensure conversation ownership is enforced server-side.
-- [ ] Confirm login, signup, logout, and expired-session states match existing authentication behavior.
-- [ ] Verify that refreshing or reopening a conversation does not silently create duplicates.
-- [ ] Avoid putting secrets, private prompts, or private conversation content into client logs.
+- [ ] Inventory currently supported file types and enforce the same list in UI and API.
+- [ ] Support image understanding through the selected hosted provider when available; retain optional local Ollama vision.
+- [ ] Add file attachment previews, upload progress, cancel/retry, and clear size/type errors.
+- [ ] Use OCR/text extraction only for appropriate formats and show when extraction fails.
+- [ ] Validate MIME type and file signature where possible; enforce size/page/pixel limits and request timeouts.
+- [ ] Prevent uploaded content from being treated as trusted instructions for agents.
+- [ ] Avoid retaining uploaded files longer than necessary; document retention behavior.
+- [ ] Test unsupported files, oversized files, corrupt images, malicious text, and provider outages.
 
-**Exit criteria:** Conversation navigation and account flows pass end-to-end tests using real persisted data.
+**Exit criteria:** Supported uploads work from selection to answer, with clear limits and no unsafe trust of file contents.
 
-## Phase 6/10 — Capability integration, not dashboard sprawl
+## Phase 6/10 — Research and source preferences
 
-**Goal:** Expose existing BobAI capabilities only when their user journey is complete.
+**Goal:** Deliver useful research with verifiable citations.
 
-- [ ] Connect optional local Ollama status to a truthful UI state: disabled, unavailable, ready, or error.
-- [ ] Provide local vision/image upload only when the matching API and validation are available.
-- [ ] Reuse existing file understanding, OCR, research, and memory pathways rather than copying AI-Glasses implementations.
-- [ ] Surface voice input/output only where the existing browser or backend integration works; request microphone permission explicitly.
-- [ ] Keep capability controls contextual to the chat or a focused settings page.
-- [ ] Do not add a separate JARVIS home screen, reactor visualization, or hardware-control panel.
-- [ ] Hide or clearly mark unavailable capabilities instead of rendering nonfunctional buttons.
-- [ ] Test capability failure, missing models, unavailable services, and offline behavior.
+- [ ] Audit the current research subsystem and identify the real search/fetch tools it can call.
+- [ ] Build a research flow that retrieves sources, summarizes them, and attaches links/citations to the claims they support.
+- [ ] Add source preferences such as official docs, academic sources, reputable news, and general web, but only where the backend can apply them.
+- [ ] Allow users to change source preferences per request and optionally set defaults.
+- [ ] Show source title, publisher/domain, date when available, and a direct link.
+- [ ] Separate sourced facts, interpretation, and uncertain claims.
+- [ ] Do not fabricate citations or claim live browsing when no retrieval occurred.
+- [ ] Add timeouts, source limits, deduplication, prompt-injection defenses, and graceful no-results behavior.
+- [ ] Test stale sources, conflicting sources, dead links, empty results, and citation/claim matching.
 
-**Exit criteria:** Every capability shown in the UI maps to a tested BobAI route or a clearly labelled, intentionally unavailable state.
+**Exit criteria:** Research results have working source links, source preferences affect retrieval, and the UI clearly communicates uncertainty.
 
-## Phase 7/10 — Settings, memory, and privacy UX
+## Phase 7/10 — Agents and safe actions
 
-**Goal:** Make important controls understandable without turning settings into a cockpit.
+**Goal:** Make agents useful without turning them into uncontrolled automation.
 
-- [ ] Keep one organized settings surface with only real, supported preferences.
-- [ ] Explain local model setup and whether a feature needs internet, a local service, or browser permission.
-- [ ] Reuse BobAI's existing memory store; show memory controls only when read/write/delete actions are supported and authorized.
-- [ ] Provide clear controls and feedback for clearing data where supported.
-- [ ] Use explicit permission prompts for microphone and file access; never enable sensitive capture silently.
-- [ ] Keep local Ollama requests loopback-only and disabled by default unless the user opts in.
-- [ ] Make privacy and data-handling explanations concise and accurate.
-- [ ] Remove device pairing, physical privacy-switch status, wake phrase, glasses microphone, and glasses camera settings from the website.
+- [ ] Define a small set of clear agent tasks before adding a general-purpose agent builder.
+- [ ] Use a bounded tool registry with explicit schemas, permission checks, timeouts, step limits, and execution logs.
+- [ ] Ask for confirmation before external side effects, spending money, sending messages, deleting data, or changing account settings.
+- [ ] Treat web pages, files, and tool output as untrusted input.
+- [ ] Add cancel/stop controls and a visible summary of actions performed.
+- [ ] Add per-user quotas and provider cost limits.
+- [ ] Keep agents from bypassing age-appropriate safety policies or service permissions.
+- [ ] Test prompt injection, tool errors, loops, timeouts, cancellation, and authorization boundaries.
 
-**Exit criteria:** Settings contain no dead controls, permissions are explicit, and privacy states match backend behavior.
+**Exit criteria:** Each agent has a defined scope, bounded execution, truthful progress, and confirmation for consequential actions.
 
-## Phase 8/10 — Accessibility, responsive polish, and performance
+## Phase 8/10 — Natural voice-to-voice
 
-**Goal:** Make the merged UI feel finished across common devices.
+**Goal:** Make speaking with BobAI feel conversational, not like a chain of awkward buttons.
 
-- [ ] Verify keyboard-only navigation, focus order, dialogs, menus, and composer shortcuts.
-- [ ] Add accessible labels and announcements for loading, streaming, errors, and status changes.
-- [ ] Verify readable contrast, text resizing, browser zoom, and reduced-motion behavior.
-- [ ] Test at common desktop, tablet, and phone widths.
-- [ ] Avoid expensive always-running background animations and decorative canvases.
-- [ ] Keep sidebar and conversation scrolling independent where appropriate.
-- [ ] Optimize image previews and large conversation rendering.
-- [ ] Check hydration warnings, console errors, layout shifts, and unnecessary re-renders.
+- [ ] Choose a practical speech-to-text and text-to-speech path based on quality, latency, privacy, language support, and cost.
+- [ ] Build a clear press-to-talk or explicitly enabled voice session; do not silently listen in the background.
+- [ ] Connect speech input to the same conversation/provider pipeline used by text chat.
+- [ ] Speak the answer with natural pacing and allow users to interrupt, stop, mute, or switch back to text.
+- [ ] Show microphone permission and recording state visibly.
+- [ ] Provide transcript text and allow correction when recognition is wrong.
+- [ ] Support language/voice selection only when the chosen service actually supports it.
+- [ ] Keep voice costs and third-party data processing transparent; use free/local options where practical.
+- [ ] Test permission denial, noisy input, silence, interruption, network loss, long responses, and mobile browsers.
 
-**Exit criteria:** No blocking accessibility issues, no major responsive breakage, and no known critical console/runtime errors in core journeys.
+**Exit criteria:** A user can speak, receive a spoken response, interrupt it, and continue the same conversation reliably with explicit microphone control.
 
-## Phase 9/10 — Security, regression, and release candidate
+## Phase 9/10 — Age-appropriate controls, privacy, and production security
 
-**Goal:** Prove the new UI did not break the existing application or weaken security.
+**Goal:** Build trust into the product from the beginning.
 
-- [ ] Run format/lint, TypeScript checks, unit tests, integration tests, and production build.
-- [ ] Add or update UI tests for sidebar, composer, streaming states, history, settings, uploads, and local-model states.
-- [ ] Verify auth boundaries and user-to-conversation ownership.
-- [ ] Verify upload size/type validation and safe rendering of untrusted text.
-- [ ] Confirm no secrets or real environment files are committed.
-- [ ] Run repository preflight and the dependency audit; remediate dependency advisories through reviewed, lockfile-consistent upgrades.
-- [ ] Test offline mode with required local models already downloaded; clearly identify features that still require the internet.
-- [ ] Compare baseline and candidate screenshots for accidental theme remnants or layout regressions.
-- [ ] Confirm only intended files changed and that the integration is on `main` without creating a new branch unless explicitly approved.
+- [ ] Define the intended age range and safety behavior with applicable platform rules and legal requirements in mind.
+- [ ] Implement age-appropriate content boundaries; do not add an unrestricted toggle intended to evade provider protections.
+- [ ] If age assurance or parental controls are needed, design them with privacy minimization and appropriate adult/legal guidance before collecting sensitive data.
+- [ ] Add a concise privacy page that accurately describes provider processing, storage, memory, uploads, and retention.
+- [ ] Provide account deletion and data export/deletion flows where feasible.
+- [ ] Verify auth, authorization, CSRF/CORS protections as applicable, rate limits, secret handling, secure cookies, and HTTPS.
+- [ ] Review dependency advisories and update vulnerable packages with a consistent lockfile and tests.
+- [ ] Avoid logging private prompts, access tokens, uploaded content, or voice recordings unnecessarily.
+- [ ] Test cross-user data access, injection attempts, abuse limits, and failure recovery.
 
-**Exit criteria:** Build, tests, preflight, and security checks pass, or every remaining failure is documented and explicitly accepted before release.
+**Exit criteria:** Security checks pass or documented blockers are fixed before public launch; age and privacy claims match real behavior.
 
-## Phase 10/10 — Production-ready release
+## Phase 10/10 — Domain, deployment, and production readiness
 
-**Goal:** Ship a maintainable, secure, dependable BobAI UI.
+**Goal:** Launch a dependable public website without overspending.
 
-- [ ] Verify production environment variables, database migrations, auth secrets, HTTPS, allowed origins, rate limits, and logging.
-- [ ] Run a staging deployment and smoke-test signup/login, new chat, streaming, conversation reload, uploads, settings, and error recovery.
-- [ ] Confirm optional local Ollama setup does not break deployments where Ollama is absent.
-- [ ] Add safe operational logging and health checks without recording sensitive conversation contents unnecessarily.
-- [ ] Verify backup/restore and database migration/rollback procedures.
-- [ ] Confirm privacy policy and terms reflect actual data flows and optional external services.
-- [ ] Run a final accessibility and responsive review.
-- [ ] Tag the release only after the production checks pass; document rollback instructions and known limitations.
-- [ ] Update this roadmap with the shipped commit, deployment URL, test evidence, and remaining non-blocking issues.
+- [ ] Compare current full first-year and renewal prices for a `.com` and `.ai` domain through reputable registrars. Do not decide based on promotional first-year pricing alone.
+- [ ] Keep the initial total budget around ₹2,000 INR; prefer free hosting/database tiers where suitable and do not enable paid model usage without explicit budget controls.
+- [ ] Choose a deployment target that supports the app's actual Next.js/API/database requirements; confirm free-tier limits before committing.
+- [ ] Configure DNS, HTTPS, environment secrets, database migrations, allowed origins, and production auth settings.
+- [ ] Configure health checks, useful privacy-safe logs, backups, and a restore/rollback plan.
+- [ ] Test signup/login, chat streaming, conversation reload, memory controls, file/image upload, research citations, agents, voice, and theme persistence in staging.
+- [ ] Test mobile layout, accessibility, performance, and both themes before launch.
+- [ ] Run build, lint/type checks, all relevant tests, repository preflight, dependency audit, and deployment smoke tests.
+- [ ] Add a status page or clear incident message if the service is unavailable.
+- [ ] Record the release commit, deployment URL, DNS notes, known limitations, and rollback instructions here.
 
-**Exit criteria:** The website is deployed, core journeys are smoke-tested in production, security/privacy configuration is reviewed, rollback is documented, and there are no known release-blocking defects.
+**Exit criteria:** Public HTTPS deployment works, core journeys are smoke-tested, spending is capped, backups/rollback are understood, and remaining issues are documented.
 
 ---
 
-## Definition of done for the UI merge
+## Budget guardrails (₹2,000 initial budget)
 
-- [ ] BobAI retains its familiar ChatGPT-like chat experience and conversation-first layout.
-- [ ] The useful AI-Glasses visual identity is reduced to a subtle dark/cyan visual language.
-- [ ] There is one theme and no theme selector.
-- [ ] Hardware-specific and duplicate prototype features are absent from the website UI.
-- [ ] Every visible control has a real, tested action.
-- [ ] Existing BobAI backend, auth, database, conversations, memory, research, and speech integrations remain the source of truth.
-- [ ] Desktop and mobile flows are accessible and responsive.
-- [ ] Build, tests, preflight, and dependency/security review have been completed and recorded.
+- **Domain:** purchase only after checking current .com and .ai renewal prices. A .ai domain may consume a large share of the budget.
+- **Hosting/database:** start with free tiers if they meet requirements, and verify quotas and sleep/usage limits.
+- **AI provider:** keep development usage on free credits/free tier where available, add hard usage limits, and never promise unlimited free AI.
+- **Voice:** prototype with browser or free/local components first; real-time hosted voice may incur recurring costs.
+- **Reserve:** keep some budget for renewals or unexpected setup costs.
+- **Rule:** no paid service is enabled by default without an explicit choice and clear cost information.
+
+## Release definition of done
+
+- [ ] Clean ChatGPT-style conversation-first UI, with working Light and Dark modes.
+- [ ] No sci-fi/HUD/robot/reactor decoration or unused alternate themes.
+- [ ] Hosted AI provider works without model training; optional local model remains optional.
+- [ ] Conversation persistence and memory are reliable and user-controlled.
+- [ ] Image/file understanding is validated and usable.
+- [ ] Research source preferences and citations work end to end.
+- [ ] Agent actions are bounded and require confirmation when consequential.
+- [ ] Voice-to-voice is interruptible and permission-driven.
+- [ ] Age-appropriate behavior and privacy/security claims are implemented, not just described.
+- [ ] Domain and deployment are live over HTTPS with spending safeguards.
+- [ ] Build, tests, accessibility checks, and security review are recorded.
 
 ## Change log
 
-- **2026-10-13:** Created the roadmap following the repository integration. Local Ollama chat and vision are already integrated into BobAI's backend. The AI-Glasses dashboard is documented as a design reference, not as a second application to copy wholesale. UI merge phases remain planned until implemented and verified.
-- **2026-10-13:** First UI pass committed to `main`: removed the legacy chat-rendering branch, locked the app to one dark/cyan theme by removing appearance/theme/accent controls, simplified the chat topbar and app shell, and replaced the multi-rail sidebar with a conversation-first sidebar containing new-chat, search, select, pin, rename, delete-confirmation, and settings navigation. This is an initial pass, not production-ready; build/test verification has not yet been confirmed for these UI commits, and remaining phases are still open.
-
-
-## UI cleanup update — 2026-10-13
-
-- [x] Removed the unused `NeuralScene.tsx`, `SceneEngine.tsx`, and `RobotIntro.tsx` sci-fi intro components from `main`.
-- [x] Removed decorative beams and particles from the root layout.
-- [x] Replaced cinematic/HUD-heavy global CSS with simple theme tokens, basic borders, and restrained transitions.
-- [x] Added a persistent light/dark theme provider and a visible toggle in the chat header.
-- [x] Updated the chat shell, header, and conversation sidebar for light and dark surfaces.
-- [ ] Verify light/dark styling across message content, composer, settings, and all other routes.
-- [ ] Run build, lint/type checks, and tests; fix any regressions before calling this production-ready.
-
-**Current status:** UI cleanup is committed to `main`, but the build and browser appearance have not yet been verified after these latest changes. The existing settings page and some message/composer components still contain fixed color classes and need a follow-up pass for complete light-mode consistency.
+- **2026-10-13:** Created a ten-phase roadmap for merging the AI-Glasses UI ideas into BobAI without importing the physical-device product.
+- **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
+- **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
