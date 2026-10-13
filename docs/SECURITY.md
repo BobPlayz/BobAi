@@ -55,3 +55,11 @@ Security practices for BobAI development and deployment.
 3. Preserve relevant audit information without copying sensitive data unnecessarily.
 4. Identify and patch the cause.
 5. Verify recovery and document follow-up actions.
+
+
+## Current review notes (2026-10-13)
+
+- Agent task instructions now explicitly treat repository/web/file/tool output as untrusted and require authorization for consequential side effects.
+- Stream cancellation is propagated to provider adapters; distributed rate limiting is configured to fail closed when its backing limiter is unavailable.
+- Upload format/size validation, research SSRF/prompt-injection controls, and account export/deletion are present in source but need the final adversarial and multi-user test pass.
+- No full penetration test, dependency audit, production configuration review, or deployed smoke test is certified yet. Keep paid AI disabled until provider-side cost limits and a budget owner are configured.
