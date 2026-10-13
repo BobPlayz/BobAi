@@ -187,7 +187,7 @@
 - [ ] Validate age-appropriate behavior across all model providers and tools; do not add an unrestricted toggle intended to evade provider protections.
 - [ ] If age assurance or parental controls are needed, design them with privacy minimization and appropriate adult/legal guidance before collecting sensitive data.
 - [ ] Add a concise privacy page that accurately describes provider processing, storage, memory, uploads, and retention.
-- [ ] Complete the account deletion journey for email-OTP-only accounts; the existing API deletion path still requires a current password.
+- [x] Add email-OTP reauthentication for account deletion, a visible confirmation flow, and scheduled permanent cleanup after the 30-day grace period. Build/test verification is pending.
 - [x] Add a user-facing account data export control backed by the authenticated export endpoint. Build/test verification is pending.
 - [ ] Verify auth, authorization, CSRF/CORS protections as applicable, rate limits, secret handling, secure cookies, and HTTPS.
 - [ ] Review dependency advisories and update vulnerable packages with a consistent lockfile and tests.
@@ -247,6 +247,7 @@
 - **2026-10-13:** Added the web lint step to CI, a visible chat-stream Stop control wired to `AbortController`, per-user stream rate limiting, and an age-appropriate server-side safety baseline. CI/test execution is being deferred until the implementation pass is complete, as requested.
 - **2026-10-13:** Added a dedicated MFA challenge step for quick-start sign-in when an account requires an authenticator. The profile name update now happens only after all sign-in checks pass; end-to-end verification is pending.
 - **2026-10-13:** Added a safe provider/model configuration status panel to Settings → About. It explicitly distinguishes configuration status from live availability and never displays provider secrets.
+- **2026-10-13:** Added email-OTP reauthentication and a clear confirmation flow for account deletion, plus a scheduled 30-day purge worker that preserves shared-workspace owners for manual resolution. Build/runtime verification remains pending.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
