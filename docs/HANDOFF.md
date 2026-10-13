@@ -60,6 +60,9 @@ All repository Markdown files were updated on 2026-10-13. The Markdown tree was 
 - Added Origin Productions as metadata/structured-data publisher and removed the unconfirmed `bobai.app` domain default from `.env.example`.
 - Updated AssistantHub voice mode to send the spoken/dictated prompt to the AI and speak the generated reply, with a Stop speech control. Browser permission and interruption behavior still need live testing.
 
+
+- Additional unverified work on this branch: AssistantHub now has separate Web Search and Deep Research modes, a hosted Image generation/editing mode with a one-image default, and AI voice replies with a stop control. Settings API now rejects old theme variants and no longer accepts a model-training opt-in setting. These changes are not yet build/test verified.
+
 ## What is not yet complete
 
 Do not infer completion from the green/checked items alone. The roadmap intentionally retains unchecked tasks that require implementation, actual configuration, or external access. High-priority work to continue:
