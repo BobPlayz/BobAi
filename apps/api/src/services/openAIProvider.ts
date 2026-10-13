@@ -146,7 +146,7 @@ export async function openAIStream(input: NativeMessage[], onToken: (token: stri
 export async function openAIImageAnalysis(imageDataUrl: string, prompt: string) {
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) throw new Error("Hosted image understanding is not configured.");
-  if (typeof imageDataUrl !== "string" || !/^data:image\\/(?:png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\\s]+$/i.test(imageDataUrl) || imageDataUrl.length > 2_800_000) throw new Error("Image must be a supported PNG, JPEG, or WebP data URL under 2 MB.");
+  if (typeof imageDataUrl !== "string" || !/^data:image\/(?:png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(imageDataUrl) || imageDataUrl.length > 2_800_000) throw new Error("Image must be a supported PNG, JPEG, or WebP data URL under 2 MB.");
   if (typeof prompt !== "string" || prompt.length > 8_000) throw new Error("Vision prompt is too long.");
   const body = JSON.stringify({ model: requestModel(), stream: false, max_tokens: 768, messages: [{ role: "user", content: [{ type: "text", text: prompt.trim() || "Describe this image and its relevant details." }, { type: "image_url", image_url: { url: imageDataUrl } }] }] });
   if (Buffer.byteLength(body) > MAX_REQUEST_BYTES) throw new Error("Image request is too large.");
