@@ -25,7 +25,7 @@ function loadLocalConversationUi(): Conversation[] {
   } catch { return []; }
 }
 export function useChat() {
-  const [conversations, setConversations] = useState<Conversation[]>([]); const [activeId, setActiveId] = useState(""); const [input, setInput] = useState(""); const [search, setSearch] = useState(""); const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null); const [settings, setSettings] = useState<ChatSettings>(loadSettings); const [uploadingFiles, setUploadingFiles] = useState<string[]>([]); const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}); const [serverReady, setServerReady] = useState(false); const [streaming, setStreaming] = useState(false); const activeStream = useRef<AbortController | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]); const [activeId, setActiveId] = useState(""); const [input, setInput] = useState(""); const [search, setSearch] = useState(""); const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null); const [settings, setSettings] = useState<ChatSettings>(loadSettings); const [uploadingFiles, setUploadingFiles] = useState<string[]>([]); const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}); const [serverReady, setServerReady] = useState(false); const [streaming, setStreaming] = useState(false); const activeStream = useRef<AbortController | null>(null); const uploadControllers = useRef(new Map<string, AbortController>());
   useEffect(() => {
     let cancelled = false;
     const localConversations = loadLocalConversationUi();
@@ -65,13 +65,17 @@ export function useChat() {
     let workingMessages = activeConversation.messages;
     try {
       for (const file of files) {
-        setUploadingFiles((prev) => [...prev, file.name]);
-        setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
+        const uploadKey = `${file.name}:${file.size}:${file.lastModified}`;
+        const uploadController = new AbortController();
+        uploadControllers.current.set(uploadKey, uploadController);
+        setUploadingFiles((prev) => [...prev, uploadKey]);
+        setUploadProgress((prev) => ({ ...prev, [uploadKey]: 0 }));
         try {
           if (file.type.startsWith("image/") && !["image/png", "image/jpeg", "image/webp"].includes(file.type.toLowerCase())) throw new Error("Image understanding currently supports PNG, JPEG, and WebP images.");
           if (file.type.startsWith("image/") && file.size > 1_000_000) throw new Error("For image understanding, attach an image smaller than 1 MB for now.");
-          const result = await uploadFile(file, (progress) => setUploadProgress((prev) => ({ ...prev, [file.name]: progress })));
+          const result = await uploadFile(file, (progress) => setUploadProgress((prev) => ({ ...prev, [uploadKey]: progress })), uploadController.signal);
           const fileData: ChatFile = { id: crypto.randomUUID(), name: result.name, type: result.type, text: result.text };
+          if (uploadController.signal.aborted) throw Object.assign(new Error("Upload cancelled."), { name: "AbortError" });
           if (file.type.startsWith("image/")) {
             const image: ChatImage = { id: crypto.randomUUID(), url: await readImageDataUrl(file), prompt: file.name };
             const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: "Please analyze this image: " + file.name, files: [fileData], images: [image] };
@@ -91,13 +95,15 @@ export function useChat() {
           workingMessages = [...nextMessages, assistantMessage];
           updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: workingMessages }));
         } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") continue;
           const message = error instanceof Error ? error.message : "The file could not be processed. Please try again.";
           const errorMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: message };
           workingMessages = [...workingMessages, errorMessage];
           updateConversation(activeId, (conversation) => ({ ...conversation, messages: [...conversation.messages, errorMessage] }));
         } finally {
-          setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
-          setUploadProgress((prev) => { const next = { ...prev }; delete next[file.name]; return next; });
+          uploadControllers.current.delete(uploadKey);
+          setUploadingFiles((prev) => prev.filter((name) => name !== uploadKey));
+          setUploadProgress((prev) => { const next = { ...prev }; delete next[uploadKey]; return next; });
         }
       }
     } finally { setLoadingConversationId(null); }
@@ -120,5 +126,6 @@ export function useChat() {
     } finally { setLoadingConversationId(null); }
   }
   function newChat() { const convo = createConversation(); setConversations((prev) => [convo, ...prev]); setActiveId(convo.id); setInput(""); } function togglePin(id: string) { const current = conversations.find((conversation) => conversation.id === id); if (!current) return; const pinned = !current.pinned; updateConversation(id, (c) => ({ ...c, pinned })); void updateRemoteConversation(id, { isPinned: pinned }).catch(() => undefined); } function togglePinMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) })); } function deleteMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.filter((m) => m.id !== messageId) })); } function renameConversation(id: string, title: string) { const next = title.trim().slice(0, 200); if (next) { updateConversation(id, (c) => ({ ...c, title: next })); void updateRemoteConversation(id, { title: next }).catch(() => undefined); } } function deleteConversation(id: string) { const target = conversations.find((conversation) => conversation.id === id); void deleteRemoteConversation(id).then(() => { setConversations((prev) => { const next = prev.filter((conversation) => conversation.id !== id); if (id === activeId) setActiveId(next[0]?.id || ""); return next; }); }).catch(() => { if (target) updateConversation(id, (conversation) => ({ ...conversation, messages: [...conversation.messages, { id: crypto.randomUUID(), role: "assistant", content: "This conversation could not be deleted from the server. Please try again." }] })); }); }
-  return { conversations, visibleConversations, activeConversation, activeId, setActiveId, input, setInput, search, setSearch, loading: Boolean(loadingConversationId), streaming, stop, uploadingFiles, uploadProgress, settings, setSettings, send, handleFiles, regenerateLastAssistant, newChat, togglePin, togglePinMessage, deleteMessage, renameConversation, deleteConversation };
+  function cancelUpload(uploadKey: string) { uploadControllers.current.get(uploadKey)?.abort(); }
+  return { conversations, visibleConversations, activeConversation, activeId, setActiveId, input, setInput, search, setSearch, loading: Boolean(loadingConversationId), streaming, stop, uploadingFiles, uploadProgress, cancelUpload, settings, setSettings, send, handleFiles, regenerateLastAssistant, newChat, togglePin, togglePinMessage, deleteMessage, renameConversation, deleteConversation };
 }
