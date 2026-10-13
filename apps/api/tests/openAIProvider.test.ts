@@ -1,6 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { openAIBaseUrl, openAIConfigured, openAIStatus } from "../src/services/openAIProvider.js";
+import { openAIBaseUrl, openAIChat, openAIConfigured, openAIStatus, openAIStream } from "../src/services/openAIProvider.js";
+
+const originalFetch = globalThis.fetch;
+const originalKey = process.env.OPENAI_API_KEY;
+const originalBase = process.env.BOBAI_OPENAI_BASE_URL;
+const originalModel = process.env.BOBAI_OPENAI_MODEL;
+
+function restoreEnvironment() {
+  globalThis.fetch = originalFetch;
+  if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey;
+  if (originalBase === undefined) delete process.env.BOBAI_OPENAI_BASE_URL; else process.env.BOBAI_OPENAI_BASE_URL = originalBase;
+  if (originalModel === undefined) delete process.env.BOBAI_OPENAI_MODEL; else process.env.BOBAI_OPENAI_MODEL = originalModel;
+}
 
 test("hosted provider accepts HTTPS endpoints and loopback HTTP for local-compatible servers", () => {
   assert.equal(openAIBaseUrl("https://api.openai.com/v1/"), "https://api.openai.com/v1");
@@ -20,7 +32,6 @@ test("hosted provider rejects insecure remote endpoints and URL credentials", ()
 });
 
 test("hosted provider is opt-in and reports missing credentials without exposing secrets", () => {
-  const previous = process.env.OPENAI_API_KEY;
   try {
     delete process.env.OPENAI_API_KEY;
     assert.equal(openAIConfigured(), false);
@@ -32,7 +43,82 @@ test("hosted provider is opt-in and reports missing credentials without exposing
     assert.equal(openAIStatus().ready, true);
     assert.equal(JSON.stringify(openAIStatus()).includes("test-key"), false);
   } finally {
-    if (previous === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = previous;
+    restoreEnvironment();
+  }
+});
+
+test("hosted chat sends the configured model and returns a valid answer", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    process.env.BOBAI_OPENAI_MODEL = "test-model";
+    globalThis.fetch = async (input, init) => {
+      assert.equal(String(input), "https://api.openai.com/v1/chat/completions");
+      assert.equal(init?.method, "POST");
+      assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-key");
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.model, "test-model");
+      assert.equal(body.stream, false);
+      return new Response(JSON.stringify({ choices: [{ message: { content: "  Hello from test  " } }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    const result = await openAIChat([{ role: "user", content: "Hello" }]);
+    assert.deepEqual(result, { content: "Hello from test", model: "test-model" });
+  } finally {
+    restoreEnvironment();
+  }
+});
+
+test("hosted chat turns quota and authentication failures into safe messages", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    globalThis.fetch = async () => new Response("private provider error details", { status: 429 });
+    await assert.rejects(openAIChat([{ role: "user", content: "Hello" }]), /rate limit or quota reached/);
+    globalThis.fetch = async () => new Response("private provider error details", { status: 401 });
+    await assert.rejects(openAIChat([{ role: "user", content: "Hello" }]), /authentication failed/);
+  } finally {
+    restoreEnvironment();
+  }
+});
+
+test("hosted chat rejects malformed and empty model responses", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    globalThis.fetch = async () => new Response("{not json", { status: 200 });
+    await assert.rejects(openAIChat([{ role: "user", content: "Hello" }]), /invalid JSON/);
+    globalThis.fetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: "  " } }] }), { status: 200 });
+    await assert.rejects(openAIChat([{ role: "user", content: "Hello" }]), /invalid or empty answer/);
+  } finally {
+    restoreEnvironment();
+  }
+});
+
+test("hosted streaming parses SSE chunks and returns the accumulated answer", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    globalThis.fetch = async () => new Response(
+      'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: {"choices":[{"delta":{"content":" world"}}]}\n\ndata: [DONE]\n\n',
+      { status: 200, headers: { "content-type": "text/event-stream" } },
+    );
+    const tokens: string[] = [];
+    const result = await openAIStream([{ role: "user", content: "Hello" }], (token) => tokens.push(token));
+    assert.equal(result.content, "Hello world");
+    assert.deepEqual(tokens, ["Hello", " world"]);
+  } finally {
+    restoreEnvironment();
+  }
+});
+
+test("hosted streaming rejects an empty answer", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    globalThis.fetch = async () => new Response("data: [DONE]\n\n", {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
+    });
+    await assert.rejects(openAIStream([{ role: "user", content: "Hello" }], () => undefined), /empty answer/);
+  } finally {
+    restoreEnvironment();
   }
 });
