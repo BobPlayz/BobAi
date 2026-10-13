@@ -81,7 +81,7 @@
 - [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage.
 - [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
-- [ ] Provide a model/provider settings area only for providers that are genuinely implemented.
+- [x] Show the configured model/provider status in Settings → About, without exposing secrets. The status is configuration-level and not a live-availability guarantee; build/runtime verification is pending.
 - [x] Add per-user rate limiting to the streamed AI chat endpoint. Build/runtime verification is pending.
 - [ ] Add hard provider-side monetary budgets and verify global cost/usage safeguards before enabling paid API calls.
 - [ ] Keep optional local Ollama as a separate opt-in path; do not require downloading a local model.
@@ -246,6 +246,7 @@
 - **2026-10-13:** Added saved-memory review, edit, individual-delete, and clear-all controls; added a user-facing account export control; and made the privacy page follow the selected theme. Build/runtime verification and account-specific end-to-end checks remain pending.
 - **2026-10-13:** Added the web lint step to CI, a visible chat-stream Stop control wired to `AbortController`, per-user stream rate limiting, and an age-appropriate server-side safety baseline. CI/test execution is being deferred until the implementation pass is complete, as requested.
 - **2026-10-13:** Added a dedicated MFA challenge step for quick-start sign-in when an account requires an authenticator. The profile name update now happens only after all sign-in checks pass; end-to-end verification is pending.
+- **2026-10-13:** Added a safe provider/model configuration status panel to Settings → About. It explicitly distinguishes configuration status from live availability and never displays provider secrets.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
