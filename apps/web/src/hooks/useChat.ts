@@ -72,7 +72,7 @@ export function useChat() {
           const nextMessages = [...current.messages, { id: crypto.randomUUID(), role: "user" as const, content: "", files: [fileData] }];
           updateConversation(activeId, (conversation) => ({ ...conversation, messages: nextMessages }));
           const filePrompt = "file content from " + result.name + ":\n\n" + result.text;
-          const response = await sendMessage([...nextMessages, { id: crypto.randomUUID(), role: "user", content: filePrompt }], settings.personality, undefined, settings.memory);
+          const response = await sendMessage([...nextMessages, { id: crypto.randomUUID(), role: "user", content: filePrompt }], settings.personality, undefined, settings.memory, activeId);
           updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: [...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: response.reply }] }));
         } catch (error) {
           const message = error instanceof Error ? error.message : "The file could not be processed. Please try again.";
@@ -93,7 +93,7 @@ export function useChat() {
     setLoadingConversationId(activeId);
     updateConversation(activeId, (conversation) => ({ ...conversation, messages: withoutAssistant }));
     try {
-      const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory);
+      const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory, activeId);
       const aiMessage = result.imagePrompt ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images) : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply };
       updateConversation(activeId, (conversation) => ({ ...conversation, title: result.title || conversation.title, messages: [...withoutAssistant, aiMessage] }));
     } catch (error) {
