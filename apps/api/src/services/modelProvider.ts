@@ -12,6 +12,7 @@ const PRODUCTION_MODEL = "bob-production";
 function selectedModel(provider: "bob" | "coding", modelOverride?: string) {
   const env = provider === "bob" ? process.env.BOBAI_MODEL_NAME : process.env.BOBAI_CODING_MODEL_NAME;
   const selectedProvider = process.env.BOBAI_PROVIDER?.trim().toLowerCase();
+  if (process.env.NODE_ENV === "production" && selectedProvider === "openai" && modelOverride && modelOverride !== OPENAI_MODEL_ID) throw new Error("Only the configured hosted provider is available in production");
   const requested = (modelOverride || (selectedProvider === "openai" ? OPENAI_MODEL_ID : env) || "").trim();
   const model = requested || (productionModelConfigured() ? PRODUCTION_MODEL : TINY_MODEL);
   if (![TINY_MODEL, PRODUCTION_MODEL, OPENAI_MODEL_ID].includes(model)) throw new Error(`unsupported model: ${model}`);
