@@ -67,6 +67,7 @@ export function useChat() {
         setUploadingFiles((prev) => [...prev, file.name]);
         setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
         try {
+          if (file.type.startsWith("image/") && !["image/png", "image/jpeg", "image/webp"].includes(file.type.toLowerCase())) throw new Error("Image understanding currently supports PNG, JPEG, and WebP images.");
           if (file.type.startsWith("image/") && file.size > 1_000_000) throw new Error("For image understanding, attach an image smaller than 1 MB for now.");
           const result = await uploadFile(file, (progress) => setUploadProgress((prev) => ({ ...prev, [file.name]: progress })));
           const fileData: ChatFile = { id: crypto.randomUUID(), name: result.name, type: result.type, text: result.text };
