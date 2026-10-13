@@ -22,3 +22,8 @@ In development, OTP codes are logged by the API if SMTP is not configured. This 
 - Email verification proves control of an inbox, not a person's legal identity.
 - Before public launch, review the privacy/terms text and age-appropriate requirements with a responsible adult/legal adviser. Do not collect more personal information than necessary.
 - Do not commit real SMTP credentials, database URLs, or AI provider keys.
+
+
+## Handoff status
+
+The quick-start flow and the broader account/session behavior are implemented in source but still require the final build/test and end-to-end verification pass. In particular verify existing users, expired/used codes, throttling, SMTP delivery, refresh/sign-out, secure cookies, terms-version mismatch, MFA-required accounts, and account deletion reauthentication. Do not bypass MFA to simplify the onboarding path.
