@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
-import { clearMemories, deleteMemory, exportAccountData, listMemories, updateMemory } from "@/lib/api";
+import { clearMemories, deleteMemory, exportAccountData, getModelStatus, listMemories, updateMemory } from "@/lib/api";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
@@ -47,8 +47,22 @@ export default function SettingsPage() {
   const [memoryEditContent, setMemoryEditContent] = useState("");
   const [exportBusy, setExportBusy] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
+  const [providerStatus, setProviderStatus] = useState<{ ready?: boolean; provider?: string; model?: string; modelId?: string; error?: string } | null>(null);
+  const [providerStatusError, setProviderStatusError] = useState("");
 
   useEffect(() => setSettings(readSettings()), []);
+
+  useEffect(() => {
+    if (tab !== "about") return;
+    let cancelled = false;
+    setProviderStatusError("");
+    void getModelStatus().then((status) => {
+      if (!cancelled) setProviderStatus(status);
+    }).catch((error: unknown) => {
+      if (!cancelled) setProviderStatusError(error instanceof Error ? error.message : "Provider status is unavailable.");
+    });
+    return () => { cancelled = true; };
+  }, [tab]);
 
   useEffect(() => {
     if (tab !== "memory") return;
@@ -328,6 +342,17 @@ export default function SettingsPage() {
               <div className={`mt-5 rounded-xl border p-4 text-sm ${colors.field}`}>
                 <div className="font-medium">Current appearance</div>
                 <div className={`mt-1 ${colors.muted}`}>{light ? "Light mode" : "Dark mode"} · saved in this browser</div>
+              </div>
+              <div className={`mt-4 rounded-xl border p-4 text-sm ${colors.field}`}>
+                <div className="font-medium">Configured AI provider</div>
+                {providerStatus ? (
+                  <>
+                    <div className={`mt-2 ${colors.muted}`}>Provider: {providerStatus.provider || "reported by API"}</div>
+                    <div className={`mt-1 ${colors.muted}`}>Model: {providerStatus.model || providerStatus.modelId || "not reported"}</div>
+                    <div className={`mt-1 ${providerStatus.ready ? "text-emerald-600" : "text-amber-600"}`}>{providerStatus.ready ? "Ready" : providerStatus.error || "Not ready"}</div>
+                  </>
+                ) : <p className={`mt-2 ${colors.muted}`}>{providerStatusError || "Checking provider status…"}</p>}
+                <p className={`mt-2 text-xs ${colors.muted}`}>This reports server configuration only. It does not guarantee live provider availability or disclose API keys.</p>
               </div>
             </section>
           )}
