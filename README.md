@@ -12,7 +12,7 @@ The idea is to bring a bunch of useful AI features into one project: model provi
 - **An API** and optional supporting services
 - **Self-hosting support**, so you can run your own instance
 
-Not every feature works without extra setup. Some need provider credentials, a database, or local services.
+Not every feature works without extra setup. Some need provider credentials, a database, or local services. The hosted chat provider is opt-in and can incur usage charges.
 
 ## Getting started
 
@@ -66,6 +66,10 @@ BobAI is a personal project that I'm growing over time. Suggestions, bug reports
 ## License
 
 Check the repository's license information for the current terms.
+
+## Hosted chat provider
+
+BobAI can use an existing OpenAI-compatible chat API. This does not train a model. Configure `BOBAI_PROVIDER=openai` and `OPENAI_API_KEY` in the private API environment, then restart the API. Never expose the key to browser code. Hosted usage may cost money, so set provider-side usage limits first. See [the hosted AI guide](docs/HOSTED_AI.md).
 
 ## Optional local AI
 
