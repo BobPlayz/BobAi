@@ -4,8 +4,6 @@ import NeuralShell from "@/components/neural/NeuralShell";
 import NeuralSidebar from "@/components/neural/NeuralSidebar";
 import NeuralTopbar from "@/components/neural/NeuralTopbar";
 import NeuralComposer from "@/components/neural/NeuralComposer";
-import ChatWindow from "@/components/ChatWindow";
-import ChatInput from "@/components/ChatInput";
 import { useChat } from "@/hooks/useChat";
 
 export default function ChatPage() {
