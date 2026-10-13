@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import BobLogo from "@/components/BobLogo";
 import { getPendingVerificationEmail, requestQuickStart, verifyQuickStart } from "@/lib/auth";
 
-const EMAIL_PATTERN = /^\\S+@\\S+\\.\\S+$/;
+const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const TERMS_VERSION = process.env.NEXT_PUBLIC_TERMS_VERSION || "2026-10-13";
 
 export default function LoginPage() {
@@ -33,7 +33,7 @@ export default function LoginPage() {
     event.preventDefault();
     setError("");
     setNotice("");
-    const cleanName = name.trim().replace(/\\s+/g, " ");
+    const cleanName = name.trim().replace(/\s+/g, " ");
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanName || cleanName.length > 80) return setError("Enter a name of up to 80 characters.");
     if (!EMAIL_PATTERN.test(cleanEmail)) return setError("Enter a valid email address.");
@@ -53,7 +53,7 @@ export default function LoginPage() {
     setError("");
     setNotice("");
     const cleanEmail = email.trim().toLowerCase();
-    if (!EMAIL_PATTERN.test(cleanEmail) || !/^\\d{6}$/.test(code.trim())) return setError("Enter the email address and its 6-digit code.");
+    if (!EMAIL_PATTERN.test(cleanEmail) || !/^\d{6}$/.test(code.trim())) return setError("Enter the email address and its 6-digit code.");
     setLoading(true);
     const result = await verifyQuickStart(cleanEmail, code.trim());
     setLoading(false);
@@ -95,7 +95,7 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={submitCode} className="mt-6 space-y-4">
             <label className="block text-sm text-white/75">6-digit email code
-              <input value={code} onChange={(event) => setCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
+              <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
             </label>
             <button disabled={loading || code.length !== 6} className="h-12 w-full rounded-xl bg-cyan-300 font-semibold text-black transition hover:bg-cyan-200 disabled:opacity-50">
               {loading ? "Verifying…" : "Verify and continue"}
