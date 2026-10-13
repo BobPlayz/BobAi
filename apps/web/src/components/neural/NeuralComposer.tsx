@@ -53,7 +53,7 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
             <label className={`flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium transition ${light ? "border-[#e5e7eb] bg-[#f9fafb] hover:bg-[#f3f4f6]" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"}`}>
               <Paperclip className="h-3.5 w-3.5" />
               Attach
-              <input type="file" multiple className="sr-only" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
+              <input type="file" multiple accept=".pdf,.txt,.md,.csv,.html,.css,.js,.xml,.png,.jpg,.jpeg,.webp" className="sr-only" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
             </label>
             <VoiceButton onTranscript={(text) => setInput(text)} disabled={disabled} />
           </div>
