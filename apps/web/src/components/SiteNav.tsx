@@ -7,7 +7,6 @@ const links = [
   ["About", "/about"],
   ["FAQ", "/faq"],
   ["Contact", "/contact"],
-  ["Waitlist", "/waitlist"],
   ["Privacy", "/privacy"],
   ["Terms", "/terms"],
 ] as const;
