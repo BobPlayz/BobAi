@@ -138,7 +138,7 @@
 - [ ] Build a research flow that retrieves sources, summarizes them, and attaches links/citations to the claims they support.
 - [ ] Add source preferences such as official docs, academic sources, reputable news, and general web, but only where the backend can apply them.
 - [x] Allow users to choose official/government, academic/research, reputable-news, or broad-web sources per Deep Research request; the preference is passed to search query construction and result filtering. Build/test verification is still pending.
-- [ ] Add optional saved defaults for research source preferences.
+- [x] Add optional saved research source defaults in Settings; individual Deep Research requests can override them. Build/runtime verification is pending.
 - [x] Show research source titles and direct clickable links in the research panel, with source snippets and publication dates when available. Build/runtime verification is pending.
 - [ ] Separate sourced facts, interpretation, and uncertain claims.
 - [ ] Do not fabricate citations or claim live browsing when no retrieval occurred.
