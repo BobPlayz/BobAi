@@ -63,3 +63,9 @@ Security practices for BobAI development and deployment.
 - Stream cancellation is propagated to provider adapters; distributed rate limiting is configured to fail closed when its backing limiter is unavailable.
 - Upload format/size validation, research SSRF/prompt-injection controls, and account export/deletion are present in source but need the final adversarial and multi-user test pass.
 - No full penetration test, dependency audit, production configuration review, or deployed smoke test is certified yet. Keep paid AI disabled until provider-side cost limits and a budget owner are configured.
+
+## Temporary dependency audit exception
+
+As of 2026-10-13, the full development dependency tree includes GHSA-vfj7-8cjw-p6xm (CVE-2026-93687) through `braces` and the Next.js ESLint/glob tooling chain. The advisory currently lists no patched `braces` version, and npm's suggested forced fix downgrades Next.js ESLint tooling across a major version. Do not run `npm audit fix --force` for this finding.
+
+The CI audit script requires the production dependency audit to pass with no high or critical findings, then permits only this exact high-severity advisory for the named development-tooling chain. Any other high/critical finding fails CI. The exception expires **2026-11-13** and must be re-reviewed or removed sooner if upstream publishes a fix. It is not a waiver for production dependencies.
