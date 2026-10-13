@@ -11,7 +11,7 @@ function queryTerms(query: string) { return [...new Set(query.toLowerCase().spli
 function rankSources(query: string, sources: ResearchSource[]) { const terms = queryTerms(query); return sources.map((source) => { const text = `${source.title} ${source.snippet || ""}`.toLowerCase(); const matched = terms.reduce((count, term) => count + (text.includes(term) ? 1 : 0), 0); const relevance = terms.length ? matched / terms.length : 0; let freshness = 0; if (source.publishedAt) { const timestamp = Date.parse(source.publishedAt); if (Number.isFinite(timestamp)) freshness = Math.max(0, 1 - Math.min(1, Math.abs(Date.now() - timestamp) / (365 * 24 * 60 * 60 * 1000))); } let credibility = { score: 0.45, credibility: "low" as ResearchSource["credibility"] }; try { credibility = domainCredibility(new URL(source.url).hostname); } catch {} const score = Number((relevance * 0.55 + freshness * 0.15 + credibility.score * 0.30).toFixed(4)); return { ...source, score, credibility: credibility.credibility }; }).sort((a, b) => (b.score || 0) - (a.score || 0)); }
 type ResearchSourceType = "official" | "academic" | "news" | "general";
 const SOURCE_TYPES = new Set<ResearchSourceType>(["official", "academic", "news", "general"]);
-function sourceTypesFrom(options: Record<string, unknown>): ResearchSourceType[] {
+export function sourceTypesFrom(options: Record<string, unknown>): ResearchSourceType[] {
   const value = options.sourceTypes;
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter((item): item is ResearchSourceType => typeof item === "string" && SOURCE_TYPES.has(item as ResearchSourceType)))];
@@ -20,7 +20,7 @@ function hostnameFor(source: ResearchSource) {
   try { return new URL(source.url).hostname.toLowerCase().replace(/^www\\./, ""); }
   catch { return ""; }
 }
-function matchesSourceTypes(source: ResearchSource, types: ResearchSourceType[]) {
+export function matchesSourceTypes(source: ResearchSource, types: ResearchSourceType[]) {
   if (!types.length || types.includes("general")) return true;
   const host = hostnameFor(source);
   if (!host) return false;
@@ -29,7 +29,7 @@ function matchesSourceTypes(source: ResearchSource, types: ResearchSourceType[])
   const news = /(^|\\.)(reuters\\.com|apnews\\.com|bbc\\.com|theguardian\\.com|indianexpress\\.com|thehindu\\.com|ndtv\\.com|aljazeera\\.com)$/.test(host);
   return (types.includes("official") && official) || (types.includes("academic") && academic) || (types.includes("news") && news);
 }
-function sourceSearchQuery(query: string, types: ResearchSourceType[]) {
+export function sourceSearchQuery(query: string, types: ResearchSourceType[]) {
   if (!types.length || types.includes("general")) return query;
   const domains = new Set<string>();
   if (types.includes("official")) [".gov", ".gov.in", ".nic.in", ".int"].forEach((value) => domains.add(value));
