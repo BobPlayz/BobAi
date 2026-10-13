@@ -7,6 +7,7 @@ const source = (url: string): ResearchSource => ({ title: "Example", url });
 test("research source preferences normalize supported values and ignore invalid entries", () => {
   assert.deepEqual(sourceTypesFrom({ sourceTypes: ["official", "news", "official", "unknown", 12] }), ["official", "news"]);
   assert.deepEqual(sourceTypesFrom({ sourceTypes: "official" }), []);
+  assert.deepEqual(sourceTypesFrom({ sourceTypes: ["official", "general"] }), ["general"]);
 });
 
 test("official source preference matches government domains", () => {
