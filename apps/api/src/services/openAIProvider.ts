@@ -184,7 +184,7 @@ export async function openAIImageGenerate(prompt: string, count = 1, inputImages
       form.set("prompt", prompt.trim());
       form.set("size", "1024x1024");
       form.set("quality", "low");
-      for (const image of images) form.append("image[]", new Blob([image.bytes], { type: `image/${image.mime}` }), image.name);
+      for (const image of images) form.append("image[]", new Blob([image.bytes.buffer.slice(image.bytes.byteOffset, image.bytes.byteOffset + image.bytes.byteLength) as ArrayBuffer], { type: `image/${image.mime}` }), image.name);
       response = await fetch(`${openAIBaseUrl()}/images/edits`, {
         method: "POST",
         headers: { authorization: `Bearer ${key}` },
