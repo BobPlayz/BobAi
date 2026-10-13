@@ -1,14 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo } from "react";
 
-export type BobTheme =
-  | "legacy"
-  | "dark"
-  | "light"
-  | "futuristic"
-  | "anime"
-  | "glass";
+export type BobTheme = "dark";
 
 type ThemeContextType = {
   theme: BobTheme;
@@ -19,49 +13,16 @@ type ThemeContextType = {
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
-const STORAGE_KEY = "bobai-theme";
-const ACCENT_KEY = "bobai-accent";
-const THEMES: BobTheme[] = ["legacy", "dark", "light", "futuristic", "anime", "glass"];
-const isTheme = (value: string | null): value is BobTheme => value !== null && THEMES.includes(value as BobTheme);
+const FIXED_ACCENT = "#38bdf8";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<BobTheme>("dark");
-  const [accent, setAccentState] = useState("#38bdf8");
-
-  useEffect(() => {
-    const storedTheme = localStorage.getItem(STORAGE_KEY);
-    const storedAccent = localStorage.getItem(ACCENT_KEY);
-
-    // The neural chat shell is currently a dark-first interface. Older builds could
-    // leave a light/glass value behind, which made the chat content white-on-white.
-    // Normalize those stale values so an existing install opens correctly.
-    if (storedTheme === "light" || storedTheme === "glass") {
-      setThemeState("dark");
-      localStorage.setItem(STORAGE_KEY, "dark");
-    } else if (isTheme(storedTheme)) {
-      setThemeState(storedTheme);
-    }
-
-    if (storedAccent && /^#[0-9a-f]{6}$/i.test(storedAccent)) {
-      setAccentState(storedAccent);
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.setProperty("--accent", accent);
-    document.documentElement.style.setProperty("--accent-2", accent);
-    localStorage.setItem(STORAGE_KEY, theme);
-    localStorage.setItem(ACCENT_KEY, accent);
-  }, [accent, theme]);
-
   const value = useMemo<ThemeContextType>(() => ({
-    theme,
-    setTheme: setThemeState,
-    accent,
-    setAccent: setAccentState,
-    cycleTheme: () => setThemeState((current) => THEMES[(THEMES.indexOf(current) + 1) % THEMES.length]),
-  }), [accent, theme]);
+    theme: "dark",
+    setTheme: () => undefined,
+    accent: FIXED_ACCENT,
+    setAccent: () => undefined,
+    cycleTheme: () => undefined,
+  }), []);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
