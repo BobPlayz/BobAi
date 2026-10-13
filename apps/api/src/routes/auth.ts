@@ -62,10 +62,10 @@ router.post("/quick-start/verify", async (req, res) => {
     if (!await verifyEmailOtp(address, code, "verification")) return res.status(401).json({ error: "invalid or expired code" });
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, address)).limit(1);
     if (!user) return res.status(401).json({ error: "account could not be verified" });
-    await db.update(users).set({ displayName, updatedAt: new Date() }).where(eq(users.id, user.id));
     const session = await loginWithEmailOtp(user.id, { userAgent: req.get("user-agent") });
     if (!session) return res.status(401).json({ error: "account is unavailable" });
     if ("mfaRequired" in session) return res.json({ mfaRequired: true, challengeToken: session.challengeToken, expiresInSeconds: 300 });
+    await db.update(users).set({ displayName, updatedAt: new Date() }).where(eq(users.id, user.id));
     setSessionCookies(res, session);
     return res.json({ expiresIn: session.expiresIn });
   } catch (error) {
