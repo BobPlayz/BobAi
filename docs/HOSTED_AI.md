@@ -20,7 +20,7 @@ Default model: `gpt-4o-mini`. Verify current provider pricing, data-use terms, m
 - Provider errors are returned as bounded error messages. The API key is not included in status output or error messages.
 - This adapter does not create a hard monetary budget. Set provider-side spending/rate limits before using a paid key.
 - Requests sent to a hosted provider leave the local machine and are subject to that provider's data-processing terms.
-- Use the optional Ollama path instead when local inference is required and the hardware can handle it.
+- Ollama is not a supported option in the public-beta branch. Do not expose or document a local-model fallback.
 
 ## Quick configuration example
 
