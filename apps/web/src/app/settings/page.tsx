@@ -99,7 +99,7 @@ export default function SettingsPage() {
   }
 
   async function deleteAccount() {
-    if (!/^\\d{6}$/.test(deleteCode)) {
+    if (!/^\d{6}$/.test(deleteCode)) {
       setDeleteMessage("Enter the 6-digit code sent to your email.");
       return;
     }
@@ -303,7 +303,7 @@ export default function SettingsPage() {
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Verify your email with a one-time code to schedule account deletion. Your account is disabled immediately; permanent deletion is scheduled after a 30-day grace period. This does not replace any legally required data-retention obligations.</p>
                 <button type="button" onClick={() => void sendDeletionCode()} disabled={deleteBusy} className="mt-3 rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-600 disabled:opacity-40">{deleteBusy ? "Please wait…" : "Email me a deletion code"}</button>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <input value={deleteCode} onChange={(event) => setDeleteCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" aria-label="Account deletion email code" className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${colors.field}`} />
+                  <input value={deleteCode} onChange={(event) => setDeleteCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" aria-label="Account deletion email code" className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${colors.field}`} />
                   <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">Confirm deletion</button>
                 </div>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
