@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { db, uploads } from "@bobai/db";
 import { deleteObject } from "./objectStorage.js";
 export async function purgeUserOwnedData(userId: string) {
-  const files = await db.select({ storageKey: uploads.storageKey }).from(uploads).where(sql`uploaded_by = ${userId}`); for (const file of files) await deleteObject(file.storageKey).catch(() => undefined);
+  const files = await db.select({ storageKey: uploads.storageKey }).from(uploads).where(sql`uploaded_by = ${userId}`); for (const file of files) await deleteObject(file.storageKey);
   await db.transaction(async (tx) => {
     await tx.execute(sql`DELETE FROM webhook_deliveries WHERE webhook_id IN (SELECT id FROM webhooks WHERE created_by = ${userId})`); await tx.execute(sql`DELETE FROM webhook_deliveries WHERE workspace_id IN (SELECT id FROM workspaces WHERE owner_id = ${userId} AND type = 'personal')`); await tx.execute(sql`DELETE FROM webhooks WHERE created_by = ${userId}`);
     await tx.execute(sql`DELETE FROM file_shares WHERE shared_with_user_id = ${userId} OR created_by = ${userId} OR workspace_id IN (SELECT id FROM workspaces WHERE owner_id = ${userId} AND type = 'personal')`); await tx.execute(sql`DELETE FROM workspace_invitations WHERE invited_by = ${userId} OR email = (SELECT email FROM users WHERE id = ${userId}) OR workspace_id IN (SELECT id FROM workspaces WHERE owner_id = ${userId} AND type = 'personal')`);
