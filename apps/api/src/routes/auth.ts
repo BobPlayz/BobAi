@@ -64,7 +64,7 @@ router.post("/quick-start/verify", async (req, res) => {
     if (!user) return res.status(401).json({ error: "account could not be verified" });
     const session = await loginWithEmailOtp(user.id, { userAgent: req.get("user-agent") });
     if (!session) return res.status(401).json({ error: "account is unavailable" });
-    if ("mfaRequired" in session) return res.status(409).json({ error: "this account has additional MFA enabled; use the existing sign-in flow to complete verification" });
+    if ("mfaRequired" in session) return res.json({ mfaRequired: true, challengeToken: session.challengeToken, expiresInSeconds: 300 });
     setSessionCookies(res, session);
     return res.json({ expiresIn: session.expiresIn });
   } catch (error) {
