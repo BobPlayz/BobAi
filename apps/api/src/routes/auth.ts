@@ -32,7 +32,7 @@ router.post("/quick-start/request", async (req, res) => {
   const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const termsAccepted = req.body?.termsAccepted === true;
   const termsVersion = typeof req.body?.termsVersion === "string" ? req.body.termsVersion : "";
-  const requiredTermsVersion = process.env.BOBAI_TERMS_VERSION;
+  const requiredTermsVersion = process.env.BOBAI_TERMS_VERSION?.trim() || "2026-10-13";
   if (displayName.length < 1 || displayName.length > 80 || !email.test(address)) return res.status(400).json({ error: "enter a name and valid email address" });
   if (!termsAccepted || !/^\\d{4}-\\d{2}-\\d{2}$/.test(termsVersion) || (requiredTermsVersion && termsVersion !== requiredTermsVersion)) return res.status(400).json({ error: "acceptance of the current Terms of Service and Privacy Policy is required" });
   if (limited(req, `quick-start-request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many code requests", retryAfterSeconds: 900 });
@@ -45,7 +45,6 @@ router.post("/quick-start/request", async (req, res) => {
       const created = await createUser(address, usernameValue, randomPassword, { termsAccepted: true, termsVersion });
       user = { id: created.id, email: created.email };
     }
-    await db.update(users).set({ displayName, updatedAt: new Date() }).where(eq(users.id, user.id));
     await requestEmailOtp(address, "verification");
     return res.status(202).json({ message: "If this email can be used, a verification code has been sent.", email: address });
   } catch (error) {
@@ -56,12 +55,14 @@ router.post("/quick-start/request", async (req, res) => {
 router.post("/quick-start/verify", async (req, res) => {
   const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
-  if (!email.test(address) || !/^\\d{6}$/.test(code)) return res.status(400).json({ error: "enter a valid email and 6-digit code" });
+  const displayName = typeof req.body?.name === "string" ? req.body.name.trim().replace(/\s+/g, " ").slice(0, 80) : "";
+  if (!email.test(address) || !/^\\d{6}$/.test(code) || !displayName) return res.status(400).json({ error: "enter your name, valid email, and 6-digit code" });
   if (limited(req, `quick-start-verify:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many code attempts", retryAfterSeconds: 900 });
   try {
     if (!await verifyEmailOtp(address, code, "verification")) return res.status(401).json({ error: "invalid or expired code" });
     const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, address)).limit(1);
     if (!user) return res.status(401).json({ error: "account could not be verified" });
+    await db.update(users).set({ displayName, updatedAt: new Date() }).where(eq(users.id, user.id));
     const session = await loginWithEmailOtp(user.id, { userAgent: req.get("user-agent") });
     if (!session) return res.status(401).json({ error: "account is unavailable" });
     if ("mfaRequired" in session) return res.status(409).json({ error: "this account has an additional authenticator requirement; use an administrator-assisted recovery or the existing MFA sign-in flow" });
