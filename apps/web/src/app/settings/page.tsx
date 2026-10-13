@@ -10,23 +10,25 @@ import { logout } from "@/lib/auth";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
-type SettingsState = { personality: string; memory: boolean };
-type Tab = "personalization" | "privacy" | "memory" | "about";
+type SettingsState = { personality: string; memory: boolean; sourceTypes: string[] };
+type Tab = "personalization" | "privacy" | "memory" | "research" | "about";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "personalization", label: "Personalization" },
   { id: "privacy", label: "Privacy" },
   { id: "memory", label: "Memory" },
+  { id: "research", label: "Research sources" },
   { id: "about", label: "About" },
 ];
 
 function readSettings(): SettingsState {
-  const defaults: SettingsState = { personality: "", memory: true };
+  const defaults: SettingsState = { personality: "", memory: true, sourceTypes: ["general"] };
   try {
     const value = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) || "{}") as Partial<SettingsState>;
     return {
       personality: typeof value.personality === "string" ? value.personality.slice(0, 12000) : defaults.personality,
       memory: value.memory !== false,
+      sourceTypes: Array.isArray(value.sourceTypes) ? [...new Set(value.sourceTypes.filter((item): item is string => typeof item === "string" && ["official", "academic", "news", "general"].includes(item)))].slice(0, 4) : defaults.sourceTypes,
     };
   } catch {
     return defaults;
@@ -38,7 +40,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const light = theme === "light";
   const [tab, setTab] = useState<Tab>("personalization");
-  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true });
+  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"] });
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [memories, setMemories] = useState<Array<Record<string, unknown>>>([]);
@@ -382,6 +384,29 @@ export default function SettingsPage() {
                 )}
               </section>
             </div>
+          )}
+
+          {tab === "research" && (
+            <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
+              <h2 className="text-base font-semibold">Default research sources</h2>
+              <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Choose the default source types for Deep Research. You can change these for an individual request in the research panel. If you clear every option, BobAI searches broadly.</p>
+              <div className="mt-4 space-y-3">
+                {([["official", "Official and government sources", "Government and official institutional sites"], ["academic", "Academic and research sources", "Universities, research archives, and selected journals"], ["news", "Reputable news sources", "Selected news publishers"], ["general", "All web sources", "Do not restrict search to a source category"]] as const).map(([value, label, description]) => (
+                  <label key={value} className={`flex items-start gap-3 rounded-xl border p-4 ${colors.field}`}>
+                    <input
+                      type="checkbox"
+                      checked={settings.sourceTypes.includes(value)}
+                      onChange={(event) => update("sourceTypes", value === "general" ? (event.target.checked ? ["general"] : []) : event.target.checked ? [...new Set([...settings.sourceTypes.filter((item) => item !== "general"), value])] : settings.sourceTypes.filter((item) => item !== "general" && item !== value))}
+                      className="mt-1 size-4 accent-sky-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">{label}</span>
+                      <span className={`mt-1 block text-xs leading-5 ${colors.muted}`}>{description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </section>
           )}
 
           {tab === "about" && (
