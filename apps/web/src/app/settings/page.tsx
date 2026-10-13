@@ -292,7 +292,7 @@ export default function SettingsPage() {
                 <li>Chat requests are sent to the BobAI API configured for this installation. The model provider depends on that server’s configuration.</li>
                 <li>Your response-style and memory preferences are stored in this browser’s local storage.</li>
                 <li>Do not enter secrets into chat or personalization instructions.</li>
-                <li>Use sign-out from the account controls provided by your installation. This page does not pretend to delete server data.</li>
+                <li>Use the export and account-deletion controls below for server-side account data. Account deletion has a 30-day grace period; per-category automatic retention controls are not available yet.</li>
               </ul>
               <div className={`mt-5 rounded-xl border p-4 ${colors.field}`}>
                 <h3 className="text-sm font-medium">Your account data</h3>
