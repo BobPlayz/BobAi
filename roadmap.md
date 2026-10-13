@@ -106,8 +106,7 @@
 - [ ] Ensure refresh/reopen does not duplicate conversations or lose messages.
 - [ ] Add clear empty, loading, offline, and failure states.
 - [ ] Decide and document what “memory” means: saved user facts, conversation retrieval, or both.
-- [x] Add user-visible memory review and deletion controls backed by authenticated database operations.
-- [ ] Add user-visible memory editing controls backed by authenticated database operations.
+- [x] Add user-visible memory review, editing, individual deletion, and clear-all controls backed by authenticated database operations. Build/test verification is pending.
 - [ ] Make memory opt-in or clearly configurable, and explain what is stored and why.
 - [ ] Test user isolation and authorization for every conversation and memory endpoint.
 
@@ -184,7 +183,8 @@
 - [ ] Implement age-appropriate content boundaries; do not add an unrestricted toggle intended to evade provider protections.
 - [ ] If age assurance or parental controls are needed, design them with privacy minimization and appropriate adult/legal guidance before collecting sensitive data.
 - [ ] Add a concise privacy page that accurately describes provider processing, storage, memory, uploads, and retention.
-- [ ] Provide account deletion and data export/deletion flows where feasible.
+- [ ] Complete the account deletion journey for email-OTP-only accounts; the existing API deletion path still requires a current password.
+- [x] Add a user-facing account data export control backed by the authenticated export endpoint. Build/test verification is pending.
 - [ ] Verify auth, authorization, CSRF/CORS protections as applicable, rate limits, secret handling, secure cookies, and HTTPS.
 - [ ] Review dependency advisories and update vulnerable packages with a consistent lockfile and tests.
 - [ ] Avoid logging private prompts, access tokens, uploaded content, or voice recordings unnecessarily.
@@ -239,7 +239,8 @@
 - **2026-10-13:** Created a ten-phase roadmap for merging the AI-Glasses UI ideas into BobAI without importing the physical-device product.
 - **2026-10-13:** Fixed repository preflight allowlists so the root roadmap and quick-start auth guide are accepted Markdown files.
 - **2026-10-13:** Added per-request Deep Research source preferences and source-filter unit tests; the tests have intentionally not been run yet because final verification is deferred until implementation work is complete.
-- **2026-10-13:** Added a saved-memory review/delete UI and an authenticated clear-all action, plus theme-aware privacy-page styling. Build/runtime verification and account-specific end-to-end checks remain pending.
+- **2026-10-13:** Added saved-memory review, edit, individual-delete, and clear-all controls; added a user-facing account export control; and made the privacy page follow the selected theme. Build/runtime verification and account-specific end-to-end checks remain pending.
+- **2026-10-13:** Added the web lint step to CI. CI/test execution is being deferred until the implementation pass is complete, as requested.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
