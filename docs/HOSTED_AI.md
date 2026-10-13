@@ -18,7 +18,7 @@ Default model: `gpt-4o-mini`. Verify current provider pricing, data-use terms, m
 - The provider is not enabled unless `BOBAI_PROVIDER=openai` is set.
 - The adapter caps input size, response size, output tokens, and request timeout.
 - Provider errors are returned as bounded error messages. The API key is not included in status output or error messages.
-- This adapter does not create a hard monetary budget. Set provider-side spending/rate limits before using a paid key.
+- This adapter does not create a hard monetary budget. For production, startup now fails closed unless the hosted provider is selected, the API key exists, the configured target is exactly ₹500/month, and `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true`. Set and verify a hard provider-side monthly spending cap before setting that flag. The flag is an operator attestation, not an automatic billing API integration. Prefer a monthly or usage-based plan with no long-term commitment and verify cancellation timing before purchase.
 - Requests sent to a hosted provider leave the local machine and are subject to that provider's data-processing terms.
 - Ollama is not a supported option in the public-beta branch. Do not expose or document a local-model fallback.
 
