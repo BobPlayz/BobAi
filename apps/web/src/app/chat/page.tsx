@@ -7,39 +7,12 @@ import NeuralComposer from "@/components/neural/NeuralComposer";
 import ChatWindow from "@/components/ChatWindow";
 import ChatInput from "@/components/ChatInput";
 import { useChat } from "@/hooks/useChat";
-import { useTheme } from "@/components/neural/ThemeProvider";
 
 export default function ChatPage() {
   const chat = useChat();
-  const { theme } = useTheme();
 
   function handleSearch(value: string) {
     chat.setSearch(value);
-  }
-
-  if (theme === "legacy") {
-    return (
-      <main className="flex h-screen flex-col bg-background text-text">
-        <ChatWindow
-          messages={chat.activeConversation?.messages || []}
-          loading={chat.loading}
-          onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
-          onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
-          onRegenerate={chat.regenerateLastAssistant}
-        />
-        <ChatInput
-          input={chat.input}
-          setInput={chat.setInput}
-          onSend={chat.send}
-          onFiles={(files) => {
-            if (files) void chat.handleFiles(Array.from(files));
-          }}
-          disabled={chat.loading}
-          uploadingFiles={chat.uploadingFiles}
-          uploadProgress={chat.uploadProgress}
-        />
-      </main>
-    );
   }
 
   const activeConversation = chat.activeConversation;
