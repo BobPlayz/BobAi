@@ -89,7 +89,7 @@ These cannot safely be completed by code changes alone:
 
 - The public SiteNav and landing page now consume the shared theme provider; the cookie-consent UI is placed inside that provider and follows the selected theme.
 - Leaving the chat aborts the active stream and in-progress upload controllers.
-- Client-disconnect cancellation is passed from the stream route through `runStream` and the model-provider adapters. This path needs tests against native/production providers, local Ollama, hosted fetch, partial message persistence, and abort timing.
+- Client-disconnect cancellation is passed from the stream route through `runStream` and the model-provider adapters. This path needs tests against the remaining supported provider paths, partial message persistence, and abort timing. Ollama was removed on the public-beta branch.
 - When research pages yield no readable evidence, search-result links are retained for transparency rather than returning an empty source list.
 - If distributed rate limiting is configured, failure of the shared limiter now fails closed. Confirm this matches the deployed backend and expected availability policy.
 
