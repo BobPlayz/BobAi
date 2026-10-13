@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BobLogo from "@/components/BobLogo";
-import { getPendingVerificationEmail, requestQuickStart, verifyQuickStart } from "@/lib/auth";
+import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart } from "@/lib/auth";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const TERMS_VERSION = process.env.NEXT_PUBLIC_TERMS_VERSION || "2026-10-13";
@@ -22,8 +22,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     const pending = getPendingVerificationEmail();
+    const pendingName = getPendingVerificationName();
     if (pending) {
       setEmail(pending);
+      setName(pendingName);
       setStep("verify");
       setNotice("Enter the 6-digit code sent to your email.");
     }
