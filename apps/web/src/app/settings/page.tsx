@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
-import { clearMemories, deleteMemory, exportAccountData, getModelStatus, listMemories, updateMemory } from "@/lib/api";
+import { clearMemories, confirmAccountDeletion, deleteMemory, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
+import { logout } from "@/lib/auth";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
@@ -32,6 +34,7 @@ function readSettings(): SettingsState {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const light = theme === "light";
   const [tab, setTab] = useState<Tab>("personalization");
@@ -49,6 +52,9 @@ export default function SettingsPage() {
   const [exportMessage, setExportMessage] = useState("");
   const [providerStatus, setProviderStatus] = useState<{ ready?: boolean; provider?: string; model?: string; modelId?: string; error?: string } | null>(null);
   const [providerStatusError, setProviderStatusError] = useState("");
+  const [deleteCode, setDeleteCode] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState("");
 
   useEffect(() => setSettings(readSettings()), []);
 
@@ -78,6 +84,39 @@ export default function SettingsPage() {
     });
     return () => { cancelled = true; };
   }, [tab]);
+
+  async function sendDeletionCode() {
+    setDeleteBusy(true);
+    setDeleteMessage("");
+    try {
+      const result = await requestAccountDeletionCode();
+      setDeleteMessage(result.message || "If email delivery is configured, a deletion code has been sent.");
+    } catch (error) {
+      setDeleteMessage(error instanceof Error ? error.message : "Could not request a deletion code.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (!/^\\d{6}$/.test(deleteCode)) {
+      setDeleteMessage("Enter the 6-digit code sent to your email.");
+      return;
+    }
+    if (!window.confirm("Schedule deletion of this BobAI account? Your account will be disabled now and permanent deletion is scheduled after 30 days.")) return;
+    setDeleteBusy(true);
+    setDeleteMessage("");
+    try {
+      const result = await confirmAccountDeletion(deleteCode);
+      logout();
+      router.replace("/");
+      setDeleteMessage(result.status || "Account deletion scheduled.");
+    } catch (error) {
+      setDeleteMessage(error instanceof Error ? error.message : "Could not schedule account deletion.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
 
   async function downloadAccountExport() {
     setExportBusy(true);
@@ -258,6 +297,16 @@ export default function SettingsPage() {
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Download the account data currently available through the authenticated API. The export may contain private conversations and account information, so keep the file secure.</p>
                 <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
                 {exportMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{exportMessage}</p>}
+              </div>
+              <div className={`mt-4 rounded-xl border border-red-500/25 p-4 ${colors.field}`}>
+                <h3 className="text-sm font-semibold text-red-600">Delete account</h3>
+                <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Verify your email with a one-time code to schedule account deletion. Your account is disabled immediately; permanent deletion is scheduled after a 30-day grace period. This does not replace any legally required data-retention obligations.</p>
+                <button type="button" onClick={() => void sendDeletionCode()} disabled={deleteBusy} className="mt-3 rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-600 disabled:opacity-40">{deleteBusy ? "Please wait…" : "Email me a deletion code"}</button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <input value={deleteCode} onChange={(event) => setDeleteCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" aria-label="Account deletion email code" className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${colors.field}`} />
+                  <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">Confirm deletion</button>
+                </div>
+                {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
               <p className={`mt-4 text-xs ${colors.muted}`}>This is a practical summary, not a complete legal privacy notice. The service operator should publish a policy matching the actual deployment and providers.</p>
             </section>
