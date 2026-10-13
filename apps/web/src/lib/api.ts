@@ -29,11 +29,12 @@ async function readChatStream(response: Response, onToken?: (token: string) => v
       const chunk = await reader.read();
       if (chunk.done) break;
       pending += decoder.decode(chunk.value, { stream: true });
-      let split = pending.indexOf("\n\n");
-      while (split >= 0) {
-        consume(pending.slice(0, split).replace(/\r/g, ""));
-        pending = pending.slice(split + 2);
-        split = pending.indexOf("\n\n");
+      let separator = pending.match(/\r?\n\r?\n/);
+      while (separator && separator.index !== undefined) {
+        const frameEnd = separator.index;
+        consume(pending.slice(0, frameEnd).replace(/\r/g, ""));
+        pending = pending.slice(frameEnd + separator[0].length);
+        separator = pending.match(/\r?\n\r?\n/);
       }
     }
     pending += decoder.decode();
