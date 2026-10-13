@@ -26,7 +26,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
   const [researchSources, setResearchSources] = useState<DeepResearchResult["sources"]>([]);
 
   useEffect(() => { void listProjects().then((items) => { setProjects(items); if (items[0]) selectProject(items[0]); }).catch(() => undefined); }, []);
-  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof saved.memory === "boolean") setMemory(saved.memory); } catch {} }, []);
+  useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof saved.memory === "boolean") setMemory(saved.memory); if (Array.isArray(saved.sourceTypes)) setSourceTypes(saved.sourceTypes.filter((item: unknown): item is string => typeof item === "string" && ["official", "academic", "news", "general"].includes(item))); } catch {} }, []);
   useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); localStorage.setItem("bobai.settings.v1", JSON.stringify({ ...saved, memory, projectContext: projectId ? { id: projectId, name: projectName, instructions: projectInstructions } : undefined })); } catch { localStorage.setItem("bobai.settings.v1", JSON.stringify({ memory })); } }, [memory, projectId, projectName, projectInstructions]);
 
   function selectProject(project: Project) {
