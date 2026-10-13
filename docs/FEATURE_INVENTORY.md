@@ -83,3 +83,14 @@ These cannot safely be completed by code changes alone:
 8. Supply deployment credentials and approve DNS changes; configure HTTPS, backups, monitoring, and rollback.
 9. Run the final CI/build/test/audit/smoke-test pass after the implementation pass is complete.
 10. Capture real desktop/mobile screenshots in both themes and review accessibility on actual target browsers/devices.
+
+
+## Latest implementation notes (2026-10-13)
+
+- The public SiteNav and landing page now consume the shared theme provider; the cookie-consent UI is placed inside that provider and follows the selected theme.
+- Leaving the chat aborts the active stream and in-progress upload controllers.
+- Client-disconnect cancellation is passed from the stream route through `runStream` and the model-provider adapters. This path needs tests against native/production providers, local Ollama, hosted fetch, partial message persistence, and abort timing.
+- When research pages yield no readable evidence, search-result links are retained for transparency rather than returning an empty source list.
+- If distributed rate limiting is configured, failure of the shared limiter now fails closed. Confirm this matches the deployed backend and expected availability policy.
+
+These are static code observations, not verified outcomes. The roadmap's test/build/security pass is still pending.
