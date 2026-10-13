@@ -27,6 +27,7 @@ export async function verifyQuickStart(name: string, email: string, code: string
     if (typeof data.expiresIn !== "number") return { ok: false, error: "invalid session from backend" };
     session = { accessToken: "", expiresIn: data.expiresIn, email: email.trim().toLowerCase() };
     localStorage.removeItem(PENDING_EMAIL_KEY);
+    localStorage.removeItem(PENDING_NAME_KEY);
     return { ok: true };
   } catch { return { ok: false, error: "backend unavailable" }; }
 }
