@@ -48,4 +48,4 @@ jobs:
         run: npm run smoke
 
       - name: Dependency audit
-        run: node scripts/dependency-audit.mjs
+        run: npm audit --workspaces --include-workspace-root --audit-level=high
