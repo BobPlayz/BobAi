@@ -38,7 +38,8 @@ Static status across these routes is **implemented or partial, not runtime-certi
 | Conversations | `apps/api/src/routes/conversations.ts`, `apps/api/src/store/conversationDb.ts`, `apps/web/src/hooks/useChat.ts` | Implemented | Refresh/reopen behavior, ownership isolation, duplicate turns, deletion/rename/pin persistence. |
 | Memory | `apps/api/src/routes/memory.ts`, `apps/api/src/store/memoryDb.ts`, Settings | Implemented | Per-user isolation, consent semantics, clear-all, disabled-memory behavior, and sensitive-content checks. |
 | Uploads | `apps/api/src/routes/files.ts`, `documentIndexer.ts`, `ocr.ts`, `malwareScanner.ts` | Implemented | Supported-type consistency, limits, corrupt files, page/pixel limits, cancellation, retention, and outage behavior. |
-| Vision | `apps/api/src/services/vision.ts`, `openAIProvider.ts`, `visionChat.ts` | Implemented, provider-dependent | Live image request with a model that truly supports image input. |
+| Vision | `apps/api/src/services/vision.ts`, `openAIProvider.ts`, `visionChat.ts` | Implemented, provider-dependent | Live image request with a model that truly supports image input. Ollama fallback was removed. |
+| Image generation | `apps/api/src/services/mediaGeneration.ts`, `flux.ts` | Partial, provider-dependent | The fake SVG fallback was removed; requests now fail clearly when a real image-generation model is not configured. Configure and verify a real provider/model before advertising generation as available. |
 | Research | `apps/api/src/services/research.ts`, `deepResearch.ts`, AssistantHub | Implemented, unverified | Citation-to-evidence matching, stale/conflicting sources, dead links, empty results, source preference behavior. |
 | Tools / agents | `toolRegistry.ts`, `toolExecution.ts`, `toolLoop.ts`, `agents.ts`, `agentTasks.ts` | Implemented, partial | Quotas/cost limits, end-to-end approval coverage, cancel/timeout/loop and cross-user tests. |
 | Voice | `apps/api/src/routes/voice.ts`, `services/voice.ts`, `VoiceButton.tsx`, NeuralComposer | Implemented, provider-dependent | Permission denial, noisy input, editing transcript, mobile support, language/voice options, interruption. |
@@ -74,7 +75,7 @@ This is a directory-level inventory, not a migration/schema compatibility audit.
 These cannot safely be completed by code changes alone:
 
 1. Choose the real production AI provider/model and accept its data-processing terms.
-2. Set hard provider/account spending limits in the provider dashboard and decide the maximum monthly spend. Keep paid AI disabled until this is done.
+2. Set hard provider/account spending limits in the provider dashboard and decide the maximum monthly spend. The production startup gate requires an operator attestation and ₹500 target, but this is not an in-app billing integration. Keep paid AI disabled until the provider cap is independently verified.
 3. Configure production SMTP, database, allowed origins, secrets, and session settings.
 4. Choose and purchase a domain only after comparing full first-year and renewal prices.
 5. Choose hosting/database tiers and confirm they fit the ₹2,000 initial budget and ongoing costs.
