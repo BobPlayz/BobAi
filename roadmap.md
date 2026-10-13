@@ -96,6 +96,8 @@
 - [ ] Verify sign-up/sign-in/sign-out and session expiry end to end.
 - [x] Replace the visible password/social login screen with a one-time name + email OTP quick-start flow; the API creates a user when needed and issues secure session cookies after verification. This is committed but not yet build/test verified.
 - [x] Add setup notes for SMTP delivery, terms-version synchronization, session-cookie behavior, and MFA limitations in `docs/QUICK_START_AUTH.md`.
+- [x] Defer profile display-name changes until the email OTP is successfully verified, preventing an unverified requester from changing another user's name.
+- [x] Enforce the server's current terms version even when `BOBAI_TERMS_VERSION` is not explicitly set.
 - [ ] Verify quick-start email delivery, existing-account handling, session refresh, sign-out, MFA edge cases, and legal-version configuration end to end.
 - [ ] Persist conversations and messages under the correct authenticated user.
 - [ ] Support new chat, history loading, conversation switching, search, rename, pin, and deletion where endpoints exist.
@@ -238,4 +240,5 @@
 - **2026-10-13:** Replaced the visible password/social sign-in screen with a one-time name + email OTP quick-start. Added API endpoints to create a user when needed, update the display name, verify the email code, and issue secure session cookies. This depends on correctly configured SMTP in production and is not yet build/test verified. Existing API auth mechanisms remain available for backward compatibility; MFA-enabled accounts need a separate verification path.
 - **2026-10-13:** Updated homepage entry points to use the single email quick-start and routed successful verification directly to chat, skipping the multi-step personalization onboarding. Added `docs/QUICK_START_AUTH.md` and `NEXT_PUBLIC_TERMS_VERSION` to the root environment example.
 - **2026-10-13:** Added friendlier chat request failure messages for expired sessions, rate limits, service outages, and other failed requests. The user-facing retry/regenerate interaction still needs verification.
+- **2026-10-13:** Tightened quick-start authentication so display names are only changed after a valid email code is consumed, and the API enforces the current terms version by default. These latest changes still require CI and end-to-end verification.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
