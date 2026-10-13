@@ -16,7 +16,7 @@ const structuredData = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description: "An AI workspace for chat, research, creation, development, memory, files, tools, agents, and automations.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://bobai.app",
+  url: process.env.NEXT_PUBLIC_SITE_URL,
 };
 
 export default function HomePage() {
