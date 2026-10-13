@@ -38,6 +38,17 @@
 - Do not claim age verification, parental controls, real-time voice, or research quality is complete until implemented and tested end to end.
 - Treat ₹2,000 as a tight initial budget. Prefer free tiers and provider limits, and ask before enabling any paid API usage.
 
+## Confirmed public-beta product scope
+
+- **Audience:** students across age groups. Age-appropriate safety, privacy, account security, and legal review are launch gates, not optional polish.
+- **Release:** public beta, with balanced priorities across reliability, security, usability, and cost.
+- **Feature ambition:** the full practical ChatGPT-like experience, especially coding assistance/agent workflows and web research with traceable citations. Also include chat, writing, tutoring, files, image understanding, data analysis, voice input/output, conversation history, user-controlled memory, projects, image generation/editing, and safe integrations where real providers and runtime support exist. This is a target list, not a claim of proprietary feature parity.
+- **AI spend:** ₹500/month target. Keep paid usage disabled until provider-side spending limits are configured and independently checked. The application currently uses an operator-attestation gate; it is not a billing API and cannot itself prove the provider cap is active.
+- **Cancellation:** choose hosting and AI plans that are monthly or usage-based and cancellable after one month where the provider permits it. Document renewal, cancellation timing, export, and deletion behavior before the owner approves a vendor.
+- **Publisher:** Origin Productions. Do not publish personal contact details. A real support/privacy contact and responsible adult/legal review remain prerequisites for a student-facing public beta.
+- **Coding execution:** public users must never get arbitrary host/computer command access. Use a network-disabled isolated sandbox, explicit approvals for repository writes and external side effects, resource/time limits, and per-user authorization.
+- **Provider direction:** hosted provider only for the public beta; Ollama has been removed on this branch. No model training as part of normal development or deployment.
+
 ---
 
 ## Phase 1/10 — Zero: audit and baseline
