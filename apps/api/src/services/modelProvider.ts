@@ -33,11 +33,11 @@ export class BobModelProvider {
       return { content, model: result.model || model, provider };
     } finally { release(); }
   }
-  async stream(messages: ProviderMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", modelOverride?: string): Promise<ProviderResult> {
+  async stream(messages: ProviderMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", modelOverride?: string, signal?: AbortSignal): Promise<ProviderResult> {
     const model = selectedModel(provider, modelOverride); const release = model === OLLAMA_MODEL_ID || model === OPENAI_MODEL_ID ? () => undefined : await modelRuntime.acquire(provider === "coding" ? "coder" : "bob");
     try {
-      if (model === OPENAI_MODEL_ID) { const result = await openAIStream(messages, onToken); return { content: result.content, model: result.model, provider }; }
-      if (model === OLLAMA_MODEL_ID) { const result = await ollamaStream(messages, onToken); return { content: result.content, model: result.model, provider }; }
+      if (model === OPENAI_MODEL_ID) { const result = await openAIStream(messages, onToken, signal); return { content: result.content, model: result.model, provider }; }
+      if (model === OLLAMA_MODEL_ID) { const result = await ollamaStream(messages, onToken, signal); return { content: result.content, model: result.model, provider }; }
       if (model === PRODUCTION_MODEL) {
         const result = await productionModelInfer(messages, { maxTokens: 768 });
         for (const token of result.content.match(/\s+|\S+/g) || [result.content]) onToken(token);
