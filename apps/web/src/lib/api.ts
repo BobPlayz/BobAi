@@ -8,8 +8,7 @@ async function readChatStream(response: Response, onToken?: (token: string) => v
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let pending = "";
-  let completed: ChatStreamResult | null = null;
-  let streamError = "";
+  const state: { completed: ChatStreamResult | null; streamError: string } = { completed: null, streamError: "" };
   const consume = (block: string) => {
     let event = "";
     const data: string[] = [];
@@ -22,8 +21,8 @@ async function readChatStream(response: Response, onToken?: (token: string) => v
     try { payload = JSON.parse(data.join("\n")) as Record<string, unknown>; }
     catch { throw new Error("BobAI returned an invalid stream event."); }
     if (event === "token" && typeof payload.token === "string") onToken?.(payload.token);
-    else if (event === "done") completed = payload as ChatStreamResult;
-    else if (event === "error") streamError = typeof payload.message === "string" ? payload.message : "The AI stream failed.";
+    else if (event === "done") state.completed = payload as ChatStreamResult;
+    else if (event === "error") state.streamError = typeof payload.message === "string" ? payload.message : "The AI stream failed.";
   };
   try {
     while (true) {
@@ -40,9 +39,9 @@ async function readChatStream(response: Response, onToken?: (token: string) => v
     pending += decoder.decode();
     if (pending.trim()) consume(pending.replace(/\r/g, ""));
   } catch (error) { await reader.cancel().catch(() => undefined); throw error; }
-  if (streamError) throw new Error(streamError);
-  if (!completed) throw new Error("BobAI stream ended before the response was complete.");
-  return completed;
+  if (state.streamError) throw new Error(state.streamError);
+  if (!state.completed) throw new Error("BobAI stream ended before the response was complete.");
+  return state.completed;
 }
 export async function sendMessage(messages: ChatMessage[], personality = "", modelId?: string, memoryEnabled?: boolean, conversationId?: string, onToken?: (token: string) => void) { const cleanMessages = messages.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { attachments: m.images.filter((image) => typeof image.url === "string" && image.url.startsWith("data:image/")).slice(0, 3).map((image) => ({ type: "image", mimeType: image.url.slice(5, image.url.indexOf(";") > -1 ? image.url.indexOf(";") : image.url.indexOf(",")), data: image.url })) } : {}) })); let effectiveMemory = memoryEnabled; let projectContext = ""; if (typeof window !== "undefined") { try { const settings = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof effectiveMemory !== "boolean") effectiveMemory = settings.memory !== false; if (settings.projectContext && typeof settings.projectContext === "object") { const name = typeof settings.projectContext.name === "string" ? settings.projectContext.name : ""; const instructions = typeof settings.projectContext.instructions === "string" ? settings.projectContext.instructions : ""; if (instructions.trim()) projectContext = `\nActive project: ${name || "untitled"}\nProject instructions:\n${instructions.slice(0, 12_000)}`; } } catch { if (typeof effectiveMemory !== "boolean") effectiveMemory = true; } } if (typeof effectiveMemory !== "boolean") effectiveMemory = true; const res = await request("/stream", { method: "POST", body: JSON.stringify({ messages: cleanMessages, personality: `${personality}${projectContext}`, memoryEnabled: effectiveMemory, ...(conversationId ? { conversationId } : {}), ...(modelId ? { modelId } : {}) }) }); if (!res.ok) { const raw = await res.text(); let providerMessage = ""; try { const parsed = JSON.parse(raw) as { error?: unknown }; if (typeof parsed.error === "string") providerMessage = parsed.error; } catch { /* keep provider internals out of the chat UI */ } if (res.status === 401) throw new Error("Your session has expired. Please verify your email again."); if (res.status === 429) throw new Error("BobAI is receiving too many requests right now. Wait a moment and try again."); if (res.status >= 500) throw new Error("The AI service is temporarily unavailable. Please try again in a moment."); throw new Error(providerMessage || "BobAI could not process that request. Please try again."); } return await readChatStream(res, onToken); }
 export async function listConversations(includeArchived = false): Promise<Conversation[]> { const res = await request(`/conversations${includeArchived ? "?archived=true" : ""}`); if (!res.ok) throw new Error((await res.text()) || "Failed to load conversations"); const data = await res.json() as { conversations?: Array<Record<string, unknown>> }; return (data.conversations || []).map((conversation) => ({ id: String(conversation.id), title: typeof conversation.title === "string" ? conversation.title : "new chat", createdAt: new Date(String(conversation.createdAt || Date.now())).getTime(), pinned: conversation.isPinned === true, messages: Array.isArray(conversation.messages) ? conversation.messages.map((message) => { const item = message as Record<string, unknown>; const attachments = item.attachments as Record<string, unknown> | null; return { id: String(item.id), role: item.role === "assistant" ? "assistant" as const : "user" as const, content: typeof item.content === "string" ? item.content : "", ...(attachments && typeof attachments === "object" ? attachments : {}) }; }) : [] })); }
