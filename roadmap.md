@@ -212,3 +212,4 @@
 ## Change log
 
 - **2026-10-13:** Created the roadmap following the repository integration. Local Ollama chat and vision are already integrated into BobAI's backend. The AI-Glasses dashboard is documented as a design reference, not as a second application to copy wholesale. UI merge phases remain planned until implemented and verified.
+- **2026-10-13:** First UI pass committed to `main`: removed the legacy chat-rendering branch, locked the app to one dark/cyan theme by removing appearance/theme/accent controls, simplified the chat topbar, and replaced the multi-rail sidebar with a conversation-first sidebar containing working new-chat, search, select, pin, rename, delete-confirmation, and settings navigation. This is an initial pass, not production-ready; remaining phases and verification are still open.
