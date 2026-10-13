@@ -1,28 +1,54 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type BobTheme = "legacy" | "dark" | "light" | "futuristic" | "anime" | "glass";
+export type BobTheme = "dark" | "light";
 
 type ThemeContextType = {
   theme: BobTheme;
   setTheme: (theme: BobTheme) => void;
+  toggleTheme: () => void;
   accent: string;
   setAccent: (accent: string) => void;
   cycleTheme: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
+const THEME_KEY = "bobai.theme";
 const FIXED_ACCENT = "#38bdf8";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<BobTheme>("dark");
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(THEME_KEY);
+      if (saved === "light" || saved === "dark") setThemeState(saved);
+    } catch {
+      // Keep the default theme when browser storage is unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    try {
+      window.localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Theme still works for this session when storage is unavailable.
+    }
+  }, [theme]);
+
+  const setTheme = useCallback((nextTheme: BobTheme) => setThemeState(nextTheme), []);
+  const toggleTheme = useCallback(() => setThemeState((current) => current === "dark" ? "light" : "dark"), []);
   const value = useMemo<ThemeContextType>(() => ({
-    theme: "dark",
-    setTheme: () => undefined,
+    theme,
+    setTheme,
+    toggleTheme,
     accent: FIXED_ACCENT,
     setAccent: () => undefined,
-    cycleTheme: () => undefined,
-  }), []);
+    cycleTheme: toggleTheme,
+  }), [theme, setTheme, toggleTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
