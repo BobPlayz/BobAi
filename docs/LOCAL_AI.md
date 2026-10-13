@@ -46,3 +46,7 @@ Set \`BOBAI_OLLAMA_VISION_ENABLED=true\` and \`BOBAI_OLLAMA_VISION_MODEL=moondre
 4. Disconnect the internet and repeat the checks.
 
 Ollama support is disabled by default. Tests do not prove that a model is installed or that laptop performance is acceptable. Do not expose Ollama or the BobAI API directly to the public internet.
+
+## Cancellation and limits
+
+The local Ollama stream adapter now accepts an optional cancellation signal and avoids starting its fallback model after cancellation. Confirm that the installed Ollama version, configured model, browser disconnect, and slow-generation paths behave correctly during final tests. Local mode is optional and disabled by default; loopback-only configuration must remain enforced.
