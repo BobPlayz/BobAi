@@ -82,7 +82,8 @@
 - [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [ ] Provide a model/provider settings area only for providers that are genuinely implemented.
-- [ ] Add per-user and global cost/usage safeguards before enabling paid API calls.
+- [x] Add per-user rate limiting to the streamed AI chat endpoint. Build/runtime verification is pending.
+- [ ] Add hard provider-side monetary budgets and verify global cost/usage safeguards before enabling paid API calls.
 - [ ] Keep optional local Ollama as a separate opt-in path; do not require downloading a local model.
 - [ ] Remove model-training commands from the normal user-facing setup instructions. Audit training scripts and references before deleting or archiving them.
 - [x] Add tests for provider URL safety and missing-key/configuration status.
@@ -101,6 +102,7 @@
 - [x] Defer profile display-name changes until the email OTP is successfully verified, preventing an unverified requester from changing another user's name.
 - [x] Preserve the pending name and email across a browser refresh during OTP verification, and clear them after success.
 - [x] Enforce the server's current terms version even when `BOBAI_TERMS_VERSION` is not explicitly set.
+- [x] Add an authenticator-code challenge to the quick-start flow for accounts that require MFA, without bypassing MFA. Build/runtime verification is pending.
 - [ ] Verify quick-start email delivery, existing-account handling, session refresh, sign-out, MFA edge cases, and legal-version configuration end to end.
 - [ ] Persist conversations and messages under the correct authenticated user.
 - [ ] Support new chat, history loading, conversation switching, search, rename, pin, and deletion where endpoints exist.
@@ -181,7 +183,8 @@
 **Goal:** Build trust into the product from the beginning.
 
 - [ ] Define the intended age range and safety behavior with applicable platform rules and legal requirements in mind.
-- [ ] Implement age-appropriate content boundaries; do not add an unrestricted toggle intended to evade provider protections.
+- [x] Add a server-side age-appropriate safety baseline to the core chat system prompt; it cannot be overridden by user customization. This is a baseline safeguard, not age verification or a substitute for provider safety.
+- [ ] Validate age-appropriate behavior across all model providers and tools; do not add an unrestricted toggle intended to evade provider protections.
 - [ ] If age assurance or parental controls are needed, design them with privacy minimization and appropriate adult/legal guidance before collecting sensitive data.
 - [ ] Add a concise privacy page that accurately describes provider processing, storage, memory, uploads, and retention.
 - [ ] Complete the account deletion journey for email-OTP-only accounts; the existing API deletion path still requires a current password.
@@ -241,7 +244,8 @@
 - **2026-10-13:** Fixed repository preflight allowlists so the root roadmap and quick-start auth guide are accepted Markdown files.
 - **2026-10-13:** Added per-request Deep Research source preferences and source-filter unit tests; the tests have intentionally not been run yet because final verification is deferred until implementation work is complete.
 - **2026-10-13:** Added saved-memory review, edit, individual-delete, and clear-all controls; added a user-facing account export control; and made the privacy page follow the selected theme. Build/runtime verification and account-specific end-to-end checks remain pending.
-- **2026-10-13:** Added the web lint step to CI and a visible chat-stream Stop control wired to `AbortController`. CI/test execution is being deferred until the implementation pass is complete, as requested.
+- **2026-10-13:** Added the web lint step to CI, a visible chat-stream Stop control wired to `AbortController`, per-user stream rate limiting, and an age-appropriate server-side safety baseline. CI/test execution is being deferred until the implementation pass is complete, as requested.
+- **2026-10-13:** Added a dedicated MFA challenge step for quick-start sign-in when an account requires an authenticator. The profile name update now happens only after all sign-in checks pass; end-to-end verification is pending.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
