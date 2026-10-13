@@ -1,5 +1,5 @@
-import { and, lt, or, eq, isNotNull } from "drizzle-orm";
-import { db, emailOtps, passwordResets, sessions, users } from "@bobai/db";
+import { and, lt, or, eq, isNotNull, ne } from "drizzle-orm";
+import { db, emailOtps, passwordResets, sessions, users, workspaces } from "@bobai/db";
 import { purgeUserOwnedData } from "./accountPurge.js";
 
 const OTP_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -23,6 +23,11 @@ export async function runRetentionCleanup(now = new Date()) {
   const candidates = await db.select({ id: users.id }).from(users).where(and(isNotNull(users.deletedAt), lt(users.deletedAt, accountCutoff)));
   for (const account of candidates) {
     try {
+      const sharedOwned = await db.select({ id: workspaces.id }).from(workspaces).where(and(eq(workspaces.ownerId, account.id), ne(workspaces.type, "personal"))).limit(1);
+      if (sharedOwned.length) {
+        console.warn("account purge deferred because the user still owns a shared workspace");
+        continue;
+      }
       await purgeUserOwnedData(account.id);
       const deleted = await db.delete(users).where(eq(users.id, account.id)).returning({ id: users.id });
       if (deleted.length) accountsDeleted += 1;
