@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createArtifact, createProject, deepResearch, listProjects, runCodingAgent, studyPack, updateProject } from "@/lib/api";
+import { createArtifact, createProject, deepResearch, listProjects, runCodingAgent, studyPack, updateProject, type DeepResearchResult } from "@/lib/api";
 
 type Project = { id: string; name: string; description?: string | null; settings?: unknown };
 type Mode = "research" | "study" | "create" | "voice" | "agent";
@@ -23,6 +23,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
   const [quiz, setQuiz] = useState<QuizItem[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({});
   const [sourceTypes, setSourceTypes] = useState<string[]>(["general"]);
+  const [researchSources, setResearchSources] = useState<DeepResearchResult["sources"]>([]);
 
   useEffect(() => { void listProjects().then((items) => { setProjects(items); if (items[0]) selectProject(items[0]); }).catch(() => undefined); }, []);
   useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof saved.memory === "boolean") setMemory(saved.memory); } catch {} }, []);
@@ -61,7 +62,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     recognition.onresult = (event) => setQuery(event.results[0]?.[0]?.transcript || ""); recognition.onend = () => setListening(false); setListening(true); recognition.start();
   }
 
-  function clearResults() { setOutput(""); setArtifact(""); setQuiz([]); setQuizAnswers({}); }
+  function clearResults() { setOutput(""); setArtifact(""); setQuiz([]); setQuizAnswers({}); setResearchSources([]); }
 
   async function run() {
     const text = query.trim(); if (!text || busy) return;
@@ -71,7 +72,8 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     try {
       if (mode === "research") {
         const result = await deepResearch(task, sourceTypes);
-        setOutput(`${result.synthesis}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => { let publisher = "source"; try { publisher = new URL(source.url).hostname.replace(/^www\./, ""); } catch {} const published = source.publishedAt ? ` · ${source.publishedAt}` : ""; return `[${index + 1}] ${source.title} (${publisher}${published}) — ${source.url}`; }).join("\n")}`);
+        setOutput(result.synthesis);
+        setResearchSources(result.sources.slice(0, 12));
         setArtifact(result.synthesis);
       } else if (mode === "study") {
         const result = await studyPack(task, "medium");
@@ -125,6 +127,20 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
           {artifact && <div className="mt-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3"><div className="mb-2 flex items-center justify-between"><span className="text-xs font-semibold text-[#94A3B8]">Editable artifact</span><button onClick={() => navigator.clipboard?.writeText(artifact)} className="rounded-lg border border-[#2A3340] px-2 py-1 text-xs text-[#94A3B8]">Copy</button></div><textarea value={artifact} onChange={(event) => setArtifact(event.target.value)} className="min-h-72 w-full resize-y rounded-lg border border-[#2A3340] bg-[#10161D] p-3 font-mono text-xs leading-5 text-[#CBD5E1] outline-none focus:border-[#38BDF8]" /><button onClick={() => speak(artifact)} className="mt-2 rounded-lg border border-[#2A3340] px-3 py-2 text-xs text-[#94A3B8]">🔊 Read aloud</button></div>}
           {quiz.length > 0 && <div className="mt-3 space-y-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-4 text-sm text-[#CBD5E1]"><div className="font-semibold text-[#E5EEF7]">Interactive quiz</div>{quiz.map((item, index) => { const selected = quizAnswers[index]; const correct = selected === item.answer; return <div key={index} className="rounded-lg border border-[#2A3340] p-3"><div>{index + 1}. {item.question}</div><div className="mt-2 grid gap-1">{item.options.map((option) => <button key={option} onClick={() => setQuizAnswers((answers) => ({ ...answers, [index]: option }))} className={`rounded-lg px-2 py-1 text-left text-xs ${quizAnswers[index] === option ? "bg-[#38BDF8]/15 text-[#E5EEF7]" : "bg-[#141A22] text-[#94A3B8]"}`}>{option}</button>)}</div>{selected !== undefined && <div className={`mt-2 text-xs ${correct ? "text-green-400" : "text-red-400"}`}>{correct ? `✓ Correct${item.explanation ? ` — ${item.explanation}` : ""}` : `✗ Correct answer: ${item.answer}`}</div>}</div>; })}</div>}
           {output && <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3 text-xs leading-5 text-[#CBD5E1]">{output}</pre>}
+          {mode === "research" && researchSources.length > 0 && (
+            <section className="mt-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3" aria-label="Research sources">
+              <h3 className="mb-2 text-xs font-semibold text-[#94A3B8]">Sources used</h3>
+              <ol className="space-y-2">
+                {researchSources.map((source, index) => (
+                  <li key={source.url} className="rounded-lg border border-[#2A3340] p-2">
+                    <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-words text-xs font-medium text-[#7DD3FC] underline underline-offset-2">[{index + 1}] {source.title}</a>
+                    <p className="mt-1 break-words text-[11px] text-[#64748B]">{source.url}{source.publishedAt ? ` · ${source.publishedAt}` : ""}</p>
+                    {source.snippet && <p className="mt-1 line-clamp-3 text-[11px] leading-5 text-[#94A3B8]">{source.snippet}</p>}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
         </div>
 
         <div className="rounded-2xl border border-[#2A3340] bg-[#10161D] p-3">
