@@ -74,3 +74,8 @@ BobAI can use an existing OpenAI-compatible chat API. This does not train a mode
 ## Optional local AI
 
 BobAI can use a local Ollama model for text chat and image understanding. See [the local AI guide](docs/LOCAL_AI.md) for setup, offline testing, and the loopback-only security boundary. Support is disabled by default.
+
+
+## Project handoff (2026-10-13)
+
+The repo is actively being implemented against [`roadmap.md`](roadmap.md). Features documented here may depend on provider credentials, PostgreSQL migrations, SMTP, or local services. Recent changes include cancellable streaming, file uploads, voice dictation/read-aloud, research sources, and public Light/Dark theming, but they have not yet had the requested final build/test pass. The current static map is [`docs/FEATURE_INVENTORY.md`](docs/FEATURE_INVENTORY.md). Do not describe the service as production-ready until the roadmap's verification and launch gates are complete.
