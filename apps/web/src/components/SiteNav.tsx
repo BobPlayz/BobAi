@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
 
@@ -12,8 +15,12 @@ const links = [
 ] as const;
 
 export default function SiteNav() {
+  const pathname = usePathname();
+  const publicNavigationRoutes = ["/about", "/faq", "/contact", "/waitlist", "/privacy", "/terms", "/thank-you"];
+  const showNavigation = publicNavigationRoutes.includes(pathname);
   const { theme, toggleTheme } = useTheme();
   const light = theme === "light";
+  if (!showNavigation) return null;
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6">
       <nav className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-xl ${light ? "border-[#e5e7eb] bg-white/90" : "border-white/10 bg-black/30"}`} aria-label="Primary navigation">
