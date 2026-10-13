@@ -55,7 +55,7 @@ export default function LoginPage() {
     const cleanEmail = email.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(cleanEmail) || !/^\d{6}$/.test(code.trim())) return setError("Enter the email address and its 6-digit code.");
     setLoading(true);
-    const result = await verifyQuickStart(cleanEmail, code.trim());
+    const result = await verifyQuickStart(name.trim().replace(/\s+/g, " "), cleanEmail, code.trim());
     setLoading(false);
     if (!result.ok) return setError(result.error || "Verification failed.");
     router.replace("/chat");
