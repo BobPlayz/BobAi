@@ -82,7 +82,7 @@ export function useChat() {
             const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: "Please analyze this image: " + file.name, files: [fileData], images: [image] };
             const nextMessages = [...workingMessages, userMessage];
             updateConversation(activeId, (conversation) => ({ ...conversation, messages: nextMessages }));
-            const response = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, activeId);
+            const response = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, activeId, undefined, uploadController.signal);
             const assistantMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "Image analysis finished without a text response." };
             workingMessages = [...nextMessages, assistantMessage];
             updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: workingMessages }));
@@ -91,7 +91,7 @@ export function useChat() {
           const nextMessages = [...workingMessages, { id: crypto.randomUUID(), role: "user" as const, content: "", files: [fileData] }];
           updateConversation(activeId, (conversation) => ({ ...conversation, messages: nextMessages }));
           const filePrompt = "file content from " + result.name + ":\n\n" + result.text;
-          const response = await sendMessage([...nextMessages, { id: crypto.randomUUID(), role: "user", content: filePrompt }], settings.personality, undefined, settings.memory, activeId);
+          const response = await sendMessage([...nextMessages, { id: crypto.randomUUID(), role: "user", content: filePrompt }], settings.personality, undefined, settings.memory, activeId, undefined, uploadController.signal);
           const assistantMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "The AI returned no text response." };
           workingMessages = [...nextMessages, assistantMessage];
           updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: workingMessages }));
