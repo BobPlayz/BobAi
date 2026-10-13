@@ -42,9 +42,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 <ThemeProvider>
               <SiteNav />
               {children}
+              <CookieConsent />
             </ThemeProvider>
           </div>
-          <CookieConsent />
         </div>
       </body>
     </html>
