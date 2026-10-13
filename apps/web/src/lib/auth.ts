@@ -1,5 +1,6 @@
 const ONBOARDING_KEY = "bobai_onboarding";
 const PENDING_EMAIL_KEY = "bobai_pending_verification_email";
+const PENDING_NAME_KEY = "bobai_pending_verification_name";
 const LEGACY_SESSION_KEY = "bobai_session";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 type ApiError = { error?: string };
@@ -14,6 +15,7 @@ export async function requestQuickStart(name: string, email: string, termsAccept
     const data = await readJson<ApiError>(res);
     if (!res.ok) return { ok: false, error: data.error || "verification code could not be sent" };
     localStorage.setItem(PENDING_EMAIL_KEY, email.trim().toLowerCase());
+    localStorage.setItem(PENDING_NAME_KEY, name.trim());
     return { ok: true };
   } catch { return { ok: false, error: "backend unavailable" }; }
 }
@@ -36,7 +38,8 @@ export async function register(username: string, email: string, password: string
 export async function requestOtp(email: string): Promise<{ ok: boolean; error?: string }> { try { const res = await fetch(`${API}/auth/otp/request`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ email }) }); const data = await readJson<{ message?: string } & ApiError>(res); if (!res.ok) return { ok: false, error: data.error || "verification email could not be sent right now" }; localStorage.setItem(PENDING_EMAIL_KEY, email.trim().toLowerCase()); return { ok: true }; } catch { return { ok: false, error: "backend unavailable" }; } }
 export async function verifyOtp(email: string, code: string): Promise<{ ok: boolean; error?: string }> { try { const res = await fetch(`${API}/auth/otp/verify`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ email, code }) }); const data = await readJson<{ verified?: boolean } & ApiError>(res); if (!res.ok) return { ok: false, error: data.error || "invalid or expired verification code" }; localStorage.removeItem(PENDING_EMAIL_KEY); return { ok: data.verified === true }; } catch { return { ok: false, error: "backend unavailable" }; } }
 export function getPendingVerificationEmail() { if (typeof window === "undefined") return ""; return localStorage.getItem(PENDING_EMAIL_KEY) || ""; }
-export function logout() { session = null; localStorage.removeItem(LEGACY_SESSION_KEY); localStorage.removeItem(ONBOARDING_KEY); localStorage.removeItem(PENDING_EMAIL_KEY); void fetch(`${API}/auth/logout`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } }).catch(() => undefined); }
+export function getPendingVerificationName() { if (typeof window === "undefined") return ""; return localStorage.getItem(PENDING_NAME_KEY) || ""; }
+export function logout() { session = null; localStorage.removeItem(LEGACY_SESSION_KEY); localStorage.removeItem(ONBOARDING_KEY); localStorage.removeItem(PENDING_EMAIL_KEY); localStorage.removeItem(PENDING_NAME_KEY); void fetch(`${API}/auth/logout`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } }).catch(() => undefined); }
 export function getSession(): Session | null { if (typeof window !== "undefined") localStorage.removeItem(LEGACY_SESSION_KEY); return session; }
 export function setSession(next: Session) { session = next; }
 export function clearSession() { session = null; }
