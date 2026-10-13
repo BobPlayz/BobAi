@@ -112,7 +112,7 @@ export function useChat() {
     updateConversation(activeId, (conversation) => ({ ...conversation, messages: withoutAssistant }));
     try {
       const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory, activeId);
-      const aiMessage = result.imagePrompt ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images) : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply };
+      const aiMessage = result.imagePrompt ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images) : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply ?? "" };
       updateConversation(activeId, (conversation) => ({ ...conversation, title: result.title || conversation.title, messages: [...withoutAssistant, aiMessage] }));
     } catch (error) {
       const message = error instanceof Error ? error.message : "The response could not be regenerated. Please try again.";
