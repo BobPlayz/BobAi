@@ -7,8 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test:security": "tsx --test tests/security.test.ts",
-    "test:local-media": "tsx --test tests/local-media.test.ts",
-    "test:ollama": "tsx --test tests/ollamaRuntime.test.ts"
+    "test:local-media": "tsx --test tests/local-media.test.ts"
   },
   "dependencies": {
     "@bobai/db": "*",
