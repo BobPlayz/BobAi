@@ -45,7 +45,7 @@ function requestModel() {
   return model;
 }
 
-async function request(messages: ReturnType<typeof normalizeMessages>, stream: boolean) {
+async function request(messages: ReturnType<typeof normalizeMessages>, stream: boolean, signal?: AbortSignal) {
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) throw new Error("Hosted AI is not configured. Set OPENAI_API_KEY on the API server.");
   const body = JSON.stringify({ model: requestModel(), messages, stream, max_tokens: 768 });
@@ -55,7 +55,7 @@ async function request(messages: ReturnType<typeof normalizeMessages>, stream: b
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
     body,
     redirect: "error",
-    signal: AbortSignal.timeout(timeoutMs()),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs())]) : AbortSignal.timeout(timeoutMs()),
   });
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
@@ -100,8 +100,8 @@ export async function openAIChat(input: NativeMessage[]) {
   return { content: content.trim(), model: requestModel() };
 }
 
-export async function openAIStream(input: NativeMessage[], onToken: (token: string) => void) {
-  const response = await request(normalizeMessages(input), true);
+export async function openAIStream(input: NativeMessage[], onToken: (token: string) => void, signal?: AbortSignal) {
+  const response = await request(normalizeMessages(input), true, signal);
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let pending = "", content = "", total = 0, done = false;
