@@ -7,6 +7,7 @@ const LEGACY_STORAGE_KEY = "bobai.conversations.v2";
 const SETTINGS_KEY = "bobai.settings.v1";
 type GeneratedImage = { url: string; prompt?: string }; type ImageResponse = { images: GeneratedImage[] };
 type ChatSettings = { personality: string; memory?: boolean };
+function readImageDataUrl(file: File): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("The image could not be read.")); reader.onerror = () => reject(new Error("The image could not be read.")); reader.readAsDataURL(file); }); }
 function createConversation(): Conversation { return { id: crypto.randomUUID(), title: "new chat", createdAt: Date.now(), pinned: false, messages: [] }; }
 function loadSettings(): ChatSettings { if (typeof window === "undefined") return { personality: "" }; try { const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); return { personality: typeof parsed?.personality === "string" ? parsed.personality : "", memory: parsed?.memory !== false }; } catch { return { personality: "" }; } }
 function loadLocalConversationUi(): Conversation[] {
@@ -69,11 +70,21 @@ export function useChat() {
           const result = await uploadFile(file, (progress) => setUploadProgress((prev) => ({ ...prev, [file.name]: progress })));
           const fileData: ChatFile = { id: crypto.randomUUID(), name: result.name, type: result.type, text: result.text };
           const current = conversations.find((conversation) => conversation.id === activeId) || activeConversation;
+          if (file.type.startsWith("image/")) {
+            if (file.size > 1_000_000) throw new Error("For image understanding, attach an image smaller than 1 MB for now.");
+            const image: ChatImage = { id: crypto.randomUUID(), url: await readImageDataUrl(file), prompt: file.name };
+            const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: "Please analyze this image: " + file.name, files: [fileData], images: [image] };
+            const nextMessages = [...current.messages, userMessage];
+            updateConversation(activeId, (conversation) => ({ ...conversation, messages: nextMessages }));
+            const response = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, activeId);
+            updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: [...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "Image analysis finished without a text response." }] }));
+            continue;
+          }
           const nextMessages = [...current.messages, { id: crypto.randomUUID(), role: "user" as const, content: "", files: [fileData] }];
           updateConversation(activeId, (conversation) => ({ ...conversation, messages: nextMessages }));
           const filePrompt = "file content from " + result.name + ":\n\n" + result.text;
           const response = await sendMessage([...nextMessages, { id: crypto.randomUUID(), role: "user", content: filePrompt }], settings.personality, undefined, settings.memory, activeId);
-          updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: [...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: response.reply }] }));
+          updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: [...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "The AI returned no text response." }] }));
         } catch (error) {
           const message = error instanceof Error ? error.message : "The file could not be processed. Please try again.";
           updateConversation(activeId, (conversation) => ({ ...conversation, messages: [...conversation.messages, { id: crypto.randomUUID(), role: "assistant", content: message }] }));
