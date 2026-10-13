@@ -36,6 +36,7 @@ async function main() {
     "docs/LOCAL_AI.md",
     "docs/HOSTED_AI.md",
     "docs/QUICK_START_AUTH.md",
+    "docs/FEATURE_INVENTORY.md",
   ]);
   const disallowedMarkdown = markdown.filter((path) => !allowedMarkdown.has(path));
   if (disallowedMarkdown.length) throw new Error(`Public repository contains unapproved Markdown files: ${disallowedMarkdown.join(", ")}`);
