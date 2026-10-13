@@ -61,3 +61,8 @@ A minimal authenticated chat request has this general shape:
 ```
 
 The exact response fields can vary by route state (for example, a tool approval response versus a completed response). Use the route implementation as the source of truth.
+
+
+## Cancellation and failure handling
+
+The streaming route propagates a client disconnect cancellation signal through the chat engine into hosted and local provider adapters. The web stream parser accepts LF and CRLF event separators. These changes have been committed but still require route-level verification for disconnects, partial-response persistence, timeouts, and provider behavior. Rate limiting is configured through the API middleware; if distributed limiting is explicitly enabled and its backing service fails, requests are denied rather than falling back to uncoordinated per-process limits.
