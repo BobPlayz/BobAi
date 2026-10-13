@@ -2,11 +2,6 @@
 
 import { useTheme } from "@/components/neural/ThemeProvider";
 
-export const metadata = {
-  title: "Privacy Policy | Bob AI",
-  description: "How Bob AI handles personal data and privacy.",
-};
-
 export default function PrivacyPageClient() {
   const { theme } = useTheme();
   const light = theme === "light";
