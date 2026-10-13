@@ -35,6 +35,8 @@ export default function ChatPage() {
             if (files) void chat.handleFiles(Array.from(files));
           }}
           disabled={chat.loading}
+          streaming={chat.streaming}
+          onStop={chat.stop}
         />
       }
     >
