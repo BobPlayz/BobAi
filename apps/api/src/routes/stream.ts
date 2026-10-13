@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
+import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { and, eq } from "drizzle-orm";
 import { db, settings } from "@bobai/db";
 import { initSSE } from "../utils/sse.js";
@@ -13,12 +14,13 @@ import { enrichMessagesWithVision } from "../services/visionChat.js";
 import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
 const router = Router();
+const streamLimit = createUserRateLimit(20, 60_000);
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
 function latestUserText(value: unknown) { if (!Array.isArray(value)) return ""; for (let index = value.length - 1; index >= 0; index -= 1) { const message = value[index]; if (!message || typeof message !== "object") continue; const record = message as Record<string, unknown>; if (record.role === "user" && typeof record.content === "string") return record.content; } return ""; }
 function persistedInputMessages(messages: Array<{ role: string; content: string }>) { return messages.map((message) => ({ id: randomUUID(), role: message.role, content: message.content, model: null, status: "completed" })); }
 function memoryContext(memories: Array<Record<string, unknown>> | null) { return (memories || []).map((memory) => typeof memory.content === "string" ? memory.content : "").filter(Boolean).slice(0, 12); }
 function shouldRouteTools(text: string) { return /\b(search|research|verify|latest|current|browse|website|open (?:the )?site|look up|generate (?:an )?(?:image|video)|create (?:an )?(?:image|video|diagram)|edit (?:an )?image|use (?:the )?computer|paint|blender|analyze (?:this )?data|run (?:the )?automation|transcribe|synthesize|voice|music|sketch to ui)\b/i.test(text); }
-router.post("/", async (req, res) => {
+router.post("/", streamLimit, async (req, res) => {
   const { send } = initSSE(res); const conversationId = typeof req.body?.conversationId === "string" && req.body.conversationId.trim() ? req.body.conversationId.trim() : randomUUID(); let assistantId: string | null = null; let workspaceId: string | null = null;
   try {
     const workspace = await ensurePersonalWorkspace(req.user!.id); workspaceId = workspace.id;
