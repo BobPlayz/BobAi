@@ -6,6 +6,19 @@ import { createArtifact, createProject, deepResearch, generateImage, listProject
 
 type Project = { id: string; name: string; description?: string | null; settings?: unknown };
 type Mode = "search" | "research" | "study" | "create" | "image" | "voice" | "agent";
+
+function verifyCitationNumbers(text: string, sourceCount: number) {
+  let invalid = false;
+  const safe = text.replace(/\[(\d+)\]/g, (match, raw: string) => {
+    const index = Number(raw);
+    if (!Number.isInteger(index) || index < 1 || index > sourceCount) {
+      invalid = true;
+      return "[unverified citation]";
+    }
+    return match;
+  });
+  return invalid ? safe + "\n\nCitation note: one or more inline references did not match the returned source list. Verify those claims before relying on them." : safe;
+}
 type Props = { personality: string; onPersonalityChange: (value: string) => void };
 type QuizItem = { question: string; options: string[]; answer: string; explanation: string };
 
@@ -92,7 +105,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
         setResearchSources(result.sources.slice(0, 12));
       } else if (mode === "research") {
         const result = await deepResearch(task, sourceTypes);
-        setOutput(result.synthesis);
+        setOutput(verifyCitationNumbers(result.synthesis, result.sources.length));
         setResearchSources(result.sources.slice(0, 12));
         setArtifact(result.synthesis);
       } else if (mode === "study") {
