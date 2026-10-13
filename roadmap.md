@@ -309,6 +309,9 @@
 - **2026-10-13, public-beta branch:** Recorded the student-facing public-beta scope, Origin Productions publisher identity, ₹500/month AI budget target, and requirement to prefer cancellable monthly services. Removed Ollama routing, runtime/test files, environment settings, and setup instructions; added hosted coding-provider routing regression tests and a production startup gate requiring a verified provider-side spending-cap attestation. The gate is not an in-app billing API.
 - **2026-10-13, public-beta branch:** Removed the fake SVG image-generation fallback so an unavailable real image model now returns an explicit error. Added Origin Productions publisher metadata, changed the About page to support Light/Dark, and removed the unconfirmed `bobai.app` default URL. All changes remain unverified until the deferred final build/test pass.
 
+- **2026-10-13, public-beta branch:** Added separate Web Search and Deep Research modes using the existing authenticated research endpoints and source filters. Added a hosted Images API path for image generation/editing, reference-image validation, and an AssistantHub Image mode. Voice mode now sends the prompt to the assistant and reads its reply aloud with an interruption control. These changes need the deferred build/test and live-provider verification.
+- **2026-10-13, public-beta branch:** Tightened settings API validation to accept only Light/Dark themes and removed the model-training opt-in setting from the supported settings surface. Enabled same-origin microphone policy on API responses; the web app already allows same-origin microphone use in its own security headers.
+
 
 ## Handoff notes for the next ChatGPT session
 
