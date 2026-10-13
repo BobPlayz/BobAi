@@ -14,7 +14,8 @@ const SOURCE_TYPES = new Set<ResearchSourceType>(["official", "academic", "news"
 export function sourceTypesFrom(options: Record<string, unknown>): ResearchSourceType[] {
   const value = options.sourceTypes;
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.filter((item): item is ResearchSourceType => typeof item === "string" && SOURCE_TYPES.has(item as ResearchSourceType)))];
+  const normalized = [...new Set(value.filter((item): item is ResearchSourceType => typeof item === "string" && SOURCE_TYPES.has(item as ResearchSourceType)))];
+  return normalized.includes("general") ? ["general"] : normalized;
 }
 function hostnameFor(source: ResearchSource) {
   try { return new URL(source.url).hostname.toLowerCase().replace(/^www\./, ""); }
