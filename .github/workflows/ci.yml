@@ -35,6 +35,9 @@ jobs:
       - name: Repository preflight
         run: npm run repo:preflight
 
+      - name: Web lint
+        run: npm run lint --workspace=web
+
       - name: Build
         run: npm run build
 
