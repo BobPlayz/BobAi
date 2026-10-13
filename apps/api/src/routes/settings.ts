@@ -46,7 +46,7 @@ router.put("/:key", async (req, res) => {
     const row = await db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`setting:${userId}:${workspace.id}:${key}`}))`);
       const [existing] = await tx.select({ id: settings.id }).from(settings).where(and(eq(settings.userId, userId), eq(settings.workspaceId, workspace.id), eq(settings.key, key))).limit(1);
-      const category = key === "modelTraining" ? "privacy" : key === "accessibility" ? "accessibility" : "user";
+      const category = key === "accessibility" ? "accessibility" : "user";
       if (existing) return (await tx.update(settings).set({ value, updatedAt: new Date(), category }).where(eq(settings.id, existing.id)).returning({ key: settings.key, value: settings.value }))[0];
       return (await tx.insert(settings).values({ userId, workspaceId: workspace.id, key, value, category }).returning({ key: settings.key, value: settings.value }))[0];
     });
