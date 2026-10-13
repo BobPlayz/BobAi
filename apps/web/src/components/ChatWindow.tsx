@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/types/chat";
 import { useTheme } from "@/components/neural/ThemeProvider";
+import VoiceButton from "@/components/VoiceButton";
 
 type Props = {
   messages: ChatMessage[];
@@ -392,6 +393,7 @@ function AssistantMessage({
 
         <span className="h-1 w-1 rounded-full bg-cyan-300/50" />
         <span className={"text-[10px] " + (light ? "text-[#9ca3af]" : "text-white/20")}>ai</span>
+        {message.content.trim() && <div className="ml-auto"><VoiceButton onTranscript={() => undefined} readAloudText={message.content} /></div>}
       </div>
 
       <div className={"relative rounded-2xl border px-4 py-4 shadow-sm sm:px-5 " + (light ? "border-[#e5e7eb] bg-white" : "border-white/[0.06] bg-white/[0.018]")}>
