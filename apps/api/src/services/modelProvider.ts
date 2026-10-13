@@ -19,7 +19,7 @@ function selectedModel(provider: "bob" | "coding", modelOverride?: string) {
 
 export class BobModelProvider {
   async chat(messages: ProviderMessage[], provider: "bob" | "coding" = "bob", modelOverride?: string): Promise<ProviderResult> {
-    const model = selectedModel(provider, modelOverride); const release = await modelRuntime.acquire(provider === "coding" ? "coder" : "bob");
+    const model = selectedModel(provider, modelOverride); const release = model === OLLAMA_MODEL_ID ? () => undefined : await modelRuntime.acquire(provider === "coding" ? "coder" : "bob");
     try {
       if (model === OLLAMA_MODEL_ID) { const result = await ollamaChat(messages); return { content: result.content, model: result.model, provider }; }
       const result = model === PRODUCTION_MODEL ? await productionModelInfer(messages, { maxTokens: 768 }) : { content: await bobNativeModel.generate(messages, { maxTokens: 768 }), model: TINY_MODEL };
@@ -29,7 +29,7 @@ export class BobModelProvider {
     } finally { release(); }
   }
   async stream(messages: ProviderMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", modelOverride?: string): Promise<ProviderResult> {
-    const model = selectedModel(provider, modelOverride); const release = await modelRuntime.acquire(provider === "coding" ? "coder" : "bob");
+    const model = selectedModel(provider, modelOverride); const release = model === OLLAMA_MODEL_ID ? () => undefined : await modelRuntime.acquire(provider === "coding" ? "coder" : "bob");
     try {
       if (model === OLLAMA_MODEL_ID) { const result = await ollamaStream(messages, onToken); return { content: result.content, model: result.model, provider }; }
       if (model === PRODUCTION_MODEL) {
