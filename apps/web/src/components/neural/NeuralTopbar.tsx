@@ -1,22 +1,21 @@
 "use client";
 
-import PillNav from "@/components/PillNav";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "./ThemeProvider";
 
 export default function NeuralTopbar() {
+  const { theme, toggleTheme } = useTheme();
+  const light = theme === "light";
   return (
-    <header className="h-[72px] px-3 pt-2 pb-2 sm:px-4">
-      <div className="flex h-full items-center justify-between rounded-2xl border border-white/[0.07] bg-[#080a0d]/95 px-4 shadow-[0_12px_36px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:px-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/[0.05]">
-            <span className="text-sm font-bold text-cyan-200">B</span>
-          </div>
-          <div className="leading-tight">
-            <div className="text-[16px] font-semibold tracking-tight text-white">Bob AI</div>
-            <div className="mt-0.5 text-[11px] text-white/40">Your AI workspace</div>
-          </div>
-        </div>
-        <PillNav items={[{ label: "Chat", href: "/chat" }, { label: "Settings", href: "/settings" }]} />
+    <header className={["flex h-14 items-center justify-between px-3 sm:px-4", light ? "bg-white" : "bg-[#08090b]"].join(" ")}>
+      <div className="flex items-center gap-2">
+        <div className={["flex h-8 w-8 items-center justify-center rounded-lg border text-sm font-semibold", light ? "border-[#e5e7eb] bg-[#f8fafc] text-[#0f766e]" : "border-white/10 bg-white/[0.04] text-cyan-200"].join(" ")}>B</div>
+        <span className={["text-sm font-semibold", light ? "text-[#202123]" : "text-white"].join(" ")}>Bob AI</span>
       </div>
+      <button type="button" onClick={toggleTheme} aria-label={light ? "Switch to dark mode" : "Switch to light mode"} title={light ? "Switch to dark mode" : "Switch to light mode"} className={["flex h-9 items-center gap-2 rounded-lg border px-3 text-sm transition", light ? "border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#f3f4f6]" : "border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/[0.08]"].join(" ")}>
+        {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+        <span className="hidden sm:inline">{light ? "Dark mode" : "Light mode"}</span>
+      </button>
     </header>
   );
 }
