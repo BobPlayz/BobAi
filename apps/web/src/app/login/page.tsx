@@ -58,7 +58,7 @@ export default function LoginPage() {
     const result = await verifyQuickStart(cleanEmail, code.trim());
     setLoading(false);
     if (!result.ok) return setError(result.error || "Verification failed.");
-    router.replace("/onboarding");
+    router.replace("/chat");
   }
 
   return (
