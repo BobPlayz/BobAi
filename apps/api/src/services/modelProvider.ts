@@ -43,7 +43,7 @@ export class BobModelProvider {
         for (const token of result.content.match(/\s+|\S+/g) || [result.content]) onToken(token);
         return { content: result.content, model: result.model || model, provider };
       }
-      const content = await bobNativeModel.generate(messages, { maxTokens: 768, onToken });
+      const content = await bobNativeModel.generate(messages, { maxTokens: 768, onToken, signal });
       if (!content || content.length > MAX_RESPONSE_CHARS) throw new Error("BobAI native model returned an invalid response");
       return { content, model, provider };
     } finally { release(); }
