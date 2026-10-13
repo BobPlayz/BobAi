@@ -2,7 +2,7 @@
 
 > **Product goal:** Build a polished, trustworthy, ChatGPT-style AI website that feels familiar and uncluttered, with useful privacy, research, voice, memory, and file features. This is a product roadmap, not a claim that every feature is already implemented.
 >
- > **Budget assumption:** ₹2,000 INR is the initial setup budget. The separate AI usage target is ₹500 INR per month. Prefer free tiers and monthly/usage-based plans that can be cancelled after one month where provider terms permit. Verify renewal and cancellation terms before any purchase; do not purchase or subscribe without explicit approval.
+> **Budget assumption:** ₹2,000 INR is the initial setup budget. The separate AI usage target is ₹500 INR per month. Prefer free tiers and monthly/usage-based plans that can be cancelled after one month where provider terms permit. Verify renewal and cancellation terms before any purchase; do not purchase or subscribe without explicit approval.
 >
 > **Model decision:** Do **not** train a model for BobAI. Use a configurable hosted provider through a server-side adapter. Ollama has been removed from the public-beta branch. Keep provider/model configuration flexible without exposing keys to browsers.
 
@@ -305,6 +305,9 @@
 - **2026-10-13:** Completed the latest chat UX wiring: image bytes are forwarded only for the newest user message, voice controls follow the active theme, assistant replies expose read-aloud with stop/cleanup, and failed image loads no longer trigger external fallback requests. Added hosted image-analysis tests; all recent code remains pending the final build/test/audit pass.
 - **2026-10-13:** Connected the existing speech-synthesis endpoint to an explicit read-aloud button on assistant replies, while keeping the composer microphone control separate. Added a stop control and audio URL cleanup for playback interruption; local/external provider behavior still needs end-to-end testing.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
+
+- **2026-10-13, public-beta branch:** Recorded the student-facing public-beta scope, Origin Productions publisher identity, ₹500/month AI budget target, and requirement to prefer cancellable monthly services. Removed Ollama routing, runtime/test files, environment settings, and setup instructions; added hosted coding-provider routing regression tests and a production startup gate requiring a verified provider-side spending-cap attestation. The gate is not an in-app billing API.
+- **2026-10-13, public-beta branch:** Removed the fake SVG image-generation fallback so an unavailable real image model now returns an explicit error. Added Origin Productions publisher metadata, changed the About page to support Light/Dark, and removed the unconfirmed `bobai.app` default URL. All changes remain unverified until the deferred final build/test pass.
 
 
 ## Handoff notes for the next ChatGPT session
