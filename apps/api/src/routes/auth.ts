@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, users } from "@bobai/db";
 import { Router, type Request, type Response } from "express";
@@ -25,6 +26,52 @@ function cookieOptions(maxAge: number) { return { httpOnly: true, secure: proces
 function readCookie(req: { header(name: string): string | undefined }, name: string) { const header = req.header("cookie") || ""; const item = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`)); if (!item) return ""; try { return decodeURIComponent(item.slice(name.length + 1)); } catch { return ""; } }
 function setSessionCookies(res: { cookie(name: string, value: string, options: object): void }, session: { accessToken: string; refreshToken: string }) { res.cookie(ACCESS_COOKIE, session.accessToken, cookieOptions(15 * 60 * 1000)); res.cookie(REFRESH_COOKIE, session.refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000)); }
 function clearSessionCookies(res: { clearCookie(name: string, options?: object): void }) { const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/" }; res.clearCookie(ACCESS_COOKIE, options); res.clearCookie(REFRESH_COOKIE, options); }
+
+router.post("/quick-start/request", async (req, res) => {
+  const displayName = typeof req.body?.name === "string" ? req.body.name.trim().replace(/\\s+/g, " ").slice(0, 80) : "";
+  const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const termsAccepted = req.body?.termsAccepted === true;
+  const termsVersion = typeof req.body?.termsVersion === "string" ? req.body.termsVersion : "";
+  const requiredTermsVersion = process.env.BOBAI_TERMS_VERSION;
+  if (displayName.length < 1 || displayName.length > 80 || !email.test(address)) return res.status(400).json({ error: "enter a name and valid email address" });
+  if (!termsAccepted || !/^\\d{4}-\\d{2}-\\d{2}$/.test(termsVersion) || (requiredTermsVersion && termsVersion !== requiredTermsVersion)) return res.status(400).json({ error: "acceptance of the current Terms of Service and Privacy Policy is required" });
+  if (limited(req, `quick-start-request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many code requests", retryAfterSeconds: 900 });
+  try {
+    let [user] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.email, address)).limit(1);
+    if (!user) {
+      const base = displayName.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/^_+|_+$/g, "").slice(0, 18) || "user";
+      const usernameValue = `${base}_${randomBytes(4).toString("hex")}`;
+      const randomPassword = randomBytes(48).toString("base64url");
+      const created = await createUser(address, usernameValue, randomPassword, { termsAccepted: true, termsVersion });
+      user = { id: created.id, email: created.email };
+    }
+    await db.update(users).set({ displayName, updatedAt: new Date() }).where(eq(users.id, user.id));
+    await requestEmailOtp(address, "verification");
+    return res.status(202).json({ message: "If this email can be used, a verification code has been sent.", email: address });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error("[AUTH] quick-start request failed", error);
+    return res.status(503).json({ error: "could not send a verification code right now; check email delivery configuration and try again" });
+  }
+});
+router.post("/quick-start/verify", async (req, res) => {
+  const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+  if (!email.test(address) || !/^\\d{6}$/.test(code)) return res.status(400).json({ error: "enter a valid email and 6-digit code" });
+  if (limited(req, `quick-start-verify:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many code attempts", retryAfterSeconds: 900 });
+  try {
+    if (!await verifyEmailOtp(address, code, "verification")) return res.status(401).json({ error: "invalid or expired code" });
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, address)).limit(1);
+    if (!user) return res.status(401).json({ error: "account could not be verified" });
+    const session = await loginWithEmailOtp(user.id, { userAgent: req.get("user-agent") });
+    if (!session) return res.status(401).json({ error: "account is unavailable" });
+    if ("mfaRequired" in session) return res.status(409).json({ error: "this account has additional MFA enabled; use the existing sign-in flow to complete verification" });
+    setSessionCookies(res, session);
+    return res.json({ expiresIn: session.expiresIn });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error("[AUTH] quick-start verification failed", error);
+    return res.status(503).json({ error: "verification is temporarily unavailable" });
+  }
+});
 
 router.post("/register", async (req, res) => { const { email: address, username: name, password, termsAccepted, termsVersion } = req.body ?? {}; const normalizedEmail = typeof address === "string" ? address.trim().toLowerCase() : ""; const normalizedUsername = typeof name === "string" ? name.trim() : ""; const requiredTermsVersion = process.env.BOBAI_TERMS_VERSION; if (!email.test(normalizedEmail) || !username.test(normalizedUsername) || typeof password !== "string" || password.length < 6 || password.length > 128) return res.status(400).json({ error: "invalid registration details" }); if (termsAccepted !== true || typeof termsVersion !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(termsVersion) || (requiredTermsVersion && termsVersion !== requiredTermsVersion)) return res.status(400).json({ error: "acceptance of the current Terms of Service is required" }); if (limited(req, "register")) return res.status(429).json({ error: "too many registration attempts", retryAfterSeconds: 900 }); try { const user = await createUser(normalizedEmail, normalizedUsername, password, { termsAccepted: true, termsVersion }); try { await requestEmailOtp(normalizedEmail); } catch { /* verification can be requested again */ } return res.status(201).json({ requiresVerification: true, user }); } catch (error) { const databaseError = error as { code?: string }; if (databaseError.code === "PASSWORD_POLICY") return res.status(400).json({ error: error instanceof Error ? error.message : "password does not meet security requirements" }); if (databaseError.code === "TERMS_REQUIRED") return res.status(400).json({ error: "acceptance of the current Terms of Service is required" }); if (databaseError.code === "ACCOUNT_EXISTS") return res.status(409).json({ error: "email or username is already in use" }); if (databaseError.code === "23505" || (error && typeof error === "object" && "cause" in error && (error as { cause?: { code?: string } }).cause?.code === "23505")) return res.status(409).json({ error: "email or username is already in use" }); if (process.env.NODE_ENV !== "production") console.error("[AUTH] registration failed", error); return res.status(503).json({ error: "account service unavailable" }); } });
 router.post("/login", async (req, res) => { const { email: address, password } = req.body ?? {}; const normalizedEmail = typeof address === "string" ? address.trim().toLowerCase() : ""; if (typeof address !== "string" || typeof password !== "string") return res.status(400).json({ error: "invalid credentials" }); if (limited(req, `login:${normalizedEmail.slice(0, 254)}`)) return res.status(429).json({ error: "too many login attempts", retryAfterSeconds: 900 }); const abuseKey = authAbuseKey(req.ip, normalizedEmail); const abuse = checkAuthAbuse(abuseKey); if (abuse.blocked) return res.status(429).json({ error: "login temporarily blocked", retryAfterSeconds: abuse.retryAfterSeconds }); try { const result = await login(normalizedEmail, password, { userAgent: req.get("user-agent") }); if (!result) { const retryAfterSeconds = recordAuthFailure(abuseKey); return res.status(401).json({ error: "invalid email or password", ...(retryAfterSeconds ? { retryAfterSeconds } : {}) }); } if ("mfaRequired" in result) return res.status(200).json({ mfaRequired: true, challengeToken: result.challengeToken, expiresInSeconds: 300 }); clearAuthFailures(abuseKey); setSessionCookies(res, result); return res.json({ expiresIn: result.expiresIn }); } catch (error) { if (process.env.NODE_ENV !== "production") console.error("[AUTH] login failed", error); return res.status(503).json({ error: "authentication service unavailable" }); } });
