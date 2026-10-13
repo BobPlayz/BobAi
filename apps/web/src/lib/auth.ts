@@ -8,6 +8,25 @@ export type LoginResult = { ok: true; mfaRequired?: false } | { ok: true; mfaReq
 let session: Session | null = null;
 async function readJson<T>(response: Response): Promise<T> { return (await response.json().catch(() => ({}))) as T; }
 async function authenticate(path: string, body: Record<string, unknown>): Promise<LoginResult> { try { const res = await fetch(`${API}${path}`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify(body) }); const data = await readJson<{ expiresIn?: number; mfaRequired?: boolean; challengeToken?: string; expiresInSeconds?: number } & ApiError>(res); if (!res.ok) return { ok: false, error: data.error || "authentication failed" }; if (data.mfaRequired === true && typeof data.challengeToken === "string" && typeof data.expiresInSeconds === "number") return { ok: true, mfaRequired: true, challengeToken: data.challengeToken, expiresInSeconds: data.expiresInSeconds }; if (typeof data.expiresIn !== "number") return { ok: false, error: "invalid session from backend" }; session = { accessToken: "", expiresIn: data.expiresIn }; return { ok: true }; } catch { return { ok: false, error: "backend unavailable" }; } }
+export async function requestQuickStart(name: string, email: string, termsAccepted: true, termsVersion: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API}/auth/quick-start/request`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ name, email, termsAccepted, termsVersion }) });
+    const data = await readJson<ApiError>(res);
+    if (!res.ok) return { ok: false, error: data.error || "verification code could not be sent" };
+    localStorage.setItem(PENDING_EMAIL_KEY, email.trim().toLowerCase());
+    return { ok: true };
+  } catch { return { ok: false, error: "backend unavailable" }; }
+}
+export async function verifyQuickStart(email: string, code: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API}/auth/quick-start/verify`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ email, code }) });
+    const data = await readJson<{ expiresIn?: number } & ApiError>(res);
+    if (!res.ok || typeof data.expiresIn !== "number") return { ok: false, error: data.error || "verification failed" };
+    session = { accessToken: "", expiresIn: data.expiresIn, email: email.trim().toLowerCase() };
+    localStorage.removeItem(PENDING_EMAIL_KEY);
+    return { ok: true };
+  } catch { return { ok: false, error: "backend unavailable" }; }
+}
 export const login = (email: string, password: string) => authenticate("/auth/login", { email, password });
 export async function requestLoginOtp(email: string): Promise<{ ok: boolean; error?: string }> { try { const res = await fetch(`${API}/auth/login-otp/request`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ email }) }); const data = await readJson<ApiError>(res); return res.ok ? { ok: true } : { ok: false, error: data.error || "sign-in code could not be sent" }; } catch { return { ok: false, error: "backend unavailable" }; } }
 export const verifyLoginOtp = (email: string, code: string) => authenticate("/auth/login-otp/verify", { email, code });
