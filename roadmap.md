@@ -83,7 +83,8 @@
 - [ ] Keep optional local Ollama as a separate opt-in path; do not require downloading a local model.
 - [ ] Remove model-training commands from the normal user-facing setup instructions. Audit training scripts and references before deleting or archiving them.
 - [x] Add tests for provider URL safety and missing-key/configuration status.
-- [ ] Add mocked integration tests for provider errors, malformed responses, streaming disconnects, and rate/usage limits.
+- [x] Add mocked tests for provider success, HTTP 401/429 failures, malformed/empty responses, and basic SSE streaming.
+- [ ] Add streaming-disconnect and rate/usage-limit coverage.
 
 **Exit criteria:** A new user can configure one supported provider and complete a streamed chat safely, without training a model.
 
@@ -92,6 +93,8 @@
 **Goal:** Make chat history reliable and memory transparent.
 
 - [ ] Verify sign-up/sign-in/sign-out and session expiry end to end.
+- [x] Replace the visible password/social login screen with a one-time name + email OTP quick-start flow; the API creates a user when needed and issues secure session cookies after verification. This is committed but not yet build/test verified.
+- [ ] Verify quick-start email delivery, existing-account handling, session refresh, sign-out, MFA edge cases, and legal-version configuration end to end.
 - [ ] Persist conversations and messages under the correct authenticated user.
 - [ ] Support new chat, history loading, conversation switching, search, rename, pin, and deletion where endpoints exist.
 - [ ] Ensure refresh/reopen does not duplicate conversations or lose messages.
@@ -230,4 +233,5 @@
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
 - **2026-10-13:** Expanded hosted-provider tests to cover a successful chat response, safe handling of HTTP 401/429 errors, malformed and empty responses, successful SSE streaming, and an empty stream. These tests are committed but still need to run in CI; stream-disconnect and usage-limit coverage remains open.
+- **2026-10-13:** Replaced the visible password/social sign-in screen with a one-time name + email OTP quick-start. Added API endpoints to create a user when needed, update the display name, verify the email code, and issue secure session cookies. This depends on correctly configured SMTP in production and is not yet build/test verified. Existing API auth mechanisms remain available for backward compatibility; MFA-enabled accounts need a separate verification path.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
