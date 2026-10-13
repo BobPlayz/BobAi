@@ -19,11 +19,12 @@ export async function requestQuickStart(name: string, email: string, termsAccept
     return { ok: true };
   } catch { return { ok: false, error: "backend unavailable" }; }
 }
-export async function verifyQuickStart(name: string, email: string, code: string): Promise<{ ok: boolean; error?: string }> {
+export async function verifyQuickStart(name: string, email: string, code: string): Promise<{ ok: boolean; error?: string; mfaRequired?: boolean; challengeToken?: string }> {
   try {
     const res = await fetch(`${API}/auth/quick-start/verify`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ name, email, code }) });
-    const data = await readJson<{ expiresIn?: number } & ApiError>(res);
+    const data = await readJson<{ expiresIn?: number; mfaRequired?: boolean; challengeToken?: string } & ApiError>(res);
     if (!res.ok) return { ok: false, error: data.error || "verification failed" };
+    if (data.mfaRequired === true && typeof data.challengeToken === "string") { localStorage.removeItem(PENDING_EMAIL_KEY); localStorage.removeItem(PENDING_NAME_KEY); return { ok: true, mfaRequired: true, challengeToken: data.challengeToken }; }
     if (typeof data.expiresIn !== "number") return { ok: false, error: "invalid session from backend" };
     session = { accessToken: "", expiresIn: data.expiresIn, email: email.trim().toLowerCase() };
     localStorage.removeItem(PENDING_EMAIL_KEY);
