@@ -62,6 +62,7 @@ export function useChat() {
   async function handleFiles(files: File[]) {
     if (!activeConversation || !files.length) return;
     setLoadingConversationId(activeId);
+    let workingMessages = activeConversation.messages;
     try {
       for (const file of files) {
         setUploadingFiles((prev) => [...prev, file.name]);
@@ -71,24 +72,29 @@ export function useChat() {
           if (file.type.startsWith("image/") && file.size > 1_000_000) throw new Error("For image understanding, attach an image smaller than 1 MB for now.");
           const result = await uploadFile(file, (progress) => setUploadProgress((prev) => ({ ...prev, [file.name]: progress })));
           const fileData: ChatFile = { id: crypto.randomUUID(), name: result.name, type: result.type, text: result.text };
-          const current = conversations.find((conversation) => conversation.id === activeId) || activeConversation;
           if (file.type.startsWith("image/")) {
             const image: ChatImage = { id: crypto.randomUUID(), url: await readImageDataUrl(file), prompt: file.name };
             const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: "Please analyze this image: " + file.name, files: [fileData], images: [image] };
-            const nextMessages = [...current.messages, userMessage];
+            const nextMessages = [...workingMessages, userMessage];
             updateConversation(activeId, (conversation) => ({ ...conversation, messages: nextMessages }));
             const response = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, activeId);
-            updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: [...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "Image analysis finished without a text response." }] }));
+            const assistantMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "Image analysis finished without a text response." };
+            workingMessages = [...nextMessages, assistantMessage];
+            updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: workingMessages }));
             continue;
           }
-          const nextMessages = [...current.messages, { id: crypto.randomUUID(), role: "user" as const, content: "", files: [fileData] }];
+          const nextMessages = [...workingMessages, { id: crypto.randomUUID(), role: "user" as const, content: "", files: [fileData] }];
           updateConversation(activeId, (conversation) => ({ ...conversation, messages: nextMessages }));
           const filePrompt = "file content from " + result.name + ":\n\n" + result.text;
           const response = await sendMessage([...nextMessages, { id: crypto.randomUUID(), role: "user", content: filePrompt }], settings.personality, undefined, settings.memory, activeId);
-          updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: [...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "The AI returned no text response." }] }));
+          const assistantMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: typeof response.reply === "string" ? response.reply : "The AI returned no text response." };
+          workingMessages = [...nextMessages, assistantMessage];
+          updateConversation(activeId, (conversation) => ({ ...conversation, title: response.title || conversation.title, messages: workingMessages }));
         } catch (error) {
           const message = error instanceof Error ? error.message : "The file could not be processed. Please try again.";
-          updateConversation(activeId, (conversation) => ({ ...conversation, messages: [...conversation.messages, { id: crypto.randomUUID(), role: "assistant", content: message }] }));
+          const errorMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: message };
+          workingMessages = [...workingMessages, errorMessage];
+          updateConversation(activeId, (conversation) => ({ ...conversation, messages: [...conversation.messages, errorMessage] }));
         } finally {
           setUploadingFiles((prev) => prev.filter((name) => name !== file.name));
           setUploadProgress((prev) => { const next = { ...prev }; delete next[file.name]; return next; });
