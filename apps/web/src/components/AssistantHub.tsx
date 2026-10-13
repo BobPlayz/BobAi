@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createArtifact, createProject, deepResearch, generateImage, listProjects, runCodingAgent, sendMessage, studyPack, updateProject, type DeepResearchResult } from "@/lib/api";
+import { createArtifact, createProject, deepResearch, generateImage, listProjects, runCodingAgent, sendMessage, studyPack, updateProject, webSearch, type DeepResearchResult } from "@/lib/api";
 
 type Project = { id: string; name: string; description?: string | null; settings?: unknown };
-type Mode = "research" | "study" | "create" | "image" | "voice" | "agent";
+type Mode = "search" | "research" | "study" | "create" | "image" | "voice" | "agent";
 type Props = { personality: string; onPersonalityChange: (value: string) => void };
 type QuizItem = { question: string; options: string[]; answer: string; explanation: string };
 
@@ -83,7 +83,11 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     const controller = mode === "agent" ? new AbortController() : null;
     if (controller) agentController.current = controller;
     try {
-      if (mode === "research") {
+      if (mode === "search") {
+        const result = await webSearch(task, sourceTypes);
+        setOutput(result.sources.length ? `Found ${result.sources.length} sources for “${task}”. Open the links below to verify the evidence.` : "No sources were returned. Try a broader search or different source preferences.");
+        setResearchSources(result.sources.slice(0, 12));
+      } else if (mode === "research") {
         const result = await deepResearch(task, sourceTypes);
         setOutput(result.synthesis);
         setResearchSources(result.sources.slice(0, 12));
@@ -100,7 +104,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     finally { if (agentController.current === controller) agentController.current = null; setBusy(false); }
   }
 
-  const modes = useMemo(() => [["research", "Deep Research"], ["study", "Study"], ["create", "Create"], ["image", "Image"], ["voice", "Voice"], ["agent", "Agent"]] as Array<[Mode, string]>, []);
+  const modes = useMemo(() => [["search", "Web Search"], ["research", "Deep Research"], ["study", "Study"], ["create", "Create"], ["image", "Image"], ["voice", "Voice"], ["agent", "Agent"]] as Array<[Mode, string]>, []);
 
   return (
     <section className="border-b border-[#2A3340] bg-[#0E141B]/95 px-4 py-3 backdrop-blur-xl">
@@ -112,8 +116,8 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
 
       <div className="mx-auto mt-3 grid max-w-5xl gap-3 lg:grid-cols-[1fr_260px]">
         <div className="rounded-2xl border border-[#2A3340] bg-[#10161D] p-3">
-          <div className="mb-2 text-xs text-[#64748B]">{mode === "research" ? "Research, compare, synthesize and cite — not just a search dump." : mode === "study" ? "Turn notes or a topic into a study pack and score yourself."  : mode === "create" ? "Generate an artifact, then edit it directly below." : mode === "image" ? "Generate a new image or upload a reference image to edit." : mode === "voice" ? "Type text to hear it, or use voice input above." : "Give the coding agent a concrete task."}</div>
-          {mode === "research" && (
+          <div className="mb-2 text-xs text-[#64748B]">{mode === "search" ? "Find web sources and inspect the evidence directly." : mode === "research" ? "Research, compare, synthesize and cite — not just a search dump." : mode === "study" ? "Turn notes or a topic into a study pack and score yourself."  : mode === "create" ? "Generate an artifact, then edit it directly below." : mode === "image" ? "Generate a new image or upload a reference image to edit." : mode === "voice" ? "Type text to hear it, or use voice input above." : "Give the coding agent a concrete task."}</div>
+          {(mode === "research" || mode === "search") && (
             <fieldset className="mb-3 rounded-xl border border-[#2A3340] p-3">
               <legend className="px-1 text-xs font-semibold text-[#94A3B8]">Preferred sources for this request</legend>
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2">
@@ -169,7 +173,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
               </figcaption>
             </figure>)}
           </div>}
-          {mode === "research" && researchSources.length > 0 && (
+          {(mode === "research" || mode === "search") && researchSources.length > 0 && (
             <section className="mt-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3" aria-label="Research sources">
               <h3 className="mb-2 text-xs font-semibold text-[#94A3B8]">Sources used</h3>
               <ol className="space-y-2">
