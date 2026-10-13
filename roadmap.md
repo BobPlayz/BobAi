@@ -77,7 +77,8 @@
 - [x] Add an opt-in OpenAI-compatible hosted chat adapter with configurable model/base URL, server-side key handling, bounded request/response sizes, timeouts, and streamed output. See [Hosted AI setup](docs/HOSTED_AI.md).
 - [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
 - [ ] Keep provider API keys server-side in environment secrets; never send them to browser code.
-- [ ] Implement/verify streaming, cancel/stop behavior, retry, timeouts, and rate limits.
+- [x] Add a visible Stop response control that aborts the active browser chat stream and preserves any partial text already received. Build/runtime verification is pending.
+- [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage.
 - [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [ ] Provide a model/provider settings area only for providers that are genuinely implemented.
@@ -240,7 +241,7 @@
 - **2026-10-13:** Fixed repository preflight allowlists so the root roadmap and quick-start auth guide are accepted Markdown files.
 - **2026-10-13:** Added per-request Deep Research source preferences and source-filter unit tests; the tests have intentionally not been run yet because final verification is deferred until implementation work is complete.
 - **2026-10-13:** Added saved-memory review, edit, individual-delete, and clear-all controls; added a user-facing account export control; and made the privacy page follow the selected theme. Build/runtime verification and account-specific end-to-end checks remain pending.
-- **2026-10-13:** Added the web lint step to CI. CI/test execution is being deferred until the implementation pass is complete, as requested.
+- **2026-10-13:** Added the web lint step to CI and a visible chat-stream Stop control wired to `AbortController`. CI/test execution is being deferred until the implementation pass is complete, as requested.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
