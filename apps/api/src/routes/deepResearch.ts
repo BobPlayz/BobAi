@@ -7,7 +7,8 @@ const limit = createUserRateLimit(4, 60_000);
 
 router.post("/", limit, async (req, res) => {
   try {
-    const result = await deepResearch(req.body?.query);
+    const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options) ? req.body.options as Record<string, unknown> : {};
+    const result = await deepResearch(req.body?.query, options);
     return res.json({ ...result, mode: "deep-research" });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("deep research failed", error);
