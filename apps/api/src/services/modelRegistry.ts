@@ -5,11 +5,11 @@ export type ModelProvider = "bob" | "coding";
 export type ModelDefinition = { id: string; name: string; provider: ModelProvider; model: string; capabilities: ModelCapability[]; description: string; visionReady: boolean };
 
 const REQUESTED_MODEL = (process.env.BOBAI_MODEL_NAME || "").trim();
-const HOSTED_PROVIDER_SELECTED = process.env.BOBAI_PROVIDER?.trim().toLowerCase() === "openai" && REQUESTED_MODEL !== "ollama-local" && REQUESTED_MODEL !== "bob-production";
+const HOSTED_PROVIDER_SELECTED = process.env.BOBAI_PROVIDER?.trim().toLowerCase() === "openai" && REQUESTED_MODEL !== "bob-production";
 const CONFIGURED_MODEL = HOSTED_PROVIDER_SELECTED ? "openai-chat" : REQUESTED_MODEL || (productionModelConfigured() ? "bob-production" : "bob-0.2-native");
 
 export const MODEL_REGISTRY: ModelDefinition[] = [
-  { id: "bob", name: "BobAI", provider: "bob", model: CONFIGURED_MODEL, capabilities: ["chat", "reasoning", "coding", "fast", "vision"], description: "BobAI's unified model. It uses the scalable production runtime when trained artifacts are available or the compact native runtime otherwise.", visionReady: false },
+  { id: "bob", name: "BobAI", provider: "bob", model: CONFIGURED_MODEL, capabilities: ["chat", "reasoning", "coding", "fast", "vision"], description: "BobAI chat model. Configure a supported hosted provider for the full assistant experience.", visionReady: false },
 ];
 
 export type BobAgentId = "worker";
