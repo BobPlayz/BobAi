@@ -431,13 +431,8 @@ function AssistantMessage({
                     referrerPolicy="no-referrer"
                     onLoad={() => onImageLoaded(image.id)}
                     onError={(event) => {
-                      const target = event.currentTarget;
-
-                      target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(
-                        image.prompt
-                      )}?seed=${
-                        Date.now() + Math.floor(Math.random() * 10000)
-                      }&model=flux&width=1024&height=1024&nologo=true`;
+                      event.currentTarget.alt = "Image could not be loaded";
+                      onImageLoaded(image.id);
                     }}
                   />
 
