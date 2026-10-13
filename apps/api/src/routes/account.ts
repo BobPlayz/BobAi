@@ -7,6 +7,7 @@ import { beginMfaSetup, disableMfa, enableMfa, userMfaStatus } from "../services
 import { requestPasswordReset, resetPassword } from "../services/passwordReset.js";
 import { listSessions, revokeAllSessions, revokeSession } from "../services/sessionManager.js";
 import { recordAudit } from "../services/audit.js";
+import { requestEmailOtp, verifyEmailOtp } from "../services/otp.js";
 const router = Router(); const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; const password = (value: unknown): value is string => typeof value === "string" && value.length >= 12 && value.length <= 128; const resetBuckets = new Map<string, { startedAt: number; count: number }>(); const RESET_WINDOW_MS = 15 * 60_000, RESET_MAX_ATTEMPTS = 10, MAX_RESET_BUCKETS = 10_000, MAX_EXPORT_BYTES = 25 * 1024 * 1024;
 function cleanupResetBuckets(now = Date.now()) { const cutoff = now - RESET_WINDOW_MS; for (const [key, bucket] of resetBuckets) if (bucket.startedAt < cutoff) resetBuckets.delete(key); }
 function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = resetBuckets.get(bucketKey); if (!current || now - current.startedAt >= RESET_WINDOW_MS) { if (resetBuckets.size >= MAX_RESET_BUCKETS) cleanupResetBuckets(now); if (resetBuckets.size >= MAX_RESET_BUCKETS) return true; resetBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > RESET_MAX_ATTEMPTS; }
@@ -14,6 +15,34 @@ setInterval(() => cleanupResetBuckets(), RESET_WINDOW_MS).unref();
 router.post("/password-reset/request", async (req, res) => { const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : ""; if (!email.test(address)) return res.status(400).json({ error: "invalid email" }); if (limited(req, `request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many password reset requests", retryAfterSeconds: 900 }); try { await requestPasswordReset(address); return res.status(202).json({ message: "if the account exists, password reset instructions have been created" }); } catch { return res.status(503).json({ error: "password reset service unavailable" }); } });
 router.post("/password-reset/confirm", async (req, res) => { const { token, password: nextPassword } = req.body ?? {}; if (typeof token !== "string" || token.length < 32 || !password(nextPassword)) return res.status(400).json({ error: "invalid reset request" }); if (limited(req, "confirm")) return res.status(429).json({ error: "too many password reset attempts", retryAfterSeconds: 900 }); try { const result = await resetPassword(token, nextPassword); if (!result.ok) return res.status(400).json({ error: result.error }); return res.status(204).send(); } catch { return res.status(503).json({ error: "password reset service unavailable" }); } });
 router.use(requireAuth);
+router.post("/delete/request", async (req, res) => {
+  if (limited(req, `delete-otp-request:${req.user!.id}`)) return res.status(429).json({ error: "too many account deletion code requests", retryAfterSeconds: 900 });
+  try {
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, req.user!.id)).limit(1);
+    if (!user) return res.status(404).json({ error: "user not found" });
+    await requestEmailOtp(user.email, "account-delete");
+    return res.status(202).json({ message: "If email delivery is configured, a deletion code has been sent." });
+  } catch {
+    return res.status(503).json({ error: "account deletion verification could not be sent" });
+  }
+});
+router.post("/delete/confirm", async (req, res) => {
+  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+  if (!/^\\d{6}$/.test(code)) return res.status(400).json({ error: "enter the 6-digit account deletion code" });
+  if (limited(req, `delete-otp-confirm:${req.user!.id}`)) return res.status(429).json({ error: "too many account deletion attempts", retryAfterSeconds: 900 });
+  try {
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, req.user!.id)).limit(1);
+    if (!user || !await verifyEmailOtp(user.email, code, "account-delete")) return res.status(401).json({ error: "invalid or expired account deletion code" });
+    const now = new Date();
+    await revokeAllSessions(req.user!.id);
+    const [deleted] = await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id)).returning({ id: users.id, deletedAt: users.deletedAt });
+    if (!deleted) return res.status(404).json({ error: "user not found" });
+    await recordAudit({ action: "account_deletion_requested", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id });
+    return res.status(202).json({ status: "account deletion scheduled", deletedAt: deleted.deletedAt, permanentDeletionAfterDays: 30 });
+  } catch {
+    return res.status(503).json({ error: "account deletion could not be scheduled" });
+  }
+});
 router.get("/me", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled }).from(users).where(eq(users.id, req.user!.id)).limit(1); return user ? res.json(user) : res.status(404).json({ error: "user not found" }); });
 router.get("/mfa", async (req, res) => res.json({ enabled: await userMfaStatus(req.user!.id) }));
 router.post("/mfa/setup", async (req, res) => { try { return res.json(await beginMfaSetup(req.user!.id)); } catch { return res.status(503).json({ error: "MFA setup unavailable" }); } });
