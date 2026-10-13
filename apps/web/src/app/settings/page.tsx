@@ -3,14 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import MagicBento, { MagicBentoCard } from "@/components/MagicBento";
-import { useTheme, type BobTheme } from "@/components/neural/ThemeProvider";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
 type Tab =
   | "account"
   | "personalization"
-  | "appearance"
   | "privacy"
   | "memory"
   | "about";
@@ -19,16 +17,13 @@ interface SettingsState {
   personality: string;
   nsfw: boolean;
   memory: boolean;
-  theme: "dark";
-  accent: string;
 }
 
 export default function SettingsPage() {
-  const { theme, setTheme, accent, setAccent } = useTheme();
   const [tab, setTab] = useState<Tab>("personalization");
 
   const [settings, setSettings] = useState<SettingsState>(() => {
-    const defaults: SettingsState = { personality: "", nsfw: false, memory: true, theme: "dark", accent: "#38bdf8" };
+    const defaults: SettingsState = { personality: "", nsfw: false, memory: true };
     if (typeof window === "undefined") return defaults;
     try {
       return { ...defaults, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null") as Partial<SettingsState>) };
@@ -60,19 +55,9 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 1500);
   }
 
-  const themeOptions: { id: BobTheme; label: string; detail: string }[] = [
-    { id: "legacy", label: "Legacy", detail: "The original Bob AI workspace" },
-    { id: "futuristic", label: "Futuristic", detail: "Neural interface with robot scene" },
-    { id: "anime", label: "Anime", detail: "Anime-inspired animated workspace" },
-    { id: "glass", label: "Glass", detail: "Translucent, quiet interface" },
-    { id: "light", label: "Light", detail: "Bright workspace for daytime" },
-    { id: "dark", label: "Dark", detail: "Low-light workspace" },
-  ];
-
   const tabs: { id: Tab; label: string }[] = [
     { id: "account", label: "Account" },
     { id: "personalization", label: "Personalization" },
-    { id: "appearance", label: "Appearance" },
     { id: "privacy", label: "Privacy" },
     { id: "memory", label: "Memory" },
     { id: "about", label: "About" },
@@ -184,64 +169,6 @@ export default function SettingsPage() {
 
               <div className="mt-3 text-xs text-[#64748B]">
                 This will be injected into Bob AI&apos;s system prompt and affect future conversations.
-              </div>
-            </div>
-          )}
-
-                    {tab === "appearance" && (
-            <div className="space-y-6">
-              <div className="rounded-3xl border border-[#2A3340] bg-[#10161D] p-6">
-                <div className="text-lg font-semibold text-[#E5EEF7]">
-                  Theme
-                </div>
-                <div className="mt-1 text-sm text-[#94A3B8]">
-                  Choose how Bob AI looks on this device.
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {themeOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setTheme(option.id)}
-                      className={
-                        theme === option.id
-                          ? "rounded-2xl border border-[#38BDF8]/30 bg-[#171D26] p-4 text-left transition-all duration-200"
-                          : "rounded-2xl border border-[#2A3340] bg-[#141A22] p-4 text-left transition-all duration-200 hover:border-[#38BDF8]/30"
-                      }
-                    >
-                      <div className="font-medium text-[#E5EEF7]">{option.label}</div>
-                      <div className="mt-1 text-xs text-[#94A3B8]">{option.detail}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-[#2A3340] bg-[#10161D] p-6">
-                <div className="text-lg font-semibold text-[#E5EEF7]">
-                  Accent Color
-                </div>
-                <div className="mt-1 text-sm text-[#94A3B8]">
-                  Sky blue is the default Bob AI accent.
-                </div>
-
-                <div className="mt-4 flex items-center gap-3">
-                  <button
-                    onClick={() => setAccent("#38bdf8")}
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#38BDF8]/40 bg-[#171D26] transition-all duration-200 hover:scale-105"
-                  >
-                    <span className="h-5 w-5 rounded-full bg-[#38BDF8]" />
-                  </button>
-
-                  <label className="text-sm text-[#94A3B8]">
-                    Custom accent
-                    <input
-                      type="color"
-                      value={accent}
-                      onChange={(event) => setAccent(event.target.value)}
-                      className="ml-3 h-8 w-12 cursor-pointer rounded border-0 bg-transparent"
-                    />
-                  </label>
-                </div>
               </div>
             </div>
           )}
