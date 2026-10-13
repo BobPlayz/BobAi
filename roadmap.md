@@ -76,7 +76,7 @@
 
 - [x] Add an opt-in OpenAI-compatible hosted chat adapter with configurable model/base URL, server-side key handling, bounded request/response sizes, timeouts, and streamed output. See [Hosted AI setup](docs/HOSTED_AI.md).
 - [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
-- [ ] Keep provider API keys server-side in environment secrets; never send them to browser code.
+- [x] Keep hosted provider keys in server-side environment configuration and expose only configuration status to the browser; build/runtime verification is pending.
 - [x] Add a visible Stop response control that aborts the active browser chat stream and preserves any partial text already received. Build/runtime verification is pending.
 - [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage.
 - [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
@@ -84,8 +84,9 @@
 - [x] Show the configured model/provider status in Settings → About, without exposing secrets. The status is configuration-level and not a live-availability guarantee; build/runtime verification is pending.
 - [x] Add per-user rate limiting to the streamed AI chat endpoint. Build/runtime verification is pending.
 - [ ] Add hard provider-side monetary budgets and verify global cost/usage safeguards before enabling paid API calls.
-- [ ] Keep optional local Ollama as a separate opt-in path; do not require downloading a local model.
-- [ ] Remove model-training commands from the normal user-facing setup instructions. Audit training scripts and references before deleting or archiving them.
+- [x] Keep local Ollama as a separate opt-in path; it remains disabled by default and is not required for hosted chat.
+- [x] Keep model-training commands out of normal user-facing setup instructions.
+- [ ] Audit training scripts and references before deleting or archiving them.
 - [x] Add tests for provider URL safety and missing-key/configuration status.
 - [x] Add mocked tests for provider success, HTTP 401/429 failures, malformed/empty responses, and basic SSE streaming.
 - [ ] Add streaming-disconnect and rate/usage-limit coverage.
@@ -110,7 +111,7 @@
 - [x] Add empty, loading, and failure states to the main chat/upload flows; verify offline recovery end to end.
 - [x] Define memory as saved user facts plus relevance-based retrieval from the user-scoped memory store; memory review/edit/delete controls are available in Settings.
 - [x] Add user-visible memory review, editing, individual deletion, and clear-all controls backed by authenticated database operations. Build/test verification is pending.
-- [ ] Make memory opt-in or clearly configurable, and explain what is stored and why.
+- [x] Make memory clearly configurable in Settings, explain that disabling it does not erase existing memories, and provide review/edit/delete/clear-all controls. Build/runtime verification is pending.
 - [ ] Test user isolation and authorization for every conversation and memory endpoint.
 
 **Exit criteria:** Conversation history and memory persist reliably, are user-scoped, and can be controlled without exposing another user's data.
@@ -120,7 +121,7 @@
 **Goal:** Let users work with useful files and images safely.
 
 - [ ] Inventory currently supported file types and enforce the same list in UI and API.
-- [ ] Support image understanding through the selected hosted provider when available; retain optional local Ollama vision.
+- [x] Implement image understanding through the configured hosted provider when available, with optional local Ollama vision. Live provider verification is pending.
 - [x] Add file attachment previews, upload progress, and clear upload size/type errors; cancel/retry remains unfinished.
 - [ ] Add cancellation/retry for in-progress uploads.
 - [x] Use OCR/text extraction for supported formats and return explicit extraction failures where available; end-to-end verification is pending.
@@ -187,7 +188,8 @@
 - [x] Add a server-side age-appropriate safety baseline to the core chat system prompt; it cannot be overridden by user customization. This is a baseline safeguard, not age verification or a substitute for provider safety.
 - [ ] Validate age-appropriate behavior across all model providers and tools; do not add an unrestricted toggle intended to evade provider protections.
 - [ ] If age assurance or parental controls are needed, design them with privacy minimization and appropriate adult/legal guidance before collecting sensitive data.
-- [ ] Add a concise privacy page that accurately describes provider processing, storage, memory, uploads, and retention.
+- [x] Maintain a privacy-page draft describing provider processing, storage, memory, uploads, and retention, and make it follow the selected theme.
+- [ ] Complete the provider inventory, operator identity, contact/grievance details, retention schedule, and legal review before treating the privacy page as final.
 - [x] Add email-OTP reauthentication for account deletion, a visible confirmation flow, and scheduled permanent cleanup after the 30-day grace period. Build/test verification is pending.
 - [x] Add a user-facing account data export control backed by the authenticated export endpoint. Build/test verification is pending.
 - [ ] Verify auth, authorization, CSRF/CORS protections as applicable, rate limits, secret handling, secure cookies, and HTTPS.
