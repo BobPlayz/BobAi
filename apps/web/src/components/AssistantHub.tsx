@@ -130,11 +130,11 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
           )}
           <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="what should Bob do?" className="min-h-20 w-full resize-y rounded-xl border border-[#2A3340] bg-[#141A22] p-3 text-sm text-[#E5EEF7] outline-none placeholder:text-[#64748B] focus:border-[#38BDF8]" />
           {mode === "image" && <div className="mt-3 rounded-xl border border-[#2A3340] p-3">
-            <label className="block text-xs font-semibold text-[#94A3B8]">Reference images (optional, up to 4, 2 MB each)</label>
-            <input type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={async (event) => {
+            <label className="block text-xs font-semibold text-[#94A3B8]">Reference image (optional, one PNG/JPEG/WebP image up to 1 MB)</label>
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={async (event) => {
               const files = Array.from(event.target.files || []);
-              if (files.length > 4) { setOutput("choose up to 4 reference images."); event.target.value = ""; return; }
-              if (files.some((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 2 * 1024 * 1024)) { setOutput("reference images must be PNG, JPEG, or WebP and no larger than 2 MB each."); event.target.value = ""; return; }
+              if (files.length > 1) { setOutput("choose one reference image."); event.target.value = ""; return; }
+              if (files.some((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 1024 * 1024)) { setOutput("the reference image must be PNG, JPEG, or WebP and no larger than 1 MB."); event.target.value = ""; return; }
               try {
                 const encoded = await Promise.all(files.map((file) => new Promise<string>((resolve, reject) => {
                   const reader = new FileReader();
@@ -143,7 +143,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
                   reader.readAsDataURL(file);
                 })));
                 setReferenceImages(encoded);
-                setOutput(encoded.length ? encoded.length + " reference image(s) ready." : "");
+                setOutput(encoded.length ? "reference image ready." : "");
               } catch { setOutput("could not read the selected image files."); }
             }} className="mt-2 block w-full text-xs text-[#94A3B8]" />
             {referenceImages.length > 0 && <button type="button" onClick={() => setReferenceImages([])} className="mt-2 rounded-lg border border-[#2A3340] px-2 py-1 text-xs text-[#94A3B8]">Clear reference images ({referenceImages.length})</button>}
