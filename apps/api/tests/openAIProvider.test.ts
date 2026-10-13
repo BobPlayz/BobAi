@@ -123,6 +123,21 @@ test("hosted streaming rejects an empty answer", async () => {
   }
 });
 
+test("hosted streaming propagates an already-aborted client signal", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    const controller = new AbortController();
+    controller.abort();
+    globalThis.fetch = async (_input, init) => {
+      assert.equal(init?.signal?.aborted, true);
+      throw new DOMException("The operation was aborted.", "AbortError");
+    };
+    await assert.rejects(openAIStream([{ role: "user", content: "Hello" }], () => undefined, controller.signal), /aborted/i);
+  } finally {
+    restoreEnvironment();
+  }
+});
+
 test("hosted image analysis sends supported image data through the server-side provider", async () => {
   try {
     process.env.OPENAI_API_KEY = "test-key";
