@@ -2,12 +2,13 @@ import type { ChatMessage, Conversation } from "@/types/chat";
 import { clearSession, getSession, refreshSession } from "@/lib/auth";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 async function request(path: string, init: RequestInit = {}, retry = true) { const headers = new Headers(init.headers); if (!(init.body instanceof FormData)) headers.set("Content-Type", "application/json"); if (["POST","PUT","PATCH","DELETE"].includes((init.method || "GET").toUpperCase())) headers.set("X-CSRF-Protection", "1"); const session = getSession(); if (session?.accessToken) headers.set("Authorization", `Bearer ${session.accessToken}`); let res = await fetch(`${API}${path}`, { ...init, credentials: "include", headers }); if (res.status === 401 && retry) { const refreshed = await refreshSession(); if (refreshed?.accessToken) { const retryHeaders = new Headers(init.headers); if (!(init.body instanceof FormData)) retryHeaders.set("Content-Type", "application/json"); if (["POST","PUT","PATCH","DELETE"].includes((init.method || "GET").toUpperCase())) retryHeaders.set("X-CSRF-Protection", "1"); retryHeaders.set("Authorization", `Bearer ${refreshed.accessToken}`); res = await fetch(`${API}${path}`, { ...init, credentials: "include", headers: retryHeaders }); } else clearSession(); } return res; }
-async function readChatStream(response: Response, onToken?: (token: string) => void) {
+type ChatStreamResult = { reply?: string; title?: string; imagePrompt?: string; [key: string]: unknown };
+async function readChatStream(response: Response, onToken?: (token: string) => void): Promise<ChatStreamResult> {
   if (!response.body) throw new Error("BobAI returned an empty stream.");
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let pending = "";
-  let completed: Record<string, unknown> | null = null;
+  let completed: ChatStreamResult | null = null;
   let streamError = "";
   const consume = (block: string) => {
     let event = "";
@@ -21,7 +22,7 @@ async function readChatStream(response: Response, onToken?: (token: string) => v
     try { payload = JSON.parse(data.join("\n")) as Record<string, unknown>; }
     catch { throw new Error("BobAI returned an invalid stream event."); }
     if (event === "token" && typeof payload.token === "string") onToken?.(payload.token);
-    else if (event === "done") completed = payload;
+    else if (event === "done") completed = payload as ChatStreamResult;
     else if (event === "error") streamError = typeof payload.message === "string" ? payload.message : "The AI stream failed.";
   };
   try {
