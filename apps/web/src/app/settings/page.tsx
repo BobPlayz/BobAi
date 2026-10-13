@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Moon, Sun, Trash2, RefreshCw } from "lucide-react";
+import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
-import { clearMemories, deleteMemory, exportAccountData, listMemories } from "@/lib/api";
+import { clearMemories, deleteMemory, exportAccountData, listMemories, updateMemory } from "@/lib/api";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
@@ -43,6 +43,8 @@ export default function SettingsPage() {
   const [memoryBusyId, setMemoryBusyId] = useState<string | null>(null);
   const [memoryError, setMemoryError] = useState("");
   const [memoryNotice, setMemoryNotice] = useState("");
+  const [memoryEditId, setMemoryEditId] = useState<string | null>(null);
+  const [memoryEditContent, setMemoryEditContent] = useState("");
   const [exportBusy, setExportBusy] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
 
@@ -81,6 +83,28 @@ export default function SettingsPage() {
       setExportMessage(error instanceof Error ? error.message : "Could not export account data.");
     } finally {
       setExportBusy(false);
+    }
+  }
+
+  async function saveMemoryEdit(id: string) {
+    const content = memoryEditContent.trim();
+    if (!content || content.length > 20_000) {
+      setMemoryError("Memory text must contain 1 to 20,000 characters.");
+      return;
+    }
+    setMemoryBusyId(id);
+    setMemoryError("");
+    setMemoryNotice("");
+    try {
+      const updated = await updateMemory(id, { content });
+      setMemories((current) => current.map((item) => item.id === id ? { ...item, ...(updated && typeof updated === "object" ? updated as Record<string, unknown> : {}), content } : item));
+      setMemoryEditId(null);
+      setMemoryEditContent("");
+      setMemoryNotice("Saved memory updated.");
+    } catch (error) {
+      setMemoryError(error instanceof Error ? error.message : "Could not update that memory.");
+    } finally {
+      setMemoryBusyId(null);
     }
   }
 
@@ -264,11 +288,30 @@ export default function SettingsPage() {
                         <li key={id || `memory-${index}`} className={`flex items-start gap-3 rounded-xl border p-4 ${colors.field}`}>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium">{title}</p>
-                            <p className={`mt-1 whitespace-pre-wrap break-words text-sm leading-6 ${colors.muted}`}>{body || "No content available for display."}</p>
+                            {memoryEditId === id ? (
+                              <div className="mt-2">
+                                <textarea value={memoryEditContent} onChange={(event) => setMemoryEditContent(event.target.value.slice(0, 20_000))} maxLength={20_000} rows={4} className={`w-full resize-y rounded-lg border px-3 py-2 text-sm leading-6 ${colors.field}`} aria-label={`Edit ${title}`} />
+                                <div className={`mt-1 text-right text-xs ${colors.muted}`}>{memoryEditContent.length}/20000</div>
+                              </div>
+                            ) : (
+                              <p className={`mt-1 whitespace-pre-wrap break-words text-sm leading-6 ${colors.muted}`}>{body || "No content available for display."}</p>
+                            )}
                           </div>
-                          <button type="button" onClick={() => id && void removeMemory(id)} disabled={!id || memoryBusyId !== null} aria-label={`Delete ${title}`} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40">
-                            {memoryBusyId === id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                          </button>
+                          {memoryEditId === id ? (
+                            <div className="flex shrink-0 gap-1">
+                              <button type="button" onClick={() => void saveMemoryEdit(id)} disabled={memoryBusyId !== null || !memoryEditContent.trim()} aria-label={`Save ${title}`} className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-40">
+                                {memoryBusyId === id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                              </button>
+                              <button type="button" onClick={() => { setMemoryEditId(null); setMemoryEditContent(""); }} disabled={memoryBusyId !== null} aria-label="Cancel memory edit" className={`rounded-lg p-2 ${colors.muted} hover:bg-black/5 disabled:opacity-40`}><X className="h-4 w-4" /></button>
+                            </div>
+                          ) : (
+                            <div className="flex shrink-0 gap-1">
+                              <button type="button" onClick={() => { setMemoryEditId(id); setMemoryEditContent(body); setMemoryError(""); setMemoryNotice(""); }} disabled={!id || memoryBusyId !== null} aria-label={`Edit ${title}`} className={`rounded-lg p-2 ${colors.muted} hover:bg-black/5 disabled:opacity-40`}><Pencil className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => id && void removeMemory(id)} disabled={!id || memoryBusyId !== null} aria-label={`Delete ${title}`} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40">
+                                {memoryBusyId === id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          )}
                         </li>
                       );
                     })}
