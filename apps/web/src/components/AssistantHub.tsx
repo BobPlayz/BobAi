@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChatMessage } from "@/types/chat";
 import { createArtifact, createProject, deepResearch, generateImage, listProjects, runCodingAgent, sendMessage, studyPack, updateProject, webSearch, type DeepResearchResult } from "@/lib/api";
 
 type Project = { id: string; name: string; description?: string | null; settings?: unknown };
@@ -16,6 +17,8 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
   const agentController = useRef<AbortController | null>(null);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [voiceMessages, setVoiceMessages] = useState<ChatMessage[]>([]);
+  const [voiceConversationId, setVoiceConversationId] = useState("");
   const [memory, setMemory] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState("");
@@ -98,7 +101,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
         setOutput(`${result.title}\n\n${result.summary}\n\nKey points:\n${result.keyPoints.map((item) => `• ${item}`).join("\n")}\n\nFlashcards:\n${result.flashcards.map((card) => `Q: ${card.question}\nA: ${card.answer}`).join("\n\n")}`);
       } else if (mode === "create") setArtifact(await createArtifact(text, personality));
       else if (mode === "image") { const result = await generateImage(text, referenceImages); const images = Array.isArray(result.images) ? result.images : []; setGeneratedImages(images); setOutput(images.length ? "image ready. review it before downloading or sharing." : "the image provider returned no images."); }
-      else if (mode === "voice") { const response = await sendMessage([{ id: crypto.randomUUID(), role: "user", content: task }], personality, undefined, memory); const reply = typeof response.reply === "string" ? response.reply.trim() : ""; setOutput(reply || "the assistant returned no spoken reply."); if (reply) speak(reply); }
+      else if (mode === "voice") { const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: task }; const nextMessages = [...voiceMessages, userMessage]; const conversationId = voiceConversationId || crypto.randomUUID(); setVoiceConversationId(conversationId); const response = await sendMessage(nextMessages, personality, undefined, memory, conversationId); const reply = typeof response.reply === "string" ? response.reply.trim() : ""; setOutput(reply || "the assistant returned no spoken reply."); if (reply) { setVoiceMessages([...nextMessages, { id: crypto.randomUUID(), role: "assistant", content: reply }]); speak(reply); } }
       else { const result = await runCodingAgent(task, controller?.signal); setOutput(result.output + (result.warnings ? `\n\nWarnings:\n${result.warnings}` : "")); }
     } catch (error) { setOutput(error instanceof Error && error.name === "AbortError" ? "Agent run cancelled." : error instanceof Error ? error.message : "that operation failed"); }
     finally { if (agentController.current === controller) agentController.current = null; setBusy(false); }
