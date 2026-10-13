@@ -74,7 +74,7 @@ export default function NeuralSidebar({
         >
           <MessageSquare className={"h-4 w-4 shrink-0 " + (light ? "text-[#9ca3af]" : "text-white/40")} />
           <span className="min-w-0 flex-1 truncate">{conversation.title || "New conversation"}</span>
-          {conversation.pinned && <Pin className="h-3 w-3 shrink-0 text-cyan-200/70" />}
+          {conversation.pinned && <Pin className={"h-3 w-3 shrink-0 " + (light ? "text-sky-600" : "text-cyan-200/70")} />}
         </button>
         <button
           type="button"
@@ -82,7 +82,8 @@ export default function NeuralSidebar({
           title="Conversation actions"
           onClick={() => setMenuId(menuId === conversation.id ? null : conversation.id)}
           className={[
-            "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-white/55 hover:bg-white/10 hover:text-white",
+            "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md",
+            light ? "text-[#6b7280] hover:bg-black/5 hover:text-[#111827]" : "text-white/55 hover:bg-white/10 hover:text-white",
             menuId === conversation.id ? "visible" : "invisible group-hover:visible focus:visible",
           ].join(" ")}
         >
@@ -116,13 +117,13 @@ export default function NeuralSidebar({
         <button
           type="button"
           onClick={onNewChat}
-          className=["flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-sm transition", light ? "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f9fafb]" : "border-white/[0.09] bg-white/[0.035] text-white/85 hover:bg-white/[0.075]"].join(" ")
+          className={["flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-sm transition", light ? "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f9fafb]" : "border-white/[0.09] bg-white/[0.035] text-white/85 hover:bg-white/[0.075]"].join(" ")}
         >
-          <PenSquare className="h-4 w-4 text-white/60" />
+          <PenSquare className={"h-4 w-4 " + (light ? "text-[#6b7280]" : "text-white/60")} />
           New chat
         </button>
         <div className="relative mt-2">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <Search className={"pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 " + (light ? "text-[#9ca3af]" : "text-white/35")} />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
