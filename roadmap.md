@@ -78,7 +78,7 @@
 - [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
 - [x] Keep hosted provider keys in server-side environment configuration and expose only configuration status to the browser; build/runtime verification is pending.
 - [x] Add a visible Stop response control that aborts the active browser chat stream and preserves any partial text already received. Build/runtime verification is pending.
-- [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage.
+- [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage. The API now propagates disconnect cancellation into hosted and Ollama stream requests; native/production inference cancellation and runtime verification remain open.
 - [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [x] Show the configured model/provider status in Settings → About, without exposing secrets. The status is configuration-level and not a live-availability guarantee; build/runtime verification is pending.
@@ -158,7 +158,7 @@
 - [x] Require explicit approval for tools marked as consequential before execution; verify coverage for every external side effect before launch.
 - [x] Treat web pages, files, and tool output as untrusted input in the chat and research prompts.
 - [x] Add a Stop agent control wired to the authenticated server-side queue cancellation endpoint. A structured action summary and end-to-end cancellation verification remain open.
-- [ ] Add per-user quotas and provider cost limits.
+- [ ] Add per-user quotas and provider cost limits. The authenticated agent endpoint now limits each user to three active tasks and five task submissions per minute; durable cross-instance quotas and hard provider-side monetary limits still require production configuration.
 - [ ] Keep agents from bypassing age-appropriate safety policies or service permissions.
 - [ ] Test prompt injection, tool errors, loops, timeouts, cancellation, and authorization boundaries.
 
@@ -254,6 +254,7 @@
 - **2026-10-13:** Deep Research now renders source links as clickable entries with available snippets and publication dates, aligns the displayed source list to the exact fetched evidence used for citation numbering, and requests explicit Findings / Interpretation / Uncertainty sections.
 - **2026-10-13:** Added `docs/FEATURE_INVENTORY.md`, a static route/API/schema/feature/control inventory and explicit external launch-blocker list. It is not a substitute for browser or runtime verification.
 - **2026-10-13:** Removed the root package `model:*` commands and retired the standalone training workflow after checking that it was separate from CI/deployment. Retained model-training sources because the optional native inference runtime still expects a prebuilt artifact under that path.
+- **2026-10-13:** Propagated client-disconnect cancellation from the API stream route through the chat engine into hosted and Ollama provider requests. Added a three-active-agent-task per-user limit; native/production inference cancellation and durable distributed quotas still need verification/design.
 - **2026-10-13:** Added editable voice dictation to the active neural composer, per-file upload cancellation/progress controls, consistent supported image formats, and an agent Stop control wired to the server queue-cancel route. These code paths remain pending final build/test verification.
 - **2026-10-13:** Added email-OTP reauthentication and a clear confirmation flow for account deletion, and hardened the existing 30-day retention cleanup to skip users who still own shared workspaces. Build/runtime verification remains pending.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
