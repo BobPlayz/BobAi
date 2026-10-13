@@ -39,7 +39,7 @@ export class BobModelProvider {
       if (model === OPENAI_MODEL_ID) { const result = await openAIStream(messages, onToken, signal); return { content: result.content, model: result.model, provider }; }
       if (model === OLLAMA_MODEL_ID) { const result = await ollamaStream(messages, onToken, signal); return { content: result.content, model: result.model, provider }; }
       if (model === PRODUCTION_MODEL) {
-        const result = await productionModelInfer(messages, { maxTokens: 768 });
+        const result = await productionModelInfer(messages, { maxTokens: 768, signal });
         for (const token of result.content.match(/\s+|\S+/g) || [result.content]) onToken(token);
         return { content: result.content, model: result.model || model, provider };
       }
