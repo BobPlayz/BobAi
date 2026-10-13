@@ -71,7 +71,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     try {
       if (mode === "research") {
         const result = await deepResearch(task, sourceTypes);
-        setOutput(`${result.synthesis}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => { let publisher = "source"; try { publisher = new URL(source.url).hostname.replace(/^www\\./, ""); } catch {} const published = source.publishedAt ? ` · ${source.publishedAt}` : ""; return `[${index + 1}] ${source.title} (${publisher}${published}) — ${source.url}`; }).join("\n")}`);
+        setOutput(`${result.synthesis}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => { let publisher = "source"; try { publisher = new URL(source.url).hostname.replace(/^www\./, ""); } catch {} const published = source.publishedAt ? ` · ${source.publishedAt}` : ""; return `[${index + 1}] ${source.title} (${publisher}${published}) — ${source.url}`; }).join("\n")}`);
         setArtifact(result.synthesis);
       } else if (mode === "study") {
         const result = await studyPack(task, "medium");
