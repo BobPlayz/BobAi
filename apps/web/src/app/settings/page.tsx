@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Trash2, RefreshCw } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
+import { clearMemories, deleteMemory, listMemories } from "@/lib/api";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
@@ -37,8 +38,59 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true });
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [memories, setMemories] = useState<Array<Record<string, unknown>>>([]);
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [memoryBusyId, setMemoryBusyId] = useState<string | null>(null);
+  const [memoryError, setMemoryError] = useState("");
+  const [memoryNotice, setMemoryNotice] = useState("");
 
   useEffect(() => setSettings(readSettings()), []);
+
+  useEffect(() => {
+    if (tab !== "memory") return;
+    let cancelled = false;
+    setMemoryLoading(true);
+    setMemoryError("");
+    void listMemories().then((items) => {
+      if (!cancelled) setMemories(items);
+    }).catch((error: unknown) => {
+      if (!cancelled) setMemoryError(error instanceof Error ? error.message : "Could not load saved memory.");
+    }).finally(() => {
+      if (!cancelled) setMemoryLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [tab]);
+
+  async function removeMemory(id: string) {
+    setMemoryBusyId(id);
+    setMemoryError("");
+    setMemoryNotice("");
+    try {
+      await deleteMemory(id);
+      setMemories((current) => current.filter((item) => item.id !== id));
+      setMemoryNotice("Saved memory deleted.");
+    } catch (error) {
+      setMemoryError(error instanceof Error ? error.message : "Could not delete that memory.");
+    } finally {
+      setMemoryBusyId(null);
+    }
+  }
+
+  async function removeAllMemories() {
+    if (!window.confirm("Delete all saved Bob AI memories? This cannot be undone.")) return;
+    setMemoryBusyId("__all__");
+    setMemoryError("");
+    setMemoryNotice("");
+    try {
+      await clearMemories();
+      setMemories([]);
+      setMemoryNotice("All saved memories were deleted.");
+    } catch (error) {
+      setMemoryError(error instanceof Error ? error.message : "Could not clear saved memory.");
+    } finally {
+      setMemoryBusyId(null);
+    }
+  }
 
   function update<K extends keyof SettingsState>(key: K, value: SettingsState[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -145,17 +197,56 @@ export default function SettingsPage() {
           )}
 
           {tab === "memory" && (
-            <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-              <h2 className="text-base font-semibold">Memory preference</h2>
-              <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>When enabled, Bob AI includes the memory preference in chat requests so the API can apply its supported memory behavior. This switch does not erase memories already stored on the server.</p>
-              <label className={`mt-5 flex items-center justify-between gap-4 rounded-xl border p-4 ${colors.field}`}>
-                <span>
-                  <span className="block text-sm font-medium">Use memory in chats</span>
-                  <span className={`mt-1 block text-xs ${colors.muted}`}>You can turn this off for future requests.</span>
-                </span>
-                <input type="checkbox" checked={settings.memory} onChange={(event) => update("memory", event.target.checked)} className="size-4 accent-sky-500" />
-              </label>
-            </section>
+            <div className="space-y-5">
+              <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
+                <h2 className="text-base font-semibold">Memory preference</h2>
+                <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Turn memory off to stop using saved memories in future chats. This switch does not delete memories already stored on the server.</p>
+                <label className={`mt-5 flex items-center justify-between gap-4 rounded-xl border p-4 ${colors.field}`}>
+                  <span>
+                    <span className="block text-sm font-medium">Use memory in chats</span>
+                    <span className={`mt-1 block text-xs ${colors.muted}`}>This preference is saved in this browser.</span>
+                  </span>
+                  <input type="checkbox" checked={settings.memory} onChange={(event) => update("memory", event.target.checked)} className="size-4 accent-sky-500" />
+                </label>
+              </section>
+              <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold">Saved memories</h2>
+                    <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Review or delete information stored in your account. Deleting memory does not delete chat history.</p>
+                  </div>
+                  <button type="button" onClick={removeAllMemories} disabled={memoryLoading || memories.length === 0 || memoryBusyId !== null} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-600 disabled:opacity-40">
+                    <Trash2 className="h-4 w-4" /> Delete all
+                  </button>
+                </div>
+                {memoryError && <p role="alert" className="mt-4 text-sm text-red-500">{memoryError}</p>}
+                {memoryNotice && <p role="status" className="mt-4 text-sm text-emerald-600">{memoryNotice}</p>}
+                {memoryLoading ? (
+                  <p className={`mt-5 text-sm ${colors.muted}`}>Loading saved memories…</p>
+                ) : memories.length === 0 ? (
+                  <p className={`mt-5 rounded-xl border border-dashed p-4 text-sm ${colors.muted}`}>No saved memories found.</p>
+                ) : (
+                  <ul className="mt-5 space-y-3">
+                    {memories.map((memory, index) => {
+                      const id = typeof memory.id === "string" ? memory.id : "";
+                      const title = typeof memory.category === "string" && memory.category.trim() ? memory.category : typeof memory.key === "string" && memory.key.trim() ? memory.key : `Memory ${index + 1}`;
+                      const body = typeof memory.content === "string" ? memory.content : typeof memory.value === "string" ? memory.value : "";
+                      return (
+                        <li key={id || `memory-${index}`} className={`flex items-start gap-3 rounded-xl border p-4 ${colors.field}`}>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium">{title}</p>
+                            <p className={`mt-1 whitespace-pre-wrap break-words text-sm leading-6 ${colors.muted}`}>{body || "No content available for display."}</p>
+                          </div>
+                          <button type="button" onClick={() => id && void removeMemory(id)} disabled={!id || memoryBusyId !== null} aria-label={`Delete ${title}`} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40">
+                            {memoryBusyId === id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            </div>
           )}
 
           {tab === "about" && (
