@@ -47,9 +47,9 @@
 - [x] Record the intended product direction and exclude physical-glasses features from the website.
 - [x] Create this 10-phase roadmap in the repository root.
 - [x] Remove unused sci-fi intro components and decorative cinematic effects as recorded in the change log.
-- [ ] Inventory all web routes, components, API routes, database tables, provider adapters, auth flows, research tools, voice paths, and file upload paths.
-- [ ] Classify each feature as working, partial, stubbed, broken, or planned.
-- [ ] Map every visible control to a real handler and endpoint.
+- [x] Inventory web routes, API route files, schema areas, major providers, auth, research, voice, uploads, and core controls in `docs/FEATURE_INVENTORY.md`. Static review only; it is not runtime certification.
+- [x] Classify major features as implemented/unverified, partial, draft, or externally blocked in `docs/FEATURE_INVENTORY.md`.
+- [x] Map the main chat, upload, voice, research, agent, memory, account, and theme controls to their handlers/endpoints in `docs/FEATURE_INVENTORY.md`.
 - [ ] Capture desktop and mobile baseline screenshots for both themes.
 - [ ] Run build, lint/type checks, tests, repository preflight, and dependency audit; record existing failures separately.
 
@@ -120,10 +120,10 @@
 
 **Goal:** Let users work with useful files and images safely.
 
-- [ ] Inventory currently supported file types and enforce the same list in UI and API.
+- [x] Align the chat file picker with supported PDF, text, and PNG/JPEG/WebP upload formats; the API rejects unsupported image formats. Remaining MIME/extension edge cases still need final verification.
 - [x] Implement image understanding through the configured hosted provider when available, with optional local Ollama vision. Live provider verification is pending.
 - [x] Add file attachment previews, upload progress, and clear upload size/type errors; cancel/retry remains unfinished.
-- [ ] Add cancellation/retry for in-progress uploads.
+- [x] Add per-file upload cancellation, progress display, and an explicit cancel control. Automatic retry is not implemented; verify cancel/error cleanup during final testing.
 - [x] Use OCR/text extraction for supported formats and return explicit extraction failures where available; end-to-end verification is pending.
 - [x] Validate supported file signatures where available and enforce a 10 MB upload limit plus extracted-text bounds; verify page/pixel limits and edge cases.
 - [x] Treat retrieved file knowledge as untrusted evidence rather than instructions in the chat system prompt.
@@ -142,7 +142,7 @@
 - [x] Allow users to choose official/government, academic/research, reputable-news, or broad-web sources per Deep Research request; the preference is passed to search query construction and result filtering. Build/test verification is still pending.
 - [x] Add optional saved research source defaults in Settings; individual Deep Research requests can override them. Build/runtime verification is pending.
 - [x] Show research source titles and direct clickable links in the research panel, with source snippets and publication dates when available. Build/runtime verification is pending.
-- [ ] Separate sourced facts, interpretation, and uncertain claims.
+- [x] Instruct research synthesis to separate Findings, Interpretation, and Uncertainty / disagreements, and align displayed source entries to the evidence used for numbered citations. Confirm model compliance and citation accuracy in final testing.
 - [ ] Do not fabricate citations or claim live browsing when no retrieval occurred.
 - [x] Add search/source timeouts, source-count and response-size limits, URL/SSRF checks, deduplication, prompt-injection defenses, and graceful no-readable-evidence behavior; tests remain pending.
 - [ ] Test stale sources, conflicting sources, dead links, empty results, and citation/claim matching.
@@ -157,7 +157,7 @@
 - [x] Use a bounded tool registry with explicit schemas, permission checks, timeouts, step limits, and execution logging; end-to-end verification is pending.
 - [x] Require explicit approval for tools marked as consequential before execution; verify coverage for every external side effect before launch.
 - [x] Treat web pages, files, and tool output as untrusted input in the chat and research prompts.
-- [ ] Add cancel/stop controls and a visible summary of actions performed.
+- [x] Add a Stop agent control wired to the authenticated server-side queue cancellation endpoint. A structured action summary and end-to-end cancellation verification remain open.
 - [ ] Add per-user quotas and provider cost limits.
 - [ ] Keep agents from bypassing age-appropriate safety policies or service permissions.
 - [ ] Test prompt injection, tool errors, loops, timeouts, cancellation, and authorization boundaries.
@@ -173,7 +173,7 @@
 - [x] Feed recorded speech transcripts into the same text composer used by chat.
 - [x] Add stop controls for recorded input and read-aloud playback; true seamless voice-to-voice turn-taking and interruption during generation remain unfinished.
 - [x] Show microphone recording state and surface permission/transcription errors.
-- [ ] Provide transcript editing and verify noisy-input/mobile-browser behavior.
+- [x] Place dictation output in the editable chat composer before sending. Verify noisy-input/mobile-browser behavior during final testing.
 - [ ] Support language/voice selection only when the chosen service actually supports it.
 - [ ] Keep voice costs and third-party data processing transparent; use free/local options where practical.
 - [ ] Test permission denial, noisy input, silence, interruption, network loss, long responses, and mobile browsers.
@@ -251,7 +251,9 @@
 - **2026-10-13:** Added a dedicated MFA challenge step for quick-start sign-in when an account requires an authenticator. The profile name update now happens only after all sign-in checks pass; end-to-end verification is pending.
 - **2026-10-13:** Added a safe provider/model configuration status panel to Settings → About. It explicitly distinguishes configuration status from live availability and never displays provider secrets.
 - **2026-10-13:** Updated Next.js to 16.4.0 and refreshed compatible dependency fixes for proxy-addr, sharp, source-map-js, and brace-expansion. Build and tests passed on the security branch; npm audit still reports the upstream braces GHSA-vfj7-8cjw-p6xm, for which no patched upstream release is published as of this run. The remaining finding is in development lint tooling and is not silently suppressed.
-- **2026-10-13:** Deep Research now renders source links as clickable entries with available snippets and publication dates, instead of embedding URLs only in plain text.
+- **2026-10-13:** Deep Research now renders source links as clickable entries with available snippets and publication dates, aligns the displayed source list to the exact fetched evidence used for citation numbering, and requests explicit Findings / Interpretation / Uncertainty sections.
+- **2026-10-13:** Added `docs/FEATURE_INVENTORY.md`, a static route/API/schema/feature/control inventory and explicit external launch-blocker list. It is not a substitute for browser or runtime verification.
+- **2026-10-13:** Added editable voice dictation to the active neural composer, per-file upload cancellation/progress controls, consistent supported image formats, and an agent Stop control wired to the server queue-cancel route. These code paths remain pending final build/test verification.
 - **2026-10-13:** Added email-OTP reauthentication and a clear confirmation flow for account deletion, and hardened the existing 30-day retention cleanup to skip users who still own shared workspaces. Build/runtime verification remains pending.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
