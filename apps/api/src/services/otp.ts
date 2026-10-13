@@ -11,7 +11,7 @@ const same = (a: string, b: string) => {
   return left.length === right.length && timingSafeEqual(left, right);
 };
 
-export type OtpPurpose = "verification" | "login";
+export type OtpPurpose = "verification" | "login" | "account-delete";
 export type OtpSender = (email: string, code: string) => Promise<void>;
 let sender: OtpSender | null = null;
 export const setOtpSender = (next: OtpSender | null) => { sender = next; };
