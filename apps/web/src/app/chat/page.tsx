@@ -37,6 +37,9 @@ export default function ChatPage() {
           disabled={chat.loading}
           streaming={chat.streaming}
           onStop={chat.stop}
+          uploadingFiles={chat.uploadingFiles}
+          uploadProgress={chat.uploadProgress}
+          onCancelUpload={chat.cancelUpload}
         />
       }
     >
