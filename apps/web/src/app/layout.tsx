@@ -4,10 +4,10 @@ import { ThemeProvider } from "@/components/neural/ThemeProvider";
 import SiteNav from "@/components/SiteNav";
 import CookieConsent from "@/components/CookieConsent";
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://bobai.app").replace(/\/$/, "");
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
   title: { default: "Bob AI", template: "%s | Bob AI" },
   description: "An AI workspace for chat, research, creation, development, memory, files, tools, agents, and automations.",
   applicationName: "Bob AI",
@@ -15,12 +15,12 @@ export const metadata: Metadata = {
   keywords: ["AI workspace", "AI assistant", "AI chat", "AI tools", "research", "coding"],
   icons: { icon: "/bob-logo.ico" },
   manifest: "/manifest.webmanifest",
-  alternates: { canonical: siteUrl },
+  ...(siteUrl ? { alternates: { canonical: siteUrl } } : {}),
   openGraph: {
     title: "Bob AI",
     description: "An AI workspace for chat, research, creation, and development.",
     type: "website",
-    url: siteUrl,
+    ...(siteUrl ? { url: siteUrl } : {}),
     siteName: "Bob AI",
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Bob AI workspace" }],
   },
