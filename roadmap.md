@@ -50,8 +50,8 @@
 - [x] Inventory web routes, API route files, schema areas, major providers, auth, research, voice, uploads, and core controls in `docs/FEATURE_INVENTORY.md`. Static review only; it is not runtime certification.
 - [x] Classify major features as implemented/unverified, partial, draft, or externally blocked in `docs/FEATURE_INVENTORY.md`.
 - [x] Map the main chat, upload, voice, research, agent, memory, account, and theme controls to their handlers/endpoints in `docs/FEATURE_INVENTORY.md`.
-- [ ] Capture desktop and mobile baseline screenshots for both themes.
-- [ ] Run build, lint/type checks, tests, repository preflight, and dependency audit; record existing failures separately.
+- [ ] Capture desktop and mobile baseline screenshots for both themes. These require a running browser session and remain external to static repository editing.
+- [ ] Run build, lint/type checks, tests, repository preflight, and dependency audit; record existing failures separately. Deferred until the implementation pass is complete, per the handoff request.
 
 **Exit criteria:** A verified feature inventory, screenshots, and a baseline CI report. Do not call unverified features complete.
 
@@ -67,6 +67,7 @@
 - [ ] Make settings plain and consistent with the main app; avoid animated dashboard-card layouts.
 - [x] Add a compact mobile navigation menu to public content pages and scope it away from the landing page, chat, login, and authenticated app screens so the marketing nav does not cover the workspace. Keyboard-overlay behavior in the chat composer still requires device testing.
 - [x] Add a shared visible keyboard-focus outline and respect reduced-motion preferences in global CSS. Contrast, text scaling, and real-device behavior still require visual verification.
+- [x] Make the public navigation, landing page, and analytics-consent banner consume the shared Light/Dark theme preference. Legacy fixed-dark utility classes also receive compatibility normalization; route-by-route visual verification remains open.
 
 **Exit criteria:** Light and Dark both work throughout the app; no sci-fi-only visual system remains; no broken navigation or unreadable content.
 
@@ -83,6 +84,8 @@
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [x] Show the configured model/provider status in Settings → About, without exposing secrets. The status is configuration-level and not a live-availability guarantee; build/runtime verification is pending.
 - [x] Add per-user rate limiting to the streamed AI chat endpoint. Build/runtime verification is pending.
+- [x] Propagate browser disconnect cancellation through the stream route, chat engine, model router, hosted adapter, and local Ollama adapter. Native/production provider behavior and partial-response persistence still need final runtime verification.
+- [x] Abort active stream and upload controllers when the user leaves the chat component.
 - [ ] Add hard provider-side monetary budgets and verify global cost/usage safeguards before enabling paid API calls.
 - [x] Keep local Ollama as a separate opt-in path; it remains disabled by default and is not required for hosted chat.
 - [x] Keep model-training commands out of normal user-facing setup instructions.
@@ -159,6 +162,7 @@
 - [x] Require explicit approval for tools marked as consequential before execution; verify coverage for every external side effect before launch.
 - [x] Treat web pages, files, and tool output as untrusted input in the chat and research prompts.
 - [x] Add a Stop agent control wired to the authenticated server-side queue cancellation endpoint. A structured action summary and end-to-end cancellation verification remain open.
+- [x] Add explicit age-appropriate safety and untrusted-input instructions to agent task prompts; verify all tool side effects and provider boundaries in the final security pass.
 - [x] Add an authenticated per-user active-agent quota (three active tasks) plus a five-submission-per-minute limit. Durable cross-instance quotas remain a production consideration.
 - [ ] Configure hard provider-side monetary limits before enabling paid model usage.
 - [x] Add an explicit age-appropriate safety and authorization baseline to agent instructions, alongside the core chat safety baseline. Verify provider/tool consistency in the final security pass.
@@ -289,3 +293,10 @@
 - **2026-10-13:** Completed the latest chat UX wiring: image bytes are forwarded only for the newest user message, voice controls follow the active theme, assistant replies expose read-aloud with stop/cleanup, and failed image loads no longer trigger external fallback requests. Added hosted image-analysis tests; all recent code remains pending the final build/test/audit pass.
 - **2026-10-13:** Connected the existing speech-synthesis endpoint to an explicit read-aloud button on assistant replies, while keeping the composer microphone control separate. Added a stop control and audio URL cleanup for playback interruption; local/external provider behavior still needs end-to-end testing.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
+
+
+## Handoff notes for the next ChatGPT session
+
+Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FEATURE_INVENTORY.md`](docs/FEATURE_INVENTORY.md). All repository Markdown files were reviewed and updated on 2026-10-13 with implementation/verification distinctions. The code has received additional static changes for public-page theming, chat teardown cancellation, provider abort propagation, research no-evidence handling, agent prompt safety, and fail-closed distributed rate limiting. **Do not tell the user the roadmap is fully done yet.** The remaining unchecked tasks are real work, including live verification, provider/SMTP/database setup, age/privacy/legal decisions, domain/deployment, and screenshots. Follow the user instruction: do not run the final build/tests until implementation work is finished; then run them and report actual results only.
+
+- **2026-10-13:** Updated every existing repository Markdown document with a handoff/status note, including API, style, database, feature inventory, hosted/local AI, auth, security, and README. Added public-site theme integration, provider cancellation, teardown cleanup, agent prompt safety, fail-closed distributed rate limiting, and research empty-evidence handling to this roadmap. These edits are committed but not build/test verified.
