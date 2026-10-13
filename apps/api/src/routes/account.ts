@@ -28,7 +28,7 @@ router.post("/delete/request", async (req, res) => {
 });
 router.post("/delete/confirm", async (req, res) => {
   const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
-  if (!/^\\d{6}$/.test(code)) return res.status(400).json({ error: "enter the 6-digit account deletion code" });
+  if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: "enter the 6-digit account deletion code" });
   if (limited(req, `delete-otp-confirm:${req.user!.id}`)) return res.status(429).json({ error: "too many account deletion attempts", retryAfterSeconds: 900 });
   try {
     const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, req.user!.id)).limit(1);
