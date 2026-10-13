@@ -1,0 +1,34 @@
+# Hosted AI provider setup
+
+BobAI can use an existing OpenAI-compatible chat API. This does not train a model. The hosted provider is opt-in because API usage can cost money.
+
+## Configure the API server
+
+1. Copy the relevant settings from `.env.example` into the API server's private environment file.
+2. Set `BOBAI_PROVIDER=openai`.
+3. Set `OPENAI_API_KEY` to a key you are authorized to use. Keep it on the server only.
+4. Optionally set `BOBAI_OPENAI_BASE_URL` and `BOBAI_OPENAI_MODEL` for a compatible provider/model.
+5. Restart the API server and check its model status endpoint before testing chat.
+
+Default model: `gpt-4o-mini`. Verify current provider pricing, data-use terms, model availability, rate limits, and applicable age restrictions before use. The model name is configurable because availability and pricing can change.
+
+## Safety and cost
+
+- Never prefix the secret with `NEXT_PUBLIC_`; that would expose it to browser code.
+- The provider is not enabled unless `BOBAI_PROVIDER=openai` is set.
+- The adapter caps input size, response size, output tokens, and request timeout.
+- Provider errors are returned as bounded error messages. The API key is not included in status output or error messages.
+- This adapter does not create a hard monetary budget. Set provider-side spending/rate limits before using a paid key.
+- Requests sent to a hosted provider leave the local machine and are subject to that provider's data-processing terms.
+- Use the optional Ollama path instead when local inference is required and the hardware can handle it.
+
+## Quick configuration example
+
+```dotenv
+BOBAI_PROVIDER=openai
+OPENAI_API_KEY=
+BOBAI_OPENAI_BASE_URL=https://api.openai.com/v1
+BOBAI_OPENAI_MODEL=gpt-4o-mini
+```
+
+The empty key is intentional. Add a valid secret only in your private API environment, never in Git.
