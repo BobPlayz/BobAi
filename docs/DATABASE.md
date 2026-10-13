@@ -55,3 +55,8 @@ The database client reads `DATABASE_URL` and supports bounded pool controls thro
 ## Backup and recovery
 
 Use the repository's database backup and verification scripts. Test restoration in a non-production environment and document the recovery point and recovery time expectations for each deployment.
+
+
+## Handoff verification notes
+
+The database/schema inventory is documented in [`FEATURE_INVENTORY.md`](FEATURE_INVENTORY.md). Recent work touches user-scoped conversations, memory, OTP sessions, account export/deletion, agent quotas, and research/usage records. No fresh-database migration run, production upgrade run, restore drill, or multi-user isolation test is certified by this document. These remain explicit final verification tasks; never run destructive migrations against production during testing.
