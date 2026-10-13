@@ -49,4 +49,4 @@ jobs:
       - name: Generate database schema
         run: npm run db:generate --workspace=@bobai/db
       - name: Dependency audit
-        run: node scripts/dependency-audit.mjs
+        run: npm audit --audit-level=high
