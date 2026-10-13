@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo } from "react";
 
-export type BobTheme = "dark";
+export type BobTheme = "legacy" | "dark" | "light" | "futuristic" | "anime" | "glass";
 
 type ThemeContextType = {
   theme: BobTheme;
