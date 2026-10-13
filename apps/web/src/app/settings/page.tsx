@@ -396,7 +396,7 @@ export default function SettingsPage() {
                     <input
                       type="checkbox"
                       checked={settings.sourceTypes.includes(value)}
-                      onChange={(event) => update("sourceTypes", value === "general" ? (event.target.checked ? ["general"] : []) : event.target.checked ? [...new Set([...settings.sourceTypes.filter((item) => item !== "general"), value])] : settings.sourceTypes.filter((item) => item !== "general" && item !== value))}
+                      onChange={(event) => { if (event.target.checked) update("sourceTypes", value === "general" ? ["general"] : [...new Set([...settings.sourceTypes.filter((item) => item !== "general"), value])]); else if (settings.sourceTypes.length > 1) update("sourceTypes", settings.sourceTypes.filter((item) => item !== value)); }}
                       className="mt-1 size-4 accent-sky-500"
                     />
                     <span>
