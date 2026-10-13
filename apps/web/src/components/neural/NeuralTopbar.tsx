@@ -1,29 +1,20 @@
 "use client";
 
-import { useTheme } from "./ThemeProvider";
 import PillNav from "@/components/PillNav";
 
 export default function NeuralTopbar() {
-  const { theme } = useTheme();
-
   return (
-    <header className="h-[84px] px-4 pt-3 pb-2">
-      <div className="flex h-full items-center justify-between rounded-[22px] border border-cyan-400/10 bg-[#060B10]/94 px-5 shadow-[0_0_0_1px_rgba(0,217,255,0.06),0_18px_56px_rgba(0,0,0,0.46)] backdrop-blur-3xl">
-        <div className="flex items-center gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-cyan-300/16 bg-[#071018] shadow-[0_0_16px_rgba(0,217,255,0.12)]">
-            <div className="h-3 w-3 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(0,217,255,0.8)]" />
+    <header className="h-[72px] px-3 pt-2 pb-2 sm:px-4">
+      <div className="flex h-full items-center justify-between rounded-2xl border border-white/[0.07] bg-[#080a0d]/95 px-4 shadow-[0_12px_36px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:px-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/[0.05]">
+            <span className="text-sm font-bold text-cyan-200">B</span>
           </div>
-
           <div className="leading-tight">
-            <div className="text-[18px] font-semibold tracking-tight text-white">
-              Bob AI
-            </div>
-            <div className="text-[11px] text-cyan-300/58">
-              {theme}
-            </div>
+            <div className="text-[16px] font-semibold tracking-tight text-white">Bob AI</div>
+            <div className="mt-0.5 text-[11px] text-white/40">Your AI workspace</div>
           </div>
         </div>
-
         <PillNav items={[{ label: "Chat", href: "/chat" }, { label: "Settings", href: "/settings" }]} />
       </div>
     </header>
