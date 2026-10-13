@@ -1,5 +1,4 @@
 import { cleanupExpiredOtps } from "./otp.js";
-import { runAccountDeletionCleanup } from "./accountDeletion.js";
 import { cleanupExpiredPasswordResets } from "./passwordReset.js";
 import { cleanupExpiredSessions } from "./sessionManager.js";
 import { cleanupExpiredToolApprovals } from "./toolExecution.js";
@@ -14,5 +13,5 @@ import { cleanupResearchQuotas } from "./researchQuota.js";
 import { cleanupOAuthStates } from "./oauth.js";
 import { startResearchBriefWorker } from "./researchBriefWorker.js";
 const INTERVAL_MS = 15 * 60_000;
-async function runMaintenance() { try { const tasks: Promise<unknown>[] = [cleanupExpiredOtps(), cleanupExpiredPasswordResets(), cleanupExpiredSessions(), runAccountDeletionCleanup(), cleanupExpiredToolApprovals(), cleanupExpiredMemories(), runRetentionCleanup(), cleanupWebhookDeliveries(), cleanupIdempotency(), cleanupResearchQuotas(), cleanupOAuthStates()]; if (process.env.BOBAI_DISTRIBUTED_RATE_LIMIT === "true") tasks.push(cleanupDistributedRateLimits()); await Promise.all(tasks); } catch (error) { console.error("maintenance cleanup failed", error); } }
+async function runMaintenance() { try { const tasks: Promise<unknown>[] = [cleanupExpiredOtps(), cleanupExpiredPasswordResets(), cleanupExpiredSessions(), cleanupExpiredToolApprovals(), cleanupExpiredMemories(), runRetentionCleanup(), cleanupWebhookDeliveries(), cleanupIdempotency(), cleanupResearchQuotas(), cleanupOAuthStates()]; if (process.env.BOBAI_DISTRIBUTED_RATE_LIMIT === "true") tasks.push(cleanupDistributedRateLimits()); await Promise.all(tasks); } catch (error) { console.error("maintenance cleanup failed", error); } }
 export function startMaintenance() { void runMaintenance(); void startAutomationWorker().catch((error) => { console.error("automation worker startup failed", error); }); startReminderWorker(); startResearchBriefWorker(); const timer = setInterval(() => { void runMaintenance(); }, INTERVAL_MS); timer.unref(); return timer; }
