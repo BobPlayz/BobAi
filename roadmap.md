@@ -66,7 +66,7 @@
 - [ ] Remove unused theme variants, theme pickers, decorative-only components, and obsolete CSS after checking imports and tests.
 - [ ] Make settings plain and consistent with the main app; avoid animated dashboard-card layouts.
 - [x] Add a compact mobile navigation menu to public content pages and scope it away from the landing page, chat, login, and authenticated app screens so the marketing nav does not cover the workspace. Keyboard-overlay behavior in the chat composer still requires device testing.
-- [ ] Check contrast, visible focus, text scaling, and reduced-motion behavior.
+- [x] Add a shared visible keyboard-focus outline and respect reduced-motion preferences in global CSS. Contrast, text scaling, and real-device behavior still require visual verification.
 
 **Exit criteria:** Light and Dark both work throughout the app; no sci-fi-only visual system remains; no broken navigation or unreadable content.
 
@@ -254,7 +254,8 @@
 - **2026-10-13:** Added a safe provider/model configuration status panel to Settings → About. It explicitly distinguishes configuration status from live availability and never displays provider secrets.
 - **2026-10-13:** Updated Next.js to 16.4.0 and refreshed compatible dependency fixes for proxy-addr, sharp, source-map-js, and brace-expansion. Build and tests passed on the security branch; npm audit still reports the upstream braces GHSA-vfj7-8cjw-p6xm, for which no patched upstream release is published as of this run. The remaining finding is in development lint tooling and is not silently suppressed.
 - **2026-10-13:** Deep Research now renders source links as clickable entries with available snippets and publication dates, aligns the displayed source list to the exact fetched evidence used for citation numbering, and requests explicit Findings / Interpretation / Uncertainty sections.
-- **2026-10-13:** Added `docs/FEATURE_INVENTORY.md`, a static route/API/schema/feature/control inventory and explicit external launch-blocker list. It is not a substitute for browser or runtime verification.
+- **2026-10-13:** Added `docs/FEATURE_INVENTORY.md`, a static route/API/schema/feature/control inventory and explicit external launch-blocker list. Updated repository preflight to allow this approved engineering document. It is not a substitute for browser or runtime verification.
+- **2026-10-13:** Added global keyboard-focus outlines and reduced-motion CSS, plus a visible focus treatment for the visually hidden attachment input. Browser/device accessibility review remains in the final verification pass.
 - **2026-10-13:** Added Light/Dark support to public navigation and the landing page, made the shared analytics consent banner use the selected theme, and removed the unconnected waitlist form so it cannot falsely imply that an email was saved. The waitlist is now explicitly closed until a real endpoint is connected. Scoped the marketing navigation to public content routes, avoiding a duplicate landing-page header and a marketing bar overlaying chat/settings/auth.
 - **2026-10-13:** Prevented the saved source-preference UI from silently turning an empty category selection into broad-web research. The explicit per-request Deep Research control still documents its own “none selected means broad” behavior.
 - **2026-10-13:** Propagated file-task cancellation through downstream document/image chat requests, and changed the attachment status from a misleading 100% upload indicator to “Processing…” while analysis is still running.
