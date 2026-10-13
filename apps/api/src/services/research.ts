@@ -17,7 +17,7 @@ export function sourceTypesFrom(options: Record<string, unknown>): ResearchSourc
   return [...new Set(value.filter((item): item is ResearchSourceType => typeof item === "string" && SOURCE_TYPES.has(item as ResearchSourceType)))];
 }
 function hostnameFor(source: ResearchSource) {
-  try { return new URL(source.url).hostname.toLowerCase().replace(/^www\\./, ""); }
+  try { return new URL(source.url).hostname.toLowerCase().replace(/^www\./, ""); }
   catch { return ""; }
 }
 export function matchesSourceTypes(source: ResearchSource, types: ResearchSourceType[]) {
@@ -25,8 +25,8 @@ export function matchesSourceTypes(source: ResearchSource, types: ResearchSource
   const host = hostnameFor(source);
   if (!host) return false;
   const official = host.endsWith(".gov") || host.endsWith(".gov.in") || host.endsWith(".nic.in") || host.endsWith(".int");
-  const academic = host.endsWith(".edu") || host.endsWith(".edu.in") || host.endsWith(".ac.in") || /(^|\\.)(nature\\.com|science\\.org|arxiv\\.org|pubmed\\.ncbi\\.nlm\\.nih\\.gov)$/.test(host);
-  const news = /(^|\\.)(reuters\\.com|apnews\\.com|bbc\\.com|theguardian\\.com|indianexpress\\.com|thehindu\\.com|ndtv\\.com|aljazeera\\.com)$/.test(host);
+  const academic = host.endsWith(".edu") || host.endsWith(".edu.in") || host.endsWith(".ac.in") || /(^|\.)(nature\.com|science\.org|arxiv\.org|pubmed\.ncbi\.nlm\.nih\.gov)$/.test(host);
+  const news = /(^|\.)(reuters\.com|apnews\.com|bbc\.com|theguardian\.com|indianexpress\.com|thehindu\.com|ndtv\.com|aljazeera\.com)$/.test(host);
   return (types.includes("official") && official) || (types.includes("academic") && academic) || (types.includes("news") && news);
 }
 export function sourceSearchQuery(query: string, types: ResearchSourceType[]) {
