@@ -22,6 +22,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
   const [artifact, setArtifact] = useState("");
   const [quiz, setQuiz] = useState<QuizItem[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({});
+  const [sourceTypes, setSourceTypes] = useState<string[]>(["general"]);
 
   useEffect(() => { void listProjects().then((items) => { setProjects(items); if (items[0]) selectProject(items[0]); }).catch(() => undefined); }, []);
   useEffect(() => { try { const saved = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof saved.memory === "boolean") setMemory(saved.memory); } catch {} }, []);
@@ -69,7 +70,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
     setBusy(true); clearResults();
     try {
       if (mode === "research") {
-        const result = await deepResearch(task);
+        const result = await deepResearch(task, sourceTypes);
         setOutput(`${result.synthesis}\n\nSources:\n${result.sources.slice(0, 12).map((source, index) => `[${index + 1}] ${source.title} — ${source.url}`).join("\n")}`);
         setArtifact(result.synthesis);
       } else if (mode === "study") {
@@ -96,6 +97,29 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
       <div className="mx-auto mt-3 grid max-w-5xl gap-3 lg:grid-cols-[1fr_260px]">
         <div className="rounded-2xl border border-[#2A3340] bg-[#10161D] p-3">
           <div className="mb-2 text-xs text-[#64748B]">{mode === "research" ? "Research, compare, synthesize and cite — not just a search dump." : mode === "study" ? "Turn notes or a topic into a study pack and score yourself." : mode === "create" ? "Generate an artifact, then edit it directly below." : mode === "voice" ? "Type text to hear it, or use voice input above." : "Give the coding agent a concrete task."}</div>
+          {mode === "research" && (
+            <fieldset className="mb-3 rounded-xl border border-[#2A3340] p-3">
+              <legend className="px-1 text-xs font-semibold text-[#94A3B8]">Preferred sources for this request</legend>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2">
+                {([["official", "Official / government"], ["academic", "Academic / research"], ["news", "Reputable news"], ["general", "All web sources"]] as const).map(([value, label]) => (
+                  <label key={value} className="inline-flex items-center gap-2 text-xs text-[#CBD5E1]">
+                    <input
+                      type="checkbox"
+                      checked={sourceTypes.includes(value)}
+                      onChange={(event) => setSourceTypes((current) => {
+                        if (value === "general") return event.target.checked ? ["general"] : [];
+                        const withoutGeneral = current.filter((item) => item !== "general");
+                        return event.target.checked ? [...new Set([...withoutGeneral, value])] : withoutGeneral.filter((item) => item !== value);
+                      })}
+                      className="size-3.5 accent-sky-400"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] text-[#64748B]">If none are selected, BobAI searches broadly. Source filters may return fewer results.</p>
+            </fieldset>
+          )}
           <textarea value={query} onChange={(event) => setQuery(event.target.value)} placeholder="what should Bob do?" className="min-h-20 w-full resize-y rounded-xl border border-[#2A3340] bg-[#141A22] p-3 text-sm text-[#E5EEF7] outline-none placeholder:text-[#64748B] focus:border-[#38BDF8]" />
           <div className="mt-2 flex justify-end"><button onClick={run} disabled={busy || !query.trim()} className="rounded-xl bg-[#38BDF8] px-4 py-2 text-sm font-semibold text-[#061018] disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Working…" : "Run"}</button></div>
           {artifact && <div className="mt-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3"><div className="mb-2 flex items-center justify-between"><span className="text-xs font-semibold text-[#94A3B8]">Editable artifact</span><button onClick={() => navigator.clipboard?.writeText(artifact)} className="rounded-lg border border-[#2A3340] px-2 py-1 text-xs text-[#94A3B8]">Copy</button></div><textarea value={artifact} onChange={(event) => setArtifact(event.target.value)} className="min-h-72 w-full resize-y rounded-lg border border-[#2A3340] bg-[#10161D] p-3 font-mono text-xs leading-5 text-[#CBD5E1] outline-none focus:border-[#38BDF8]" /><button onClick={() => speak(artifact)} className="mt-2 rounded-lg border border-[#2A3340] px-3 py-2 text-xs text-[#94A3B8]">🔊 Read aloud</button></div>}
