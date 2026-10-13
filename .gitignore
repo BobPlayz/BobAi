@@ -30,4 +30,7 @@ model-training/data/test.jsonl
 # Local-only internal Markdown and agent instructions
 *.md
 !README.md
+!docs/
+!docs/*.md
+!docs/**/*.md
 .agent/
