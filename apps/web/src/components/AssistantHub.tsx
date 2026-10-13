@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createArtifact, createProject, deepResearch, generateImage, listProjects, runCodingAgent, studyPack, updateProject, type DeepResearchResult } from "@/lib/api";
+import { createArtifact, createProject, deepResearch, generateImage, listProjects, runCodingAgent, sendMessage, studyPack, updateProject, type DeepResearchResult } from "@/lib/api";
 
 type Project = { id: string; name: string; description?: string | null; settings?: unknown };
 type Mode = "research" | "study" | "create" | "image" | "voice" | "agent";
@@ -15,6 +15,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
   const [busy, setBusy] = useState(false);
   const agentController = useRef<AbortController | null>(null);
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [memory, setMemory] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState("");
@@ -55,8 +56,15 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
 
   function speak(text: string) {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) { setOutput("voice playback is not supported by this browser"); return; }
-    window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
   }
+
+  function stopSpeaking() { if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel(); setSpeaking(false); }
 
   function startVoice() {
     const Recognition = (window as unknown as { webkitSpeechRecognition?: new () => { lang: string; continuous: boolean; interimResults: boolean; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; start: () => void } }).webkitSpeechRecognition;
@@ -86,7 +94,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
         setOutput(`${result.title}\n\n${result.summary}\n\nKey points:\n${result.keyPoints.map((item) => `• ${item}`).join("\n")}\n\nFlashcards:\n${result.flashcards.map((card) => `Q: ${card.question}\nA: ${card.answer}`).join("\n\n")}`);
       } else if (mode === "create") setArtifact(await createArtifact(text, personality));
       else if (mode === "image") { const result = await generateImage(text, referenceImages); const images = Array.isArray(result.images) ? result.images : []; setGeneratedImages(images); setOutput(images.length ? "image ready. review it before downloading or sharing." : "the image provider returned no images."); }
-      else if (mode === "voice") { speak(text); setOutput("speaking…"); }
+      else if (mode === "voice") { const response = await sendMessage([{ id: crypto.randomUUID(), role: "user", content: task }], personality, undefined, memory); const reply = typeof response.reply === "string" ? response.reply.trim() : ""; setOutput(reply || "the assistant returned no spoken reply."); if (reply) speak(reply); }
       else { const result = await runCodingAgent(task, controller?.signal); setOutput(result.output + (result.warnings ? `\n\nWarnings:\n${result.warnings}` : "")); }
     } catch (error) { setOutput(error instanceof Error && error.name === "AbortError" ? "Agent run cancelled." : error instanceof Error ? error.message : "that operation failed"); }
     finally { if (agentController.current === controller) agentController.current = null; setBusy(false); }
@@ -148,7 +156,7 @@ export default function AssistantHub({ personality, onPersonalityChange }: Props
             }} className="mt-2 block w-full text-xs text-[#94A3B8]" />
             {referenceImages.length > 0 && <button type="button" onClick={() => setReferenceImages([])} className="mt-2 rounded-lg border border-[#2A3340] px-2 py-1 text-xs text-[#94A3B8]">Clear reference images ({referenceImages.length})</button>}
           </div>}
-          <div className="mt-2 flex justify-end">{agentController.current && busy ? <button type="button" onClick={() => agentController.current?.abort()} className="rounded-xl border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-500">Stop agent</button> : <button onClick={run} disabled={busy || !query.trim()} className="rounded-xl bg-[#38BDF8] px-4 py-2 text-sm font-semibold text-[#061018] disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Working…" : "Run"}</button>}</div>
+          <div className="mt-2 flex justify-end">{mode === "voice" && speaking ? <button type="button" onClick={stopSpeaking} className="rounded-xl border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-500">Stop speech</button> : agentController.current && busy ? <button type="button" onClick={() => agentController.current?.abort()} className="rounded-xl border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-500">Stop agent</button> : <button onClick={run} disabled={busy || !query.trim()} className="rounded-xl bg-[#38BDF8] px-4 py-2 text-sm font-semibold text-[#061018] disabled:cursor-not-allowed disabled:opacity-40">{busy ? "Working…" : mode === "voice" ? "Ask and speak reply" : "Run"}</button>}</div>
           {artifact && <div className="mt-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3"><div className="mb-2 flex items-center justify-between"><span className="text-xs font-semibold text-[#94A3B8]">Editable artifact</span><button onClick={() => navigator.clipboard?.writeText(artifact)} className="rounded-lg border border-[#2A3340] px-2 py-1 text-xs text-[#94A3B8]">Copy</button></div><textarea value={artifact} onChange={(event) => setArtifact(event.target.value)} className="min-h-72 w-full resize-y rounded-lg border border-[#2A3340] bg-[#10161D] p-3 font-mono text-xs leading-5 text-[#CBD5E1] outline-none focus:border-[#38BDF8]" /><button onClick={() => speak(artifact)} className="mt-2 rounded-lg border border-[#2A3340] px-3 py-2 text-xs text-[#94A3B8]">🔊 Read aloud</button></div>}
           {quiz.length > 0 && <div className="mt-3 space-y-3 rounded-xl border border-[#2A3340] bg-[#0B0F14] p-4 text-sm text-[#CBD5E1]"><div className="font-semibold text-[#E5EEF7]">Interactive quiz</div>{quiz.map((item, index) => { const selected = quizAnswers[index]; const correct = selected === item.answer; return <div key={index} className="rounded-lg border border-[#2A3340] p-3"><div>{index + 1}. {item.question}</div><div className="mt-2 grid gap-1">{item.options.map((option) => <button key={option} onClick={() => setQuizAnswers((answers) => ({ ...answers, [index]: option }))} className={`rounded-lg px-2 py-1 text-left text-xs ${quizAnswers[index] === option ? "bg-[#38BDF8]/15 text-[#E5EEF7]" : "bg-[#141A22] text-[#94A3B8]"}`}>{option}</button>)}</div>{selected !== undefined && <div className={`mt-2 text-xs ${correct ? "text-green-400" : "text-red-400"}`}>{correct ? `✓ Correct${item.explanation ? ` — ${item.explanation}` : ""}` : `✗ Correct answer: ${item.answer}`}</div>}</div>; })}</div>}
           {output && <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-xl border border-[#2A3340] bg-[#0B0F14] p-3 text-xs leading-5 text-[#CBD5E1]">{output}</pre>}
