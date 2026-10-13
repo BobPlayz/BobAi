@@ -32,7 +32,7 @@
 
 All repository Markdown files were updated on 2026-10-13. The Markdown tree was checked and contains: README.md, roadmap.md, docs/API.md, docs/CODE_STYLE.md, docs/DATABASE.md, docs/FEATURE_INVENTORY.md, docs/HOSTED_AI.md, docs/LOCAL_AI.md, docs/QUICK_START_AUTH.md, and docs/SECURITY.md. This handoff file is the new eleventh Markdown document.
 
-## Latest static changes in main
+## Original main snapshot and current branch changes
 
 - Hosted AI adapter and provider safety tests exist; hosted provider is opt-in.
 - Email OTP quick-start flow exists. Accounts requiring MFA must not bypass MFA; dedicated MFA behavior needs end-to-end verification.
@@ -48,6 +48,16 @@ All repository Markdown files were updated on 2026-10-13. The Markdown tree was 
 - Distributed rate limiting fails closed when its configured shared backend is unavailable. Verify behavior and availability impact.
 - docs/FEATURE_INVENTORY.md maps major controls and routes. It is a static inventory, not a certification.
 - Latest relevant commit includes SSE CRLF parser fix afcadcde3465baf5b581fa567032aacd56441432 and documentation/handoff updates. See Git history for later per-file commits.
+
+## Public-beta branch changes made in this session
+
+- Created branch `implementation/public-beta-student-scope` from `main`; changes are not merged or deployed.
+- Fixed repository preflight's allowlist to include `docs/HANDOFF.md`.
+- Removed Ollama provider routing, vision fallback, runtime source, test, package test command, and environment-template options. Updated the hosted-only docs and provider routing. The legacy native/specialist runtime and model-training source directories remain in the repository and must not be marketed as supported Ollama or model-training workflows.
+- Added provider-routing regression tests for rejecting the retired Ollama model id and routing coding requests through the configured hosted provider. Tests have not been run yet.
+- Production startup now fails closed unless the hosted provider/key, ₹500 monthly target, and `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true` operator attestation are configured. This flag does not prove a real provider cap is active; the owner must verify it in the provider dashboard.
+- Removed the fake SVG image-generation fallback. Image generation now reports unavailable if no real model is configured.
+- Added Origin Productions as metadata/structured-data publisher and removed the unconfirmed `bobai.app` domain default from `.env.example`.
 
 ## What is not yet complete
 
