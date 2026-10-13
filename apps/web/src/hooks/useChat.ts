@@ -26,6 +26,7 @@ function loadLocalConversationUi(): Conversation[] {
 }
 export function useChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]); const [activeId, setActiveId] = useState(""); const [input, setInput] = useState(""); const [search, setSearch] = useState(""); const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null); const [settings, setSettings] = useState<ChatSettings>(loadSettings); const [uploadingFiles, setUploadingFiles] = useState<string[]>([]); const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}); const [serverReady, setServerReady] = useState(false); const [streaming, setStreaming] = useState(false); const activeStream = useRef<AbortController | null>(null); const uploadControllers = useRef(new Map<string, AbortController>());
+  useEffect(() => () => { activeStream.current?.abort(); for (const controller of uploadControllers.current.values()) controller.abort(); uploadControllers.current.clear(); }, []);
   useEffect(() => {
     let cancelled = false;
     const localConversations = loadLocalConversationUi();
