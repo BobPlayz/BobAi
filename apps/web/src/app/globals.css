@@ -33,6 +33,16 @@ html[data-theme="dark"] {
   --accent: #38bdf8;
 }
 
+/* Legacy public pages still use a few fixed dark utility classes. Normalize those in Light mode while the route-by-route cleanup continues. */
+html[data-theme="light"] [class~="bg-[#07090c]"],
+html[data-theme="light"] [class~="bg-[#08090b]"],
+html[data-theme="light"] [class~="bg-[#10161D]"],
+html[data-theme="light"] [class~="bg-[#111214]"],
+html[data-theme="light"] [class~="bg-slate-950/95"] { background-color: var(--surface) !important; }
+html[data-theme="light"] [class*="text-white/"] { color: var(--muted) !important; }
+html[data-theme="light"] [class~="text-white"] { color: var(--text) !important; }
+html[data-theme="light"] [class*="border-white/"] { border-color: var(--border) !important; }
+
 * { box-sizing: border-box; }
 
 html, body {
