@@ -28,6 +28,7 @@ async function main() {
   const markdown = files.filter((path) => path.toLowerCase().endsWith(".md"));
   const allowedMarkdown = new Set([
     "README.md",
+    "roadmap.md",
     "docs/API.md",
     "docs/DATABASE.md",
     "docs/CODE_STYLE.md",
