@@ -14,6 +14,7 @@ import {
   Pencil,
   X,
 } from "lucide-react";
+import { useTheme } from "./ThemeProvider";
 
 type Props = {
   conversations: Conversation[];
@@ -38,6 +39,8 @@ export default function NeuralSidebar({
   onRename,
   onDelete,
 }: Props) {
+  const { theme } = useTheme();
+  const light = theme === "light";
   const [menuId, setMenuId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
 
@@ -103,17 +106,17 @@ export default function NeuralSidebar({
   }
 
   return (
-    <aside className="flex h-full w-full flex-col bg-[#090a0c] text-white">
+    <aside className={["flex h-full w-full flex-col", light ? "bg-[#f1f2f4] text-[#202123]" : "bg-[#090a0c] text-white"].join(" ")}>
       <div className="flex items-center justify-between px-4 pb-3 pt-5">
-        <Link href="/chat" className="text-[17px] font-semibold tracking-tight text-white" aria-label="Bob AI home">Bob AI</Link>
-        <span className="rounded-md border border-white/[0.08] px-2 py-1 text-[10px] text-white/35">AI</span>
+        <Link href="/chat" className={["text-[17px] font-semibold tracking-tight", light ? "text-[#202123]" : "text-white"].join(" ")} aria-label="Bob AI home">Bob AI</Link>
+        <span className={["rounded-md border px-2 py-1 text-[10px]", light ? "border-[#d1d5db] text-[#6b7280]" : "border-white/[0.08] text-white/35"].join(" ")}>AI</span>
       </div>
 
       <div className="px-3 pb-3">
         <button
           type="button"
           onClick={onNewChat}
-          className="flex h-10 w-full items-center gap-2 rounded-lg border border-white/[0.09] bg-white/[0.035] px-3 text-sm text-white/85 transition hover:bg-white/[0.075]"
+          className=["flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-sm transition", light ? "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f9fafb]" : "border-white/[0.09] bg-white/[0.035] text-white/85 hover:bg-white/[0.075]"].join(" ")
         >
           <PenSquare className="h-4 w-4 text-white/60" />
           New chat
@@ -125,7 +128,7 @@ export default function NeuralSidebar({
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search chats"
             aria-label="Search conversations"
-            className="h-9 w-full rounded-lg border border-white/[0.07] bg-white/[0.025] pl-9 pr-3 text-xs text-white placeholder:text-white/35 outline-none focus:border-cyan-300/35"
+            className={["h-9 w-full rounded-lg border pl-9 pr-3 text-xs outline-none focus:border-cyan-300/50", light ? "border-[#e5e7eb] bg-white text-[#202123] placeholder:text-[#9ca3af]" : "border-white/[0.07] bg-white/[0.025] text-white placeholder:text-white/35"].join(" ")}
           />
         </div>
       </div>
@@ -147,8 +150,8 @@ export default function NeuralSidebar({
         </section>
       </div>
 
-      <div className="border-t border-white/[0.07] p-3">
-        <Link href="/settings" className="flex h-10 items-center gap-2 rounded-lg px-3 text-sm text-white/65 transition hover:bg-white/[0.06] hover:text-white">
+      <div className={["border-t p-3", light ? "border-[#e5e7eb]" : "border-white/[0.07]"].join(" ")}>
+        <Link href="/settings" className={["flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition", light ? "text-[#4b5563] hover:bg-black/[0.04] hover:text-[#111827]" : "text-white/65 hover:bg-white/[0.06] hover:text-white"].join(" ")}>
           <Settings className="h-4 w-4 text-white/45" />
           Settings
         </Link>
