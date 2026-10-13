@@ -143,7 +143,7 @@ export default function ChatInput({
               <VoiceButton onTranscript={(transcript) => setInput(input ? `${input}${input.endsWith(" ") ? "" : " "}${transcript}` : transcript)} disabled={disabled} />
               </div>
                             {disabled ? (
-                <div className=`flex h-10 w-10 items-center justify-center rounded-full ${light ? "bg-[#f1f5f9]" : "bg-[#171D26]"}`>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${light ? "bg-[#f1f5f9]" : "bg-[#171D26]"}`}>
                   <div className="thinking-triangle" />
                 </div>
               ) : (
