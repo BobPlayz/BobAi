@@ -143,6 +143,21 @@ export async function openAIStream(input: NativeMessage[], onToken: (token: stri
   return { content: content.trim(), model: requestModel() };
 }
 
+export async function openAIImageAnalysis(imageDataUrl: string, prompt: string) {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  if (!key) throw new Error("Hosted image understanding is not configured.");
+  if (typeof imageDataUrl !== "string" || !/^data:image\\/(?:png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\\s]+$/i.test(imageDataUrl) || imageDataUrl.length > 2_800_000) throw new Error("Image must be a supported PNG, JPEG, or WebP data URL under 2 MB.");
+  if (typeof prompt !== "string" || prompt.length > 8_000) throw new Error("Vision prompt is too long.");
+  const body = JSON.stringify({ model: requestModel(), stream: false, max_tokens: 768, messages: [{ role: "user", content: [{ type: "text", text: prompt.trim() || "Describe this image and its relevant details." }, { type: "image_url", image_url: { url: imageDataUrl } }] }] });
+  if (Buffer.byteLength(body) > MAX_REQUEST_BYTES) throw new Error("Image request is too large.");
+  const response = await fetch(`${openAIBaseUrl()}/chat/completions`, { method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" }, body, redirect: "error", signal: AbortSignal.timeout(timeoutMs()) });
+  if (!response.ok) { await response.body?.cancel().catch(() => undefined); if (response.status === 401) throw new Error("Hosted AI authentication failed. Check OPENAI_API_KEY."); if (response.status === 429) throw new Error("Hosted AI rate limit or quota reached."); throw new Error(`Hosted image analysis failed with HTTP ${response.status}`); }
+  let data: { choices?: Array<{ message?: { content?: unknown } }> };
+  try { data = JSON.parse(await readLimited(response)); } catch (error) { if (error instanceof Error && error.message.includes("too large")) throw error; throw new Error("Hosted image analysis returned invalid JSON."); }
+  const content = data.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || !content.trim() || content.length > MAX_RESPONSE_CHARS) throw new Error("Hosted image analysis returned an empty or invalid description.");
+  return { model: requestModel(), response: content.trim() };
+}
 export function openAIStatus() {
   return { ready: openAIConfigured(), provider: "openai-compatible", modelId: OPENAI_MODEL_ID, model: process.env.BOBAI_OPENAI_MODEL || "gpt-4o-mini", error: openAIConfigured() ? undefined : "OPENAI_API_KEY is not configured" };
 }
