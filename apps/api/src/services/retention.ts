@@ -29,8 +29,7 @@ export async function runRetentionCleanup(now = new Date()) {
         continue;
       }
       await purgeUserOwnedData(account.id);
-      const deleted = await db.delete(users).where(eq(users.id, account.id)).returning({ id: users.id });
-      if (deleted.length) accountsDeleted += 1;
+      accountsDeleted += 1;
     } catch (error) {
       console.error("account purge deferred", error);
     }
