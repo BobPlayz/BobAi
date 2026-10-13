@@ -34,6 +34,7 @@ html[data-theme="dark"] {
 }
 
 /* Legacy public pages still use a few fixed dark utility classes. Normalize those in Light mode while the route-by-route cleanup continues. */
+html[data-theme="light"] [class~="bg-[#0E141B]/95"],
 html[data-theme="light"] [class~="bg-[#07090c]"],
 html[data-theme="light"] [class~="bg-[#08090b]"],
 html[data-theme="light"] [class~="bg-[#0b1118]/95"],
@@ -47,6 +48,13 @@ html[data-theme="light"] [class~="bg-black/20"] { background-color: rgba(0, 0, 0
 html[data-theme="light"] [class*="text-white/"] { color: var(--muted) !important; }
 html[data-theme="light"] [class~="text-white"] { color: var(--text) !important; }
 html[data-theme="light"] [class*="border-white/"] { border-color: var(--border) !important; }
+html[data-theme="light"] [class~="border-[#2A3340]"] { border-color: var(--border) !important; }
+html[data-theme="light"] [class~="text-[#E5EEF7]"],
+html[data-theme="light"] [class~="text-[#CBD5E1]"] { color: var(--text) !important; }
+html[data-theme="light"] [class~="text-[#94A3B8]"],
+html[data-theme="light"] [class~="text-[#64748B]"] { color: var(--muted) !important; }
+html[data-theme="light"] [class~="text-[#7DD3FC]"] { color: var(--accent) !important; }
+html[data-theme="light"] [class*="placeholder:text-[#64748B]"]::placeholder { color: var(--muted) !important; }
 
 * { box-sizing: border-box; }
 
