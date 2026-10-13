@@ -67,11 +67,11 @@ export function useChat() {
         setUploadingFiles((prev) => [...prev, file.name]);
         setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
         try {
+          if (file.type.startsWith("image/") && file.size > 1_000_000) throw new Error("For image understanding, attach an image smaller than 1 MB for now.");
           const result = await uploadFile(file, (progress) => setUploadProgress((prev) => ({ ...prev, [file.name]: progress })));
           const fileData: ChatFile = { id: crypto.randomUUID(), name: result.name, type: result.type, text: result.text };
           const current = conversations.find((conversation) => conversation.id === activeId) || activeConversation;
           if (file.type.startsWith("image/")) {
-            if (file.size > 1_000_000) throw new Error("For image understanding, attach an image smaller than 1 MB for now.");
             const image: ChatImage = { id: crypto.randomUUID(), url: await readImageDataUrl(file), prompt: file.name };
             const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: "Please analyze this image: " + file.name, files: [fileData], images: [image] };
             const nextMessages = [...current.messages, userMessage];
