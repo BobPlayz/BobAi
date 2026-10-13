@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { openAIBaseUrl, openAIChat, openAIConfigured, openAIStatus, openAIStream } from "../src/services/openAIProvider.js";
+import { openAIBaseUrl, openAIChat, openAIConfigured, openAIStatus, openAIStream, openAIImageAnalysis } from "../src/services/openAIProvider.js";
 
 const originalFetch = globalThis.fetch;
 const originalKey = process.env.OPENAI_API_KEY;
@@ -121,4 +121,31 @@ test("hosted streaming rejects an empty answer", async () => {
   } finally {
     restoreEnvironment();
   }
+});
+
+test("hosted image analysis sends supported image data through the server-side provider", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    process.env.BOBAI_OPENAI_MODEL = "vision-test-model";
+    globalThis.fetch = async (input, init) => {
+      assert.equal(String(input), "https://api.openai.com/v1/chat/completions");
+      assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-key");
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.model, "vision-test-model");
+      assert.equal(body.messages[0].content[0].text, "Describe this test image.");
+      assert.equal(body.messages[0].content[1].image_url.url, "data:image/png;base64,iVBORw==");
+      return new Response(JSON.stringify({ choices: [{ message: { content: "A test image." } }] }), { status: 200 });
+    };
+    const result = await openAIImageAnalysis("data:image/png;base64,iVBORw==", "Describe this test image.");
+    assert.deepEqual(result, { model: "vision-test-model", response: "A test image." });
+  } finally { restoreEnvironment(); }
+});
+
+test("hosted image analysis rejects unsupported or oversized image data before fetch", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    globalThis.fetch = async () => { throw new Error("fetch must not run for invalid image data"); };
+    await assert.rejects(openAIImageAnalysis("data:image/svg+xml;base64,PHN2Zz4=", "describe"), /supported PNG, JPEG, or WebP/);
+    await assert.rejects(openAIImageAnalysis("not-an-image", "describe"), /supported PNG, JPEG, or WebP/);
+  } finally { restoreEnvironment(); }
 });
