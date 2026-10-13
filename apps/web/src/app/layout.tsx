@@ -39,7 +39,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <div id="bobai-root" className="relative min-h-screen overflow-hidden">
           <div className="relative z-10 min-h-screen">
-<ThemeProvider>
+            <ThemeProvider>
               <SiteNav />
               {children}
               <CookieConsent />
