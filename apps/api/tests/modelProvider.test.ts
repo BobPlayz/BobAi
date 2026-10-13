@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
 
 const originalFetch = globalThis.fetch;
-const keys = ["BOBAI_PROVIDER", "BOBAI_MODEL_NAME", "BOBAI_CODING_MODEL_NAME", "OPENAI_API_KEY", "BOBAI_OPENAI_BASE_URL", "BOBAI_OPENAI_MODEL"] as const;
+const keys = ["NODE_ENV", "BOBAI_PROVIDER", "BOBAI_MODEL_NAME", "BOBAI_CODING_MODEL_NAME", "OPENAI_API_KEY", "BOBAI_OPENAI_BASE_URL", "BOBAI_OPENAI_MODEL"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]])) as Record<(typeof keys)[number], string | undefined>;
 function restore() {
   globalThis.fetch = originalFetch;
@@ -43,6 +43,20 @@ test("hosted provider selection also routes coding model requests to the hosted 
     assert.equal(result.content, "coding answer");
     assert.equal(result.model, "test-model");
     assert.equal(result.provider, "coding");
+  } finally {
+    restore();
+  }
+});
+
+test("production accepts only the configured hosted model", async () => {
+  try {
+    process.env.NODE_ENV = "production";
+    process.env.BOBAI_PROVIDER = "openai";
+    process.env.OPENAI_API_KEY = "test-key";
+    await assert.rejects(
+      new BobModelProvider().chat([{ role: "user", content: "hello" }], "bob", "bob-production"),
+      /Only the configured hosted provider is available in production/,
+    );
   } finally {
     restore();
   }
