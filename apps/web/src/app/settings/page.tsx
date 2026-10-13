@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
-import { clearMemories, deleteMemory, listMemories } from "@/lib/api";
+import { clearMemories, deleteMemory, exportAccountData, listMemories } from "@/lib/api";
 
 const SETTINGS_KEY = "bobai.settings.v1";
 
@@ -43,6 +43,8 @@ export default function SettingsPage() {
   const [memoryBusyId, setMemoryBusyId] = useState<string | null>(null);
   const [memoryError, setMemoryError] = useState("");
   const [memoryNotice, setMemoryNotice] = useState("");
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportMessage, setExportMessage] = useState("");
 
   useEffect(() => setSettings(readSettings()), []);
 
@@ -60,6 +62,27 @@ export default function SettingsPage() {
     });
     return () => { cancelled = true; };
   }, [tab]);
+
+  async function downloadAccountExport() {
+    setExportBusy(true);
+    setExportMessage("");
+    try {
+      const blob = await exportAccountData();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = "bobai-account-export.json";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+      setExportMessage("Your account export was prepared.");
+    } catch (error) {
+      setExportMessage(error instanceof Error ? error.message : "Could not export account data.");
+    } finally {
+      setExportBusy(false);
+    }
+  }
 
   async function removeMemory(id: string) {
     setMemoryBusyId(id);
@@ -192,6 +215,12 @@ export default function SettingsPage() {
                 <li>Do not enter secrets into chat or personalization instructions.</li>
                 <li>Use sign-out from the account controls provided by your installation. This page does not pretend to delete server data.</li>
               </ul>
+              <div className={`mt-5 rounded-xl border p-4 ${colors.field}`}>
+                <h3 className="text-sm font-medium">Your account data</h3>
+                <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Download the account data currently available through the authenticated API. The export may contain private conversations and account information, so keep the file secure.</p>
+                <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
+                {exportMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{exportMessage}</p>}
+              </div>
               <p className={`mt-4 text-xs ${colors.muted}`}>This is a practical summary, not a complete legal privacy notice. The service operator should publish a policy matching the actual deployment and providers.</p>
             </section>
           )}
