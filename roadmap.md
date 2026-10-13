@@ -174,7 +174,7 @@
 - [x] Use explicit press-to-record controls; the app does not silently listen in the background.
 - [x] Feed recorded speech transcripts into the same text composer used by chat.
 - [x] Add stop controls for recorded input and read-aloud playback; true seamless voice-to-voice turn-taking and interruption during generation remain unfinished.
-- [x] Show microphone recording state and surface permission/transcription errors.
+- [x] Show microphone recording state and surface permission/transcription errors; choose a MediaRecorder MIME type supported by the current browser instead of assuming WAV support.
 - [x] Place dictation output in the editable chat composer before sending. Verify noisy-input/mobile-browser behavior during final testing.
 - [ ] Support language/voice selection only when the chosen service actually supports it.
 - [ ] Keep voice costs and third-party data processing transparent; use free/local options where practical.
@@ -258,6 +258,7 @@
 - **2026-10-13:** Added Light/Dark support to public navigation and the landing page, made the shared analytics consent banner use the selected theme, and removed the unconnected waitlist form so it cannot falsely imply that an email was saved. The waitlist is now explicitly closed until a real endpoint is connected.
 - **2026-10-13:** Prevented the saved source-preference UI from silently turning an empty category selection into broad-web research. The explicit per-request Deep Research control still documents its own “none selected means broad” behavior.
 - **2026-10-13:** Propagated file-task cancellation through downstream document/image chat requests, and changed the attachment status from a misleading 100% upload indicator to “Processing…” while analysis is still running.
+- **2026-10-13:** Removed the voice recorder’s unsupported-WAV assumption and now select among browser-supported MediaRecorder formats, falling back to the browser default when necessary. Backend format support still needs device/browser verification.
 - **2026-10-13:** Removed the root package `model:*` commands and retired the standalone training workflow after checking that it was separate from CI/deployment. Retained model-training sources because the optional native inference runtime still expects a prebuilt artifact under that path.
 - **2026-10-13:** Propagated client-disconnect cancellation from the API stream route through the chat engine into hosted and Ollama provider requests. Corrected disconnect error handling so a cancelled response is not subsequently overwritten as failed. Added a three-active-agent-task per-user limit; durable distributed quotas and hard provider-side monetary limits still require production configuration.
 - **2026-10-13:** Added editable voice dictation to the active neural composer, per-file upload cancellation/progress controls, consistent supported image formats, and an agent Stop control wired to the server queue-cancel route. These code paths remain pending final build/test verification.
