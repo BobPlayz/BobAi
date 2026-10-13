@@ -17,7 +17,7 @@ In development, OTP codes are logged by the API if SMTP is not configured. This 
 - Codes are six digits, expire after ten minutes, and have bounded attempts and request throttling.
 - Session cookies are HttpOnly and Secure in production; the API refreshes the session through the existing refresh-token rotation logic.
 - Existing password, OAuth, and OTP endpoints remain in the API for compatibility, but the visible login page now uses the quick-start flow.
-- Accounts with an additional authenticator-based MFA requirement must complete the existing MFA flow; the quick-start flow does not bypass MFA.
+- Accounts with an additional authenticator-based MFA requirement cannot finish through the simplified quick-start screen yet. The API refuses to bypass MFA; a dedicated MFA step in this screen remains unfinished.
 - Email verification proves control of an inbox, not a person's legal identity.
 - Before public launch, review the privacy/terms text and age-appropriate requirements with a responsible adult/legal adviser. Do not collect more personal information than necessary.
 - Do not commit real SMTP credentials, database URLs, or AI provider keys.
