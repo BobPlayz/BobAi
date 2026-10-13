@@ -2,6 +2,7 @@
 import { useEffect,useRef,useState } from "react";
 import { Mic,Square,Volume2 } from "lucide-react";
 import { synthesizeSpeech,transcribeAudio } from "@/lib/voice";
+import { useTheme } from "@/components/neural/ThemeProvider";
 
 type Props={onTranscript:(text:string)=>void;disabled?:boolean;readAloudText?:string};
 export default function VoiceButton({onTranscript,disabled=false,readAloudText}:Props){const { theme } = useTheme(); const light = theme === "light"; const recorder=useRef<MediaRecorder|null>(null);const audioRef=useRef<HTMLAudioElement|null>(null);const [speaking,setSpeaking]=useState(false);const chunks=useRef<Blob[]>([]);const [recording,setRecording]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
