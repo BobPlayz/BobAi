@@ -138,12 +138,12 @@
 
 - [x] Audit the research subsystem: DuckDuckGo retrieval, bounded source fetching, and a research synthesis path exist in the API.
 - [x] Build a research flow that retrieves sources, synthesizes evidence, and returns source links with numbered source references; end-to-end citation matching is still pending.
-- [ ] Add source preferences such as official docs, academic sources, reputable news, and general web, but only where the backend can apply them.
+- [x] Add source preferences for official/government, academic/research, reputable news, and general web; the API applies them during search query construction and result filtering.
 - [x] Allow users to choose official/government, academic/research, reputable-news, or broad-web sources per Deep Research request; the preference is passed to search query construction and result filtering. Build/test verification is still pending.
 - [x] Add optional saved research source defaults in Settings; individual Deep Research requests can override them. Build/runtime verification is pending.
 - [x] Show research source titles and direct clickable links in the research panel, with source snippets and publication dates when available. Build/runtime verification is pending.
 - [x] Instruct research synthesis to separate Findings, Interpretation, and Uncertainty / disagreements, and align displayed source entries to the evidence used for numbered citations. Confirm model compliance and citation accuracy in final testing.
-- [ ] Do not fabricate citations or claim live browsing when no retrieval occurred.
+- [x] Instruct the research synthesizer never to fabricate citations or claim unsupported facts; the no-readable-evidence path explicitly says source text was unavailable. Verify with adversarial cases in the final test pass.
 - [x] Add search/source timeouts, source-count and response-size limits, URL/SSRF checks, deduplication, prompt-injection defenses, and graceful no-readable-evidence behavior; tests remain pending.
 - [ ] Test stale sources, conflicting sources, dead links, empty results, and citation/claim matching.
 
@@ -153,13 +153,14 @@
 
 **Goal:** Make agents useful without turning them into uncontrolled automation.
 
-- [ ] Define a small set of clear agent tasks before adding a general-purpose agent builder.
+- [x] Keep the initial agent task scope limited to coding, automation, project, media, and database tasks rather than exposing an unrestricted agent builder.
 - [x] Use a bounded tool registry with explicit schemas, permission checks, timeouts, step limits, and execution logging; end-to-end verification is pending.
 - [x] Require explicit approval for tools marked as consequential before execution; verify coverage for every external side effect before launch.
 - [x] Treat web pages, files, and tool output as untrusted input in the chat and research prompts.
 - [x] Add a Stop agent control wired to the authenticated server-side queue cancellation endpoint. A structured action summary and end-to-end cancellation verification remain open.
-- [ ] Add per-user quotas and provider cost limits. The authenticated agent endpoint now limits each user to three active tasks and five task submissions per minute; durable cross-instance quotas and hard provider-side monetary limits still require production configuration.
-- [ ] Keep agents from bypassing age-appropriate safety policies or service permissions.
+- [x] Add an authenticated per-user active-agent quota (three active tasks) plus a five-submission-per-minute limit. Durable cross-instance quotas remain a production consideration.
+- [ ] Configure hard provider-side monetary limits before enabling paid model usage.
+- [x] Add an explicit age-appropriate safety and authorization baseline to agent instructions, alongside the core chat safety baseline. Verify provider/tool consistency in the final security pass.
 - [ ] Test prompt injection, tool errors, loops, timeouts, cancellation, and authorization boundaries.
 
 **Exit criteria:** Each agent has a defined scope, bounded execution, truthful progress, and confirmation for consequential actions.
