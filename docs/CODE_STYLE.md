@@ -44,3 +44,8 @@ Standards for writing consistent, readable, and maintainable BobAI code.
 - List tests actually run and any that could not be run.
 - Keep migrations and configuration changes clearly identified.
 - Do not claim a build or test passed unless it was run successfully.
+
+
+## Handoff verification rule
+
+The current project has a deferred verification pass by explicit project instruction. Do not run builds/tests until implementation work is considered complete. Do not mark a feature complete solely because a handler, button, route, or test file exists. Keep implementation status distinct from runtime verification, and record exact commands/results plus unresolved failures in `roadmap.md` after the final pass.
