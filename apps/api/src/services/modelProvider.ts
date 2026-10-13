@@ -12,7 +12,7 @@ const PRODUCTION_MODEL = "bob-production";
 function selectedModel(provider: "bob" | "coding", modelOverride?: string) {
   const env = provider === "bob" ? process.env.BOBAI_MODEL_NAME : process.env.BOBAI_CODING_MODEL_NAME;
   const selectedProvider = process.env.BOBAI_PROVIDER?.trim().toLowerCase();
-  const requested = (modelOverride || (provider === "bob" && selectedProvider === "openai" ? OPENAI_MODEL_ID : env) || "").trim();
+  const requested = (modelOverride || (selectedProvider === "openai" ? OPENAI_MODEL_ID : env) || "").trim();
   const model = requested || (productionModelConfigured() ? PRODUCTION_MODEL : TINY_MODEL);
   if (![TINY_MODEL, PRODUCTION_MODEL, OPENAI_MODEL_ID].includes(model)) throw new Error(`unsupported model: ${model}`);
   if (model === OPENAI_MODEL_ID && !openAIConfigured()) throw new Error("Hosted AI is selected but OPENAI_API_KEY is not configured on the API server.");
