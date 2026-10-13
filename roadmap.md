@@ -62,7 +62,7 @@
 - [x] Remove the unused sci-fi intro/scene components and decorative beams/particles as recorded in the change log.
 - [x] Establish a conversation-first shell and a restrained visual direction.
 - [x] Add a persistent Light/Dark theme preference and visible chat-header toggle for the chat workspace.
-- [ ] Audit all routes and shared components for fixed dark-only colors, including the public landing/legal pages, message menus, markdown/code, uploads, dialogs, and error states. The chat composer and main message text now adapt to Light/Dark; a full visual audit is still required.
+- [ ] Audit all routes and shared components for fixed dark-only colors, including the public landing/legal pages, message menus, markdown/code, uploads, dialogs, and error states. The chat composer, sidebar, empty state, and main message text now adapt to Light/Dark; a full visual audit is still required.
 - [ ] Remove unused theme variants, theme pickers, decorative-only components, and obsolete CSS after checking imports and tests.
 - [ ] Make settings plain and consistent with the main app; avoid animated dashboard-card layouts.
 - [ ] Ensure mobile navigation is usable and the chat composer is not obscured by the keyboard.
@@ -227,6 +227,6 @@
 
 - **2026-10-13:** Created a ten-phase roadmap for merging the AI-Glasses UI ideas into BobAI without importing the physical-device product.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
-- **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer and sidebar adapt to Light/Dark, and fixed the missing `ChatWindow` import. The main message list and public pages still need a complete Light/Dark and accessibility audit.
+- **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
