@@ -74,14 +74,16 @@
 
 **Goal:** Use an existing chatbot model rather than training BobAI's own model.
 
-- [ ] Choose a default hosted provider based on current quality, supported modalities, privacy terms, and cost. Keep the provider adapter replaceable.
+- [x] Add an opt-in OpenAI-compatible hosted chat adapter with configurable model/base URL, server-side key handling, bounded request/response sizes, timeouts, and streamed output. See [Hosted AI setup](docs/HOSTED_AI.md).
+- [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
 - [ ] Keep provider API keys server-side in environment secrets; never send them to browser code.
 - [ ] Implement/verify streaming, cancel/stop behavior, retry, timeouts, rate limits, and useful error messages.
 - [ ] Provide a model/provider settings area only for providers that are genuinely implemented.
 - [ ] Add per-user and global cost/usage safeguards before enabling paid API calls.
 - [ ] Keep optional local Ollama as a separate opt-in path; do not require downloading a local model.
 - [ ] Remove model-training commands from the normal user-facing setup instructions. Audit training scripts and references before deleting or archiving them.
-- [ ] Add tests for missing keys, provider errors, malformed responses, streaming disconnects, and budget/rate limits.
+- [x] Add tests for provider URL safety and missing-key/configuration status.
+- [ ] Add mocked integration tests for provider errors, malformed responses, streaming disconnects, and rate/usage limits.
 
 **Exit criteria:** A new user can configure one supported provider and complete a streamed chat safely, without training a model.
 
@@ -225,5 +227,6 @@
 
 - **2026-10-13:** Created a ten-phase roadmap for merging the AI-Glasses UI ideas into BobAI without importing the physical-device product.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
-- **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, and made the chat composer adapt to Light/Dark. Fixed the missing `ChatWindow` import and simplified the chat page layout. The full roadmap is not complete until the remaining phases and end-to-end verification are finished.
+- **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer and sidebar adapt to Light/Dark, and fixed the missing `ChatWindow` import. The main message list and public pages still need a complete Light/Dark and accessibility audit.
+- **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
