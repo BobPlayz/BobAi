@@ -1,8 +1,48 @@
 import Breadcrumbs from "@/components/Breadcrumbs";
 import Link from "next/link";
+import { useTheme } from "@/components/neural/ThemeProvider";
 
-export const metadata = { title: "About | Bob AI", description: "Learn what Bob AI is building." };
+export const metadata = {
+  title: "About | Bob AI",
+  description: "Learn what Bob AI is building and who publishes it.",
+};
 
 export default function AboutPage() {
-  return <main className="min-h-screen overflow-auto px-6 pb-20 pt-28"><div className="mx-auto max-w-4xl"><Breadcrumbs current="About" /><h1 className="text-4xl font-bold tracking-tight">about bob ai</h1><p className="mt-5 max-w-2xl text-lg leading-8 text-white/60">Bob AI is being built as a practical AI workspace: one place for conversation, research, creation, files, and developer tools.</p><div className="mt-10 grid gap-4 sm:grid-cols-3">{[["chat", "reason through ideas and tasks"],["create", "work with images, audio, video and design capabilities"],["build", "code, test and deploy with AI-assisted workflows"]].map(([title, text]) => <article key={title} className="rounded-2xl border border-white/10 bg-white/[.03] p-5"><h2 className="font-semibold">{title}</h2><p className="mt-2 text-sm leading-6 text-white/50">{text}</p></article>)}</div><div className="mt-10 rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-6"><h2 className="font-semibold">the team</h2><p className="mt-2 text-sm leading-6 text-white/55">Bob AI is currently a focused independent project. A real team photo will be added when there is a team to photograph — no AI-generated people pretending to be the team.</p></div><Link href="/contact" className="mt-8 inline-flex rounded-xl border border-white/10 px-5 py-3 font-semibold hover:bg-white/5">Contact</Link></div></main>;
+  const { theme } = useTheme();
+  const light = theme === "light";
+  const colors = light
+    ? { page: "bg-[#f7f8fa] text-[#202123]", muted: "text-[#5f6672]", panel: "border-[#e5e7eb] bg-white", link: "border-[#d1d5db] hover:bg-[#f3f4f6]" }
+    : { page: "bg-[#08090b] text-white", muted: "text-white/60", panel: "border-white/10 bg-white/[0.03]", link: "border-white/10 hover:bg-white/5" };
+
+  return (
+    <main className={`min-h-screen overflow-auto px-6 pb-20 pt-28 ${colors.page}`}>
+      <div className="mx-auto max-w-4xl">
+        <Breadcrumbs current="About" />
+        <h1 className="text-4xl font-bold tracking-tight">about bob ai</h1>
+        <p className={`mt-5 max-w-2xl text-lg leading-8 ${colors.muted}`}>
+          Bob AI is being built as a practical AI workspace for conversation, research, creation, files, and developer tools.
+        </p>
+        <p className={`mt-3 text-sm ${colors.muted}`}>Published by <strong className={light ? "text-[#202123]" : "text-white"}>Origin Productions</strong>.</p>
+        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          {[
+            ["chat", "reason through ideas and tasks"],
+            ["create", "work with supported image, audio, and design capabilities"],
+            ["build", "use AI-assisted coding and development workflows"],
+          ].map(([title, text]) => (
+            <article key={title} className={`rounded-2xl border p-5 ${colors.panel}`}>
+              <h2 className="font-semibold">{title}</h2>
+              <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>{text}</p>
+            </article>
+          ))}
+        </div>
+        <div className={`mt-10 rounded-2xl border p-6 ${colors.panel}`}>
+          <h2 className="font-semibold">the team</h2>
+          <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>
+            Bob AI is an independent project published by Origin Productions. The public beta will only describe features that are actually available and verified.
+          </p>
+        </div>
+        <Link href="/contact" className={`mt-8 inline-flex rounded-xl border px-5 py-3 font-semibold ${colors.link}`}>Contact</Link>
+      </div>
+    </main>
+  );
 }
