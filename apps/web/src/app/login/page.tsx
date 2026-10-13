@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BobLogo from "@/components/BobLogo";
-import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart } from "@/lib/auth";
+import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin } from "@/lib/auth";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const TERMS_VERSION = process.env.NEXT_PUBLIC_TERMS_VERSION || "2026-10-13";
@@ -15,7 +15,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [step, setStep] = useState<"details" | "verify">("details");
+  const [step, setStep] = useState<"details" | "verify" | "mfa">("details");
+  const [challengeToken, setChallengeToken] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,6 +62,25 @@ export default function LoginPage() {
     const result = await verifyQuickStart(name.trim().replace(/\s+/g, " "), cleanEmail, code.trim());
     setLoading(false);
     if (!result.ok) return setError(result.error || "Verification failed.");
+    if (result.mfaRequired && result.challengeToken) {
+      setChallengeToken(result.challengeToken);
+      setCode("");
+      setStep("mfa");
+      setNotice("This account needs its authenticator code to finish signing in.");
+      return;
+    }
+    router.replace("/chat");
+  }
+
+  async function submitMfa(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    if (!challengeToken || !/^\\d{6}$/.test(mfaCode)) return setError("Enter the 6-digit authenticator code.");
+    setLoading(true);
+    const result = await verifyMfaLogin(challengeToken, mfaCode);
+    setLoading(false);
+    if (!result.ok) return setError(result.error || "Authenticator verification failed.");
     router.replace("/chat");
   }
 
@@ -71,11 +92,9 @@ export default function LoginPage() {
           <span className="text-lg font-semibold">BobAI</span>
         </Link>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Email verification</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">{step === "details" ? "Get started" : "Check your inbox"}</h1>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight">{step === "details" ? "Get started" : step === "verify" ? "Check your inbox" : "Verify authenticator"}</h1>
         <p className="mt-2 text-sm leading-6 text-white/55">
-          {step === "details"
-            ? "Enter your name and email. No password or social sign-in is needed."
-            : `Enter the 6-digit code sent to ${email || "your email"}. You will stay signed in on this device until your session expires or you sign out.`}
+          {step === "details" ? "Enter your name and email. No password or social sign-in is needed." : step === "verify" ? `Enter the 6-digit code sent to ${email || "your email"}. You will stay signed in on this device until your session expires or you sign out.` : "Enter the 6-digit code from your authenticator app to finish signing in."}
         </p>
 
         {step === "details" ? (
@@ -94,7 +113,7 @@ export default function LoginPage() {
               {loading ? "Sending code…" : "Send email code"}
             </button>
           </form>
-        ) : (
+        ) : step === "verify" ? (
           <form onSubmit={submitCode} className="mt-6 space-y-4">
             <label className="block text-sm text-white/75">6-digit email code
               <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
@@ -103,6 +122,14 @@ export default function LoginPage() {
               {loading ? "Verifying…" : "Verify and continue"}
             </button>
             <button type="button" onClick={() => { setStep("details"); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-white/55 hover:text-white">Use a different email</button>
+          </form>
+        ) : (
+          <form onSubmit={submitMfa} className="mt-6 space-y-4">
+            <label className="block text-sm text-white/75">6-digit authenticator code
+              <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
+            </label>
+            <button disabled={loading || mfaCode.length !== 6} className="h-12 w-full rounded-xl bg-cyan-300 font-semibold text-black transition hover:bg-cyan-200 disabled:opacity-50">{loading ? "Verifying…" : "Verify authenticator"}</button>
+            <button type="button" onClick={() => { setStep("details"); setChallengeToken(""); setMfaCode(""); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-white/55 hover:text-white">Start over</button>
           </form>
         )}
 
