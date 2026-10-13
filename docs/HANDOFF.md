@@ -54,10 +54,11 @@ All repository Markdown files were updated on 2026-10-13. The Markdown tree was 
 - Created branch `implementation/public-beta-student-scope` from `main`; changes are not merged or deployed.
 - Fixed repository preflight's allowlist to include `docs/HANDOFF.md`.
 - Removed Ollama provider routing, vision fallback, runtime source, test, package test command, and environment-template options. Updated the hosted-only docs and provider routing. The legacy native/specialist runtime and model-training source directories remain in the repository and must not be marketed as supported Ollama or model-training workflows.
-- Added provider-routing regression tests for rejecting the retired Ollama model id and routing coding requests through the configured hosted provider. Tests have not been run yet.
+- Added provider-routing regression tests for rejecting the retired Ollama model id and routing coding requests through the configured hosted provider, plus hosted image generation/editing request tests. Tests have not been run yet.
 - Production startup now fails closed unless the hosted provider/key, ₹500 monthly target, and `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true` operator attestation are configured. This flag does not prove a real provider cap is active; the owner must verify it in the provider dashboard.
-- Removed the fake SVG image-generation fallback. Image generation now reports unavailable if no real model is configured.
+- Removed the fake SVG image-generation fallback and added a hosted Images API adapter, an Image mode, reference-image editing, and provider tests. Live model access, editing output, storage growth, and UI behavior remain unverified.
 - Added Origin Productions as metadata/structured-data publisher and removed the unconfirmed `bobai.app` domain default from `.env.example`.
+- Updated AssistantHub voice mode to send the spoken/dictated prompt to the AI and speak the generated reply, with a Stop speech control. Browser permission and interruption behavior still need live testing.
 
 ## What is not yet complete
 
