@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Paperclip, Square } from "lucide-react";
+import { ArrowUp, Paperclip, Square, X } from "lucide-react";
 import VoiceButton from "@/components/VoiceButton";
 import { useTheme } from "./ThemeProvider";
 
@@ -12,9 +12,12 @@ type Props = {
   disabled?: boolean;
   streaming?: boolean;
   onStop?: () => void;
+  uploadingFiles?: string[];
+  uploadProgress?: Record<string, number>;
+  onCancelUpload?: (key: string) => void;
 };
 
-export default function NeuralComposer({ input, setInput, onSend, onFiles, disabled, streaming, onStop }: Props) {
+export default function NeuralComposer({ input, setInput, onSend, onFiles, disabled, streaming, onStop, uploadingFiles = [], uploadProgress = {}, onCancelUpload }: Props) {
   const { theme } = useTheme();
   const light = theme === "light";
 
@@ -27,6 +30,13 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
 
   return (
     <div className="mx-auto w-full max-w-[860px]">
+      {uploadingFiles.length > 0 && <div className={`mb-2 space-y-2 rounded-xl border p-2 ${light ? "border-[#e5e7eb] bg-white" : "border-white/10 bg-[#111214]"}`}>
+        {uploadingFiles.map((key) => <div key={key} className={`flex items-center gap-3 rounded-lg px-2 py-1.5 text-xs ${light ? "text-[#374151]" : "text-white/75"}`}>
+          <span className="min-w-0 flex-1 truncate">{key.split(":").slice(0, -2).join(":") || key}</span>
+          <span className="tabular-nums">{uploadProgress[key] || 0}%</span>
+          <button type="button" onClick={() => onCancelUpload?.(key)} aria-label={`Cancel upload ${key}`} title="Cancel upload" className="rounded-md p-1 hover:bg-red-500/10 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>
+        </div>)}
+      </div>}
       <div className={`relative rounded-2xl border shadow-sm ${light ? "border-[#d1d5db] bg-white" : "border-white/10 bg-[#111214]"}`}>
         <textarea
           value={input}
