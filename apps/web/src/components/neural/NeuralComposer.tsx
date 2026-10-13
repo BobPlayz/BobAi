@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Paperclip } from "lucide-react";
+import { ArrowUp, Paperclip, Square } from "lucide-react";
 import VoiceButton from "@/components/VoiceButton";
 import { useTheme } from "./ThemeProvider";
 
@@ -10,9 +10,11 @@ type Props = {
   onSend: () => void;
   onFiles: (files: FileList | null) => void;
   disabled?: boolean;
+  streaming?: boolean;
+  onStop?: () => void;
 };
 
-export default function NeuralComposer({ input, setInput, onSend, onFiles, disabled }: Props) {
+export default function NeuralComposer({ input, setInput, onSend, onFiles, disabled, streaming, onStop }: Props) {
   const { theme } = useTheme();
   const light = theme === "light";
 
@@ -45,9 +47,15 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
             </label>
             <VoiceButton onTranscript={(text) => setInput(text)} disabled={disabled} />
           </div>
-          <button type="button" onClick={onSend} disabled={disabled || !input.trim()} aria-label="Send message" title="Send message" className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-35">
-            <ArrowUp className="h-4 w-4" />
-          </button>
+          {streaming ? (
+            <button type="button" onClick={onStop} aria-label="Stop response" title="Stop response" className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-600">
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
+            <button type="button" onClick={onSend} disabled={disabled || !input.trim()} aria-label="Send message" title="Send message" className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-35">
+              <ArrowUp className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
       <p className={`mt-2 text-center text-[11px] ${light ? "text-[#6b7280]" : "text-white/35"}`}>Enter to send · Shift + Enter for a new line</p>
