@@ -78,6 +78,7 @@
 - [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
 - [ ] Keep provider API keys server-side in environment secrets; never send them to browser code.
 - [ ] Implement/verify streaming, cancel/stop behavior, retry, timeouts, and rate limits.
+- [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [ ] Provide a model/provider settings area only for providers that are genuinely implemented.
 - [ ] Add per-user and global cost/usage safeguards before enabling paid API calls.
@@ -241,4 +242,5 @@
 - **2026-10-13:** Updated homepage entry points to use the single email quick-start and routed successful verification directly to chat, skipping the multi-step personalization onboarding. Added `docs/QUICK_START_AUTH.md` and `NEXT_PUBLIC_TERMS_VERSION` to the root environment example.
 - **2026-10-13:** Added friendlier chat request failure messages for expired sessions, rate limits, service outages, and other failed requests. The user-facing retry/regenerate interaction still needs verification.
 - **2026-10-13:** Tightened quick-start authentication so display names are only changed after a valid email code is consumed, and the API enforces the current terms version by default. These latest changes still require CI and end-to-end verification.
+- **2026-10-13:** Improved chat recovery behavior for upload processing and regenerate failures, with per-file progress cleanup and readable failure messages. Build/tests have not yet been run.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
