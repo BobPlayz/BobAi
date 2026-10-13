@@ -73,7 +73,7 @@ BobAI can use an existing OpenAI-compatible chat API. This does not train a mode
 
 ## Optional local AI
 
-BobAI can use a local Ollama model for text chat and image understanding. See [the local AI guide](docs/LOCAL_AI.md) for setup, offline testing, and the loopback-only security boundary. Support is disabled by default.
+Ollama support has been retired. BobAI's public-beta AI path uses a configurable hosted provider; paid usage must remain disabled until provider-side limits and the ₹500 monthly budget safeguards are configured. See [hosted AI setup](docs/HOSTED_AI.md).
 
 
 ## Project handoff (2026-10-13)
