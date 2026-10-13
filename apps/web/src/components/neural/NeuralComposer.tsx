@@ -50,7 +50,7 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
         />
         <div className={`flex items-center justify-between gap-3 px-3 pb-3 ${light ? "text-[#4b5563]" : "text-white/70"}`}>
           <div className="flex items-center gap-2">
-            <label className={`flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium transition ${light ? "border-[#e5e7eb] bg-[#f9fafb] hover:bg-[#f3f4f6]" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"}`}>
+            <label className={`flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-sky-500 ${light ? "border-[#e5e7eb] bg-[#f9fafb] hover:bg-[#f3f4f6]" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"}`}>
               <Paperclip className="h-3.5 w-3.5" />
               Attach
               <input type="file" multiple accept=".pdf,.txt,.md,.csv,.html,.css,.js,.xml,.png,.jpg,.jpeg,.webp" className="sr-only" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
