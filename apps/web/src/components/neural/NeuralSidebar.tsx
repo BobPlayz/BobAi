@@ -1,20 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Conversation } from "@/types/chat";
 import {
-  PenSquare,
   MessageSquare,
-  Search,
-  Image,
-  Library,
-  Plug,
-  Folder,
-  Code2,
-  Settings,
   MoreHorizontal,
+  PenSquare,
+  Pin,
+  Search,
+  Settings,
+  Trash2,
+  Pencil,
+  X,
 } from "lucide-react";
-import BorderGlow from "@/components/BorderGlow";
 
 type Props = {
   conversations: Conversation[];
@@ -43,319 +42,135 @@ export default function NeuralSidebar({
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return conversations;
-    return conversations.filter((c) =>
-      c.title.toLowerCase().includes(q)
-    );
+    const query = search.trim().toLowerCase();
+    if (!query) return conversations;
+    return conversations.filter((conversation) => conversation.title.toLowerCase().includes(query));
   }, [conversations, search]);
 
-  const pinned = filtered.filter((c) => c.pinned);
-  const recent = filtered.filter((c) => !c.pinned);
+  const pinned = filtered.filter((conversation) => conversation.pinned);
+  const recent = filtered.filter((conversation) => !conversation.pinned);
+
+  function rename(conversation: Conversation) {
+    const nextTitle = window.prompt("Rename conversation", conversation.title)?.trim();
+    if (nextTitle && nextTitle !== conversation.title) onRename(conversation.id, nextTitle);
+    setMenuId(null);
+  }
+
+  function renderConversation(conversation: Conversation) {
+    const active = conversation.id === activeId;
+    return (
+      <div key={conversation.id} className="group relative">
+        <button
+          type="button"
+          onClick={() => { onSelect(conversation.id); setMenuId(null); }}
+          title={conversation.title}
+          className={[
+            "flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 pr-9 text-left text-[13px] transition",
+            active ? "bg-white/[0.09] text-white" : "text-white/65 hover:bg-white/[0.055] hover:text-white",
+          ].join(" ")}
+        >
+          <MessageSquare className="h-4 w-4 shrink-0 text-white/40" />
+          <span className="min-w-0 flex-1 truncate">{conversation.title || "New conversation"}</span>
+          {conversation.pinned && <Pin className="h-3 w-3 shrink-0 text-cyan-200/70" />}
+        </button>
+        <button
+          type="button"
+          aria-label={`More actions for ${conversation.title || "conversation"}`}
+          title="Conversation actions"
+          onClick={() => setMenuId(menuId === conversation.id ? null : conversation.id)}
+          className={[
+            "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-white/55 hover:bg-white/10 hover:text-white",
+            menuId === conversation.id ? "visible" : "invisible group-hover:visible focus:visible",
+          ].join(" ")}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+        {menuId === conversation.id && (
+          <div className="absolute right-1 top-9 z-30 w-44 rounded-xl border border-white/10 bg-[#17191d] p-1 shadow-xl">
+            <button type="button" onClick={() => { onPin(conversation.id); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10">
+              <Pin className="h-3.5 w-3.5" /> {conversation.pinned ? "Unpin chat" : "Pin chat"}
+            </button>
+            <button type="button" onClick={() => rename(conversation)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-white/80 hover:bg-white/10">
+              <Pencil className="h-3.5 w-3.5" /> Rename
+            </button>
+            <button type="button" onClick={() => { setDeleteTarget(conversation); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-red-300 hover:bg-red-400/10">
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <>
-      <aside className="flex h-full w-full bg-[#04070C]">
-        {/* Left neural rail */}
-        <div className="relative flex w-[64px] flex-col items-center bg-[#04070C] py-3">
-          <div className="absolute inset-y-0 right-0 w-px bg-cyan-400/18" />
-          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-r from-transparent to-cyan-400/6 blur-md" />
+    <aside className="flex h-full w-full flex-col bg-[#090a0c] text-white">
+      <div className="flex items-center justify-between px-4 pb-3 pt-5">
+        <Link href="/chat" className="text-[17px] font-semibold tracking-tight text-white" aria-label="Bob AI home">Bob AI</Link>
+        <span className="rounded-md border border-white/[0.08] px-2 py-1 text-[10px] text-white/35">AI</span>
+      </div>
 
-          <RailButton active onClick={onNewChat}>
-            <PenSquare className="h-5 w-5" />
-          </RailButton>
-          <RailButton>
-            <MessageSquare className="h-5 w-5" />
-          </RailButton>
-          <RailButton>
-            <Search className="h-5 w-5" />
-          </RailButton>
-          <RailButton>
-            <Image className="h-5 w-5" />
-          </RailButton>
-          <RailButton>
-            <Library className="h-5 w-5" />
-          </RailButton>
-          <RailButton>
-            <Plug className="h-5 w-5" />
-          </RailButton>
-          <RailButton>
-            <Folder className="h-5 w-5" />
-          </RailButton>
-          <RailButton>
-            <Code2 className="h-5 w-5" />
-          </RailButton>
-
-          <div className="mt-auto mb-2">
-            <div className="neural-orb">
-              <div className="neural-orb-core" />
-            </div>
-          </div>
-
-          <RailButton>
-            <Settings className="h-5 w-5" />
-          </RailButton>
+      <div className="px-3 pb-3">
+        <button
+          type="button"
+          onClick={onNewChat}
+          className="flex h-10 w-full items-center gap-2 rounded-lg border border-white/[0.09] bg-white/[0.035] px-3 text-sm text-white/85 transition hover:bg-white/[0.075]"
+        >
+          <PenSquare className="h-4 w-4 text-white/60" />
+          New chat
+        </button>
+        <div className="relative mt-2">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search chats"
+            aria-label="Search conversations"
+            className="h-9 w-full rounded-lg border border-white/[0.07] bg-white/[0.025] pl-9 pr-3 text-xs text-white placeholder:text-white/35 outline-none focus:border-cyan-300/35"
+          />
         </div>
+      </div>
 
-        {/* Attached sidebar */}
-        <div className="relative flex flex-1 flex-col bg-[#05080D]">
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-cyan-400/12" />
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        {pinned.length > 0 && (
+          <section className="mb-4">
+            <h2 className="px-3 py-2 text-[11px] font-medium text-white/35">Pinned</h2>
+            <div className="space-y-0.5">{pinned.map(renderConversation)}</div>
+          </section>
+        )}
+        <section>
+          <h2 className="px-3 py-2 text-[11px] font-medium text-white/35">Recent</h2>
+          {recent.length ? (
+            <div className="space-y-0.5">{recent.map(renderConversation)}</div>
+          ) : pinned.length === 0 ? (
+            <p className="px-3 py-2 text-xs leading-5 text-white/35">{search ? "No matching conversations." : "Your conversations will appear here."}</p>
+          ) : null}
+        </section>
+      </div>
 
-          {/* Header */}
-          <div className="border-b border-cyan-400/10 px-4 py-4">
-            <div className="text-[22px] font-semibold tracking-tight text-white">
-              Bob AI
-            </div>
-            <div className="mt-1 text-xs uppercase tracking-[0.18em] text-cyan-300/68">
-              Neural Interface
-            </div>
-
-            <button
-              onClick={onNewChat}
-              className="mt-4 h-10 w-full rounded-xl border border-cyan-300/24 bg-[#0A1622] text-sm font-semibold text-cyan-100 shadow-[0_0_18px_rgba(0,217,255,0.16)] transition hover:border-cyan-200/45 hover:shadow-[0_0_28px_rgba(0,217,255,0.28)]"
-            >
-              + New chat
-            </button>
-
-            <div className="relative mt-3">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-300/36" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search conversations"
-                className="h-10 w-full rounded-xl border border-cyan-400/10 bg-[#081018] pl-9 pr-3 text-sm text-white placeholder:text-cyan-300/24 outline-none focus:border-cyan-300/24"
-              />
-            </div>
-          </div>
-
-          {/* Conversation list */}
-          <div className="flex-1 overflow-y-auto px-2 py-3">
-            {pinned.length > 0 && (
-              <Section
-                title="Pinned"
-                conversations={pinned}
-                activeId={activeId}
-                onSelect={onSelect}
-                onPin={onPin}
-                onRename={onRename}
-                onDelete={(c) => setDeleteTarget(c)}
-                menuId={menuId}
-                setMenuId={setMenuId}
-              />
-            )}
-
-            <Section
-              title="Recents"
-              conversations={recent}
-              activeId={activeId}
-              onSelect={onSelect}
-              onPin={onPin}
-              onRename={onRename}
-              onDelete={(c) => setDeleteTarget(c)}
-              menuId={menuId}
-              setMenuId={setMenuId}
-            />
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-cyan-400/10 p-3">
-            <div className="flex items-center gap-3 rounded-xl border border-cyan-400/10 bg-[#081018] px-3 py-2">
-              <div className="neural-orb">
-                <div className="neural-orb-core" />
-              </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-white">
-                  Bob
-                </div>
-                <div className="text-xs text-cyan-300/44">
-                  Neural profile
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <div className="border-t border-white/[0.07] p-3">
+        <Link href="/settings" className="flex h-10 items-center gap-2 rounded-lg px-3 text-sm text-white/65 transition hover:bg-white/[0.06] hover:text-white">
+          <Settings className="h-4 w-4 text-white/45" />
+          Settings
+        </Link>
+      </div>
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-[420px] rounded-2xl border border-cyan-400/14 bg-[#070C12] p-6 shadow-[0_0_30px_rgba(0,217,255,0.14)]">
-            <h2 className="text-lg font-semibold text-white">
-              Delete conversation?
-            </h2>
-            <p className="mt-2 text-sm text-cyan-300/55">
-              This will permanently delete &quot;{deleteTarget.title}&quot; and remove
-              any memory associated with this conversation.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="rounded-xl border border-cyan-400/10 px-4 py-2 text-sm text-white/80 hover:bg-white/5"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  onDelete(deleteTarget.id);
-                  setDeleteTarget(null);
-                }}
-                className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400"
-              >
-                Delete
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-chat-title" className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#17191d] p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="delete-chat-title" className="text-base font-semibold text-white">Delete conversation?</h2>
+                <p className="mt-2 text-sm leading-5 text-white/55">This will remove “{deleteTarget.title || "New conversation"}” from your history.</p>
+              </div>
+              <button type="button" onClick={() => setDeleteTarget(null)} aria-label="Close dialog" className="rounded-md p-1 text-white/50 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
             </div>
-          </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-lg border border-white/10 px-3 py-2 text-sm text-white/75 hover:bg-white/[0.06]">Cancel</button>
+              <button type="button" onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }} className="rounded-lg bg-red-500/90 px-3 py-2 text-sm font-medium text-white hover:bg-red-500">Delete</button>
+            </div>
+          </section>
         </div>
       )}
-    </>
-  );
-}
-
-function RailButton({
-  children,
-  active = false,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={
-        active
-          ? "mb-2 flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/28 bg-[#0A1622] text-cyan-100 shadow-[0_0_18px_rgba(0,217,255,0.22)]"
-          : "mb-2 flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/10 bg-[#081018] text-cyan-300/72 transition hover:border-cyan-300/22 hover:text-cyan-100"
-      }
-    >
-      {children}
-    </button>
-  );
-}
-
-function Section({
-  title,
-  conversations,
-  activeId,
-  onSelect,
-  onPin,
-  onRename,
-  onDelete,
-  menuId,
-  setMenuId,
-}: {
-  title: string;
-  conversations: Conversation[];
-  activeId: string;
-  onSelect: (id: string) => void;
-  onPin: (id: string) => void;
-  onRename: (id: string, title: string) => void;
-  onDelete: (c: Conversation) => void;
-  menuId: string | null;
-  setMenuId: (id: string | null) => void;
-}) {
-  if (conversations.length === 0) return null;
-
-  return (
-    <div className="mb-4">
-      <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300/42">
-        {title}
-      </div>
-      <div className="space-y-1">
-        {conversations.map((conversation) => (
-          <ConversationRow
-            key={conversation.id}
-            conversation={conversation}
-            active={conversation.id === activeId}
-            onSelect={onSelect}
-            onPin={onPin}
-            onRename={onRename}
-            onDelete={onDelete}
-            menuId={menuId}
-            setMenuId={setMenuId}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ConversationRow({
-  conversation,
-  active,
-  onSelect,
-  onPin,
-  onRename,
-  onDelete,
-  menuId,
-  setMenuId,
-}: {
-  conversation: Conversation;
-  active: boolean;
-  onSelect: (id: string) => void;
-  onPin: (id: string) => void;
-  onRename: (id: string, title: string) => void;
-  onDelete: (c: Conversation) => void;
-  menuId: string | null;
-  setMenuId: (id: string | null) => void;
-}) {
-  return (
-    <div className="relative group">
-      <BorderGlow className="rounded-xl">
-        <button
-          onClick={() => onSelect(conversation.id)}
-          className={
-            active
-              ? "flex h-10 w-full items-center rounded-xl border border-cyan-300/22 bg-[#0A1622] px-3 text-left text-sm text-white shadow-[0_0_14px_rgba(0,217,255,0.10)]"
-              : "flex h-10 w-full items-center rounded-xl px-3 text-left text-sm text-cyan-100/86 hover:bg-[#09131C] hover:text-white"
-          }
-        >
-          <MessageSquare className="mr-3 h-4 w-4 text-cyan-300/68" />
-          <span className="truncate">{conversation.title}</span>
-        </button>
-      </BorderGlow>
-
-      <button
-        onClick={() =>
-          setMenuId(menuId === conversation.id ? null : conversation.id)
-        }
-        className="absolute right-2 top-1/2 hidden h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-cyan-300/50 hover:bg-white/10 hover:text-cyan-100 group-hover:flex"
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-
-      {menuId === conversation.id && (
-        <div className="absolute right-2 top-10 z-20 w-40 rounded-xl border border-cyan-400/10 bg-[#081018] py-1 shadow-[0_0_22px_rgba(0,217,255,0.12)]">
-          <button
-            onClick={() => {
-              onPin(conversation.id);
-              setMenuId(null);
-            }}
-            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5"
-          >
-            {conversation.pinned ? "Unpin" : "Pin"}
-          </button>
-          <button
-            onClick={() => {
-              const next = prompt("Rename conversation", conversation.title);
-              if (next && next.trim()) onRename(conversation.id, next.trim());
-              setMenuId(null);
-            }}
-            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5"
-          >
-            Rename
-          </button>
-          <button
-            onClick={() => {
-              onDelete(conversation);
-              setMenuId(null);
-            }}
-            className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5"
-          >
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
+    </aside>
   );
 }
