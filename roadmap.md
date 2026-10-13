@@ -9,10 +9,10 @@
 ### The intended experience
 - Keep BobAI as the single website, app shell, API, authentication system, conversation store, and memory system.
 - Preserve a familiar ChatGPT-like layout: a compact left sidebar, clear conversation history, a central conversation area, and a bottom message composer.
-- Borrow the AI-Glasses project's restrained dark interface and cyan accent, crisp borders, compact status indicators, and subtle motion. Use these as accents, not as a full-screen sci-fi control room.
+- Use a clean, neat, presentable layout inspired by the AI-Glasses dashboard's straightforward organization, while keeping BobAI's ChatGPT-like conversation flow. Support exactly two themes: light and dark. Keep effects minimal and cyan as a restrained accent.
 - Keep the interface responsive and usable on desktop, tablet, and mobile.
 - Make real chat the primary screen. Feature discovery should not push the conversation off-screen or turn the app into a dashboard.
-- Keep the design consistent: dark background, readable text, neutral surfaces, and one cyan accent. No theme picker.
+- Keep the design consistent in both light and dark mode, with readable text, neutral surfaces, simple borders, and one restrained accent. A light/dark toggle is required.
 
 ### UI features to retain or adapt
 - Sidebar navigation and conversation history.
@@ -28,8 +28,8 @@
 - Existing BobAI memory, research, speech, and file capabilities through their existing APIs and stores. Do not duplicate their backends.
 
 ### Remove or do not import
-- All alternate visual themes and theme toggles, including legacy, light, glass, anime, and any per-feature theme mode.
-- The JARVIS branding, reactor/orb centerpiece, perspective-grid HUD, corner brackets, fake CPU/RAM meters, decorative terminal log, and persistent sci-fi status theater.
+- All theme variants except light and dark, including legacy, glass, anime, futuristic, and per-feature theme modes.
+- Sci-fi-only visuals and code: JARVIS branding, robot intro, reactor/orb centerpiece, perspective-grid HUD, corner brackets, fake CPU/RAM meters, decorative terminal logs, ambient beams, particles, and intro animations.
 - Hardware-specific controls: physical glasses pairing, ESP32 status/firmware, device camera/microphone switches, glasses speaker, hardware wake phrase, and firmware/BOM/wiring UI.
 - The AI-Glasses Android-phone-camera workflow and device-specific live-capture flows.
 - The separate AI-Glasses dashboard, SQLite memory/conversation store, and duplicate research implementation.
@@ -65,10 +65,10 @@
 **Goal:** Define one stable design language before moving components.
 
 - [ ] Establish design tokens for background, surfaces, borders, primary text, muted text, cyan accent, focus rings, spacing, and radii.
-- [ ] Use near-black page surfaces, subtle charcoal panels, thin neutral borders, and cyan for primary actions and focus.
+- [ ] Use neutral surfaces and thin borders in both light and dark mode; use cyan sparingly for primary actions and focus.
 - [ ] Keep typography clean and readable; avoid excessive letter spacing, all-caps labels, or terminal-style body text.
 - [ ] Keep animations subtle and optional; honor `prefers-reduced-motion`.
-- [ ] Remove legacy/light/glass/anime theme branches and theme-selection UI once no active feature depends on them.
+- [ ] Keep only light and dark themes, with a persistent user choice and a visible toggle; remove every other theme branch.
 - [ ] Define consistent button, input, textarea, menu, dialog, tooltip, message, and status styles.
 - [ ] Check contrast and visible focus states.
 
@@ -85,6 +85,7 @@
 - [ ] On narrow screens, turn the sidebar into a usable drawer rather than shrinking the chat.
 - [ ] Preserve navigation state and avoid losing a draft when opening/closing the sidebar.
 - [ ] Remove redundant dashboard cards and duplicate navigation.
+- [ ] Remove unused sci-fi-only components and decorative CSS rather than merely hiding them.
 
 **Exit criteria:** All visible navigation destinations work, the shell is responsive, and no hardware-only entry remains.
 
@@ -213,3 +214,16 @@
 
 - **2026-10-13:** Created the roadmap following the repository integration. Local Ollama chat and vision are already integrated into BobAI's backend. The AI-Glasses dashboard is documented as a design reference, not as a second application to copy wholesale. UI merge phases remain planned until implemented and verified.
 - **2026-10-13:** First UI pass committed to `main`: removed the legacy chat-rendering branch, locked the app to one dark/cyan theme by removing appearance/theme/accent controls, simplified the chat topbar and app shell, and replaced the multi-rail sidebar with a conversation-first sidebar containing new-chat, search, select, pin, rename, delete-confirmation, and settings navigation. This is an initial pass, not production-ready; build/test verification has not yet been confirmed for these UI commits, and remaining phases are still open.
+
+
+## UI cleanup update — 2026-10-13
+
+- [x] Removed the unused `NeuralScene.tsx`, `SceneEngine.tsx`, and `RobotIntro.tsx` sci-fi intro components from `main`.
+- [x] Removed decorative beams and particles from the root layout.
+- [x] Replaced cinematic/HUD-heavy global CSS with simple theme tokens, basic borders, and restrained transitions.
+- [x] Added a persistent light/dark theme provider and a visible toggle in the chat header.
+- [x] Updated the chat shell, header, and conversation sidebar for light and dark surfaces.
+- [ ] Verify light/dark styling across message content, composer, settings, and all other routes.
+- [ ] Run build, lint/type checks, and tests; fix any regressions before calling this production-ready.
+
+**Current status:** UI cleanup is committed to `main`, but the build and browser appearance have not yet been verified after these latest changes. The existing settings page and some message/composer components still contain fixed color classes and need a follow-up pass for complete light-mode consistency.
