@@ -334,9 +334,11 @@ function UserMessage({
   onCopy: () => Promise<void>;
   onDelete: () => void;
 }) {
+  const { theme } = useTheme();
+  const light = theme === "light";
   return (
-    <div className="relative rounded-2xl border border-cyan-300/[0.08] bg-cyan-300/[0.045] px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
-      <div className="pr-7 whitespace-pre-wrap text-[15px] leading-7 text-white/85">
+    <div className={"relative rounded-2xl border px-4 py-3 shadow-sm " + (light ? "border-sky-200 bg-sky-50" : "border-cyan-300/[0.08] bg-cyan-300/[0.045]")}>
+      <div className={"pr-7 whitespace-pre-wrap text-[15px] leading-7 " + (light ? "text-[#202123]" : "text-white/85")}>
         {message.content}
       </div>
 
@@ -375,6 +377,8 @@ function AssistantMessage({
   onCopy: () => Promise<void>;
   onDelete: () => void;
 }) {
+  const { theme } = useTheme();
+  const light = theme === "light";
   return (
     <div className="relative">
       <div className="mb-3 flex items-center gap-2">
@@ -382,17 +386,17 @@ function AssistantMessage({
           <span className="text-[10px] font-bold text-cyan-300">B</span>
         </div>
 
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/30">
+        <span className={"text-[11px] font-semibold uppercase tracking-[0.18em] " + (light ? "text-[#6b7280]" : "text-white/30")}>
           bob
         </span>
 
         <span className="h-1 w-1 rounded-full bg-cyan-300/50" />
-        <span className="text-[10px] text-white/20">ai</span>
+        <span className={"text-[10px] " + (light ? "text-[#9ca3af]" : "text-white/20")}>ai</span>
       </div>
 
-      <div className="relative rounded-2xl border border-white/[0.06] bg-white/[0.018] px-4 py-4 shadow-[0_12px_45px_rgba(0,0,0,0.12)] sm:px-5">
+      <div className={"relative rounded-2xl border px-4 py-4 shadow-sm sm:px-5 " + (light ? "border-[#e5e7eb] bg-white" : "border-white/[0.06] bg-white/[0.018]")}>
         {message.content && (
-          <div className="pr-7 whitespace-pre-wrap text-[15px] leading-7 text-white/78">
+          <div className={"pr-7 whitespace-pre-wrap text-[15px] leading-7 " + (light ? "text-[#202123]" : "text-white/78")}>
             {message.content}
           </div>
         )}
