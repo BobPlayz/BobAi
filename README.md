@@ -66,3 +66,7 @@ BobAI is a personal project that I'm growing over time. Suggestions, bug reports
 ## License
 
 Check the repository's license information for the current terms.
+
+## Optional local AI
+
+BobAI can use a local Ollama model for text chat and image understanding. See [the local AI guide](docs/LOCAL_AI.md) for setup, offline testing, and the loopback-only security boundary. Support is disabled by default.
