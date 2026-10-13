@@ -76,7 +76,7 @@ export default function LoginPage() {
     event.preventDefault();
     setError("");
     setNotice("");
-    if (!challengeToken || !/^\\d{6}$/.test(mfaCode)) return setError("Enter the 6-digit authenticator code.");
+    if (!challengeToken || !/^\d{6}$/.test(mfaCode)) return setError("Enter the 6-digit authenticator code.");
     setLoading(true);
     const result = await verifyMfaLogin(challengeToken, mfaCode);
     setLoading(false);
@@ -126,7 +126,7 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={submitMfa} className="mt-6 space-y-4">
             <label className="block text-sm text-white/75">6-digit authenticator code
-              <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
+              <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
             </label>
             <button disabled={loading || mfaCode.length !== 6} className="h-12 w-full rounded-xl bg-cyan-300 font-semibold text-black transition hover:bg-cyan-200 disabled:opacity-50">{loading ? "Verifying…" : "Verify authenticator"}</button>
             <button type="button" onClick={() => { setStep("details"); setChallengeToken(""); setMfaCode(""); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-white/55 hover:text-white">Start over</button>
