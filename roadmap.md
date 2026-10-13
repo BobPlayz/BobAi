@@ -104,11 +104,11 @@
 - [x] Enforce the server's current terms version even when `BOBAI_TERMS_VERSION` is not explicitly set.
 - [x] Add an authenticator-code challenge to the quick-start flow for accounts that require MFA, without bypassing MFA. Build/runtime verification is pending.
 - [ ] Verify quick-start email delivery, existing-account handling, session refresh, sign-out, MFA edge cases, and legal-version configuration end to end.
-- [ ] Persist conversations and messages under the correct authenticated user.
-- [ ] Support new chat, history loading, conversation switching, search, rename, pin, and deletion where endpoints exist.
-- [ ] Ensure refresh/reopen does not duplicate conversations or lose messages.
-- [ ] Add clear empty, loading, offline, and failure states.
-- [ ] Decide and document what “memory” means: saved user facts, conversation retrieval, or both.
+- [x] Persist conversations and messages through authenticated, user-scoped conversation APIs; end-to-end verification is pending.
+- [x] Support new chat, history loading, conversation switching, title search, rename, pin, and deletion where endpoints exist; build/runtime verification is pending.
+- [ ] Verify refresh/reopen does not duplicate conversations or lose messages.
+- [x] Add empty, loading, and failure states to the main chat/upload flows; verify offline recovery end to end.
+- [x] Define memory as saved user facts plus relevance-based retrieval from the user-scoped memory store; memory review/edit/delete controls are available in Settings.
 - [x] Add user-visible memory review, editing, individual deletion, and clear-all controls backed by authenticated database operations. Build/test verification is pending.
 - [ ] Make memory opt-in or clearly configurable, and explain what is stored and why.
 - [ ] Test user isolation and authorization for every conversation and memory endpoint.
@@ -121,11 +121,12 @@
 
 - [ ] Inventory currently supported file types and enforce the same list in UI and API.
 - [ ] Support image understanding through the selected hosted provider when available; retain optional local Ollama vision.
-- [ ] Add file attachment previews, upload progress, cancel/retry, and clear size/type errors.
-- [ ] Use OCR/text extraction only for appropriate formats and show when extraction fails.
-- [ ] Validate MIME type and file signature where possible; enforce size/page/pixel limits and request timeouts.
-- [ ] Prevent uploaded content from being treated as trusted instructions for agents.
-- [ ] Avoid retaining uploaded files longer than necessary; document retention behavior.
+- [x] Add file attachment previews, upload progress, and clear upload size/type errors; cancel/retry remains unfinished.
+- [ ] Add cancellation/retry for in-progress uploads.
+- [x] Use OCR/text extraction for supported formats and return explicit extraction failures where available; end-to-end verification is pending.
+- [x] Validate supported file signatures where available and enforce a 10 MB upload limit plus extracted-text bounds; verify page/pixel limits and edge cases.
+- [x] Treat retrieved file knowledge as untrusted evidence rather than instructions in the chat system prompt.
+- [ ] Define and enforce a category-specific uploaded-file retention schedule before public launch.
 - [ ] Test unsupported files, oversized files, corrupt images, malicious text, and provider outages.
 
 **Exit criteria:** Supported uploads work from selection to answer, with clear limits and no unsafe trust of file contents.
@@ -134,15 +135,15 @@
 
 **Goal:** Deliver useful research with verifiable citations.
 
-- [ ] Audit the current research subsystem and identify the real search/fetch tools it can call.
-- [ ] Build a research flow that retrieves sources, summarizes them, and attaches links/citations to the claims they support.
+- [x] Audit the research subsystem: DuckDuckGo retrieval, bounded source fetching, and a research synthesis path exist in the API.
+- [x] Build a research flow that retrieves sources, synthesizes evidence, and returns source links with numbered source references; end-to-end citation matching is still pending.
 - [ ] Add source preferences such as official docs, academic sources, reputable news, and general web, but only where the backend can apply them.
 - [x] Allow users to choose official/government, academic/research, reputable-news, or broad-web sources per Deep Research request; the preference is passed to search query construction and result filtering. Build/test verification is still pending.
 - [x] Add optional saved research source defaults in Settings; individual Deep Research requests can override them. Build/runtime verification is pending.
 - [x] Show research source titles and direct clickable links in the research panel, with source snippets and publication dates when available. Build/runtime verification is pending.
 - [ ] Separate sourced facts, interpretation, and uncertain claims.
 - [ ] Do not fabricate citations or claim live browsing when no retrieval occurred.
-- [ ] Add timeouts, source limits, deduplication, prompt-injection defenses, and graceful no-results behavior.
+- [x] Add search/source timeouts, source-count and response-size limits, URL/SSRF checks, deduplication, prompt-injection defenses, and graceful no-readable-evidence behavior; tests remain pending.
 - [ ] Test stale sources, conflicting sources, dead links, empty results, and citation/claim matching.
 
 **Exit criteria:** Research results have working source links, source preferences affect retrieval, and the UI clearly communicates uncertainty.
@@ -152,9 +153,9 @@
 **Goal:** Make agents useful without turning them into uncontrolled automation.
 
 - [ ] Define a small set of clear agent tasks before adding a general-purpose agent builder.
-- [ ] Use a bounded tool registry with explicit schemas, permission checks, timeouts, step limits, and execution logs.
-- [ ] Ask for confirmation before external side effects, spending money, sending messages, deleting data, or changing account settings.
-- [ ] Treat web pages, files, and tool output as untrusted input.
+- [x] Use a bounded tool registry with explicit schemas, permission checks, timeouts, step limits, and execution logging; end-to-end verification is pending.
+- [x] Require explicit approval for tools marked as consequential before execution; verify coverage for every external side effect before launch.
+- [x] Treat web pages, files, and tool output as untrusted input in the chat and research prompts.
 - [ ] Add cancel/stop controls and a visible summary of actions performed.
 - [ ] Add per-user quotas and provider cost limits.
 - [ ] Keep agents from bypassing age-appropriate safety policies or service permissions.
@@ -166,12 +167,12 @@
 
 **Goal:** Make speaking with BobAI feel conversational, not like a chain of awkward buttons.
 
-- [ ] Choose a practical speech-to-text and text-to-speech path based on quality, latency, privacy, language support, and cost.
-- [ ] Build a clear press-to-talk or explicitly enabled voice session; do not silently listen in the background.
-- [ ] Connect speech input to the same conversation/provider pipeline used by text chat.
-- [ ] Speak the answer with natural pacing and allow users to interrupt, stop, mute, or switch back to text.
-- [ ] Show microphone permission and recording state visibly.
-- [ ] Provide transcript text and allow correction when recognition is wrong.
+- [x] Implement a browser microphone recording path with server-side transcription and a speech-synthesis endpoint; provider/latency/language tradeoffs still need a live evaluation.
+- [x] Use explicit press-to-record controls; the app does not silently listen in the background.
+- [x] Feed recorded speech transcripts into the same text composer used by chat.
+- [x] Add stop controls for recorded input and read-aloud playback; true seamless voice-to-voice turn-taking and interruption during generation remain unfinished.
+- [x] Show microphone recording state and surface permission/transcription errors.
+- [ ] Provide transcript editing and verify noisy-input/mobile-browser behavior.
 - [ ] Support language/voice selection only when the chosen service actually supports it.
 - [ ] Keep voice costs and third-party data processing transparent; use free/local options where practical.
 - [ ] Test permission denial, noisy input, silence, interruption, network loss, long responses, and mobile browsers.
