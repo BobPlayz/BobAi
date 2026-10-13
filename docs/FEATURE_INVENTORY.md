@@ -32,7 +32,7 @@ Static status across these routes is **implemented or partial, not runtime-certi
 
 | Capability | Main implementation | Static status | Remaining verification |
 |---|---|---|---|
-| Hosted AI | `apps/api/src/services/openAIProvider.ts`, `modelProvider.ts`, `chatEngine.ts` | Implemented, opt-in | Confirm production provider/model, privacy terms, modalities, cost controls, and live streamed response. |
+| Hosted AI | `apps/api/src/services/openAIProvider.ts`, `modelProvider.ts`, `chatEngine.ts` | Implemented, opt-in | Ollama routing removed on the public-beta branch. Confirm production provider/model, privacy terms, modalities, provider-side cost controls, and live streamed response. |
 | Streaming | `apps/api/src/routes/stream.ts`, `apps/web/src/lib/api.ts` | Implemented | Confirm LF/CRLF frames, abort/disconnect handling, partial response persistence, retries, and rate limits. |
 | Accounts / OTP | `apps/api/src/routes/auth.ts`, `apps/web/src/app/login/page.tsx` | Implemented | SMTP, existing account, MFA, terms version, refresh, sign-out, expiry, and cookies. |
 | Conversations | `apps/api/src/routes/conversations.ts`, `apps/api/src/store/conversationDb.ts`, `apps/web/src/hooks/useChat.ts` | Implemented | Refresh/reopen behavior, ownership isolation, duplicate turns, deletion/rename/pin persistence. |
