@@ -1,17 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { openAIBaseUrl, openAIChat, openAIConfigured, openAIStatus, openAIStream, openAIImageAnalysis } from "../src/services/openAIProvider.js";
+import { openAIBaseUrl, openAIChat, openAIConfigured, openAIStatus, openAIStream, openAIImageAnalysis, openAIImageGenerate } from "../src/services/openAIProvider.js";
 
 const originalFetch = globalThis.fetch;
 const originalKey = process.env.OPENAI_API_KEY;
 const originalBase = process.env.BOBAI_OPENAI_BASE_URL;
 const originalModel = process.env.BOBAI_OPENAI_MODEL;
+const originalImageModel = process.env.BOBAI_OPENAI_IMAGE_MODEL;
 
 function restoreEnvironment() {
   globalThis.fetch = originalFetch;
   if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey;
   if (originalBase === undefined) delete process.env.BOBAI_OPENAI_BASE_URL; else process.env.BOBAI_OPENAI_BASE_URL = originalBase;
   if (originalModel === undefined) delete process.env.BOBAI_OPENAI_MODEL; else process.env.BOBAI_OPENAI_MODEL = originalModel;
+  if (originalImageModel === undefined) delete process.env.BOBAI_OPENAI_IMAGE_MODEL; else process.env.BOBAI_OPENAI_IMAGE_MODEL = originalImageModel;
 }
 
 test("hosted provider accepts HTTPS endpoints and loopback HTTP for local-compatible servers", () => {
@@ -163,4 +165,53 @@ test("hosted image analysis rejects unsupported or oversized image data before f
     await assert.rejects(openAIImageAnalysis("data:image/svg+xml;base64,PHN2Zz4=", "describe"), /supported PNG, JPEG, or WebP/);
     await assert.rejects(openAIImageAnalysis("not-an-image", "describe"), /supported PNG, JPEG, or WebP/);
   } finally { restoreEnvironment(); }
+});
+
+test("hosted image generation uses a real image endpoint and returns image bytes", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    process.env.BOBAI_OPENAI_BASE_URL = "https://api.openai.com/v1";
+    process.env.BOBAI_OPENAI_IMAGE_MODEL = "test-image-model";
+    globalThis.fetch = async (input, init) => {
+      assert.equal(String(input), "https://api.openai.com/v1/images/generations");
+      assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-key");
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.model, "test-image-model");
+      assert.equal(body.quality, "low");
+      assert.equal(body.n, 1);
+      return new Response(JSON.stringify({ data: [{ b64_json: Buffer.from("png-test-data").toString("base64") }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    const result = await openAIImageGenerate("a blue bicycle", 1);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].url, `data:image/png;base64,${Buffer.from("png-test-data").toString("base64")}`);
+  } finally {
+    restoreEnvironment();
+  }
+});
+
+test("hosted image editing sends validated reference image data", async () => {
+  try {
+    process.env.OPENAI_API_KEY = "test-key";
+    process.env.BOBAI_OPENAI_BASE_URL = "https://api.openai.com/v1";
+    globalThis.fetch = async (input, init) => {
+      assert.equal(String(input), "https://api.openai.com/v1/images/edits");
+      assert.ok(init?.body instanceof FormData);
+      const form = init.body as FormData;
+      assert.equal(form.get("prompt"), "make the background sunny");
+      assert.ok(form.get("image[]") instanceof Blob);
+      return new Response(JSON.stringify({ data: [{ b64_json: Buffer.from("edited-png").toString("base64") }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    };
+    const reference = `data:image/png;base64,${Buffer.from("source-png").toString("base64")}`;
+    const result = await openAIImageGenerate("make the background sunny", 1, [reference]);
+    assert.equal(result.length, 1);
+    assert.ok(result[0].url.startsWith("data:image/png;base64,"));
+  } finally {
+    restoreEnvironment();
+  }
 });
