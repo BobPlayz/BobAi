@@ -98,6 +98,7 @@
 - [x] Replace the visible password/social login screen with a one-time name + email OTP quick-start flow; the API creates a user when needed and issues secure session cookies after verification. This is committed but not yet build/test verified.
 - [x] Add setup notes for SMTP delivery, terms-version synchronization, session-cookie behavior, and MFA limitations in `docs/QUICK_START_AUTH.md`.
 - [x] Defer profile display-name changes until the email OTP is successfully verified, preventing an unverified requester from changing another user's name.
+- [x] Preserve the pending name and email across a browser refresh during OTP verification, and clear them after success.
 - [x] Enforce the server's current terms version even when `BOBAI_TERMS_VERSION` is not explicitly set.
 - [ ] Verify quick-start email delivery, existing-account handling, session refresh, sign-out, MFA edge cases, and legal-version configuration end to end.
 - [ ] Persist conversations and messages under the correct authenticated user.
@@ -243,4 +244,5 @@
 - **2026-10-13:** Added friendlier chat request failure messages for expired sessions, rate limits, service outages, and other failed requests. The user-facing retry/regenerate interaction still needs verification.
 - **2026-10-13:** Tightened quick-start authentication so display names are only changed after a valid email code is consumed, and the API enforces the current terms version by default. These latest changes still require CI and end-to-end verification.
 - **2026-10-13:** Improved chat recovery behavior for upload processing and regenerate failures, with per-file progress cleanup and readable failure messages. Build/tests have not yet been run.
+- **2026-10-13:** Preserved the name and email in the OTP step across page refreshes so a user can complete verification without re-entering their name; clears the temporary details after successful verification.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
