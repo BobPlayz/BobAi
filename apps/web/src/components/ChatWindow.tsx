@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/types/chat";
+import { useTheme } from "@/components/neural/ThemeProvider";
 
 type Props = {
   messages: ChatMessage[];
@@ -281,22 +282,22 @@ export default function ChatWindow({
 }
 
 function EmptyState() {
+  const { theme } = useTheme();
+  const light = theme === "light";
   return (
     <div className="flex min-h-[calc(100vh-260px)] items-center justify-center">
       <div className="w-full max-w-xl text-center">
-        <div className="neural-orb mx-auto mb-7">
-          <div className="neural-orb-core" />
-        </div>
+        <div className="mx-auto mb-5 grid size-12 place-items-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-lg font-semibold text-sky-600" aria-hidden="true">B</div>
 
         <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300/55">
           bob ai
         </div>
 
-        <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+        <h1 className={"text-3xl font-semibold tracking-tight sm:text-4xl " + (light ? "text-[#202123]" : "text-white")}>
           what are we building today?
         </h1>
 
-        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/35">
+        <p className={"mx-auto mt-3 max-w-md text-sm leading-6 " + (light ? "text-[#6b7280]" : "text-white/35")}>
           ask a question, build something, analyze a file, or just throw an
           idea at bob.
         </p>
@@ -306,7 +307,7 @@ function EmptyState() {
             (suggestion) => (
               <div
                 key={suggestion}
-                className="rounded-full border border-white/[0.07] bg-white/[0.025] px-3 py-1.5 text-xs text-white/35"
+                className={"rounded-full border px-3 py-1.5 text-xs " + (light ? "border-[#e5e7eb] bg-white text-[#4b5563]" : "border-white/[0.07] bg-white/[0.025] text-white/35")}
               >
                 {suggestion}
               </div>
