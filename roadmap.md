@@ -86,7 +86,7 @@
 - [ ] Add hard provider-side monetary budgets and verify global cost/usage safeguards before enabling paid API calls.
 - [x] Keep local Ollama as a separate opt-in path; it remains disabled by default and is not required for hosted chat.
 - [x] Keep model-training commands out of normal user-facing setup instructions.
-- [ ] Audit training scripts and references before deleting or archiving them.
+- [x] Audit training references: removed all `model:*` training commands from the root package scripts and retired the standalone model-training workflow. Retained the `model-training/` source/artifact path because the optional native runtime still looks there for a prebuilt artifact; do not run training as part of normal setup.
 - [x] Add tests for provider URL safety and missing-key/configuration status.
 - [x] Add mocked tests for provider success, HTTP 401/429 failures, malformed/empty responses, and basic SSE streaming.
 - [ ] Add streaming-disconnect and rate/usage-limit coverage.
@@ -253,6 +253,7 @@
 - **2026-10-13:** Updated Next.js to 16.4.0 and refreshed compatible dependency fixes for proxy-addr, sharp, source-map-js, and brace-expansion. Build and tests passed on the security branch; npm audit still reports the upstream braces GHSA-vfj7-8cjw-p6xm, for which no patched upstream release is published as of this run. The remaining finding is in development lint tooling and is not silently suppressed.
 - **2026-10-13:** Deep Research now renders source links as clickable entries with available snippets and publication dates, aligns the displayed source list to the exact fetched evidence used for citation numbering, and requests explicit Findings / Interpretation / Uncertainty sections.
 - **2026-10-13:** Added `docs/FEATURE_INVENTORY.md`, a static route/API/schema/feature/control inventory and explicit external launch-blocker list. It is not a substitute for browser or runtime verification.
+- **2026-10-13:** Removed the root package `model:*` commands and retired the standalone training workflow after checking that it was separate from CI/deployment. Retained model-training sources because the optional native inference runtime still expects a prebuilt artifact under that path.
 - **2026-10-13:** Added editable voice dictation to the active neural composer, per-file upload cancellation/progress controls, consistent supported image formats, and an agent Stop control wired to the server queue-cancel route. These code paths remain pending final build/test verification.
 - **2026-10-13:** Added email-OTP reauthentication and a clear confirmation flow for account deletion, and hardened the existing 30-day retention cleanup to skip users who still own shared workspaces. Build/runtime verification remains pending.
 - **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
