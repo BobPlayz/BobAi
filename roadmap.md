@@ -77,7 +77,8 @@
 - [x] Add an opt-in OpenAI-compatible hosted chat adapter with configurable model/base URL, server-side key handling, bounded request/response sizes, timeouts, and streamed output. See [Hosted AI setup](docs/HOSTED_AI.md).
 - [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
 - [ ] Keep provider API keys server-side in environment secrets; never send them to browser code.
-- [ ] Implement/verify streaming, cancel/stop behavior, retry, timeouts, rate limits, and useful error messages.
+- [ ] Implement/verify streaming, cancel/stop behavior, retry, timeouts, and rate limits.
+- [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [ ] Provide a model/provider settings area only for providers that are genuinely implemented.
 - [ ] Add per-user and global cost/usage safeguards before enabling paid API calls.
 - [ ] Keep optional local Ollama as a separate opt-in path; do not require downloading a local model.
@@ -236,4 +237,5 @@
 - **2026-10-13:** Expanded hosted-provider tests to cover a successful chat response, safe handling of HTTP 401/429 errors, malformed and empty responses, successful SSE streaming, and an empty stream. These tests are committed but still need to run in CI; stream-disconnect and usage-limit coverage remains open.
 - **2026-10-13:** Replaced the visible password/social sign-in screen with a one-time name + email OTP quick-start. Added API endpoints to create a user when needed, update the display name, verify the email code, and issue secure session cookies. This depends on correctly configured SMTP in production and is not yet build/test verified. Existing API auth mechanisms remain available for backward compatibility; MFA-enabled accounts need a separate verification path.
 - **2026-10-13:** Updated homepage entry points to use the single email quick-start and routed successful verification directly to chat, skipping the multi-step personalization onboarding. Added `docs/QUICK_START_AUTH.md` and `NEXT_PUBLIC_TERMS_VERSION` to the root environment example.
+- **2026-10-13:** Added friendlier chat request failure messages for expired sessions, rate limits, service outages, and other failed requests. The user-facing retry/regenerate interaction still needs verification.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
