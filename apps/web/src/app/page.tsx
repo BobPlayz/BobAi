@@ -32,7 +32,7 @@ export default function HomePage() {
             <Link href="/terms" className="hover:text-white">terms</Link>
             <Link href="/privacy" className="hover:text-white">privacy</Link>
           </nav>
-          <Link href="/login" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold hover:bg-white/[0.08]" title="Sign in to your Bob AI workspace">sign in</Link>
+          <Link href="/login" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold hover:bg-white/[0.08]">get started</Link>
         </header>
         <section className="flex flex-1 items-center py-20 sm:py-28">
           <div className="max-w-3xl">
@@ -42,8 +42,7 @@ export default function HomePage() {
             <h1 className="text-5xl font-black tracking-[-0.04em] sm:text-7xl">One clean place for <span className="text-cyan-300">your AI work.</span></h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/50 sm:text-lg">BobAI brings conversations, memory, projects, files and tools into one focused workspace. No fake chat wall. No dashboard soup.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/login?mode=signup" className="rounded-2xl bg-cyan-300 px-6 py-3.5 font-bold text-black transition hover:bg-cyan-200">create account</Link>
-              <Link href="/login" className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-3.5 font-semibold text-white transition hover:bg-white/[0.08]">sign in</Link>
+              <Link href="/login" className="rounded-2xl bg-cyan-300 px-6 py-3.5 font-bold text-black transition hover:bg-cyan-200">get started with email</Link>
             </div>
             <p className="mt-5 text-xs text-white/30">Built for focused work. Your workspace starts when you do.</p>
           </div>
