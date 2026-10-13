@@ -84,7 +84,23 @@ export function useChat() {
       }
     } finally { setLoadingConversationId(null); }
   }
-  async function regenerateLastAssistant() { if (!activeConversation || loadingConversationId) return; const messages = activeConversation.messages; const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant"); if (!lastAssistant) return; const withoutAssistant = messages.filter((m) => m.id !== lastAssistant.id); setLoadingConversationId(activeId); updateConversation(activeId, (c) => ({ ...c, messages: withoutAssistant })); try { const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory); const aiMessage = result.imagePrompt ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images) : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply }; updateConversation(activeId, (c) => ({ ...c, title: result.title || c.title, messages: [...withoutAssistant, aiMessage] })); } finally { setLoadingConversationId(null); } }
+  async function regenerateLastAssistant() {
+    if (!activeConversation || loadingConversationId) return;
+    const messages = activeConversation.messages;
+    const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+    if (!lastAssistant) return;
+    const withoutAssistant = messages.filter((message) => message.id !== lastAssistant.id);
+    setLoadingConversationId(activeId);
+    updateConversation(activeId, (conversation) => ({ ...conversation, messages: withoutAssistant }));
+    try {
+      const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory);
+      const aiMessage = result.imagePrompt ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images) : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply };
+      updateConversation(activeId, (conversation) => ({ ...conversation, title: result.title || conversation.title, messages: [...withoutAssistant, aiMessage] }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The response could not be regenerated. Please try again.";
+      updateConversation(activeId, (conversation) => ({ ...conversation, messages: [...withoutAssistant, { id: crypto.randomUUID(), role: "assistant", content: message }] }));
+    } finally { setLoadingConversationId(null); }
+  }
   function newChat() { const convo = createConversation(); setConversations((prev) => [convo, ...prev]); setActiveId(convo.id); setInput(""); } function togglePin(id: string) { updateConversation(id, (c) => ({ ...c, pinned: !c.pinned })); } function togglePinMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) })); } function deleteMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.filter((m) => m.id !== messageId) })); } function renameConversation(id: string, title: string) { const next = title.trim(); if (next) updateConversation(id, (c) => ({ ...c, title: next.slice(0, 200) })); } function deleteConversation(id: string) { setConversations((prev) => { const next = prev.filter((c) => c.id !== id); if (id === activeId) setActiveId(next[0]?.id || ""); return next; }); void deleteRemoteConversation(id).catch(() => undefined); }
   return { conversations, visibleConversations, activeConversation, activeId, setActiveId, input, setInput, search, setSearch, loading: Boolean(loadingConversationId), uploadingFiles, uploadProgress, settings, setSettings, send, handleFiles, regenerateLastAssistant, newChat, togglePin, togglePinMessage, deleteMessage, renameConversation, deleteConversation };
 }
