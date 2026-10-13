@@ -32,3 +32,8 @@ BOBAI_OPENAI_MODEL=gpt-4o-mini
 ```
 
 The empty key is intentional. Add a valid secret only in your private API environment, never in Git.
+
+
+## Streaming cancellation
+
+The hosted stream adapter accepts an optional `AbortSignal` and combines it with the configured request timeout. The API stream route is intended to abort the provider fetch when the browser disconnects. Verify cancellation, partial-response persistence, provider compatibility, and timeout behavior before enabling a paid provider. This does not implement a hard monetary budget; provider-side limits are still mandatory.
