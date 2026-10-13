@@ -7,7 +7,7 @@ import BobLogo from "@/components/BobLogo";
 import { getPendingVerificationEmail, requestQuickStart, verifyQuickStart } from "@/lib/auth";
 
 const EMAIL_PATTERN = /^\\S+@\\S+\\.\\S+$/;
-const TERMS_VERSION = "2026-10-13";
+const TERMS_VERSION = process.env.NEXT_PUBLIC_TERMS_VERSION || "2026-10-13";
 
 export default function LoginPage() {
   const router = useRouter();
