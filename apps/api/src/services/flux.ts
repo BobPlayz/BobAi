@@ -32,7 +32,7 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
       clearTimeout(timer);
       if (error) reject(error); else resolve(value || {});
     };
-    child.once("error", (error) => finish(new Error(\`could not start local image runtime: \${error.message}\`)));
+    child.once("error", (error) => finish(new Error("could not start local image runtime: " + error.message)));
     child.stdout.on("data", (chunk: Buffer) => {
       stdoutBytes += chunk.length;
       if (stdoutBytes > MAX_STDOUT_BYTES) {
