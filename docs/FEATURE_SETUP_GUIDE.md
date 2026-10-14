@@ -9,8 +9,8 @@ This guide describes the current local-first direction. Chat, coding responses, 
 3. Copy .env.example to .env using the command for your terminal.
 4. Configure DATABASE_URL with your Neon PostgreSQL connection string when you are ready to enable database-backed features.
 5. Install Ollama and pull the default models:
-   - ollama pull qwen2.5:3b
-   - ollama pull qwen2.5-coder:3b
+   - ollama pull qwen3.5:2b
+   - ollama pull qwen3-embedding:0.6b
 6. Confirm Ollama is running at http://127.0.0.1:11434.
 7. Run npm test, then npm run build. After failures are fixed, use npm run ai to start the API and web app.
 
@@ -21,10 +21,14 @@ Do not treat a successful start as proof that every feature works. The database 
 The API uses Ollama's local chat endpoint. Default settings:
 
 - BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
-- BOBAI_OLLAMA_MODEL=qwen2.5:3b
-- BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
+- BOBAI_OLLAMA_MODEL=qwen3.5:2b
+- BOBAI_OLLAMA_CODING_MODEL=qwen3.5:2b
+- BOBAI_OLLAMA_VISION_MODEL=qwen3.5:2b
+- BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
+- BOBAI_OLLAMA_NUM_CTX=4096
+- BOBAI_OLLAMA_NUM_PREDICT=512
 
-These are example defaults, not hard requirements. Choose models that are actually installed in Ollama. Small models are more practical on an 8 GB RAM computer but may produce weaker results. Coding requests are routed to the local coder model when recognized; this is code generation and debugging, not a fully autonomous repository-editing agent by itself.
+Jarvis shares one Qwen3.5 2B tag for chat, coding, and vision to avoid three separate LLMs occupying RAM. Qwen3 Embedding 0.6B is used for semantic memory, then unloaded after each request. This improves memory matching but can add noticeable latency because models are loaded sequentially. If that is too slow, set BOBAI_OLLAMA_EMBEDDING_MODEL=disabled to use the lexical fallback. Optional 4B shared-model upgrade and exact after-code steps are documented in [MODEL_SELECTION_8GB.md](MODEL_SELECTION_8GB.md). Coding requests are routed to the local model when recognized; this is code generation and debugging, not a fully autonomous repository-editing agent by itself.
 
 No OpenAI key or hosted AI API is required for the local chat path.
 
@@ -50,7 +54,7 @@ BobAI now has a direct Python Diffusers runner. It does not call a hosted image-
 5. Set BOBAI_PYTHON if the API should use a specific Python executable.
 6. Restart the API and test one 512x512 image.
 
-Generation uses local_files_only mode, so the model must already exist on disk. The runner attempts to use CUDA if available and otherwise uses CPU. CPU generation can be very slow and may exhaust 8 GB of RAM. Do not promise usable generation speed until it has been tested on the target computer. Reference-image editing is not implemented in this local pipeline yet.
+Generation uses local_files_only mode, so the model must already exist on disk. The runner attempts to use CUDA if available and otherwise uses CPU. Image generation is serialized with Ollama and asks it to unload resident models before starting Diffusers. CPU generation can still be very slow and may exhaust 8 GB of RAM. Test a single 512×512 image before trying larger dimensions or multiple outputs.
 
 ## 5. Jarvis voice from Ai-Glasses
 
@@ -84,13 +88,13 @@ Resend is wired as the preferred OTP delivery method, with SMTP as a fallback. S
 | Feature | Current implementation direction | Still needs verification |
 |---|---|---|
 | Chat and streaming | Local Ollama adapter | Real local model response, cancellation, model-not-installed errors |
-| Coding generation | Local Ollama coder model | Prompt routing and quality on chosen model |
+| Coding generation | Shared local Qwen3.5 2B profile by default | Prompt routing and quality on chosen model; optional dedicated coder requires extra memory |
 | Internet research | BobAI search/evidence pipeline plus Ollama synthesis | Search reliability, source-to-claim grounding, stale/broken sources |
 | Image generation | Local Diffusers pipeline, no ComfyUI | Python packages, local model folder, actual output and memory use |
 | Voice | Local Piper + Whisper.cpp integration | Native media build, English/Telugu model paths, playback and transcription |
-| Memory and conversations | Existing PostgreSQL/Drizzle layer | Neon connection, migrations, persistence, cross-account isolation |
+| Memory and conversations | PostgreSQL/Drizzle with semantic Qwen3 embeddings and lexical fallback | Neon connection, migrations, persistence, retrieval quality, cross-account isolation |
 | Email OTP | Existing delivery abstraction | Resend adapter, secret configuration, real delivery and failure handling |
-| Image understanding | Local vision-specialist interface | Compatible local vision artifact must be installed; not provided by the Ollama chat model automatically |
+| Image understanding | Shared Qwen3.5 2B Ollama vision model by default | Real image inputs and descriptions on the target computer |
 | Coding workspace agent | Separate sandbox bridge when configured | Requires a local bridge with strong authentication and sandbox verification |
 
 ## 8. Verification commands
@@ -112,3 +116,8 @@ Review failures and audit findings instead of forcing upgrades blindly. The conf
 - Publish accurate privacy/terms, retention, operator, and support information.
 - Test a fresh database migration and a database upgrade using disposable data.
 - Do not claim a feature works until the real local model or infrastructure path has been exercised.
+
+
+## 9. 8 GB RAM model profile and next steps
+
+Use the [8 GB model selection and setup runbook](MODEL_SELECTION_8GB.md) for the exact model downloads, environment settings, sequential memory strategy, verification sequence, and the distinction between completed code and live environment validation.
