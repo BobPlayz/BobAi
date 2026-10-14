@@ -4,7 +4,7 @@ import path from "node:path";
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
-export async function fluxGenerate(prompt: string, count: number, inputImages: string[] = [], signal?: AbortSignal) {
+export async function fluxGenerate(prompt: string, count: number, inputImages: string[] = [], signal?: AbortSignal, options: { width?: number; height?: number; seed?: number } = {}) {
   if (inputImages.length) throw new Error("local image editing is not configured yet; BobAI will not send reference images to an external provider");
   const modelPath = process.env.BOBAI_IMAGE_MODEL_PATH?.trim();
   if (!modelPath) throw new Error("local image generation needs BOBAI_IMAGE_MODEL_PATH pointing to a downloaded Diffusers model directory");
@@ -16,6 +16,8 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env, BOBAI_IMAGE_MODEL_PATH: path.resolve(modelPath) },
   });
+  const width = options.width ?? 512;
+  const height = options.height ?? 512;
   const stdout: Buffer[] = [];
   let stdoutBytes = 0;
   let settled = false;
@@ -59,12 +61,12 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
           if (!item || typeof item !== "object") throw new Error("local image runtime returned an invalid image");
           const image = item as Record<string, unknown>;
           if (typeof image.url !== "string" || image.url.length > 12 * 1024 * 1024 || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image.url)) throw new Error("local image runtime returned invalid PNG data");
-          return { url: image.url, prompt: typeof image.prompt === "string" ? image.prompt.slice(0, 8000) : prompt, index: typeof image.index === "number" ? image.index : 0 };
+          return { url: image.url, prompt: typeof image.prompt === "string" ? image.prompt.slice(0, 8000) : prompt, index: typeof image.index === "number" ? image.index : 0, ...(typeof image.seed === "number" ? { seed: image.seed } : {}), width: typeof image.width === "number" ? image.width : width, height: typeof image.height === "number" ? image.height : height };
         });
         finish(undefined, { images });
       } catch (error) { finish(error instanceof Error ? error : new Error("local image runtime returned invalid JSON")); }
     });
-    child.stdin.end(JSON.stringify({ prompt, count, width: 512, height: 512 }));
+    child.stdin.end(JSON.stringify({ prompt, count, width, height, ...(options.seed === undefined ? {} : { seed: options.seed }) }));
   });
   if (Buffer.byteLength(JSON.stringify(result), "utf8") > MAX_STDOUT_BYTES) throw new Error("local image generation result exceeded the size limit");
   return Array.isArray(result.images) ? result.images : [];
