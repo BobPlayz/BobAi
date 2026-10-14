@@ -29,10 +29,16 @@ router.post("/generate", limit, async (req, res) => {
   const width = typeof req.body?.width === "number" ? req.body.width : 512;
   const height = typeof req.body?.height === "number" ? req.body.height : 512;
   const seed = req.body?.seed;
+  const steps = req.body?.steps === undefined ? 24 : req.body.steps;
+  const guidanceScale = req.body?.guidanceScale === undefined ? 7 : req.body.guidanceScale;
+  const negativePrompt = req.body?.negativePrompt === undefined ? "" : req.body.negativePrompt;
   if (!prompt || prompt.length > MAX_PROMPT) return res.status(400).json({ error: "image prompt must be 1-8000 characters" });
   if (!Number.isInteger(count) || count < 1 || count > 4) return res.status(400).json({ error: "count must be between 1 and 4" });
   if (!Number.isInteger(width) || width < 256 || width > 768 || width % 8 !== 0 || !Number.isInteger(height) || height < 256 || height > 768 || height % 8 !== 0) return res.status(400).json({ error: "width and height must be multiples of 8 between 256 and 768" });
   if (seed !== undefined && (!Number.isInteger(seed) || seed < 0 || seed > 2_147_483_647)) return res.status(400).json({ error: "seed must be an integer between 0 and 2147483647" });
+  if (!Number.isInteger(steps) || steps < 10 || steps > 50) return res.status(400).json({ error: "steps must be an integer between 10 and 50" });
+  if (typeof guidanceScale !== "number" || !Number.isFinite(guidanceScale) || guidanceScale < 1 || guidanceScale > 15) return res.status(400).json({ error: "guidanceScale must be a number between 1 and 15" });
+  if (typeof negativePrompt !== "string" || negativePrompt.length > 2_000) return res.status(400).json({ error: "negativePrompt must be text under 2000 characters" });
   if (req.body?.inputImages !== undefined && (!Array.isArray(req.body.inputImages) || req.body.inputImages.length > 4 || req.body.inputImages.some((image: unknown) => typeof image !== "string"))) return res.status(400).json({ error: "inputImages must be an array of up to 4 reference images" });
   const inputImages = req.body?.inputImages as string[] | undefined;
   const controller = new AbortController();
@@ -41,7 +47,7 @@ router.post("/generate", limit, async (req, res) => {
   res.once("close", onDisconnect);
 
   try {
-    const generated = await generateImages(prompt, count, inputImages, controller.signal, { width, height, ...(seed === undefined ? {} : { seed }) });
+    const generated = await generateImages(prompt, count, inputImages, controller.signal, { width, height, steps, guidanceScale, negativePrompt, ...(seed === undefined ? {} : { seed }) });
     if (controller.signal.aborted || res.destroyed) return;
     if (!generated.length || generated.length > count) throw new Error("local image generation returned no images");
     for (const item of generated) {
@@ -69,7 +75,7 @@ router.post("/generate", limit, async (req, res) => {
   } catch (error) {
     if (controller.signal.aborted || res.destroyed) return;
     const message = error instanceof Error ? error.message : "";
-    const clientError = /^(image prompt.{0,100}|count must be.{0,100}|width and height.{0,100}|seed must be.{0,100}|local image editing is not configured.{0,100}|image generation is unavailable.{0,100}|up to 4 input images are supported|reference images.{0,100}|MIME does not match.{0,100}|media request violates the safety policy|image request exceeds the 12 MB limit)$/i.test(message);
+    const clientError = /^(image prompt.{0,100}|count must be.{0,100}|width and height.{0,100}|seed must be.{0,100}|steps must be.{0,100}|guidanceScale must be.{0,100}|negativePrompt must be.{0,100}|local image editing is not configured.{0,100}|image generation is unavailable.{0,100}|up to 4 input images are supported|reference images.{0,100}|MIME does not match.{0,100}|media request violates the safety policy|image request exceeds the 12 MB limit)$/i.test(message);
     const safeMessage = clientError ? message : "local image generation failed; check the local model setup and API logs";
     return res.status(clientError ? 400 : 502).json({ error: safeMessage });
   } finally {
