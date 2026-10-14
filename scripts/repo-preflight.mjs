@@ -39,6 +39,7 @@ async function main() {
     "docs/FEATURE_INVENTORY.md",
     "docs/FEATURE_SETUP_GUIDE.md",
     "docs/MODEL_SELECTION_8GB.md",
+    "docs/FINAL_COMPLETION_CHECKLIST.md",
     "docs/HANDOFF.md",
   ]);
   const disallowedMarkdown = markdown.filter((path) => !allowedMarkdown.has(path));
