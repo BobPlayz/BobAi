@@ -1,6 +1,7 @@
 import path from "node:path";
 import { statSync } from "node:fs";
 import { nativeMedia } from "./nativeMedia.js";
+import { validatePcm16Wav } from "./wavSafety.js";
 
 const PIPER_MODEL = process.env.BOBAI_PIPER_MODEL_PATH || "";
 const PIPER_EN_MODEL = process.env.BOBAI_PIPER_EN_MODEL_PATH || PIPER_MODEL;
@@ -25,6 +26,7 @@ export async function synthesizeLocal(text: string, options?: Record<string, unk
   const lengthScale = Math.min(Math.max(rawScale, 0.5), 2);
   const audio = nativeMedia.require().synthesize(path.resolve(model), config ? path.resolve(config) : "", path.resolve(ESPEAK_DATA), text.trim(), lengthScale);
   if (!audio.length || audio.length > 64 * 1024 * 1024) throw new Error("BobVoice output is invalid or too large");
+  validatePcm16Wav(audio, 64 * 1024 * 1024);
   return { audio: audio.toString("base64"), mimeType: "audio/wav", engine: "BobVoice/Piper", model: path.basename(model), language: telugu ? "Telugu" : "English", offline: true, voiceProfile: "Ai-Glasses Jarvis offline profile" };
 }
 function existsFile(value: string) { try { return Boolean(value && statSync(path.resolve(value)).isFile()); } catch { return false; } }
