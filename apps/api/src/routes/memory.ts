@@ -1,11 +1,36 @@
 import { Router } from "express";
 import { and, eq, isNull } from "drizzle-orm";
-import { db, workspaceMembers } from "@bobai/db";
+import { db, projects, workspaceMembers } from "@bobai/db";
 import { dbRemember, dbRecallAll, dbClearMemory, dbDeleteMemory, dbUpdateMemory, dbMergeMemories, dbListMemoryHistory, isSensitiveMemory } from "../store/memoryDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 import { issueSensitiveMemoryApproval, consumeSensitiveMemoryApproval } from "../services/sensitiveMemoryApproval.js";
 const router = Router(); type AuthenticatedRequest = { user?: { id: string }; query: Record<string, unknown>; body?: unknown; params: Record<string, string> }; const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-async function context(req: AuthenticatedRequest) { const body = req.body as Record<string, unknown> | undefined; const requested = typeof req.query.workspaceId === "string" ? req.query.workspaceId : typeof body?.workspaceId === "string" ? body.workspaceId : ""; const requestedProject = typeof req.query.projectId === "string" ? req.query.projectId : typeof body?.projectId === "string" ? body.projectId : ""; const userId = req.user?.id; if (!userId) return null; if (!requested) { const workspace = await ensurePersonalWorkspace(userId); return { workspaceId: workspace.id, userId, projectId: requestedProject && UUID.test(requestedProject) ? requestedProject : undefined }; } if (!UUID.test(requested)) return null; const [member] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, requested), eq(workspaceMembers.userId, userId))).limit(1); return member ? { workspaceId: requested, userId, projectId: requestedProject && UUID.test(requestedProject) ? requestedProject : undefined } : null; }
+async function context(req: AuthenticatedRequest) {
+  const body = req.body as Record<string, unknown> | undefined;
+  const requested = typeof req.query.workspaceId === "string" ? req.query.workspaceId : typeof body?.workspaceId === "string" ? body.workspaceId : "";
+  const requestedProject = typeof req.query.projectId === "string" ? req.query.projectId : typeof body?.projectId === "string" ? body.projectId : "";
+  const userId = req.user?.id;
+  if (!userId || (requestedProject && !UUID.test(requestedProject))) return null;
+
+  let workspaceId = requested;
+  if (!workspaceId) {
+    const workspace = await ensurePersonalWorkspace(userId);
+    workspaceId = workspace.id;
+  } else {
+    if (!UUID.test(workspaceId)) return null;
+    const [member] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, userId))).limit(1);
+    if (!member) return null;
+  }
+
+  if (requestedProject) {
+    const [project] = await db.select({ id: projects.id }).from(projects)
+      .where(and(eq(projects.id, requestedProject), eq(projects.workspaceId, workspaceId), eq(projects.archived, false), isNull(projects.deletedAt))).limit(1);
+    if (!project) return null;
+  }
+
+  return { workspaceId, userId, projectId: requestedProject || undefined };
+}
 function validOptionalUuid(value: unknown) { return value === undefined || value === null || (typeof value === "string" && UUID.test(value)); } function parseExpiry(value: unknown) { if (value === undefined || value === null || value === "") return null; if (typeof value !== "string") return undefined; const date = new Date(value); return Number.isNaN(date.getTime()) || date.getTime() <= Date.now() ? undefined : date; }
 router.get("/", async (req, res) => { try { const ctx = await context(req as AuthenticatedRequest); if (!ctx) return res.status(403).json({ error: "workspace access denied" }); const memories = await dbRecallAll(ctx.workspaceId, ctx.userId, ctx.projectId); if (!memories) return res.status(503).json({ error: "memory storage unavailable" }); return res.json({ memories, persistent: true, workspaceId: ctx.workspaceId, projectId: ctx.projectId ?? null }); } catch { return res.status(503).json({ error: "memory storage unavailable" }); } });
 router.post("/approve-sensitive", async (req, res) => { const key = typeof req.body?.key === "string" ? req.body.key.trim() : ""; if (!key || key.length > 200) return res.status(400).json({ error: "valid memory key is required" }); try { const ctx = await context(req as AuthenticatedRequest); if (!ctx) return res.status(403).json({ error: "workspace access denied" }); return res.json(await issueSensitiveMemoryApproval(ctx.userId, ctx.workspaceId, key)); } catch { return res.status(503).json({ error: "memory approval unavailable" }); } });
