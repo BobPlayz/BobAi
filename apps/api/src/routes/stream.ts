@@ -29,6 +29,8 @@ router.post("/", streamLimit, async (req, res) => {
   res.once("close", markClientDisconnected);
   const { send } = initSSE(res); const conversationId = typeof req.body?.conversationId === "string" && req.body.conversationId.trim() ? req.body.conversationId.trim() : randomUUID(); let assistantId: string | null = null; let workspaceId: string | null = null;
   try {
+    if (req.body?.modelId !== undefined && (typeof req.body.modelId !== "string" || req.body.modelId.length > 160)) { send("error", { message: "invalid modelId" }); return res.end(); }
+    if (req.body?.messages !== undefined && (!Array.isArray(req.body.messages) || req.body.messages.length > 100 || req.body.messages.some((message: unknown) => !message || typeof message !== "object" || !["user", "assistant", "system"].includes((message as Record<string, unknown>).role as string) || typeof (message as Record<string, unknown>).content !== "string" || ((message as Record<string, unknown>).content as string).length > 100_000))) { send("error", { message: "messages must contain up to 100 user/assistant/system messages with text under 100,000 characters each" }); return res.end(); }
     const workspace = await ensurePersonalWorkspace(req.user!.id); workspaceId = workspace.id;
     const rows = await db.select({ key: settings.key, value: settings.value }).from(settings).where(and(eq(settings.userId, req.user!.id), eq(settings.workspaceId, workspace.id))).limit(50);
     const memoryEnabled = req.body?.memoryEnabled !== false && settingValue(rows, "memoryEnabled") !== false;
@@ -50,7 +52,7 @@ router.post("/", streamLimit, async (req, res) => {
     if (prepared.latestUserMessage && shouldRouteTools(prepared.latestUserMessage.content) && process.env.BOBAI_TOOLS_ENABLED !== "false") {
       const toolContext = { userId: req.user!.id, workspaceId: workspace.id, modelId: prepared.modelId, mode: "chat", signal: requestController.signal } as const;
       const toolResult = await runToolLoop(prepared.providerMessages, toolContext, decideTools, async (messages, modelId) => {
-        const result = await runChat(messages, modelId);
+        const result = await runChat(messages, modelId, requestController.signal);
         return { content: result.message.content };
       });
       if (toolResult.status === "cancelled" || toolResult.status === "approval_required" || toolResult.status === "completed" || toolResult.status === "failed" || toolResult.status === "limit_reached") {
