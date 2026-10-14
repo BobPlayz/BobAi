@@ -5,16 +5,35 @@ async function getDb() { if (!process.env.DATABASE_URL) return null; if (!dbProm
 export function isSensitiveMemory(value: string) { return /\b(password|passcode|otp|one[- ]time code|api key|secret key|private key|credit card|cvv|cvc|bank account|routing number|access token|refresh token|seed phrase|recovery code)\b/i.test(value); }
 function privacyClass(value: string) { if (isSensitiveMemory(value)) return "sensitive"; if (/\b(address|phone|email|birthday|school|family|parent|sibling|friend)\b/i.test(value)) return "personal"; if (/\b(code|program|typescript|javascript|python|project|repository|database|api)\b/i.test(value)) return "technical"; return "preference"; }
 function activeMemoryScope(workspaceId: string, userId?: string, projectId?: string) { return and(eq(memories.workspaceId, workspaceId), userId ? eq(memories.userId, userId) : isNull(memories.userId), projectId ? eq(memories.projectId, projectId) : isNull(memories.projectId), eq(memories.isArchived, false), isNull(memories.deletedAt), or(isNull(memories.expiresAt), sql`${memories.expiresAt} > now()`)); }
-async function saveEmbedding(memoryId: string, content: string, suppliedVector?: number[] | null) { const db = await getDb(); if (!db) return false; try { await db.delete(memoryEmbeddings).where(eq(memoryEmbeddings.memoryId, memoryId)); } catch { return false; } let vector: number[] | null = suppliedVector ?? null; if (suppliedVector === undefined) { try { vector = await import("../services/embeddings.js").then(({ generateModelEmbedding }) => generateModelEmbedding(content)); } catch { return false; } } if (!vector || vector.length !== 1536 || vector.some((value) => !Number.isFinite(value))) return false; try { await db.insert(memoryEmbeddings).values({ memoryId, embedding: vector }); return true; } catch { return false; } }
+async function saveEmbedding(memoryId: string, content: string, suppliedVector?: number[] | null) {
+  const db = await getDb();
+  if (!db) return false;
+  let vector: number[] | null = suppliedVector ?? null;
+  if (suppliedVector === undefined) {
+    try { vector = await import("../services/embeddings.js").then(({ generateModelEmbedding }) => generateModelEmbedding(content)); }
+    catch { return false; }
+  }
+  if (!vector || vector.length !== 1536 || vector.some((value) => !Number.isFinite(value))) return false;
+  const { embeddingModelId } = await import("../services/embeddings.js");
+  const modelId = embeddingModelId();
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(memoryEmbeddings).where(eq(memoryEmbeddings.memoryId, memoryId));
+      await tx.insert(memoryEmbeddings).values({ memoryId, embedding: vector!, embeddingModel: modelId });
+    });
+    return true;
+  } catch { return false; }
+}
 async function recordHistory(db: typeof import("@bobai/db").db, memory: { id: string; workspaceId: string; userId: string | null; category?: string | null; content?: string | null; summary?: string | null; confidence?: number; importance?: number; projectId?: string | null; metadata?: unknown }, action: string) { await db.insert(memoryHistory).values({ memoryId: memory.id, workspaceId: memory.workspaceId, userId: memory.userId, action, snapshot: { category: memory.category, content: memory.content, summary: memory.summary, confidence: memory.confidence, importance: memory.importance, projectId: memory.projectId, metadata: memory.metadata } }); }
 export async function dbRemember(input: { workspaceId: string; userId?: string; projectId?: string; key: string; value: string; sourceMessageId?: string; sourceConversationId?: string; sourceType?: string; confidence?: number; importance?: number; expiresAt?: Date | null; allowSensitive?: boolean }) { const value = input.value.trim(); if (!value || value.length > 20_000 || (isSensitiveMemory(value) && input.allowSensitive !== true)) return false; const db = await getDb(); if (!db) return false; const scope = and(eq(memories.workspaceId, input.workspaceId), input.userId ? eq(memories.userId, input.userId) : isNull(memories.userId), input.projectId ? eq(memories.projectId, input.projectId) : isNull(memories.projectId), eq(memories.content, value), isNull(memories.deletedAt)); const existing = await db.select().from(memories).where(scope).limit(1); const expiresAt = input.expiresAt ?? null;
   let candidateEmbedding: number[] | null = null;
   if (!isSensitiveMemory(value)) {
     try { candidateEmbedding = await import("../services/embeddings.js").then(({ generateModelEmbedding }) => generateModelEmbedding(value)); } catch { candidateEmbedding = null; }
   }
+  const candidateEmbeddingModel = candidateEmbedding ? (await import("../services/embeddings.js")).embeddingModelId() : "";
   if (!existing.length && candidateEmbedding) {
     const semantic = await db.execute(sql`select m.id, 1 - (e.embedding <=> ${JSON.stringify(candidateEmbedding)}::vector) as similarity
-      from memories m inner join memory_embeddings e on e.memory_id = m.id
+      from memories m inner join memory_embeddings e on e.memory_id = m.id and e.embedding_model = ${candidateEmbeddingModel}
       where m.workspace_id = ${input.workspaceId}
         and ${input.userId ? sql`m.user_id = ${input.userId}` : sql`m.user_id is null`}
         and ${input.projectId ? sql`m.project_id = ${input.projectId}` : sql`m.project_id is null`}
@@ -44,8 +63,9 @@ export async function dbRecallRelevant(workspaceId: string, userId: string | und
   const normalized = query.normalize("NFKC").trim().slice(0, 4_000);
   if (!normalized) return [];
   const safeLimit = Math.min(50, Math.max(1, Math.floor(limit)));
-  const { generateModelEmbedding } = await import("../services/embeddings.js");
+  const { generateModelEmbedding, embeddingModelId } = await import("../services/embeddings.js");
   const vector = await generateModelEmbedding(normalized).catch(() => null);
+  const activeEmbeddingModel = vector ? embeddingModelId() : "";
   const terms = [...new Set((normalized.toLocaleLowerCase().match(/[\p{L}\p{N}]{2,}/gu) || []).filter((term) => term.length <= 64))].slice(0, 32);
   const lexicalScore = terms.length
     ? sql`(${sql.join(terms.map((term) => sql`case when m.content ilike ${`%${term}%`} then 1 else 0 end`), sql` + `)})::float / ${terms.length}`
@@ -64,7 +84,7 @@ export async function dbRecallRelevant(workspaceId: string, userId: string | und
         + ((m.confidence / 100.0) * 0.05)
         + (greatest(0, 1 - extract(epoch from (now() - m.updated_at)) / 2592000.0) * 0.05)) as relevance_score
     from memories m
-    left join memory_embeddings e on e.memory_id = m.id
+    left join memory_embeddings e on e.memory_id = m.id and e.embedding_model = ${activeEmbeddingModel}
     where m.workspace_id = ${workspaceId}
       and ${userId ? sql`m.user_id = ${userId}` : sql`m.user_id is null`}
       and ${projectId ? sql`m.project_id = ${projectId}` : sql`m.project_id is null`}
