@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { Router } from "express";
+import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { db, projects, settings } from "@bobai/db";
 import { prepareChat, runChat, getRequestedModelId } from "../services/chatEngine.js";
 import { dbRecallRelevant, dbRemember, isSensitiveMemory } from "../store/memoryDb.js";
@@ -9,11 +10,11 @@ import { ensurePersonalWorkspace } from "../services/workspace.js";
 import { enrichMessagesWithVision } from "../services/visionChat.js";
 import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
-const router = Router(); const MAX_SETTINGS_LOOKUP = 50; const MAX_PROJECT_INSTRUCTIONS = 12_000;
+const router = Router(); const chatLimit = createUserRateLimit(20, 60_000); const MAX_SETTINGS_LOOKUP = 50; const MAX_PROJECT_INSTRUCTIONS = 12_000;
 function relevantMemories(memories: Array<Record<string, unknown>> | null) { if (!memories?.length) return []; return memories.slice(0, 12).map((memory) => `${typeof memory.category === "string" ? memory.category : "memory"}: ${typeof memory.content === "string" ? memory.content : ""}`); }
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
 function latestUserText(value: unknown) { if (!Array.isArray(value)) return ""; for (let index = value.length - 1; index >= 0; index -= 1) { const message = value[index]; if (!message || typeof message !== "object") continue; const record = message as Record<string, unknown>; if (record.role === "user" && typeof record.content === "string") return record.content; } return ""; }
-router.post("/", async (req, res) => {
+router.post("/", chatLimit, async (req, res) => {
   const controller = new AbortController();
   const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
   req.once("aborted", onDisconnect);
