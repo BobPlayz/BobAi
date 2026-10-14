@@ -44,8 +44,8 @@ export async function dbRecallRelevant(workspaceId: string, userId: string | und
   const normalized = query.normalize("NFKC").trim().slice(0, 4_000);
   if (!normalized) return [];
   const safeLimit = Math.min(50, Math.max(1, Math.floor(limit)));
-  const { generateEmbedding } = await import("../services/embeddings.js");
-  const vector = await generateEmbedding(normalized).catch(() => null);
+  const { generateModelEmbedding } = await import("../services/embeddings.js");
+  const vector = await generateModelEmbedding(normalized).catch(() => null);
   const terms = [...new Set((normalized.toLocaleLowerCase().match(/[\p{L}\p{N}]{2,}/gu) || []).filter((term) => term.length <= 64))].slice(0, 32);
   const lexicalScore = terms.length
     ? sql`(${sql.join(terms.map((term) => sql`case when m.content ilike ${`%${term}%`} then 1 else 0 end`), sql` + `)})::float / ${terms.length}`
