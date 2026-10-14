@@ -5,6 +5,8 @@ import { extractImagePrompt } from "../src/services/imagePrompt.js";
 test("explicit image requests extract only the image subject", () => {
   assert.equal(extractImagePrompt("generate an image of a cat in a space suit"), "a cat in a space suit");
   assert.equal(extractImagePrompt("make me a logo for BobAI"), "BobAI");
+  assert.equal(extractImagePrompt("can you make me a logo for my robotics club?"), "my robotics club?");
+  assert.equal(extractImagePrompt("i want an image of a red fox in snow"), "a red fox in snow");
   assert.equal(extractImagePrompt("create a poster showing a futuristic cyan city"), "a futuristic cyan city");
 });
 
