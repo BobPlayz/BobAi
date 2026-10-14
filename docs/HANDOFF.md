@@ -66,3 +66,5 @@
 - File indexing now records explicit `indexing`, `indexed`, and `indexing_failed` states, including chunk counts and a bounded diagnostic. File deletion is now a transactional soft-delete of the upload and its indexed chunks before best-effort object cleanup, so storage cleanup failures cannot resurrect the file or leave its contents searchable.
 
 - Added `POST /files/:id/reindex` so an authenticated owner can recover a failed or interrupted upload-indexing/OCR job without uploading the file again. It returns `202 Accepted`; processing state and bounded failure details are stored with the upload metadata.
+
+- Added configurable upload retention enforcement to the scheduled cleanup worker: images default to 30 days and documents to 90 days. Set `BOBAI_UPLOAD_IMAGE_RETENTION_DAYS` or `BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS` to `0` to disable automatic deletion for that category, or `1`–`3650` to choose a period. Expired uploads are soft-deleted with their indexed chunks, then stored objects are removed best-effort; cleanup failures are counted without making deleted content searchable.
