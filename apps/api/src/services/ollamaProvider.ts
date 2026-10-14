@@ -276,7 +276,7 @@ export async function unloadOllamaModelsExcept(keepModel?: string): Promise<stri
     });
     if (!response.ok) {
       await response.body?.cancel().catch(() => undefined);
-      throw new Error(`Could not free Ollama model memory before image generation (HTTP ${response.status})`);
+      throw new Error(`Could not unload Ollama model ${model} (HTTP ${response.status})`);
     }
     const result = await readLimited(response);
     try { JSON.parse(result); } catch { throw new Error("Ollama returned an invalid model-unload response"); }
