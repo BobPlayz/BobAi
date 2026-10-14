@@ -84,3 +84,11 @@
 - Extended sensitive audit metadata redaction to cover research queries, search terms, messages, and user-text fields; image-generation screening also rejects nudity-related prompts for the general-audience product.
 
 - Voice readiness now checks whether configured Whisper/Piper model files, optional Piper config files, and the eSpeak data directory actually exist; configured environment strings alone no longer imply that the voice runtime is ready.
+
+
+## 2026-10-14 static backend audit addendum
+
+- Fixed production upload-retention validation so valid integer values from 0 through 3650 are parsed as digits instead of being rejected by an over-escaped regular expression.
+- Production startup now requires `BOBAI_DISTRIBUTED_RATE_LIMIT=true`. The in-memory limiter is process-local and is not sufficient as the only production limit when multiple API instances are running. The PostgreSQL `rate_limit_buckets` table is created by migration `0022_rate_limit_buckets.sql`; apply migrations before starting production.
+- Both environment examples now document the distributed limiter flag as `false` for local development and explain the production requirement.
+- This was a static source/configuration review and implementation correction only. No tests, build, database migrations, or runtime checks were run. The previous implementation and runtime verification caveats still apply.
