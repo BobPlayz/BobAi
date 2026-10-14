@@ -29,7 +29,8 @@ router.post("/generate", limit, async (req, res) => {
   const width = typeof req.body?.width === "number" ? req.body.width : 512;
   const height = typeof req.body?.height === "number" ? req.body.height : 512;
   const seed = req.body?.seed;
-  const steps = req.body?.steps === undefined ? 24 : req.body.steps;
+  const qualityProfile = (process.env.BOBAI_IMAGE_PROFILE || "fast").trim().toLowerCase() === "quality";
+  const steps = req.body?.steps === undefined ? (qualityProfile ? 32 : 24) : req.body.steps;
   const guidanceScale = req.body?.guidanceScale === undefined ? 7 : req.body.guidanceScale;
   const negativePrompt = req.body?.negativePrompt === undefined ? "" : req.body.negativePrompt;
   if (!prompt || prompt.length > MAX_PROMPT) return res.status(400).json({ error: "image prompt must be 1-8000 characters" });
