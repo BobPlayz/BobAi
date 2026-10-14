@@ -100,6 +100,11 @@ async function ollamaChatUnlocked(input: NativeMessage[], provider: "bob" | "cod
   return { content: content.trim(), model };
 }
 
+export function ollamaEmbeddingEnabled() {
+  const configured = process.env.BOBAI_OLLAMA_EMBEDDING_MODEL?.trim().toLowerCase();
+  return configured !== "disabled" && configured !== "off" && configured !== "none";
+}
+
 export function ollamaEmbeddingModel() {
   const model = (process.env.BOBAI_OLLAMA_EMBEDDING_MODEL || "qwen3-embedding:0.6b").trim();
   if (!model || model.length > 160 || /[\\r\\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama embedding model name");
@@ -108,7 +113,7 @@ export function ollamaEmbeddingModel() {
 
 async function ollamaEmbeddingUnlocked(text: string): Promise<number[] | null> {
   const input = text.trim().slice(0, 8_000);
-  if (!input) return null;
+  if (!input || !ollamaEmbeddingEnabled()) return null;
   const model = ollamaEmbeddingModel();
   await unloadOllamaModels();
   const response = await fetch(`${configuredBaseUrl()}/api/embed`, {
@@ -232,7 +237,7 @@ export async function ollamaStatus(): Promise<{ ready: boolean; provider: "ollam
     if (!response.ok) return { ready: false, provider: "ollama", error: `Ollama returned HTTP ${response.status}` };
     const data = await response.json() as { models?: Array<{ name?: string }> };
     const models = Array.isArray(data.models) ? data.models.map((item) => item.name).filter((name): name is string => typeof name === "string") : [];
-    const required = [...new Set([ollamaModelFor("bob"), ollamaModelFor("coding"), ollamaVisionModel(), ollamaEmbeddingModel()])];
+    const required = [...new Set([ollamaModelFor("bob"), ollamaModelFor("coding"), ollamaVisionModel(), ...(ollamaEmbeddingEnabled() ? [ollamaEmbeddingModel()] : [])])];
     return { ready: required.every((model) => models.includes(model) || models.some((name) => name.split(":")[0] === model.split(":")[0] && !model.includes(":"))), provider: "ollama", models, requiredModels: required, missingModels: required.filter((model) => !models.includes(model)) };
   } catch (error) {
     return { ready: false, provider: "ollama", error: error instanceof Error ? error.message : "Ollama unavailable" };
