@@ -21,9 +21,24 @@ export const RUNTIME_MODELS: RuntimeModel[] = [
 ];
 function messageText(messages: unknown) { if (!Array.isArray(messages)) return ""; return messages.map((item)=>item&&typeof item==="object"&&typeof (item as {content?:unknown}).content==="string"?(item as {content:string}).content:"").join(" ").toLowerCase().slice(-12000); }
 export function inferTaskPlan(input:{messages?:unknown;hasImage?:boolean;hasAudio?:boolean;wantsImage?:boolean;wantsSpeech?:boolean}):TaskPlan {
- const text=messageText(input.messages), capabilities:RuntimeCapability[]=[]; const add=(x:RuntimeCapability)=>{if(!capabilities.includes(x))capabilities.push(x)};
- if(input.hasImage||/\b(image|photo|picture|screenshot|vision|see|look at)\b/.test(text))add("vision"); if(input.hasAudio||/\b(audio|voice|speech|listen|transcribe|transcription|hear)\b/.test(text))add("asr"); if(input.wantsSpeech||/\b(speak|read aloud|voice response|pronounce)\b/.test(text))add("tts"); if(input.wantsImage||/\b(generate|create|draw|make)\b.{0,40}\b(image|picture|art|illustration)\b/.test(text))add("image"); if(/\b(remember|memory|similar|semantic|embed|embedding)\b/.test(text))add("embedding"); if(/\b(search|retrieve|rank|relevant|best match)\b/.test(text))add("reranking"); if(/\b(code|coding|program|debug|typescript|javascript|python|sql)\b/.test(text))add("coding"); if(!capabilities.length)add("chat");
- const primary=capabilities[0]; const model=RUNTIME_MODELS.find(x=>x.capability===primary); return {capabilities,primary,modelId:model?.id,reason:model?`selected ${model.id}`:`no runtime for ${primary}`,requiresSpecialist:primary!=="chat"&&primary!=="coding"};
+ const text=messageText(input.messages);
+ const wantsImage=Boolean(input.wantsImage)||/\\b(generate|create|draw|make|render)\\b.{0,40}\\b(image|picture|art|illustration|wallpaper|poster)\\b/.test(text);
+ const wantsSpeech=Boolean(input.wantsSpeech)||/\\b(speak|read aloud|voice response|pronounce|say this aloud|text to speech)\\b/.test(text);
+ const wantsVision=Boolean(input.hasImage)||(!wantsImage&&/\\b(analy[sz]e|describe|what is in|what's in|identify|look at|see|screenshot|photo|picture|image|vision)\\b/.test(text));
+ const wantsAsr=Boolean(input.hasAudio)||(!wantsSpeech&&/\\b(audio|voice|speech|listen|transcribe|transcription|hear|spoken)\\b/.test(text));
+ const capabilities:RuntimeCapability[]=[];
+ const add=(x:RuntimeCapability)=>{if(!capabilities.includes(x))capabilities.push(x)};
+ if(wantsImage)add("image");
+ if(wantsVision)add("vision");
+ if(wantsAsr)add("asr");
+ if(wantsSpeech)add("tts");
+ if(/\\b(remember|memory|similar|semantic|embed|embedding)\\b/.test(text))add("embedding");
+ if(/\\b(search|retrieve|rank|relevant|best match)\\b/.test(text))add("reranking");
+ if(/\\b(code|coding|program|debug|typescript|javascript|python|sql)\\b/.test(text))add("coding");
+ if(!capabilities.length)add("chat");
+ const primary=capabilities[0];
+ const model=RUNTIME_MODELS.find(x=>x.capability===primary);
+ return {capabilities,primary,modelId:model?.id,reason:model?`selected ${model.id}`:`no runtime for ${primary}`,requiresSpecialist:primary!=="chat"&&primary!=="coding"};
 }
 type Entry={model:RuntimeModel;state:RuntimeState;activeRequests:number;loadedAt?:string;lastUsedAt?:string;error?:string;stop?:()=>Promise<void>};
 const isSpecialistCapability = (capability: RuntimeCapability): capability is Exclude<RuntimeCapability, "chat" | "coding"> => capability !== "chat" && capability !== "coding";
