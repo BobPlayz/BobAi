@@ -44,7 +44,7 @@ function shouldUseCodingModel(messages: ProviderMessage[], modelId?: string) {
   if (modelId === "bob-coder") return true;
   if (modelId && modelId !== "bob") return false;
   const latestUser = [...messages].reverse().find((message) => message.role === "user")?.content || "";
-  return /\b(write|build|create|fix|debug|refactor|implement|code|coding|program|function|component|api|endpoint|typescript|javascript|python|react|next\.js|css|html|sql)\b/i.test(latestUser);
+  return /\b(code|coding|debug|refactor|typescript|javascript|python|react|next\.js|css|html|sql|api|endpoint|function|component|script|compiler|repository|bugfix)\b|\b(write|build|implement)\b.{0,40}\b(app|website|program|bot|api|script|function|component|tool|game)\b/i.test(latestUser);
 }
 export async function runChat(messages: ProviderMessage[], modelId?: string) {
   const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "bob" });
