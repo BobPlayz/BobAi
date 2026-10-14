@@ -1,5 +1,5 @@
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
-import { and, desc, eq, gt, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { db, emailOtps, users } from "@bobai/db";
 
 const TTL_MS = 10 * 60_000;
@@ -33,14 +33,16 @@ export const verifyEmailOtp = async (email: string, code: string, purpose: OtpPu
   const [otp] = await db.select().from(emailOtps).where(and(eq(emailOtps.userId, user.id), eq(emailOtps.purpose, purpose), isNull(emailOtps.consumedAt), gt(emailOtps.expiresAt, new Date()))).orderBy(desc(emailOtps.createdAt)).limit(1);
   if (!otp || otp.attempts >= MAX_ATTEMPTS) return false;
   if (!same(hash(code), otp.codeHash)) {
-    await db.update(emailOtps).set({ attempts: otp.attempts + 1 }).where(eq(emailOtps.id, otp.id));
+    await db.update(emailOtps).set({ attempts: sql`${emailOtps.attempts} + 1` }).where(and(eq(emailOtps.id, otp.id), isNull(emailOtps.consumedAt), lt(emailOtps.attempts, MAX_ATTEMPTS)));
     return false;
   }
-  await db.transaction(async tx => {
-    await tx.update(emailOtps).set({ consumedAt: new Date() }).where(eq(emailOtps.id, otp.id));
-    await tx.update(users).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, user.id));
+  const consumed = await db.transaction(async tx => {
+    const [claimed] = await tx.update(emailOtps).set({ consumedAt: new Date() }).where(and(eq(emailOtps.id, otp.id), isNull(emailOtps.consumedAt), gt(emailOtps.expiresAt, new Date()), lt(emailOtps.attempts, MAX_ATTEMPTS))).returning({ id: emailOtps.id });
+    if (!claimed) return false;
+    if (purpose === "verification") await tx.update(users).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, user.id));
+    return true;
   });
-  return true;
+  return consumed;
 };
 
 export async function cleanupExpiredOtps() {
