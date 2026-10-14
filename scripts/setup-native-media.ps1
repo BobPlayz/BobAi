@@ -104,8 +104,26 @@ Write-Host "  eSpeak data: $espeakTarget"
 Write-Host "  Whisper model: $whisperModel"
 Write-Host "  .env updated without deleting unrelated settings."
 
+function Get-EnvValue([string]$Key) {
+  $escaped = [regex]::Escape($Key)
+  if (Test-Path $envPath) {
+    foreach ($line in Get-Content -Path $envPath) {
+      if ($line -match "^\s*$escaped\s*=\s*(.*)$") {
+        return $Matches[1].Trim().Trim('"').Trim("'")
+      }
+    }
+  }
+  return ""
+}
+
+# Read roots from .env as well as the current process environment, then export
+# them for node-gyp because binding.gyp reads process.env rather than .env.
 $piperRoot = [Environment]::GetEnvironmentVariable("BOBAI_PIPER_ROOT")
+if (-not $piperRoot) { $piperRoot = Get-EnvValue "BOBAI_PIPER_ROOT" }
 $whisperRoot = [Environment]::GetEnvironmentVariable("BOBAI_WHISPER_ROOT")
+if (-not $whisperRoot) { $whisperRoot = Get-EnvValue "BOBAI_WHISPER_ROOT" }
+if ($piperRoot) { $env:BOBAI_PIPER_ROOT = $piperRoot }
+if ($whisperRoot) { $env:BOBAI_WHISPER_ROOT = $whisperRoot }
 $piperHeader = if ($piperRoot) { Join-Path $piperRoot "include\piper.h" } else { "" }
 $whisperHeader = if ($whisperRoot) { Join-Path $whisperRoot "include\whisper.h" } else { "" }
 $piperLib = if ($piperRoot) { Join-Path $piperRoot "lib\piper.lib" } else { "" }
