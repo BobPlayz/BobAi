@@ -5,7 +5,7 @@ import { BobModelProvider } from "../src/services/modelProvider.js";
 import { ollamaEmbedding, ollamaEmbeddingModel, ollamaModelFor, ollamaStatus, ollamaVision, ollamaVisionModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
 
 const originalFetch = globalThis.fetch;
-const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS", "BOBAI_OLLAMA_NUM_CTX", "BOBAI_OLLAMA_NUM_PREDICT", "BOBAI_OLLAMA_EMBEDDING_MODEL"] as const;
+const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS", "BOBAI_OLLAMA_NUM_CTX", "BOBAI_OLLAMA_NUM_PREDICT", "BOBAI_OLLAMA_THINK", "BOBAI_OLLAMA_EMBEDDING_MODEL"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]])) as Record<(typeof keys)[number], string | undefined>;
 function restore() {
   globalThis.fetch = originalFetch;
@@ -37,6 +37,7 @@ test("Ollama chat sends requests only to the configured local runtime", async ()
       const body = JSON.parse(String(init?.body));
       assert.equal(body.model, "qwen2.5:3b");
       assert.equal(body.stream, false);
+      assert.equal(body.think, false);
       assert.equal(body.options.num_ctx, 4096);
       return new Response(JSON.stringify({ message: { content: "  local answer  " }, done: true }), { status: 200 });
     };
@@ -107,6 +108,7 @@ test("Ollama vision sends image bytes only to the configured local runtime", asy
       const body = JSON.parse(String(init?.body));
       assert.equal(body.model, "moondream:1.8b");
       assert.equal(body.stream, false);
+      assert.equal(body.think, false);
       assert.equal(body.messages[0].role, "system");
       assert.match(body.messages[0].content, /untrusted data/i);
       assert.deepEqual(body.messages[1].images, ["iVBORw0KGgo="]);
