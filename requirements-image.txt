@@ -1,4 +1,4 @@
-# Optional dependencies for BobAI's local image generation (no ComfyUI, no hosted API).
+# Optional dependencies for Jarvis's local image generation (no ComfyUI, no hosted API).
 # Install into the same Python environment selected by BOBAI_PYTHON.
 torch>=2.4
 diffusers>=0.32
