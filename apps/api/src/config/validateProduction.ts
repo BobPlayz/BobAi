@@ -20,6 +20,7 @@ export function validateProductionConfig() {
   if (process.env.BOBAI_AUTH_REDIRECT_BASE_URL!.endsWith("/")) throw new Error("BOBAI_AUTH_REDIRECT_BASE_URL must not end with / in production");
   if (process.env.CORS_ORIGIN!.split(",").some((origin) => !/^https:\/\/[^\s,*]+$/i.test(origin.trim()))) throw new Error("CORS_ORIGIN must contain only explicit HTTPS origins in production");
   if (process.env.TRUST_PROXY === "true") { const hops = Number(process.env.TRUST_PROXY_HOPS); if (!Number.isInteger(hops) || hops < 1 || hops > 10) throw new Error("TRUST_PROXY_HOPS must be an integer from 1 to 10"); }
+  if (process.env.BOBAI_DISTRIBUTED_RATE_LIMIT !== "true") throw new Error("BOBAI_DISTRIBUTED_RATE_LIMIT=true is required in production so rate limits are shared across API instances");
   const admins = (process.env.BOBAI_ADMIN_EMAILS || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
   if (!admins.length || new Set(admins).size !== admins.length || admins.some((email) => !/^\S+@\S+\.\S+$/.test(email))) throw new Error("BOBAI_ADMIN_EMAILS must contain one or more distinct valid email addresses in production");
   for (const key of ["BOBAI_UPLOAD_IMAGE_RETENTION_DAYS", "BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS"]) {
