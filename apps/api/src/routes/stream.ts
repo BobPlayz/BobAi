@@ -25,7 +25,7 @@ function shouldRouteTools(text: string) { return /\b(search|research|verify|late
 router.post("/", streamLimit, async (req, res) => {
   let clientDisconnected = false;
   const requestController = new AbortController();
-  const markClientDisconnected = () => { if (!res.writableEnded && !res.destroyed) { clientDisconnected = true; requestController.abort(new Error("client disconnected")); } };
+  const markClientDisconnected = () => { if (!res.writableEnded) { clientDisconnected = true; requestController.abort(new Error("client disconnected")); } };
   req.once("aborted", markClientDisconnected);
   res.once("close", markClientDisconnected);
   const { send } = initSSE(res); const conversationId = typeof req.body?.conversationId === "string" && req.body.conversationId.trim() ? req.body.conversationId.trim() : randomUUID(); let assistantId: string | null = null; let workspaceId: string | null = null;
