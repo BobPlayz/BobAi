@@ -64,3 +64,5 @@
 - Reconciled API docs with the current local-first main-branch architecture and documented the new `/voice/turn` endpoint; removed stale hosted-provider instructions that contradicted the active implementation.
 
 - File indexing now records explicit `indexing`, `indexed`, and `indexing_failed` states, including chunk counts and a bounded diagnostic. File deletion is now a transactional soft-delete of the upload and its indexed chunks before best-effort object cleanup, so storage cleanup failures cannot resurrect the file or leave its contents searchable.
+
+- Added `POST /files/:id/reindex` so an authenticated owner can recover a failed or interrupted upload-indexing/OCR job without uploading the file again. It returns `202 Accepted`; processing state and bounded failure details are stored with the upload metadata.

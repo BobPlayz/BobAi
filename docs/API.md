@@ -94,3 +94,7 @@ Rate limiting is configured through API middleware. If distributed limiting is e
 - Hosted image generation/editing uses the Images API and `BOBAI_OPENAI_IMAGE_MODEL`; the current UI defaults to one low-quality image per request and accepts one reference image under 1 MB.
 - Production startup fails closed until the operator confirms a hard provider-side monthly spend limit and sets `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true`. That variable is an attestation, not an automatic billing integration.
 - Do not expose provider keys to browser code. Provider/model access, spending limits, privacy terms, and live responses must be verified before public release.
+
+### File processing recovery
+
+- `POST /files/:id/reindex` retries extraction/indexing for an owned, non-deleted upload. Text and PDF files are re-indexed; supported image uploads are re-run through OCR and then indexing. The endpoint returns `202 Accepted` and exposes processing state through `GET /files/:id`.
