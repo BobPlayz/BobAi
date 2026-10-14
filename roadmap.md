@@ -348,3 +348,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Added an authenticated upload reprocessing endpoint for retrying document indexing or image OCR after processing failures.
 - **2026-10-14:** Implemented category-specific upload retention enforcement (images: 30 days by default, documents: 90 days by default), with environment overrides and cleanup of indexed chunks and object storage.
 - **2026-10-14:** Strengthened backend media safety policy for explicit sexual and graphic self-harm requests, and applied age-appropriate output constraints to local vision analysis.
+- **2026-10-14:** Filtered document chunk retrieval to fully indexed uploads, hiding partial chunks while processing is in progress or has failed.

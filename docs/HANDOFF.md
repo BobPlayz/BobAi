@@ -70,3 +70,5 @@
 - Added configurable upload retention enforcement to the scheduled cleanup worker: images default to 30 days and documents to 90 days. Set `BOBAI_UPLOAD_IMAGE_RETENTION_DAYS` or `BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS` to `0` to disable automatic deletion for that category, or `1`–`3650` to choose a period. Expired uploads are soft-deleted with their indexed chunks, then stored objects are removed best-effort; cleanup failures are counted without making deleted content searchable.
 
 - Expanded image-generation prompt screening to reject explicit sexual content and graphic self-harm requests for the general-audience product, and strengthened the local vision system prompt with age-appropriate, non-graphic output rules.
+
+- Document chunk retrieval now only returns chunks from uploads whose persisted processing state is `indexed`, so partial chunks from an interrupted or failed indexing attempt are not exposed as completed search results.
