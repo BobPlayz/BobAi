@@ -31,22 +31,23 @@ Set DATABASE_URL after creating your database, then configure the local model se
 
 Start Ollama, then pull the default local models:
 
-    ollama pull qwen3.5:2b
+    ollama pull qwen3.5:4b
+    ollama pull qwen2.5-coder:3b
     ollama pull qwen3-embedding:0.6b
 
 The default environment values are:
 
     BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
-    BOBAI_OLLAMA_MODEL=qwen3.5:2b
-    BOBAI_OLLAMA_CODING_MODEL=qwen3.5:2b
-    BOBAI_OLLAMA_VISION_MODEL=qwen3.5:2b
+    BOBAI_OLLAMA_MODEL=qwen3.5:4b
+    BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
+    BOBAI_OLLAMA_VISION_MODEL=qwen3.5:4b
     BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
     BOBAI_OLLAMA_NUM_CTX=4096
     BOBAI_OLLAMA_NUM_PREDICT=512
 
 The default uses one shared text-and-image model for chat, coding, research synthesis, and image understanding. This avoids keeping three different LLMs resident in RAM. Ollama calls are serialized, context/output sizes are capped, and image generation first asks Ollama to unload resident models. This reduces memory pressure but makes the next chat request slower while the model reloads. Semantic memory also loads Qwen3 Embedding 0.6B only when needed, then unloads it; set BOBAI_OLLAMA_EMBEDDING_MODEL=disabled to use lexical fallback instead.
 
-Qwen3.5-4B can be tested as a quality upgrade only if the 2B model runs reliably and Windows still has enough free memory. Do not start by loading separate chat, coder, and vision models at once. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
+The shared Qwen3.5 4B model is the quality-first default for chat, research synthesis, and image understanding. Jarvis unloads other Ollama models before switching to the dedicated Qwen2.5-Coder 3B model, so the tags do not stay resident together. If 4B causes paging or out-of-memory errors, switch chat and vision to qwen3.5:2b. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
 
 ## Local image generation
 
