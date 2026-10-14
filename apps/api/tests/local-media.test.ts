@@ -23,13 +23,6 @@ test("local image request limits and image MIME validation are enforced before m
   await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64," + "A".repeat(2_800_001)]), /reference images/);
 });
 
-test("local image request limits and image MIME validation are enforced before model startup", async () => {
-  const { generateImages } = await import("../src/services/mediaGeneration.js");
-  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64,SGVsbG8="]), /MIME does not match/);
-  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64,!!!!"]), /reference images/);
-  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64," + "A".repeat(2_800_001)]), /reference images/);
-});
-
 test("image generation validates count and quality controls before starting the model", async () => {
   const { generateImages } = await import("../src/services/mediaGeneration.js");
   await assert.rejects(() => generateImages("test", 0), /count must be an integer between 1 and 4/);
