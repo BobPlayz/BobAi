@@ -15,7 +15,11 @@ def main() -> int:
         return 2
 
     try:
+        import os
+        os.environ.setdefault("OMP_NUM_THREADS", "4")
+        os.environ.setdefault("MKL_NUM_THREADS", "4")
         import torch
+        torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
         from diffusers import DiffusionPipeline
 
         print("Loading local model on CPU. This can take a few minutes...", flush=True)
