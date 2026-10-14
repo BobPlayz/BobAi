@@ -345,3 +345,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Aligned the authentication middleware and malformed-cookie regression test with the `jarvis_access` cookie used by the auth route and CSRF middleware.
 - **2026-10-14:** Updated the API guide to match the actual local-first model providers and documented the combined local voice-turn endpoint.
 - **2026-10-14:** Completed upload-processing state transitions and made file deletion a transactional soft-delete with indexed-chunk removal and explicit orphan-object cleanup status.
+- **2026-10-14:** Added an authenticated upload reprocessing endpoint for retrying document indexing or image OCR after processing failures.
