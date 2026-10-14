@@ -1,47 +1,13 @@
-# Hosted AI provider setup
+# Retired: hosted AI provider
 
-BobAI can use an existing OpenAI-compatible chat API. This does not train a model. The hosted provider is opt-in because API usage can cost money.
+BobAI's current direction is local-first. This document is kept temporarily so old links do not break, but its former hosted-provider setup is no longer supported by the active backend.
 
-## Configure the API server
+Use Ollama for chat and coding:
+- Install Ollama locally.
+- Pull the configured models shown in .env.example.
+- Set BOBAI_OLLAMA_BASE_URL, BOBAI_OLLAMA_MODEL, and BOBAI_OLLAMA_CODING_MODEL.
+- Follow the current setup steps in README.md and docs/FEATURE_SETUP_GUIDE.md.
 
-1. Copy the relevant settings from `.env.example` into the API server's private environment file.
-2. Set `BOBAI_PROVIDER=openai`.
-3. Set `OPENAI_API_KEY` to a key you are authorized to use. Keep it on the server only.
-4. Optionally set `BOBAI_OPENAI_BASE_URL` and `BOBAI_OPENAI_MODEL` for a compatible provider/model.
-5. Restart the API server and check its model status endpoint before testing chat.
+Image generation uses the local Diffusers runner and a model directory configured through BOBAI_IMAGE_MODEL_PATH. Voice uses local Piper/Whisper integrations. Research uses BobAI's own search/evidence pipeline and the local Ollama model for synthesis.
 
-Default model: `gpt-4o-mini`. Verify current provider pricing, data-use terms, model availability, rate limits, and applicable age restrictions before use. The model name is configurable because availability and pricing can change.
-
-## Safety and cost
-
-- Never prefix the secret with `NEXT_PUBLIC_`; that would expose it to browser code.
-- The provider is not enabled unless `BOBAI_PROVIDER=openai` is set.
-- The adapter caps input size, response size, output tokens, and request timeout.
-- Provider errors are returned as bounded error messages. The API key is not included in status output or error messages.
-- This adapter does not create a hard monetary budget. For production, startup now fails closed unless the hosted provider is selected, the API key exists, the configured target is exactly ₹500/month, and `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true`. Set and verify a hard provider-side monthly spending cap before setting that flag. The flag is an operator attestation, not an automatic billing API integration. Prefer a monthly or usage-based plan with no long-term commitment and verify cancellation timing before purchase.
-- Requests sent to a hosted provider leave the local machine and are subject to that provider's data-processing terms.
-- Ollama is not a supported option in the public-beta branch. Do not expose or document a local-model fallback.
-
-## Hosted image generation and editing
-
-When `BOBAI_PROVIDER=openai` and the server-side key is configured, BobAI can use the Images API for real image generation and reference-image editing. The image model is configurable with `BOBAI_OPENAI_IMAGE_MODEL` (the example defaults to `gpt-image-2`). Requests default to low quality, square 1024×1024 output, and one image per user request to keep cost predictable. Reference images must be PNG, JPEG, or WebP data URLs under 2 MB each.
-
-This is a provider-backed capability, not a free local feature. Model access, image-generation pricing, supported parameters, and organization verification requirements can change. Review the current [Image generation guide](https://developers.openai.com/api/docs/guides/image-generation) before enabling it. If no real generation model is configured, BobAI returns an explicit unavailable error instead of inventing a placeholder image.
-
-For the ₹500/month target, set a **hard** project or organization spend limit in the provider dashboard, not only an alert. The provider documents that enforcement may not be instantaneous, so choose a cap conservatively below the total budget and account for currency conversion and taxes. See the [API spend limits guide](https://developers.openai.com/api/docs/guides/spend-limits). The environment flag only records that an operator checked the provider setting; it cannot verify the dashboard itself.
-
-## Quick configuration example
-
-```dotenv
-BOBAI_PROVIDER=openai
-OPENAI_API_KEY=
-BOBAI_OPENAI_BASE_URL=https://api.openai.com/v1
-BOBAI_OPENAI_MODEL=gpt-4o-mini
-```
-
-The empty key is intentional. Add a valid secret only in your private API environment, never in Git.
-
-
-## Streaming cancellation
-
-The hosted stream adapter accepts an optional `AbortSignal` and combines it with the configured request timeout. The API stream route is intended to abort the provider fetch when the browser disconnects. Verify cancellation, partial-response persistence, provider compatibility, and timeout behavior before enabling a paid provider. This does not implement a hard monetary budget; provider-side limits are still mandatory. The production startup flag is an operator attestation, not an automatic check of the provider account.
+Do not configure an OpenAI key or any hosted AI endpoint for the current local-first build. Database and email delivery are separate infrastructure concerns; Neon and Resend must be configured and tested independently.
