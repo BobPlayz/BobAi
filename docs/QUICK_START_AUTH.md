@@ -1,10 +1,10 @@
-# BobAI email OTP quick-start
+# Jarvis email OTP quick-start
 
 The browser entry flow asks for a display name, email address, and agreement to the current Terms and Privacy Policy. It sends a one-time code to that email; successful verification establishes a server-managed session cookie and sends the user directly to chat. No password is required in this visible flow.
 
 ## Required production configuration
 
-- `DATABASE_URL`: a working Postgres database with the current BobAI schema/migrations applied.
+- `DATABASE_URL`: a working Postgres database with the current Jarvis schema/migrations applied.
 - Preferred: `RESEND_API_KEY` and `RESEND_FROM_EMAIL`, with a sender/domain verified in Resend. Alternatively configure `BOBAI_SMTP_HOST`, `BOBAI_SMTP_PORT`, and `BOBAI_SMTP_FROM`; if authentication is required, also set `BOBAI_SMTP_USER` and `BOBAI_SMTP_PASSWORD`.
 - `BOBAI_WEB_URL` and `CORS_ORIGIN`: the actual deployed web origin(s).
 - `BOBAI_TERMS_VERSION`: optional server-side accepted terms version. If set, it must match `NEXT_PUBLIC_TERMS_VERSION` in the web build.

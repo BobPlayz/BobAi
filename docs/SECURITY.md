@@ -1,6 +1,6 @@
 # Security Guide
 
-Security practices for BobAI development and deployment.
+Security practices for Jarvis development and deployment.
 
 ## Core principles
 

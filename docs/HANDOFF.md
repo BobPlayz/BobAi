@@ -1,4 +1,4 @@
-# BobAI handoff for the next ChatGPT session
+# Jarvis handoff for the next ChatGPT session
 
 **Updated:** 2026-10-13  
 **Repository:** https://github.com/BobPlayz/BobAi  
@@ -57,7 +57,7 @@ All repository Markdown files were updated on 2026-10-13. The Markdown tree was 
 - Added provider-routing regression tests for rejecting the retired Ollama model id and routing coding requests through the configured hosted provider, plus hosted image generation/editing request tests. Tests have not been run yet.
 - Production startup now fails closed unless the hosted provider/key, ₹500 monthly target, and `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true` operator attestation are configured. This flag does not prove a real provider cap is active; the owner must verify it in the provider dashboard.
 - Removed the fake SVG image-generation fallback and added a hosted Images API adapter, an Image mode, reference-image editing, and provider tests. Live model access, editing output, storage growth, and UI behavior remain unverified.
-- Added Origin Productions as metadata/structured-data publisher and removed the unconfirmed `bobai.app` domain default from `.env.example`.
+- Added Origin Productions as metadata/structured-data publisher and removed the unconfirmed `jarvis.app` domain default from `.env.example`.
 - Updated AssistantHub voice mode to send the spoken/dictated prompt to the AI and speak the generated reply, with a Stop speech control. Browser permission and interruption behavior still need live testing.
 
 
@@ -109,4 +109,4 @@ Some of these may change as implementation work uncovers blockers. The final ans
 
 ## Important honesty boundary
 
-The code changes recorded above were committed through GitHub file operations but were not tested in a local runtime at the time of writing. Do not say build, tests, security audit, provider calls, email delivery, database migrations, accessibility, or deployment passed unless the corresponding run actually happened and results are available.\n\n## Current user-approved architecture (2026-10-14)\n\n- Chat and coding: local Ollama.\n- Internet research: BobAI-owned retrieval/evidence pipeline plus local Ollama synthesis. Live web retrieval still needs internet.\n- Images: direct Diffusers local runtime, no ComfyUI, no hosted image API. Model files and Python dependencies are not bundled.\n- Voice: local Piper English Alan and Telugu Venkatesh plus Whisper.cpp, matching the Ai-Glasses voice profile. Assets/native build need local setup.\n- Database: Neon PostgreSQL via DATABASE_URL.\n- Email: Resend preferred, SMTP fallback. Credentials and verified sender must be supplied by the user.\n- Video: disabled until a local video model/runtime is implemented.\n- Do not claim roadmap complete until build, tests, smoke checks, and runtime paths are actually verified.\n
+The code changes recorded above were committed through GitHub file operations but were not tested in a local runtime at the time of writing. Do not say build, tests, security audit, provider calls, email delivery, database migrations, accessibility, or deployment passed unless the corresponding run actually happened and results are available.\n\n## Current user-approved architecture (2026-10-14)\n\n- Chat and coding: local Ollama.\n- Internet research: Jarvis-owned retrieval/evidence pipeline plus local Ollama synthesis. Live web retrieval still needs internet.\n- Images: direct Diffusers local runtime, no ComfyUI, no hosted image API. Model files and Python dependencies are not bundled.\n- Voice: local Piper English Alan and Telugu Venkatesh plus Whisper.cpp, matching the Ai-Glasses voice profile. Assets/native build need local setup.\n- Database: Neon PostgreSQL via DATABASE_URL.\n- Email: Resend preferred, SMTP fallback. Credentials and verified sender must be supplied by the user.\n- Video: disabled until a local video model/runtime is implemented.\n- Do not claim roadmap complete until build, tests, smoke checks, and runtime paths are actually verified.\n
