@@ -12,9 +12,9 @@
 - [ ] Resolve the native build blocker: install/configure compatible Windows x64 Piper and whisper.cpp C++ development packages, including headers and import libraries. Set process-level `BOBAI_PIPER_ROOT` and `BOBAI_WHISPER_ROOT`, then rerun `npm run setup:native-media`. The voice ONNX files alone cannot build this addon.
 - [ ] Confirm the native addon file exists at `native/media/build/Release/bobai_media.node` and check `GET /voice/status` reports speech synthesis and recognition ready.
 - [ ] If voice is not required for the first UI demo, mark it **not ready**, do not claim it works, and continue with the non-voice checklist.
-- [ ] Run `npm run setup:image-generation` to install the dedicated Python 3.11 CPU runtime and download the local Tiny-SD model; review the CreativeML Open RAIL-M license.
-- [ ] For Local mode, run `npm run test:image-generation` and confirm a real PNG is saved to `storage/image-generation-smoke.png`; then test `POST /images/generate` through the authenticated app and verify image history, chat reload/reopen persistence, cancellation, clear setup errors, and offline inference.
-- [ ] If Power mode is desired, set `BOBAI_IMAGE_PROVIDER=openai` and a valid private `BOBAI_IMAGE_API_KEY`; verify a real hosted generation, quota/error handling, cancellation, saved history, and that reference-image editing is clearly reported as unsupported in this mode. Confirm billing and privacy expectations before enabling it.
+- [ ] Run `npm run setup:image-generation` for the lightweight local Tiny-SD profile, or `npm run setup:image-generation -- -Profile quality` to download the larger local DreamShaper 8 model. Both require internet only for the initial model download; review the selected model's license and available disk space first.
+- [ ] On an 8 GB CPU-only laptop, start with Tiny-SD if RAM is tight. DreamShaper 8 can improve image detail and composition, but it can take much longer and may still run out of memory. The setup command deliberately configures the local provider and does not require a hosted image API.
+- [ ] Run `npm run test:image-generation` and confirm a real PNG is saved to `storage/image-generation-smoke.png`; then test `POST /images/generate` through the authenticated app and verify image history, chat reload/reopen persistence, cancellation, clear setup errors, and offline inference.
 
 ## 2. Full local verification
 
