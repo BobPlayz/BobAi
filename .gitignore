@@ -34,3 +34,7 @@ model-training/data/test.jsonl
 !docs/*.md
 !docs/**/*.md
 .agent/
+
+# Local image-generation runtime and downloaded model assets
+.venv-image/
+models/image/
