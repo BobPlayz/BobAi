@@ -1,3 +1,5 @@
+import { withLocalModelLock } from "./localModelLock.js";
+import { unloadOllamaModels } from "./ollamaProvider.js";
 import { spawn } from "node:child_process";
 import path from "node:path";
 
@@ -5,7 +7,7 @@ const MAX_STDOUT_BYTES = 32 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
-export async function fluxGenerate(prompt: string, count: number, inputImages: string[] = [], signal?: AbortSignal, options: { width?: number; height?: number; seed?: number; steps?: number; guidanceScale?: number; negativePrompt?: string } = {}) {
+async function fluxGenerateUnlocked(prompt: string, count: number, inputImages: string[] = [], signal?: AbortSignal, options: { width?: number; height?: number; seed?: number; steps?: number; guidanceScale?: number; negativePrompt?: string } = {}) {
   if (inputImages.length > 4) throw new Error("up to 4 reference images are supported");
   const modelPath = process.env.BOBAI_IMAGE_MODEL_PATH?.trim();
   if (!modelPath) throw new Error("local image generation needs BOBAI_IMAGE_MODEL_PATH pointing to a downloaded Diffusers model directory");
@@ -78,4 +80,22 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
   });
   if (Buffer.byteLength(JSON.stringify(result), "utf8") > MAX_STDOUT_BYTES) throw new Error("local image generation result exceeded the size limit");
   return Array.isArray(result.images) ? result.images : [];
+}
+
+/**
+ * Diffusion inference can consume several GB of RAM. Serialize it with Ollama,
+ * and release resident Ollama weights before starting the image worker.
+ */
+export function fluxGenerate(
+  prompt: string,
+  count: number,
+  inputImages: string[] = [],
+  signal?: AbortSignal,
+  options: { width?: number; height?: number; seed?: number; steps?: number; guidanceScale?: number; negativePrompt?: string } = {},
+) {
+  return withLocalModelLock(async () => {
+    if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("local image generation cancelled");
+    await unloadOllamaModels();
+    return fluxGenerateUnlocked(prompt, count, inputImages, signal, options);
+  });
 }
