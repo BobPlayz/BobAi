@@ -13,6 +13,7 @@ const structuredData = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Bob AI",
+  publisher: { "@type": "Organization", name: "Origin Productions" },
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description: "An AI workspace for chat, research, creation, development, memory, files, tools, agents, and automations.",

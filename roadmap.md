@@ -2,9 +2,9 @@
 
 > **Product goal:** Build a polished, trustworthy, ChatGPT-style AI website that feels familiar and uncluttered, with useful privacy, research, voice, memory, and file features. This is a product roadmap, not a claim that every feature is already implemented.
 >
-> **Budget assumption:** ₹2,000 INR is the initial total budget for a domain and early running costs. Keep the first version inexpensive and avoid paid usage by default. Domain renewal and AI API usage are recurring costs, so check prices before purchasing.
+> **Budget assumption:** ₹2,000 INR is the initial setup budget. The separate AI usage target is ₹500 INR per month. Prefer free tiers and monthly/usage-based plans that can be cancelled after one month where provider terms permit. Verify renewal and cancellation terms before any purchase; do not purchase or subscribe without explicit approval.
 >
-> **Model decision:** Do **not** train a model for BobAI. Use a hosted AI provider through an adapter, with optional local Ollama support for users who choose it. Keep provider/model choices configurable so BobAI is not locked to one vendor.
+> **Model decision:** Do **not** train a model for BobAI. Use a configurable hosted provider through a server-side adapter. Ollama has been removed from the public-beta branch. Keep provider/model configuration flexible without exposing keys to browsers.
 
 ## Product and design contract
 
@@ -27,16 +27,27 @@
 7. **Conversations and memory:** persistent conversation history and user-controlled memory. Explain what is saved, allow viewing/deleting memories when implemented, and keep user data separated.
 8. **Account and privacy:** secure sign-in, account/session management, data deletion path, secrets kept server-side, and concise privacy explanations.
 9. **Deployment and domain:** deploy to a stable HTTPS host and connect a purchased `.com` or `.ai` domain only after checking the full first-year and renewal price. Do not spend the whole ₹2,000 on the domain if that leaves no room for essential hosting.
-10. **No model training:** use an existing hosted model API for the default path. Keep local Ollama as optional, not a requirement. Remove or archive unused training workflows only after confirming they are not used by CI, deployment, or other features.
+10. **No model training:** use an existing hosted model API through the provider adapter. Ollama is removed. Keep unused training workflows out of normal setup and deployment; do not train a model.
 
 ### Important implementation rules
 - Existing BobAI APIs, auth, database, conversation store, memory, research, and speech integrations remain the source of truth when they work.
-- The optional Ollama integration remains disabled by default and loopback-only.
+- Ollama runtime, configuration, tests, and user-facing setup guidance are removed from this branch.
 - Never expose provider keys to the browser or commit secrets.
 - Research citations must point to sources actually retrieved; do not fabricate sources.
 - Keep upload validation, rate limits, timeouts, cost caps, and abuse protections server-side.
 - Do not claim age verification, parental controls, real-time voice, or research quality is complete until implemented and tested end to end.
 - Treat ₹2,000 as a tight initial budget. Prefer free tiers and provider limits, and ask before enabling any paid API usage.
+
+## Confirmed public-beta product scope
+
+- **Audience:** students across age groups. Age-appropriate safety, privacy, account security, and legal review are launch gates, not optional polish.
+- **Release:** public beta, with balanced priorities across reliability, security, usability, and cost.
+- **Feature ambition:** the full practical ChatGPT-like experience, especially coding assistance/agent workflows and web research with traceable citations. Also include chat, writing, tutoring, files, image understanding, data analysis, voice input/output, conversation history, user-controlled memory, projects, image generation/editing, and safe integrations where real providers and runtime support exist. This is a target list, not a claim of proprietary feature parity.
+- **AI spend:** ₹500/month target. Keep paid usage disabled until provider-side spending limits are configured and independently checked. The application currently uses an operator-attestation gate; it is not a billing API and cannot itself prove the provider cap is active.
+- **Cancellation:** choose hosting and AI plans that are monthly or usage-based and cancellable after one month where the provider permits it. Document renewal, cancellation timing, export, and deletion behavior before the owner approves a vendor.
+- **Publisher:** Origin Productions. Do not publish personal contact details. A real support/privacy contact and responsible adult/legal review remain prerequisites for a student-facing public beta.
+- **Coding execution:** public users must never get arbitrary host/computer command access. Use a network-disabled isolated sandbox, explicit approvals for repository writes and external side effects, resource/time limits, and per-user authorization.
+- **Provider direction:** hosted provider only for the public beta; Ollama has been removed on this branch. No model training as part of normal development or deployment.
 
 ---
 
@@ -79,15 +90,15 @@
 - [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
 - [x] Keep hosted provider keys in server-side environment configuration and expose only configuration status to the browser; build/runtime verification is pending.
 - [x] Add a visible Stop response control that aborts the active browser chat stream and preserves partial text in the UI and persisted assistant-message record. Build/runtime verification is pending.
-- [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage. The API now propagates disconnect cancellation into hosted, Ollama, native, and production inference paths; runtime verification remains open.
+- [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage. The API now propagates disconnect cancellation into hosted, native, and production inference paths; runtime verification remains open.
 - [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [x] Show the configured model/provider status in Settings → About, without exposing secrets. The status is configuration-level and not a live-availability guarantee; build/runtime verification is pending.
 - [x] Add per-user rate limiting to the streamed AI chat endpoint. Build/runtime verification is pending.
-- [x] Propagate browser disconnect cancellation through the stream route, chat engine, model router, hosted adapter, and local Ollama adapter. Native/production provider behavior and partial-response persistence still need final runtime verification.
+- [x] Propagate browser disconnect cancellation through the stream route, chat engine, model router, hosted adapter and remaining supported runtime paths. Native/production provider behavior and partial-response persistence still need final runtime verification.
 - [x] Abort active stream and upload controllers when the user leaves the chat component.
 - [ ] Add hard provider-side monetary budgets and verify global cost/usage safeguards before enabling paid API calls.
-- [x] Keep local Ollama as a separate opt-in path; it remains disabled by default and is not required for hosted chat.
+- [x] Remove Ollama support from the provider router, vision pipeline, environment template, test scripts, and user-facing setup documentation.
 - [x] Keep model-training commands out of normal user-facing setup instructions.
 - [x] Audit training references: removed all `model:*` training commands from the root package scripts and retired the standalone model-training workflow. Retained the `model-training/` source/artifact path because the optional native runtime still looks there for a prebuilt artifact; do not run training as part of normal setup.
 - [x] Add tests for provider URL safety and missing-key/configuration status.
@@ -124,7 +135,7 @@
 **Goal:** Let users work with useful files and images safely.
 
 - [x] Align the chat file picker with supported PDF, text, and PNG/JPEG/WebP upload formats; the API rejects unsupported image formats. Remaining MIME/extension edge cases still need final verification.
-- [x] Implement image understanding through the configured hosted provider when available, with optional local Ollama vision. Live provider verification is pending.
+- [x] Implement image understanding through the configured hosted provider when available, with the configured hosted provider or supported vision specialist. Live provider verification is pending.
 - [x] Add file attachment previews, upload progress, and clear upload size/type errors; cancel/retry remains unfinished.
 - [x] Add per-file upload cancellation, progress display, and an explicit cancel control; propagate cancellation through file processing and the resulting AI analysis request, and distinguish transfer progress from processing state. Automatic retry is not implemented; verify cancel/error cleanup during final testing.
 - [x] Use OCR/text extraction for supported formats and return explicit extraction failures where available; end-to-end verification is pending.
@@ -224,12 +235,13 @@
 
 ---
 
-## Budget guardrails (₹2,000 initial budget)
+## Budget guardrails (₹2,000 initial setup budget; ₹500/month AI target)
 
 - **Domain:** purchase only after checking current .com and .ai renewal prices. A .ai domain may consume a large share of the budget.
 - **Hosting/database:** start with free tiers if they meet requirements, and verify quotas and sleep/usage limits.
-- **AI provider:** keep development usage on free credits/free tier where available, add hard usage limits, and never promise unlimited free AI.
+- **AI provider:** target no more than ₹500/month. Keep paid usage disabled until app-level usage accounting, a hard fail-closed budget guard, and provider-side spending limits are configured and verified. Never promise unlimited free AI.
 - **Voice:** prototype with browser or free/local components first; real-time hosted voice may incur recurring costs.
+- **Cancellation:** choose monthly/usage-based hosting and AI plans with no long-term commitment where available; verify the exact cancellation and auto-renewal controls before enabling billing.
 - **Reserve:** keep some budget for renewals or unexpected setup costs.
 - **Rule:** no paid service is enabled by default without an explicit choice and clear cost information.
 
@@ -237,7 +249,7 @@
 
 - [ ] Clean ChatGPT-style conversation-first UI, with working Light and Dark modes.
 - [ ] No sci-fi/HUD/robot/reactor decoration or unused alternate themes.
-- [ ] Hosted AI provider works without model training; optional local model remains optional.
+- [ ] Hosted AI provider works without model training; Ollama is removed and the provider path is verified.
 - [ ] Conversation persistence and memory are reliable and user-controlled.
 - [ ] Image/file understanding is validated and usable.
 - [ ] Research source preferences and citations work end to end.
@@ -269,7 +281,7 @@
 - **2026-10-13:** Propagated client-disconnect cancellation from the API stream route through the chat engine into hosted, Ollama, native, and production inference requests. Corrected disconnect error handling so a cancelled response is not subsequently overwritten as failed, and persist the partial streamed answer when cancellation occurs. Added a three-active-agent-task per-user limit; durable distributed quotas and hard provider-side monetary limits still require production configuration.
 - **2026-10-13:** Added editable voice dictation to the active neural composer, per-file upload cancellation/progress controls, consistent supported image formats, and an agent Stop control wired to the server queue-cancel route. These code paths remain pending final build/test verification.
 - **2026-10-13:** Added email-OTP reauthentication and a clear confirmation flow for account deletion, and hardened the existing 30-day retention cleanup to skip users who still own shared workspaces. Build/runtime verification remains pending.
-- **2026-10-13:** Initial chat-first UI cleanup and local Ollama integration were committed to `main`; automated verification of all UI changes still needs to be run.
+- **2026-10-13:** Initial chat-first UI cleanup was committed to `main`. Ollama was later retired on the public-beta branch; automated verification remains deferred until the implementation pass is complete.
 - **2026-10-13:** Replaced placeholder settings with real browser-local personalization/memory preferences, removed the misleading NSFW toggle and fake account/model claims, made the chat composer, sidebar, and empty state adapt to Light/Dark, removed the sci-fi orb from the empty state, and fixed the missing `ChatWindow` import. The message menus and public pages still need a complete Light/Dark and accessibility audit.
 - **2026-10-13:** Added an opt-in OpenAI-compatible hosted chat adapter, server-side key configuration, endpoint validation, streaming support, setup documentation, and configuration safety tests. It remains opt-in because usage may cost money. Tests and build have not yet been run in this environment.
 - **2026-10-13:** Expanded hosted-provider tests to cover a successful chat response, safe handling of HTTP 401/429 errors, malformed and empty responses, successful SSE streaming, and an empty stream. These tests are committed but still need to run in CI; stream-disconnect and usage-limit coverage remains open.
@@ -282,7 +294,7 @@
 - **2026-10-13:** Connected the active conversation ID to normal chat, file-processing, and regenerate API requests so the backend can persist turns under the same conversation. Passed image data URLs through the chat request into the existing vision pipeline. Corrected a misleading vision fallback that described an image as analyzed when it had only produced an embedding; the specialist now must return descriptive text, otherwise vision reports an explicit configuration error. End-to-end image understanding still depends on a real descriptive vision model and must be verified.
 - **2026-10-13:** Connected the web chat client to the existing authenticated SSE `/stream` route and added incremental assistant-token rendering. The regular `/chat` endpoint no longer claims streaming readiness. Streaming still needs build/tests and an authenticated browser end-to-end check; file and regenerate calls use the same stream client and retain conversation IDs.
 - **2026-10-13:** Fixed the stream disconnect watcher to observe the HTTP response closing, rather than the incoming request finishing. This avoids treating normal request-body completion as a client disconnect during generation; verify with an actual streamed response before release.
-- **2026-10-13:** Added server-side hosted multimodal image analysis through the configured OpenAI-compatible endpoint when `OPENAI_API_KEY` is present, with supported-image/data-size checks and no browser exposure of credentials. Local Ollama vision remains an alternative. This path is implemented but still requires provider/model and end-to-end verification; image requests may incur provider usage costs.
+- **2026-10-13:** Added server-side hosted multimodal image analysis through the configured OpenAI-compatible endpoint when `OPENAI_API_KEY` is present, with supported-image/data-size checks and no browser exposure of credentials. Ollama support has been retired from this branch. This path is implemented but still requires provider/model and end-to-end verification; image requests may incur provider usage costs.
 - **2026-10-13:** Added unit coverage for hosted image-analysis request shape, server-side authorization, returned descriptions, and rejection of unsupported image data. The tests are committed but intentionally not run until the final verification pass.
 - **2026-10-13:** Routed image files selected in the chat composer through the vision pipeline, while keeping ordinary document uploads on the text-extraction path. Inline images are limited to 1 MB for now to fit the API request budget; inline image bytes are excluded from conversation metadata persistence, so the conversation text remains saved but the image preview itself is session-only. End-to-end behavior still needs verification.
 - **2026-10-13:** Fixed multi-file handling to carry forward each preceding attachment result and any per-file error instead of rebuilding every iteration from a stale React state snapshot.
@@ -293,6 +305,12 @@
 - **2026-10-13:** Completed the latest chat UX wiring: image bytes are forwarded only for the newest user message, voice controls follow the active theme, assistant replies expose read-aloud with stop/cleanup, and failed image loads no longer trigger external fallback requests. Added hosted image-analysis tests; all recent code remains pending the final build/test/audit pass.
 - **2026-10-13:** Connected the existing speech-synthesis endpoint to an explicit read-aloud button on assistant replies, while keeping the composer microphone control separate. Added a stop control and audio URL cleanup for playback interruption; local/external provider behavior still needs end-to-end testing.
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
+
+- **2026-10-13, public-beta branch:** Recorded the student-facing public-beta scope, Origin Productions publisher identity, ₹500/month AI budget target, and requirement to prefer cancellable monthly services. Removed Ollama routing, runtime/test files, environment settings, and setup instructions; added hosted coding-provider routing regression tests and a production startup gate requiring a verified provider-side spending-cap attestation. The gate is not an in-app billing API.
+- **2026-10-13, public-beta branch:** Removed the fake SVG image-generation fallback so an unavailable real image model now returns an explicit error. Added Origin Productions publisher metadata, changed the About page to support Light/Dark, and removed the unconfirmed `bobai.app` default URL. All changes remain unverified until the deferred final build/test pass.
+
+- **2026-10-13, public-beta branch:** Added separate Web Search and Deep Research modes using the existing authenticated research endpoints and source filters. Added a hosted Images API path for image generation/editing, reference-image validation, and an AssistantHub Image mode. Voice mode now sends the prompt to the assistant and reads its reply aloud with an interruption control. These changes need the deferred build/test and live-provider verification.
+- **2026-10-13, public-beta branch:** Tightened settings API validation to accept only Light/Dark themes and removed the model-training opt-in setting from the supported settings surface. Enabled same-origin microphone policy on API responses; the web app already allows same-origin microphone use in its own security headers.
 
 
 ## Handoff notes for the next ChatGPT session

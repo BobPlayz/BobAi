@@ -29,6 +29,10 @@ The authenticated API currently groups functionality under paths such as:
 | `/v1/settings` | User settings |
 | `/v1/memory` | Memory operations |
 | `/v1/files` | File operations |
+| `/v1/research/search` | Basic web search with source preferences and saved research sessions |
+| `/v1/deep-research` | Multi-query research with fetched evidence and synthesis |
+| `/v1/images/generate` | Hosted image generation and reference-image editing; provider-dependent |
+| `/v1/voice` | Voice transcription and synthesis |
 | `/v1/agents` | Agent execution |
 | `/v1/automation` | Automation management |
 | `/v1/projects` | Project management |
@@ -65,4 +69,11 @@ The exact response fields can vary by route state (for example, a tool approval 
 
 ## Cancellation and failure handling
 
-The streaming route propagates a client disconnect cancellation signal through the chat engine into hosted and local provider adapters. The web stream parser accepts LF and CRLF event separators. These changes have been committed but still require route-level verification for disconnects, partial-response persistence, timeouts, and provider behavior. Rate limiting is configured through the API middleware; if distributed limiting is explicitly enabled and its backing service fails, requests are denied rather than falling back to uncoordinated per-process limits.
+The streaming route propagates a client disconnect cancellation signal through the chat engine into supported provider adapters. Ollama support has been removed from the public-beta branch. The web stream parser accepts LF and CRLF event separators. These changes have been committed but still require route-level verification for disconnects, partial-response persistence, timeouts, and provider behavior. Rate limiting is configured through the API middleware; if distributed limiting is explicitly enabled and its backing service fails, requests are denied rather than falling back to uncoordinated per-process limits.
+
+## Public-beta provider notes
+
+- Hosted chat requires `BOBAI_PROVIDER=openai` and a server-side `OPENAI_API_KEY` in production.
+- Hosted image generation/editing uses the Images API and `BOBAI_OPENAI_IMAGE_MODEL`; the current UI defaults to one low-quality image per request and accepts one reference image under 1 MB.
+- Production startup fails closed until the operator confirms a hard provider-side monthly spend limit and sets `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true`. That variable is an attestation, not an automatic billing integration.
+- Do not expose provider keys to browser code. Provider/model access, spending limits, privacy terms, and live responses must be verified before public release.

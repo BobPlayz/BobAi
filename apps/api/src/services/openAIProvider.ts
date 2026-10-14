@@ -158,6 +158,70 @@ export async function openAIImageAnalysis(imageDataUrl: string, prompt: string) 
   if (typeof content !== "string" || !content.trim() || content.length > MAX_RESPONSE_CHARS) throw new Error("Hosted image analysis returned an empty or invalid description.");
   return { model: requestModel(), response: content.trim() };
 }
+export async function openAIImageGenerate(prompt: string, count = 1, inputImages: string[] = []) {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  if (!key) throw new Error("Hosted image generation is not configured.");
+  if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 8_000) throw new Error("Image prompt must be between 1 and 8000 characters.");
+  if (!Number.isInteger(count) || count < 1 || count > 4) throw new Error("Image count must be between 1 and 4.");
+  if (!Array.isArray(inputImages) || inputImages.length > 4) throw new Error("Up to 4 reference images are supported.");
+  const model = (process.env.BOBAI_OPENAI_IMAGE_MODEL || "gpt-image-2").trim();
+  if (!/^[A-Za-z0-9._-]{1,100}$/.test(model)) throw new Error("Invalid configured image model.");
+  const images = inputImages.map((value) => {
+    if (typeof value !== "string" || value.length > 2_800_000) throw new Error("Each reference image must be under 2 MB.");
+    const match = value.match(/^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=\s]+)$/i);
+    if (!match) throw new Error("Reference images must be PNG, JPEG, or WebP data URLs.");
+    const mime = match[1].toLowerCase() === "jpg" ? "jpeg" : match[1].toLowerCase();
+    const bytes = Buffer.from(match[2], "base64");
+    if (!bytes.length || bytes.length > 2 * 1024 * 1024) throw new Error("Each reference image must be under 2 MB.");
+    return { mime, bytes, name: `reference-${inputImages.indexOf(value) + 1}.${mime === "jpeg" ? "jpg" : mime}` };
+  });
+  const output: Array<{ url: string; prompt: string; index: number }> = [];
+  for (let index = 0; index < count; index += 1) {
+    let response: Response;
+    if (images.length) {
+      const form = new FormData();
+      form.set("model", model);
+      form.set("prompt", prompt.trim());
+      form.set("size", "1024x1024");
+      form.set("quality", "low");
+      for (const image of images) form.append("image[]", new Blob([image.bytes.buffer.slice(image.bytes.byteOffset, image.bytes.byteOffset + image.bytes.byteLength) as ArrayBuffer], { type: `image/${image.mime}` }), image.name);
+      response = await fetch(`${openAIBaseUrl()}/images/edits`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}` },
+        body: form,
+        redirect: "error",
+        signal: AbortSignal.timeout(timeoutMs()),
+      });
+    } else {
+      const body = JSON.stringify({ model, prompt: prompt.trim(), size: "1024x1024", quality: "low", n: 1, output_format: "png" });
+      response = await fetch(`${openAIBaseUrl()}/images/generations`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body,
+        redirect: "error",
+        signal: AbortSignal.timeout(timeoutMs()),
+      });
+    }
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      if (response.status === 401) throw new Error("Hosted AI authentication failed. Check OPENAI_API_KEY.");
+      if (response.status === 429) throw new Error("Hosted image generation rate limit, quota, or spending limit reached.");
+      throw new Error(`Hosted image generation failed with HTTP ${response.status}`);
+    }
+    let data: { data?: Array<{ b64_json?: unknown }> };
+    try { data = JSON.parse(await readLimited(response)); } catch (error) {
+      if (error instanceof Error && error.message.includes("too large")) throw error;
+      throw new Error("Hosted image generation returned invalid JSON.");
+    }
+    const encoded = data.data?.[0]?.b64_json;
+    if (typeof encoded !== "string" || !/^[A-Za-z0-9+/=]+$/.test(encoded)) throw new Error("Hosted image generation returned no valid image data.");
+    const bytes = Buffer.from(encoded, "base64");
+    if (!bytes.length || bytes.length > MAX_RESPONSE_BYTES) throw new Error("Generated image exceeded the response limit.");
+    output.push({ url: `data:image/png;base64,${bytes.toString("base64")}`, prompt: prompt.trim(), index });
+  }
+  return output;
+}
+
 export function openAIStatus() {
   return { ready: openAIConfigured(), provider: "openai-compatible", modelId: OPENAI_MODEL_ID, model: process.env.BOBAI_OPENAI_MODEL || "gpt-4o-mini", error: openAIConfigured() ? undefined : "OPENAI_API_KEY is not configured" };
 }

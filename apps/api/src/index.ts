@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { app } from "./app.js";
 import { configureOtpDelivery } from "./services/otpDelivery.js";
 import { dbClient } from "@bobai/db";
+import { validateProductionConfig } from "./config/validateProduction.js";
 
 const PORT = Number(process.env.PORT || 3001);
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -11,6 +12,7 @@ const HEADERS_TIMEOUT_MS = Math.max(REQUEST_TIMEOUT_MS + 10_000, 40_000);
 const KEEP_ALIVE_TIMEOUT_MS = Math.min(Math.max(Number(process.env.API_KEEP_ALIVE_TIMEOUT_MS || 5_000), 1_000), 120_000);
 const MAX_HEADER_SIZE = 16 * 1024;
 
+validateProductionConfig();
 configureOtpDelivery();
 process.on("uncaughtException", (error) => { console.error("BobAI uncaught exception", error); process.exitCode = 1; void shutdown("uncaughtException"); });
 process.on("unhandledRejection", (reason) => { console.error("BobAI unhandled rejection", reason); });

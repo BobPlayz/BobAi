@@ -32,14 +32,15 @@ Static status across these routes is **implemented or partial, not runtime-certi
 
 | Capability | Main implementation | Static status | Remaining verification |
 |---|---|---|---|
-| Hosted AI | `apps/api/src/services/openAIProvider.ts`, `modelProvider.ts`, `chatEngine.ts` | Implemented, opt-in | Confirm production provider/model, privacy terms, modalities, cost controls, and live streamed response. |
+| Hosted AI | `apps/api/src/services/openAIProvider.ts`, `modelProvider.ts`, `chatEngine.ts` | Implemented, opt-in | Ollama routing removed on the public-beta branch. Confirm production provider/model, privacy terms, modalities, provider-side cost controls, and live streamed response. |
 | Streaming | `apps/api/src/routes/stream.ts`, `apps/web/src/lib/api.ts` | Implemented | Confirm LF/CRLF frames, abort/disconnect handling, partial response persistence, retries, and rate limits. |
 | Accounts / OTP | `apps/api/src/routes/auth.ts`, `apps/web/src/app/login/page.tsx` | Implemented | SMTP, existing account, MFA, terms version, refresh, sign-out, expiry, and cookies. |
 | Conversations | `apps/api/src/routes/conversations.ts`, `apps/api/src/store/conversationDb.ts`, `apps/web/src/hooks/useChat.ts` | Implemented | Refresh/reopen behavior, ownership isolation, duplicate turns, deletion/rename/pin persistence. |
 | Memory | `apps/api/src/routes/memory.ts`, `apps/api/src/store/memoryDb.ts`, Settings | Implemented | Per-user isolation, consent semantics, clear-all, disabled-memory behavior, and sensitive-content checks. |
 | Uploads | `apps/api/src/routes/files.ts`, `documentIndexer.ts`, `ocr.ts`, `malwareScanner.ts` | Implemented | Supported-type consistency, limits, corrupt files, page/pixel limits, cancellation, retention, and outage behavior. |
-| Vision | `apps/api/src/services/vision.ts`, `openAIProvider.ts`, `visionChat.ts` | Implemented, provider-dependent | Live image request with a model that truly supports image input. |
-| Research | `apps/api/src/services/research.ts`, `deepResearch.ts`, AssistantHub | Implemented, unverified | Citation-to-evidence matching, stale/conflicting sources, dead links, empty results, source preference behavior. |
+| Vision | `apps/api/src/services/vision.ts`, `openAIProvider.ts`, `visionChat.ts` | Implemented, provider-dependent | Live image request with a model that truly supports image input. Ollama fallback was removed. |
+| Image generation/editing | `apps/api/src/services/openAIProvider.ts`, `mediaGeneration.ts`, `flux.ts`, `/images/generate`, AssistantHub | Implemented in source, provider-dependent | Uses the configured hosted Images API with a low-quality default and one-image UI default; supports one validated reference image up to 1 MB through the JSON API. Verify model access, real output, edit behavior, session-only output handling, provider errors, and costs before public release. No fake SVG fallback remains. |
+| Web search / research | `apps/api/src/services/research.ts`, `deepResearch.ts`, `apps/api/src/routes/research.ts`, AssistantHub | Implemented in source, unverified | AssistantHub now exposes separate Web Search and Deep Research modes. Verify citation-to-evidence matching, stale/conflicting sources, dead links, empty results, and source preference behavior. |
 | Tools / agents | `toolRegistry.ts`, `toolExecution.ts`, `toolLoop.ts`, `agents.ts`, `agentTasks.ts` | Implemented, partial | Quotas/cost limits, end-to-end approval coverage, cancel/timeout/loop and cross-user tests. |
 | Voice | `apps/api/src/routes/voice.ts`, `services/voice.ts`, `VoiceButton.tsx`, NeuralComposer | Implemented, provider-dependent | Permission denial, noisy input, editing transcript, mobile support, language/voice options, interruption. |
 | Account deletion/export | `apps/api/src/routes/account.ts`, `accountPurge.ts`, `retention.ts` | Implemented, unverified | Confirm export contents, reauthentication, grace period, workspace ownership and final deletion. |
@@ -74,7 +75,7 @@ This is a directory-level inventory, not a migration/schema compatibility audit.
 These cannot safely be completed by code changes alone:
 
 1. Choose the real production AI provider/model and accept its data-processing terms.
-2. Set hard provider/account spending limits in the provider dashboard and decide the maximum monthly spend. Keep paid AI disabled until this is done.
+2. Set hard provider/account spending limits in the provider dashboard and decide the maximum monthly spend. The production startup gate requires an operator attestation and ₹500 target, but this is not an in-app billing integration. Keep paid AI disabled until the provider cap is independently verified.
 3. Configure production SMTP, database, allowed origins, secrets, and session settings.
 4. Choose and purchase a domain only after comparing full first-year and renewal prices.
 5. Choose hosting/database tiers and confirm they fit the ₹2,000 initial budget and ongoing costs.
@@ -89,7 +90,7 @@ These cannot safely be completed by code changes alone:
 
 - The public SiteNav and landing page now consume the shared theme provider; the cookie-consent UI is placed inside that provider and follows the selected theme.
 - Leaving the chat aborts the active stream and in-progress upload controllers.
-- Client-disconnect cancellation is passed from the stream route through `runStream` and the model-provider adapters. This path needs tests against native/production providers, local Ollama, hosted fetch, partial message persistence, and abort timing.
+- Client-disconnect cancellation is passed from the stream route through `runStream` and the model-provider adapters. This path needs tests against the remaining supported provider paths, partial message persistence, and abort timing. Ollama was removed on the public-beta branch.
 - When research pages yield no readable evidence, search-result links are retained for transparency rather than returning an empty source list.
 - If distributed rate limiting is configured, failure of the shared limiter now fails closed. Confirm this matches the deployed backend and expected availability policy.
 

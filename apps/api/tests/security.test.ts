@@ -73,8 +73,8 @@ async function main() {
   test("chat context stays bounded while preserving the system prompt", async () => {
     const prepared = await prepareChat({ messages: Array.from({ length: 100 }, (_, index) => ({ role: index % 2 ? "assistant" : "user", content: "x".repeat(2_000) })), personality: "be helpful" });
     assert.equal(prepared.validationError, null);
-    assert.equal(prepared.ollamaMessages[0].role, "system");
-    assert.ok(prepared.ollamaMessages.reduce((total, message) => total + message.content.length, 0) <= 120_000);
+    assert.equal(prepared.providerMessages[0].role, "system");
+    assert.ok(prepared.providerMessages.reduce((total, message) => total + message.content.length, 0) <= 120_000);
   });
   test("TOTP matches the RFC 6238 SHA-1 test vector", () => {
     const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
