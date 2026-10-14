@@ -33,7 +33,9 @@
     "test": "npm run test:api && npm run test --workspace=@bobai/bobhs",
     "audit": "npm audit --workspaces --include-workspace-root",
     "smoke": "tsx scripts/smoke.ts",
-    "repo:preflight": "node scripts/repo-preflight.mjs"
+    "repo:preflight": "node scripts/repo-preflight.mjs",
+    "setup:image-generation": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-image-generation.ps1",
+    "test:image-generation": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-image-generation.ps1"
   },
   "overrides": {
     "esbuild": "^0.28.2",
