@@ -45,8 +45,12 @@ export async function runRetentionCleanup(now = new Date()) {
   let uploadRows = 0;
   let storageCleanupPending = 0;
   if (imageRetentionDays > 0 || documentRetentionDays > 0) {
+    const expiredCategories = [
+      ...(imageRetentionDays > 0 ? [and(lt(uploads.createdAt, imageCutoff), sql`${uploads.mimeType} like 'image/%'`)] : []),
+      ...(documentRetentionDays > 0 ? [and(lt(uploads.createdAt, documentCutoff), sql`${uploads.mimeType} not like 'image/%'`)] : []),
+    ];
     const candidates = await db.select({ id: uploads.id, workspaceId: uploads.workspaceId, storageKey: uploads.storageKey, mimeType: uploads.mimeType, createdAt: uploads.createdAt, metadata: uploads.metadata })
-      .from(uploads).where(isNull(uploads.deletedAt)).orderBy(asc(uploads.createdAt)).limit(500);
+      .from(uploads).where(and(isNull(uploads.deletedAt), or(...expiredCategories))).orderBy(asc(uploads.createdAt)).limit(500);
     for (const file of candidates) {
       const isImage = file.mimeType.startsWith("image/");
       const days = isImage ? imageRetentionDays : documentRetentionDays;
