@@ -30,6 +30,14 @@ test("local image request limits and image MIME validation are enforced before m
   await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64," + "A".repeat(2_800_001)]), /reference images/);
 });
 
+test("image generation validates count and quality controls before starting the model", async () => {
+  const { generateImages } = await import("../src/services/mediaGeneration.js");
+  await assert.rejects(() => generateImages("test", 0), /count must be an integer between 1 and 4/);
+  await assert.rejects(() => generateImages("test", 1, undefined, undefined, { steps: 9 }), /steps must be an integer between 10 and 50/);
+  await assert.rejects(() => generateImages("test", 1, undefined, undefined, { guidanceScale: Number.NaN }), /guidance scale must be a number between 1 and 15/);
+  await assert.rejects(() => generateImages("test", 1, undefined, undefined, { negativePrompt: "x".repeat(2001) }), /negative prompt must be text under 2000 characters/);
+});
+
 test("local vision validates image bytes before contacting the configured Ollama model", async () => {
   const { analyzeImage } = await import("../src/services/vision.js");
   await assert.rejects(() => analyzeImage("not base64"), /valid PNG, JPEG, or WebP base64 data/);
