@@ -23,8 +23,23 @@ export async function sendResendOtp(email: string, code: string) {
       signal: controller.signal,
     });
     if (!response.ok) {
-      await response.body?.cancel().catch(() => undefined);
-      throw new Error(`Resend rejected email delivery with HTTP ${response.status}`);
+      // Resend returns a useful JSON error message (for example, testing-recipient
+      // restrictions or an unverified sender). Preserve that explanation in local
+      // server logs without ever including request headers or credentials.
+      let detail = "";
+      try {
+        const payload: unknown = await response.json();
+        if (payload && typeof payload === "object") {
+          const record = payload as Record<string, unknown>;
+          const candidate = typeof record.message === "string" ? record.message
+            : typeof record.error === "string" ? record.error
+            : typeof record.name === "string" ? record.name : "";
+          detail = candidate.replace(/[\\r\\n\\t]+/g, " ").slice(0, 300);
+        }
+      } catch {
+        await response.body?.cancel().catch(() => undefined);
+      }
+      throw new Error(`Resend rejected email delivery with HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
     }
     await response.body?.cancel().catch(() => undefined);
   } finally {
