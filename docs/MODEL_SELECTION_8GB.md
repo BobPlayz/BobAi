@@ -93,6 +93,7 @@ Then finish setup in this order:
 
 1. Copy `.env.example` to `.env` only if you do not already have a private `.env`; do not overwrite existing secrets.
 2. Set `DATABASE_URL`, verify that it points at the intended database, then run `npm run db:migrate` to apply the repository SQL migrations.
+3. If the database already contains saved memories, run `npm run memory:reindex` once to rebuild semantic vectors with the selected embedding model. This can take time and should be run while Jarvis is not serving user requests.
 3. Set the Ollama and media model paths listed above. Never commit `.env` or paste its secrets into chat.
 4. Start Ollama, then start Jarvis with `npm run ai`.
 5. Verify chat, streaming, coding, image understanding, semantic memory, research citations, speech transcription, speech output, and one 512×512 image separately.
