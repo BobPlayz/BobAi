@@ -16,7 +16,7 @@ function settingValue(rows: Array<{ key: string; value: unknown }>, key: string)
 function latestUserText(value: unknown) { if (!Array.isArray(value)) return ""; for (let index = value.length - 1; index >= 0; index -= 1) { const message = value[index]; if (!message || typeof message !== "object") continue; const record = message as Record<string, unknown>; if (record.role === "user" && typeof record.content === "string") return record.content; } return ""; }
 router.post("/", chatLimit, async (req, res) => {
   const controller = new AbortController();
-  const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
+  const onDisconnect = () => { if (!res.writableEnded) controller.abort(new Error("client disconnected")); };
   req.once("aborted", onDisconnect);
   res.once("close", onDisconnect);
   try {
