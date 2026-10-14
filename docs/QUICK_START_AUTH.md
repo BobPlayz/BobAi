@@ -5,12 +5,12 @@ The browser entry flow asks for a display name, email address, and agreement to 
 ## Required production configuration
 
 - `DATABASE_URL`: a working Postgres database with the current BobAI schema/migrations applied.
-- `BOBAI_SMTP_HOST`, `BOBAI_SMTP_PORT`, and `BOBAI_SMTP_FROM`: working email delivery. If the SMTP server requires authentication, also set `BOBAI_SMTP_USER` and `BOBAI_SMTP_PASSWORD`.
+- Preferred: `RESEND_API_KEY` and `RESEND_FROM_EMAIL`, with a sender/domain verified in Resend. Alternatively configure `BOBAI_SMTP_HOST`, `BOBAI_SMTP_PORT`, and `BOBAI_SMTP_FROM`; if authentication is required, also set `BOBAI_SMTP_USER` and `BOBAI_SMTP_PASSWORD`.
 - `BOBAI_WEB_URL` and `CORS_ORIGIN`: the actual deployed web origin(s).
 - `BOBAI_TERMS_VERSION`: optional server-side accepted terms version. If set, it must match `NEXT_PUBLIC_TERMS_VERSION` in the web build.
 - `NEXT_PUBLIC_TERMS_VERSION`: the version/date displayed as accepted by the frontend. Default is `2026-10-13`; change it whenever the legal terms version changes, and keep it synchronized with the API configuration.
 
-In development, OTP codes are logged by the API if SMTP is not configured. This development fallback must not be used in production. Production should fail closed when SMTP is missing.
+In development, OTPs are not logged by default. Only set `BOBAI_DEV_LOG_OTP=true` for local-only development if you explicitly want terminal codes. Production refuses to start unless complete Resend or SMTP delivery settings are provided.
 
 ## Security and account notes
 
@@ -18,7 +18,7 @@ In development, OTP codes are logged by the API if SMTP is not configured. This 
 - Session cookies are HttpOnly and Secure in production; the API refreshes the session through the existing refresh-token rotation logic.
 - Existing password, OAuth, and OTP endpoints remain in the API for compatibility, but the visible login page now uses the quick-start flow.
 - Account deletion can be requested from Settings → Privacy after email-OTP reauthentication. The account is disabled immediately; permanent cleanup runs after a 30-day grace period. Users who still own shared workspaces are skipped by the cleanup worker until that ownership is resolved.
-- Accounts with an additional authenticator-based MFA requirement cannot finish through the simplified quick-start screen yet. The API refuses to bypass MFA; a dedicated MFA step in this screen remains unfinished.
+- Accounts with an additional authenticator-based MFA requirement must complete the dedicated MFA challenge; the API refuses to bypass MFA. Verify the flow end to end before launch.
 - Email verification proves control of an inbox, not a person's legal identity.
 - Before public launch, review the privacy/terms text and age-appropriate requirements with a responsible adult/legal adviser. Do not collect more personal information than necessary.
 - Do not commit real SMTP credentials, database URLs, or AI provider keys.
@@ -26,4 +26,4 @@ In development, OTP codes are logged by the API if SMTP is not configured. This 
 
 ## Handoff status
 
-The quick-start flow and the broader account/session behavior are implemented in source but still require the final build/test and end-to-end verification pass. In particular verify existing users, expired/used codes, throttling, SMTP delivery, refresh/sign-out, secure cookies, terms-version mismatch, MFA-required accounts, and account deletion reauthentication. Do not bypass MFA to simplify the onboarding path.
+The quick-start flow and the broader account/session behavior are implemented in source but still require the final build/test and end-to-end verification pass. In particular verify existing users, expired/used codes, throttling, Resend/SMTP delivery, refresh/sign-out, secure cookies, terms-version mismatch, MFA-required accounts, and account deletion reauthentication. Do not bypass MFA to simplify the onboarding path.
