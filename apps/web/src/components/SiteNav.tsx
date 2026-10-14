@@ -24,9 +24,9 @@ export default function SiteNav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6">
       <nav className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-xl ${light ? "border-[#e5e7eb] bg-white/90" : "border-white/10 bg-black/30"}`} aria-label="Primary navigation">
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight" aria-label="Bob AI home">
+        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight" aria-label="Jarvis home">
           <span className={`grid size-8 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm ${light ? "text-sky-700" : "text-cyan-200"}`} aria-hidden="true">B</span>
-          <span>Bob AI</span>
+          <span>Jarvis</span>
         </Link>
         <div className="hidden items-center gap-1 sm:flex">
           {links.slice(1).map(([label, href]) => (
@@ -41,7 +41,7 @@ export default function SiteNav() {
             </div>
           </details>
           <button type="button" onClick={toggleTheme} aria-label={light ? "Switch to dark theme" : "Switch to light theme"} title={light ? "Switch to dark theme" : "Switch to light theme"} className={`grid size-9 place-items-center rounded-xl border ${light ? "border-[#d1d5db] text-[#374151] hover:bg-black/5" : "border-white/10 text-white/75 hover:bg-white/5"}`}>{light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</button>
-          <Link href="/chat" className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_0_24px_rgba(34,211,238,.2)] hover:-translate-y-0.5">Try Bob AI</Link>
+          <Link href="/chat" className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_0_24px_rgba(34,211,238,.2)] hover:-translate-y-0.5">Try Jarvis</Link>
         </div>
       </nav>
     </header>

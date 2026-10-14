@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Bob AI",
-    short_name: "Bob AI",
+    name: "Jarvis",
+    short_name: "Jarvis",
     description: "An AI workspace for chat, research, creation, and development.",
     start_url: "/",
     display: "standalone",
