@@ -3,7 +3,6 @@ import { and, desc, eq } from "drizzle-orm";
 import { Router } from "express";
 import { db, researchSessions } from "@bobai/db";
 import { webSearch } from "../services/research.js";
-import { deepResearch } from "../services/deepResearch.js";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 import { recordResearchSources, reserveResearchRequest } from "../services/researchQuota.js";
@@ -11,34 +10,6 @@ import { listResearchClaims, saveResearchClaims } from "../services/researchClai
 const router = Router(); const limit = createUserRateLimit(20, 60_000); const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function citations(sessionId: string, sources: Array<{ title: string; url: string; snippet?: string; publishedAt?: string }>) { return sources.map((source, index) => ({ id: `${sessionId}:${index + 1}`, index: index + 1, title: source.title, url: source.url, snippet: source.snippet, publishedAt: source.publishedAt })); }
 router.post("/search", limit, async (req, res) => { const query = typeof req.body?.query === "string" ? req.body.query.trim() : ""; if (!query) return res.status(400).json({ error: "query is required" }); if (query.length > 2_000) return res.status(400).json({ error: "query is too long" }); const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options) ? req.body.options as Record<string, unknown> : {}; const controller = new AbortController(); const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); }; req.once("aborted", onDisconnect); res.once("close", onDisconnect); try { const reservation = await reserveResearchRequest(req.user!.id); const result = await webSearch(query, options, controller.signal); if (controller.signal.aborted || res.destroyed) return; const quota = await recordResearchSources(req.user!.id, result.sources.length, reservation.windowStart); if (controller.signal.aborted || res.destroyed) return; const workspace = await ensurePersonalWorkspace(req.user!.id); if (controller.signal.aborted || res.destroyed) return; const sessionId = randomUUID(); await db.insert(researchSessions).values({ id: sessionId, workspaceId: workspace.id, userId: req.user!.id, query: result.query, sources: result.sources, status: "completed" }); return res.json({ ...result, sessionId, quota, citations: citations(sessionId, result.sources) }); } catch (error) { if (controller.signal.aborted || res.destroyed) return; if (process.env.NODE_ENV !== "production") console.error("research failed", error); const message = error instanceof Error ? error.message : "web search unavailable"; if (/query is required|query is too long/i.test(message)) return res.status(400).json({ error: message }); if (/quota exceeded/i.test(message)) return res.status(429).json({ error: message }); return res.status(503).json({ error: "web search unavailable" }); } finally { req.off("aborted", onDisconnect); res.off("close", onDisconnect); } });
-router.post("/deep-search", limit, async (req, res) => {
-  const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
-  if (!query) return res.status(400).json({ error: "query is required" });
-  if (query.length > 2_000) return res.status(400).json({ error: "query is too long" });
-  const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options) ? req.body.options as Record<string, unknown> : {};
-  const controller = new AbortController();
-  const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
-  req.once("aborted", onDisconnect); res.once("close", onDisconnect);
-  try {
-    const reservation = await reserveResearchRequest(req.user!.id);
-    const result = await deepResearch(query, options, controller.signal);
-    if (controller.signal.aborted || res.destroyed) return;
-    const quota = await recordResearchSources(req.user!.id, result.sources.length, reservation.windowStart);
-    if (controller.signal.aborted || res.destroyed) return;
-    const workspace = await ensurePersonalWorkspace(req.user!.id);
-    if (controller.signal.aborted || res.destroyed) return;
-    const sessionId = randomUUID();
-    await db.insert(researchSessions).values({ id: sessionId, workspaceId: workspace.id, userId: req.user!.id, query: result.query, sources: result.sources, answer: result.synthesis, status: "completed" });
-    return res.json({ ...result, sessionId, quota, citations: citations(sessionId, result.sources) });
-  } catch (error) {
-    if (controller.signal.aborted || res.destroyed) return;
-    const message = error instanceof Error ? error.message : "deep research unavailable";
-    if (/quota exceeded/i.test(message)) return res.status(429).json({ error: message });
-    if (/query is required|query is too long/i.test(message)) return res.status(400).json({ error: message });
-    if (process.env.NODE_ENV !== "production") console.error("deep research failed", error);
-    return res.status(503).json({ error: "deep research unavailable" });
-  } finally { req.off("aborted", onDisconnect); res.off("close", onDisconnect); }
-});
 router.get("/sessions", limit, async (req, res) => { try { const workspace = await ensurePersonalWorkspace(req.user!.id); const rows = await db.select({ id: researchSessions.id, query: researchSessions.query, sources: researchSessions.sources, answer: researchSessions.answer, status: researchSessions.status, createdAt: researchSessions.createdAt, updatedAt: researchSessions.updatedAt }).from(researchSessions).where(and(eq(researchSessions.workspaceId, workspace.id), eq(researchSessions.userId, req.user!.id))).orderBy(desc(researchSessions.createdAt)).limit(100); return res.json({ sessions: rows }); } catch { return res.status(503).json({ error: "research history unavailable" }); } });
 router.get("/sessions/:id", async (req, res) => { const id = String(req.params.id); if (!UUID.test(id)) return res.status(400).json({ error: "invalid research session id" }); try { const workspace = await ensurePersonalWorkspace(req.user!.id); const [row] = await db.select().from(researchSessions).where(and(eq(researchSessions.id, id), eq(researchSessions.workspaceId, workspace.id), eq(researchSessions.userId, req.user!.id))).limit(1); return row ? res.json({ session: row }) : res.status(404).json({ error: "research session not found" }); } catch { return res.status(503).json({ error: "research history unavailable" }); } });
 router.post("/sessions/:id/replay", limit, async (req, res) => { const id = String(req.params.id); if (!UUID.test(id)) return res.status(400).json({ error: "invalid research session id" }); try { const workspace = await ensurePersonalWorkspace(req.user!.id); const [source] = await db.select({ query: researchSessions.query }).from(researchSessions).where(and(eq(researchSessions.id, id), eq(researchSessions.workspaceId, workspace.id), eq(researchSessions.userId, req.user!.id))).limit(1); if (!source) return res.status(404).json({ error: "research session not found" }); const reservation = await reserveResearchRequest(req.user!.id); const result = await webSearch(source.query, {}); const quota = await recordResearchSources(req.user!.id, result.sources.length, reservation.windowStart); const sessionId = randomUUID(); await db.insert(researchSessions).values({ id: sessionId, workspaceId: workspace.id, userId: req.user!.id, query: result.query, sources: result.sources, status: "replayed" }); return res.json({ ...result, sessionId, replayedFrom: id, quota, citations: citations(sessionId, result.sources) }); } catch (error) { if (/quota exceeded/i.test(error instanceof Error ? error.message : "")) return res.status(429).json({ error: "research quota exceeded" }); return res.status(503).json({ error: "research replay unavailable" }); } });
