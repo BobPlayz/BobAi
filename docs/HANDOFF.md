@@ -122,3 +122,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - Image understanding is now routed to the local Ollama multimodal endpoint via `BOBAI_OLLAMA_VISION_MODEL` (default `moondream:1.8b`), with image signature/base64/size validation and cancellation from the streamed chat route. The custom specialist checkpoint is no longer required for image understanding.
 
 - Fixed strict local-vision image validation regexes and classified malformed image formats as client input errors rather than runtime failures.
+
+- Ollama readiness now includes the configured vision model in `requiredModels`/`missingModels`, and regression tests cover the multimodal request path against a mocked local endpoint.

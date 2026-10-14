@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
-import { ollamaModelFor, ollamaStatus } from "../src/services/ollamaProvider.js";
+import { ollamaModelFor, ollamaStatus, ollamaVision } from "../src/services/ollamaProvider.js";
 
 const originalFetch = globalThis.fetch;
-const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS"] as const;
+const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]])) as Record<(typeof keys)[number], string | undefined>;
 function restore() {
   globalThis.fetch = originalFetch;
@@ -82,7 +82,23 @@ test("Ollama status does not expose credentials and reports required local model
     const status = await ollamaStatus();
     assert.equal(status.provider, "ollama");
     assert.equal(status.ready, false);
-    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b"]);
+    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b", "moondream:1.8b"]);
     assert.equal(JSON.stringify(status).includes("secret"), false);
+  } finally { restore(); }
+});
+
+test("Ollama vision sends image bytes only to the configured local runtime", async () => {
+  try {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    process.env.BOBAI_OLLAMA_VISION_MODEL = "moondream:1.8b";
+    globalThis.fetch = async (input, init) => {
+      assert.equal(String(input), "http://127.0.0.1:11434/api/chat");
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.model, "moondream:1.8b");
+      assert.equal(body.stream, false);
+      assert.deepEqual(body.messages[0].images, ["iVBORw0KGgo="]);
+      return new Response(JSON.stringify({ message: { content: "A cat on a chair." } }), { status: 200 });
+    };
+    assert.deepEqual(await ollamaVision("iVBORw0KGgo=", "Describe the image"), { content: "A cat on a chair.", model: "moondream:1.8b" });
   } finally { restore(); }
 });
