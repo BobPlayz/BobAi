@@ -128,3 +128,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - The local image subprocess validates the complete request size before spawning Python and discards subprocess stderr to avoid pipe backpressure from library warnings; the image-specific JSON limit is now documented in both environment templates.
 
 - Added endpoint-specific JSON body limits for direct vision analysis, chat image attachments, browser voice transcription, and the native media endpoints. The previous global 2 MB parser silently prevented normal 3-minute WAV transcription and some image requests from reaching their handlers.
+
+- Replaced remaining runtime-facing assistant/product labels in workspace creation, system prompts, research synthesis, agent safety prompts, chat stream errors, and native-media errors with Jarvis. Legacy package scopes and `BOBAI_*` environment identifiers remain unchanged for compatibility.

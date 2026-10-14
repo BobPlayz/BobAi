@@ -20,7 +20,7 @@ for (const candidate of candidates) {
 }
 
 export function requireNativeMedia(): NativeMediaAddon {
-  if (!addon) throw new Error(`BobAI native media runtime unavailable: ${loadError}`);
+  if (!addon) throw new Error(`Jarvis native media runtime unavailable: ${loadError}`);
   return addon;
 }
 export function nativeMediaStatus() { if (!addon) return { ready: false, error: loadError, engine: "BobMedia native addon" }; return { ready: true, ...addon.status() }; }

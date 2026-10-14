@@ -15,7 +15,7 @@ export async function ensurePersonalWorkspace(userId: string, username?: string)
     if (existing[0]) return existing[0];
 
     const [user] = username ? [{ username }] : await tx.select({ username: users.username }).from(users).where(eq(users.id, userId)).limit(1);
-    const name = `${user?.username || "user"}'s BobAI`;
+    const name = `${user?.username || "user"}'s Jarvis`;
     const [workspace] = await tx.insert(workspaces).values({ ownerId: userId, name, type: "personal" }).returning({ id: workspaces.id, name: workspaces.name });
     if (!workspace) throw new Error("personal workspace creation failed");
     await tx.insert(workspaceMembers).values({ workspaceId: workspace.id, userId, role: "owner" });
