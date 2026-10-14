@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { matchesSourceTypes, sourceSearchQuery, sourceTypesFrom, type ResearchSource } from "../src/services/research.js";
+import { domainCredibility, matchesSourceTypes, sourceSearchQuery, sourceTypesFrom, type ResearchSource } from "../src/services/research.js";
 
 const source = (url: string): ResearchSource => ({ title: "Example", url });
 
@@ -31,4 +31,12 @@ test("source preferences modify the actual search query", () => {
   assert.match(sourceSearchQuery("climate change", ["official"]), /site:\.gov/);
   assert.equal(sourceSearchQuery("climate change", ["general"]), "climate change");
   assert.equal(sourceSearchQuery("climate change", []), "climate change");
+});
+
+test("credibility ranking requires an exact trusted-domain boundary", () => {
+  assert.equal(domainCredibility("www.reuters.com").credibility, "high");
+  assert.equal(domainCredibility("world.apnews.com").credibility, "high");
+  assert.equal(domainCredibility("fake-reuters.com").credibility, "low");
+  assert.equal(domainCredibility("reuters.com.attacker.example").credibility, "low");
+  assert.equal(domainCredibility("notwikipedia.org").credibility, "low");
 });
