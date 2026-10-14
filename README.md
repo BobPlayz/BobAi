@@ -39,6 +39,11 @@ The default environment values are:
     BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
     BOBAI_OLLAMA_MODEL=qwen2.5:3b
     BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
+    BOBAI_OLLAMA_VISION_MODEL=moondream:1.8b
+
+Pull the separate local vision model before using image understanding:
+
+    ollama pull moondream:1.8b
 
 You can choose other locally installed Ollama models in your private .env. For an 8 GB RAM computer, start with small quantized models and expect generation to be slower. Model quality and speed depend on hardware.
 
@@ -51,7 +56,7 @@ Jarvis uses a local Diffusers pipeline directly, without ComfyUI and without a h
 3. Set BOBAI_IMAGE_MODEL_PATH to that directory in .env.
 4. Restart the API and test one 512x512 image first.
 
-The model must already be on disk because inference uses local_files_only=True. CPU generation can be very slow and may run out of memory on an 8 GB laptop. Reference-image editing is not implemented in the local pipeline yet.
+The model must already be on disk because inference uses local_files_only=True. CPU generation can be very slow and may run out of memory on an 8 GB laptop. Reference-image editing is implemented through Diffusers `AutoPipelineForImage2Image` when the selected local model supports it. Actual generation/editing still needs to be tested with the downloaded model.
 
 ## Jarvis voice
 
