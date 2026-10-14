@@ -2,6 +2,8 @@ export type ChatImage = {
   id: string;
   url: string;
   prompt: string;
+  /** Server-side image record used to restore generated images after a reload. */
+  serverImageId?: string;
 };
 
 export type ChatFile = {
