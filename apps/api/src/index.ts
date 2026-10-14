@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createServer } from "node:http";
 import { app } from "./app.js";
 import { configureOtpDelivery } from "./services/otpDelivery.js";
-import { dbClient } from "@bobai/db";
+import { dbClient } from "@jarvis/db";
 import { validateProductionConfig } from "./config/validateProduction.js";
 
 const PORT = Number(process.env.PORT || 3001);
@@ -14,12 +14,12 @@ const MAX_HEADER_SIZE = 16 * 1024;
 
 validateProductionConfig();
 configureOtpDelivery();
-process.on("uncaughtException", (error) => { console.error("BobAI uncaught exception", error); process.exitCode = 1; void shutdown("uncaughtException"); });
-process.on("unhandledRejection", (reason) => { console.error("BobAI unhandled rejection", reason); });
+process.on("uncaughtException", (error) => { console.error("Jarvis uncaught exception", error); process.exitCode = 1; void shutdown("uncaughtException"); });
+process.on("unhandledRejection", (reason) => { console.error("Jarvis unhandled rejection", reason); });
 
 const server = createServer({ maxHeaderSize: MAX_HEADER_SIZE }, app);
 server.listen(PORT, () => {
-  console.log(`BobAI API listening on http://localhost:${PORT}`);
+  console.log(`Jarvis API listening on http://localhost:${PORT}`);
 });
 server.requestTimeout = REQUEST_TIMEOUT_MS;
 server.headersTimeout = HEADERS_TIMEOUT_MS;
@@ -31,20 +31,20 @@ let shuttingDown = false;
 async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`BobAI API received ${signal}; shutting down gracefully`);
+  console.log(`Jarvis API received ${signal}; shutting down gracefully`);
   const timeout = setTimeout(() => {
-    console.error("BobAI API shutdown timed out; forcing exit");
+    console.error("Jarvis API shutdown timed out; forcing exit");
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS);
   timeout.unref();
   server.close(async (error) => {
     clearTimeout(timeout);
     if (error) {
-      console.error("BobAI API shutdown failed", error);
+      console.error("Jarvis API shutdown failed", error);
       process.exitCode = 1;
       return;
     }
-    try { await dbClient.end({ timeout: 5 }); } catch (dbError) { console.error("BobAI database shutdown failed", dbError); process.exitCode = 1; return; }
+    try { await dbClient.end({ timeout: 5 }); } catch (dbError) { console.error("Jarvis database shutdown failed", dbError); process.exitCode = 1; return; }
     process.exitCode = 0;
   });
 }

@@ -1,6 +1,6 @@
 # Code Style Guide
 
-Standards for writing consistent, readable, and maintainable BobAI code.
+Standards for writing consistent, readable, and maintainable Jarvis code.
 
 ## General principles
 
