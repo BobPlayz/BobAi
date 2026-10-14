@@ -22,6 +22,10 @@ export function validateProductionConfig() {
   if (process.env.TRUST_PROXY === "true") { const hops = Number(process.env.TRUST_PROXY_HOPS); if (!Number.isInteger(hops) || hops < 1 || hops > 10) throw new Error("TRUST_PROXY_HOPS must be an integer from 1 to 10"); }
   const admins = (process.env.BOBAI_ADMIN_EMAILS || "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
   if (!admins.length || new Set(admins).size !== admins.length || admins.some((email) => !/^\S+@\S+\.\S+$/.test(email))) throw new Error("BOBAI_ADMIN_EMAILS must contain one or more distinct valid email addresses in production");
+  for (const key of ["BOBAI_UPLOAD_IMAGE_RETENTION_DAYS", "BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS"]) {
+    const raw = process.env[key];
+    if (raw !== undefined && (!/^\\d+$/.test(raw) || Number(raw) > 3650)) throw new Error(`${key} must be an integer from 0 to 3650 (0 disables automatic deletion)`);
+  }
   if (process.env.BOBAI_CODING_AGENT_URL && (!process.env.BOBAI_CODING_AGENT_KEY || process.env.BOBAI_CODING_AGENT_KEY.length < 32)) throw new Error("BOBAI_CODING_AGENT_KEY must be at least 32 characters when the coding-agent bridge is enabled");
   if (process.env.BOBAI_CODING_AGENT_URL && process.env.BOBAI_CODING_AGENT_SANDBOX_ATTESTED !== "true") throw new Error("BOBAI_CODING_AGENT_SANDBOX_ATTESTED must be true before the coding-agent bridge can run in production");
 }

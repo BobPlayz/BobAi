@@ -98,3 +98,7 @@ Rate limiting is configured through API middleware. If distributed limiting is e
 ### File processing recovery
 
 - `POST /files/:id/reindex` retries extraction/indexing for an owned, non-deleted upload. Text and PDF files are re-indexed; supported image uploads are re-run through OCR and then indexing. The endpoint returns `202 Accepted` and exposes processing state through `GET /files/:id`.
+
+### Upload retention policy
+
+The scheduled retention worker soft-deletes image uploads after 30 days and other supported document uploads after 90 days by default. Configure `BOBAI_UPLOAD_IMAGE_RETENTION_DAYS` and `BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS` to an integer from `1` to `3650`; use `0` to disable automatic deletion for that category. Expired uploads and their indexed chunks are removed from user-visible/searchable results before object storage cleanup is attempted. Storage cleanup failures are reported in the worker result for operator follow-up.
