@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   title: { default: "Bob AI", template: "%s | Bob AI" },
   description: "An AI workspace for chat, research, creation, development, memory, files, tools, agents, and automations.",
   applicationName: "Bob AI",
+  creator: "Origin Productions",
+  publisher: "Origin Productions",
   generator: "Next.js",
   keywords: ["AI workspace", "AI assistant", "AI chat", "AI tools", "research", "coding"],
   icons: { icon: "/bob-logo.ico" },

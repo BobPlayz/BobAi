@@ -18,9 +18,17 @@ Default model: `gpt-4o-mini`. Verify current provider pricing, data-use terms, m
 - The provider is not enabled unless `BOBAI_PROVIDER=openai` is set.
 - The adapter caps input size, response size, output tokens, and request timeout.
 - Provider errors are returned as bounded error messages. The API key is not included in status output or error messages.
-- This adapter does not create a hard monetary budget. Set provider-side spending/rate limits before using a paid key.
+- This adapter does not create a hard monetary budget. For production, startup now fails closed unless the hosted provider is selected, the API key exists, the configured target is exactly ₹500/month, and `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true`. Set and verify a hard provider-side monthly spending cap before setting that flag. The flag is an operator attestation, not an automatic billing API integration. Prefer a monthly or usage-based plan with no long-term commitment and verify cancellation timing before purchase.
 - Requests sent to a hosted provider leave the local machine and are subject to that provider's data-processing terms.
-- Use the optional Ollama path instead when local inference is required and the hardware can handle it.
+- Ollama is not a supported option in the public-beta branch. Do not expose or document a local-model fallback.
+
+## Hosted image generation and editing
+
+When `BOBAI_PROVIDER=openai` and the server-side key is configured, BobAI can use the Images API for real image generation and reference-image editing. The image model is configurable with `BOBAI_OPENAI_IMAGE_MODEL` (the example defaults to `gpt-image-2`). Requests default to low quality, square 1024×1024 output, and one image per user request to keep cost predictable. Reference images must be PNG, JPEG, or WebP data URLs under 2 MB each.
+
+This is a provider-backed capability, not a free local feature. Model access, image-generation pricing, supported parameters, and organization verification requirements can change. Review the current [Image generation guide](https://developers.openai.com/api/docs/guides/image-generation) before enabling it. If no real generation model is configured, BobAI returns an explicit unavailable error instead of inventing a placeholder image.
+
+For the ₹500/month target, set a **hard** project or organization spend limit in the provider dashboard, not only an alert. The provider documents that enforcement may not be instantaneous, so choose a cap conservatively below the total budget and account for currency conversion and taxes. See the [API spend limits guide](https://developers.openai.com/api/docs/guides/spend-limits). The environment flag only records that an operator checked the provider setting; it cannot verify the dashboard itself.
 
 ## Quick configuration example
 
@@ -36,4 +44,4 @@ The empty key is intentional. Add a valid secret only in your private API enviro
 
 ## Streaming cancellation
 
-The hosted stream adapter accepts an optional `AbortSignal` and combines it with the configured request timeout. The API stream route is intended to abort the provider fetch when the browser disconnects. Verify cancellation, partial-response persistence, provider compatibility, and timeout behavior before enabling a paid provider. This does not implement a hard monetary budget; provider-side limits are still mandatory.
+The hosted stream adapter accepts an optional `AbortSignal` and combines it with the configured request timeout. The API stream route is intended to abort the provider fetch when the browser disconnects. Verify cancellation, partial-response persistence, provider compatibility, and timeout behavior before enabling a paid provider. This does not implement a hard monetary budget; provider-side limits are still mandatory. The production startup flag is an operator attestation, not an automatic check of the provider account.

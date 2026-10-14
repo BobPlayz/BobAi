@@ -1,6 +1,10 @@
 export function validateProductionConfig() {
   if (process.env.NODE_ENV !== "production") return;
   const required = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL","BOBAI_SMTP_HOST","BOBAI_SMTP_PORT","BOBAI_SMTP_FROM","BOBAI_MFA_ENCRYPTION_KEY","BOBAI_TERMS_VERSION","BOBAI_TERMS_URL","BOBAI_PRIVACY_URL","BOBAI_LEGAL_CONTACT"];
+  if (process.env.BOBAI_PROVIDER?.trim().toLowerCase() !== "openai") throw new Error("BOBAI_PROVIDER=openai is required for the hosted-only public beta");
+  if (!process.env.OPENAI_API_KEY?.trim()) throw new Error("OPENAI_API_KEY is required for the hosted-only public beta");
+  if (process.env.BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED !== "true") throw new Error("Set a hard monthly spending limit in the provider dashboard, then set BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true");
+  if (Number(process.env.BOBAI_PROVIDER_MONTHLY_BUDGET_INR) !== 500) throw new Error("BOBAI_PROVIDER_MONTHLY_BUDGET_INR must be 500 unless the product owner explicitly revises the budget");
   const missing = required.filter((key) => !process.env[key]?.trim()); if (missing.length) throw new Error(`Missing production configuration: ${missing.join(", ")}`);
   const smtpPort = Number(process.env.BOBAI_SMTP_PORT); if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) throw new Error("BOBAI_SMTP_PORT must be an integer from 1 to 65535");
   const smtpUser = process.env.BOBAI_SMTP_USER?.trim(); const smtpPassword = process.env.BOBAI_SMTP_PASSWORD; if ((smtpUser && !smtpPassword) || (!smtpUser && smtpPassword)) throw new Error("BOBAI_SMTP_USER and BOBAI_SMTP_PASSWORD must be provided together");
