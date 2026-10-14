@@ -46,6 +46,7 @@ export default function ChatPage() {
       <ChatWindow
         messages={chat.activeConversation?.messages ?? []}
         loading={chat.loading}
+        loadingLabel={chat.generatingImage ? "creating your image" : "working on it"}
         onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
         onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
         onRegenerate={chat.regenerateLastAssistant}
