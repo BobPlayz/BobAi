@@ -12,6 +12,7 @@ import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
 
 const router = Router();
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const limit = createUserRateLimit(20, 60_000);
 const decode = (value: unknown, maxBytes: number) => {
   if (typeof value !== "string" || value.length > Math.ceil(maxBytes / 3) * 4 + 16 || !/^[A-Za-z0-9+/\s]*={0,2}$/.test(value)) throw new Error("invalid audio");
@@ -78,6 +79,7 @@ router.post("/turn", limit, async (req, res) => {
       return res.json({ transcript: spokenText, reply: "got it. i will remember that for future conversations.", memoryStored: true, audio: speech?.audio ?? null, mimeType: speech?.mimeType ?? null, voice: speech ? { engine: speech.engine, model: speech.model, language: speech.language, offline: speech.offline } : null });
     }
 
+    if (req.body?.conversationId !== undefined && (typeof req.body.conversationId !== "string" || !UUID.test(req.body.conversationId))) return res.status(400).json({ error: "invalid conversationId" });
     const conversationId = typeof req.body?.conversationId === "string" && req.body.conversationId.trim() ? req.body.conversationId.trim() : randomUUID();
     const loop = await runToolLoop(prepared.providerMessages, {
       userId: req.user!.id,
