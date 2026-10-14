@@ -49,6 +49,9 @@ export async function dbSaveConversation(input: { id: string; userId: string; wo
     else await tx.insert(conversations).values({ id: input.id, userId: input.userId, workspaceId: input.workspaceId, title: input.title });
     for (const message of input.messages) {
       if (!message.id) continue;
+      if (!["user", "assistant", "system"].includes(message.role)) throw new Error("invalid conversation message role");
+      const priorMessage = await tx.select({ conversationId: messages.conversationId }).from(messages).where(eq(messages.id, message.id)).limit(1);
+      if (priorMessage[0] && priorMessage[0].conversationId !== input.id) throw new Error("message ownership mismatch");
       await tx.insert(messages).values({ id: message.id, conversationId: input.id, role: message.role, content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null }).onConflictDoUpdate({ target: messages.id, set: { content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null, updatedAt: new Date() } });
     }
   }); return true;
