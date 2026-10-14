@@ -49,20 +49,43 @@ The default shares Qwen3.5 4B between chat, research synthesis, and image unders
 
 The shared Qwen3.5 4B model is the quality-first default for chat, research synthesis, and image understanding. Jarvis unloads other Ollama models before switching to the dedicated Qwen2.5-Coder 3B model, so the tags do not stay resident together. If 4B causes paging or out-of-memory errors, switch chat and vision to qwen3.5:2b. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
 
-## Local image generation
+## Image generation: Local and Power modes
 
-Jarvis generates new images locally through Hugging Face Diffusers. It does not require ComfyUI, a hosted image API, or a paid generation key.
+Jarvis has two image-generation modes. Choose one in your private `.env`.
+
+### Local mode (offline and free after setup)
+
+Keep:
+
+    BOBAI_IMAGE_PROVIDER=local
+    BOBAI_IMAGE_MODEL_PATH=models/image/tiny-sd
 
 On Windows, copy `.env.example` to `.env`, install Node dependencies, then run:
 
     npm run setup:image-generation
     npm run test:image-generation
 
-The setup command creates a dedicated Python 3.11 virtual environment, installs CPU-only PyTorch plus the optional Diffusers dependencies, downloads Segmind Tiny-SD (about 1.1 GB), and writes the local Python/model paths into your private `.env`. It does not overwrite unrelated environment settings. The first setup needs internet; after the model is downloaded, inference uses local files only. Tiny-SD is distributed under the CreativeML Open RAIL-M license, so review its terms before using or redistributing outputs.
+The setup command creates a dedicated Python 3.11 virtual environment, installs CPU-only PyTorch plus the optional Diffusers dependencies, downloads Segmind Tiny-SD (about 1.1 GB), and writes the local Python/model paths into your private `.env`. It does not overwrite unrelated environment settings. The first setup needs internet; after the model is downloaded, inference uses local files only. Tiny-SD is lightweight, not a premium-quality model. Review its CreativeML Open RAIL-M license before using or redistributing outputs.
 
-The smoke test performs actual 512x512 CPU inference and saves `storage/image-generation-smoke.png`. On an 8 GB laptop it can take several minutes and may fail if other applications consume too much RAM. Close heavy applications before running it. The API serializes image inference with Ollama and unloads Ollama model weights before generation to reduce memory pressure.
+The smoke test performs actual 512x512 CPU inference and saves `storage/image-generation-smoke.png`. On an 8 GB laptop it can take several minutes and may fail if other applications consume too much RAM. Close heavy applications before running it. Jarvis serializes local image inference with Ollama and unloads Ollama model weights before generation to reduce memory pressure.
 
-The authenticated API endpoint is `POST /images/generate` with JSON such as `{"prompt":"a tiny robot in a cyan glass laboratory","width":512,"height":512,"count":1}`. The response contains generated PNG data URLs and stores the image in the user's image history. Reference-image editing is available only when the selected Diffusers model supports the image-to-image pipeline.
+### Power mode (stronger hosted image generation)
+
+Power mode sends the prompt to OpenAI's hosted image API, which can produce substantially more detailed images than Tiny-SD. It requires internet, an OpenAI API key with image-generation access, and available API billing/credits. **It is not free or offline.** Check current provider pricing and limits before enabling it.
+
+Set these values in your private `.env`:
+
+    BOBAI_IMAGE_PROVIDER=openai
+    BOBAI_IMAGE_API_KEY=your_private_api_key
+    BOBAI_IMAGE_API_MODEL=gpt-image-1
+
+Restart Jarvis after changing the provider. Keep the API key out of Git, screenshots, logs, and shared files. Requests and prompts leave your computer when Power mode is enabled. If the key is missing, rejected, or out of quota, Jarvis returns a clear setup error instead of pretending it generated an image.
+
+Power mode currently supports text-to-image generation, not reference-image editing. Switch back to `BOBAI_IMAGE_PROVIDER=local` for the local Diffusers image-to-image pipeline. The Power provider maps requested aspect ratio to the hosted model's supported image sizes; output dimensions can therefore differ from the local mode's exact width and height.
+
+### API and history
+
+The authenticated API endpoint is `POST /images/generate` with JSON such as `{"prompt":"a tiny robot in a cyan glass laboratory","width":512,"height":512,"count":1}`. The response contains generated PNG data URLs and stores the image in the user's image history. Generated images can be restored from history. Real inference still needs to be verified on the target computer; a passing code build does not prove the local model or remote account is configured.
 
 ## Jarvis voice
 
