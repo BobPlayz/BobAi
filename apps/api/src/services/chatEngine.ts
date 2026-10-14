@@ -46,15 +46,16 @@ function shouldUseCodingModel(messages: ProviderMessage[], modelId?: string) {
   const latestUser = [...messages].reverse().find((message) => message.role === "user")?.content || "";
   return /\b(code|coding|debug|refactor|typescript|javascript|python|react|next\.js|css|html|sql|api|endpoint|function|component|script|compiler|repository|bugfix)\b|\b(write|build|implement)\b.{0,40}\b(app|website|program|bot|api|script|function|component|tool|game)\b/i.test(latestUser);
 }
-export async function runChat(messages: ProviderMessage[], modelId?: string) {
+export async function runChat(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal) {
   const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "bob" });
   const coding = shouldUseCodingModel(messages, modelId);
   try {
-    const result = await bobModelProvider.chat(messages, coding ? "coding" : selected.provider, coding ? undefined : selected.model);
+    const result = await bobModelProvider.chat(messages, coding ? "coding" : selected.provider, coding ? undefined : selected.model, signal);
     return { message: { content: result.content }, model: result.model, provider: result.provider };
   } catch (error) {
     if (!coding) throw error;
-    const fallback = await bobModelProvider.chat(messages, "bob");
+    if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new DOMException("Chat request cancelled.", "AbortError");
+    const fallback = await bobModelProvider.chat(messages, "bob", undefined, signal);
     return { message: { content: fallback.content }, model: fallback.model, provider: fallback.provider };
   }
 }

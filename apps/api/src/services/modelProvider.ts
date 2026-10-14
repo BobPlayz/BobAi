@@ -6,8 +6,8 @@ export type ProviderResult = { content: string; model: string; provider: "bob" |
 const MAX_RESPONSE_CHARS = 200_000;
 
 export class BobModelProvider {
-  async chat(messages: ProviderMessage[], provider: "bob" | "coding" = "bob", modelOverride?: string): Promise<ProviderResult> {
-    const result = await ollamaChat(messages, provider, modelOverride);
+  async chat(messages: ProviderMessage[], provider: "bob" | "coding" = "bob", modelOverride?: string, signal?: AbortSignal): Promise<ProviderResult> {
+    const result = await ollamaChat(messages, provider, modelOverride, signal);
     if (!result.content || result.content.length > MAX_RESPONSE_CHARS) throw new Error("Ollama returned an invalid response");
     return { content: result.content, model: result.model, provider };
   }

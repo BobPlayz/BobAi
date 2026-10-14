@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { domainCredibility, matchesSourceTypes, sourceSearchQuery, sourceTypesFrom, type ResearchSource } from "../src/services/research.js";
+import { domainCredibility, matchesSourceTypes, sourceSearchQuery, sourceTypesFrom, webSearch, type ResearchSource } from "../src/services/research.js";
+import { deepResearch } from "../src/services/deepResearch.js";
 
 const source = (url: string): ResearchSource => ({ title: "Example", url });
 
@@ -39,4 +40,16 @@ test("credibility ranking requires an exact trusted-domain boundary", () => {
   assert.equal(domainCredibility("fake-reuters.com").credibility, "low");
   assert.equal(domainCredibility("reuters.com.attacker.example").credibility, "low");
   assert.equal(domainCredibility("notwikipedia.org").credibility, "low");
+});
+
+test("web search rejects an already-aborted request before cache or network access", async () => {
+  const controller = new AbortController();
+  controller.abort(new Error("client disconnected"));
+  await assert.rejects(() => webSearch("test query", {}, controller.signal), /client disconnected/);
+});
+
+test("deep research rejects cancellation before starting parallel searches", async () => {
+  const controller = new AbortController();
+  controller.abort(new Error("client disconnected"));
+  await assert.rejects(() => deepResearch("test query", {}, controller.signal), /client disconnected/);
 });

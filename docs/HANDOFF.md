@@ -113,6 +113,6 @@ The code changes recorded above were committed through GitHub file operations bu
 
 ## Latest implementation pass (2026-10-14)
 
-- Added request-disconnect cancellation propagation from the deep-research endpoint through parallel web searches, source fetching, and local synthesis signal checks. Search retries now stop promptly when the request is cancelled, and cancelled searches are not cached.
-- Added request-disconnect cancellation propagation to local image generation so the spawned Diffusers process can be terminated when the client leaves; avoid writing image records after a disconnected request.
+- Added request-disconnect cancellation propagation from the basic and deep-research endpoints through DuckDuckGo fetches, retry backoff, source fetching, and local Ollama synthesis. Search retries stop promptly when cancelled, and cancelled results are not cached.
+- Added request-disconnect cancellation propagation to local image generation so the spawned Diffusers process can be terminated when the client leaves; image records are not written after a disconnected request.
 - These changes are committed to `main`; GitHub Actions results must be inspected before claiming build/test success. External model assets and live provider/database behavior remain unverified.
