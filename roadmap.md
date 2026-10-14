@@ -342,3 +342,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 
 - Corrected the voice-turn orchestrator to read the actual chat-engine response shape (`reply.message.content`) before synthesizing speech.
 - **2026-10-14:** Aligned auth cookies (`jarvis_access`/`jarvis_refresh`) with production CSRF middleware and applied the voice payload limit to `/voice/turn` as well as `/voice/transcribe`.
+- **2026-10-14:** Aligned the authentication middleware and malformed-cookie regression test with the `jarvis_access` cookie used by the auth route and CSRF middleware.
