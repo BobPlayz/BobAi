@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
-import { ollamaModelFor, ollamaStatus, ollamaVision } from "../src/services/ollamaProvider.js";
+import { ollamaModelFor, ollamaStatus, ollamaVision, ollamaVisionModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
 
 const originalFetch = globalThis.fetch;
-const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS"] as const;
+const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS", "BOBAI_OLLAMA_NUM_CTX", "BOBAI_OLLAMA_NUM_PREDICT"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]])) as Record<(typeof keys)[number], string | undefined>;
 function restore() {
   globalThis.fetch = originalFetch;
@@ -14,11 +14,12 @@ function restore() {
   }
 }
 
-test("BobAI defaults to local Ollama models without API credentials", () => {
+test("BobAI defaults to one shared multimodal Ollama model without API credentials", () => {
   try {
     for (const key of keys) delete process.env[key];
-    assert.equal(ollamaModelFor("bob"), "qwen2.5:3b");
-    assert.equal(ollamaModelFor("coding"), "qwen2.5-coder:3b");
+    assert.equal(ollamaModelFor("bob"), "qwen3.5:2b");
+    assert.equal(ollamaModelFor("coding"), "qwen3.5:2b");
+    assert.equal(ollamaVisionModel(), "qwen3.5:2b");
     assert.equal(new BobModelProvider().isConfigured(), true);
   } finally { restore(); }
 });
@@ -105,5 +106,24 @@ test("Ollama vision sends image bytes only to the configured local runtime", asy
       return new Response(JSON.stringify({ message: { content: "A cat on a chair." } }), { status: 200 });
     };
     assert.deepEqual(await ollamaVision("iVBORw0KGgo=", "Describe the image"), { content: "A cat on a chair.", model: "moondream:1.8b" });
+  } finally { restore(); }
+});
+
+test("Ollama model unload releases resident weights before a memory-heavy image task", async () => {
+  try {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    const calls: Array<{ url: string; body?: Record<string, unknown> }> = [];
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/ps")) return new Response(JSON.stringify({ models: [{ name: "qwen3.5:2b" }, { name: "qwen3.5:2b" }] }), { status: 200 });
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      calls.push({ url, body });
+      return new Response(JSON.stringify({ response: "", done: true }), { status: 200 });
+    };
+    assert.deepEqual(await unloadOllamaModels(), ["qwen3.5:2b"]);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "http://127.0.0.1:11434/api/generate");
+    assert.equal(calls[0].body?.model, "qwen3.5:2b");
+    assert.equal(calls[0].body?.keep_alive, 0);
   } finally { restore(); }
 });
