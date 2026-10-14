@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 type Service = "api" | "web";
 
 function runTests(): boolean {
-  console.log("\n[BobAI] Running the configured automated test suite before startup.\n");
+  console.log("\n[Jarvis] Running the configured automated test suite before startup.\n");
   const result = spawnSync("npm", ["test"], {
     stdio: "inherit",
     shell: process.platform === "win32",
@@ -13,18 +13,18 @@ function runTests(): boolean {
   });
 
   if (result.error) {
-    console.error("[BobAI] Could not start the test command:", result.error.message);
+    console.error("[Jarvis] Could not start the test command:", result.error.message);
     return false;
   }
 
   if (result.status !== 0) {
     console.error(
-      `\n[BobAI] Tests failed (exit code ${result.status ?? "unknown"}). Services were not started. Fix the failures, then run npm run ai again.\n`,
+      `\n[Jarvis] Tests failed (exit code ${result.status ?? "unknown"}). Services were not started. Fix the failures, then run npm run ai again.\n`,
     );
     return false;
   }
 
-  console.log("\n[BobAI] All configured tests passed. Starting the development services...\n");
+  console.log("\n[Jarvis] All configured tests passed. Starting the development services...\n");
   return true;
 }
 
@@ -68,7 +68,7 @@ function openBrowser(url: string): void {
 
   const browser = spawn(command, args, { stdio: "ignore", detached: true });
   browser.on("error", () => {
-    console.log(`[BobAI] Open your browser manually at ${url}`);
+    console.log(`[Jarvis] Open your browser manually at ${url}`);
   });
   browser.unref();
 }
@@ -83,12 +83,12 @@ async function main(): Promise<void> {
   // Child workspace commands run from apps/api and apps/web, so load the root file here and pass it down.
   try {
     process.loadEnvFile(resolve(process.cwd(), ".env"));
-    console.log("[BobAI] Loaded root .env configuration.");
+    console.log("[Jarvis] Loaded root .env configuration.");
   } catch (error) {
     if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
       throw error;
     }
-    console.warn("[BobAI] No root .env file found. Services will use the environment variables already set.");
+    console.warn("[Jarvis] No root .env file found. Services will use the environment variables already set.");
   }
 
   const api = run("API", "api");
@@ -98,7 +98,7 @@ async function main(): Promise<void> {
   function shutdown(exitCode = 0): void {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.log("\n[BobAI] Shutting down API and web services...");
+    console.log("\n[Jarvis] Shutting down API and web services...");
     api.kill();
     web.kill();
     process.exitCode = exitCode;
@@ -129,12 +129,12 @@ async function main(): Promise<void> {
   process.on("SIGINT", () => shutdown(0));
   process.on("SIGTERM", () => shutdown(0));
 
-  console.log("\n[BobAI] Web app: http://localhost:3000");
-  console.log("[BobAI] Keep this terminal open. Press Ctrl+C to stop both services.\n");
+  console.log("\n[Jarvis] Web app: http://localhost:3000");
+  console.log("[Jarvis] Keep this terminal open. Press Ctrl+C to stop both services.\n");
   setTimeout(() => openBrowser("http://localhost:3000"), 2000);
 }
 
 main().catch((error: unknown) => {
-  console.error("[BobAI] Startup failed:", error);
+  console.error("[Jarvis] Startup failed:", error);
   process.exitCode = 1;
 });
