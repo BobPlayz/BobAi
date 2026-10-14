@@ -334,3 +334,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Added explicit HTTP 413/400 handling for JSON body-size and parse failures, so media payload limits produce accurate client errors instead of HTTP 500.
 - **2026-10-14:** Hardened memory context resolution so a caller cannot attach memory operations to a project from another workspace by supplying an arbitrary project UUID; archived/deleted projects are rejected.
 - **2026-10-14:** Added strict route-level validation for the `inputImages` field and corrected image-generation error status codes for invalid reference images and safety-policy rejections.
+- **2026-10-14:** Added image prompt-injection instructions to the local vision system message and propagated disconnect cancellation through `/vision/analyze`, with regression coverage for the system prompt and local-only image request.

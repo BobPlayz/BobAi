@@ -99,7 +99,9 @@ test("Ollama vision sends image bytes only to the configured local runtime", asy
       const body = JSON.parse(String(init?.body));
       assert.equal(body.model, "moondream:1.8b");
       assert.equal(body.stream, false);
-      assert.deepEqual(body.messages[0].images, ["iVBORw0KGgo="]);
+      assert.equal(body.messages[0].role, "system");
+      assert.match(body.messages[0].content, /untrusted data/i);
+      assert.deepEqual(body.messages[1].images, ["iVBORw0KGgo="]);
       return new Response(JSON.stringify({ message: { content: "A cat on a chair." } }), { status: 200 });
     };
     assert.deepEqual(await ollamaVision("iVBORw0KGgo=", "Describe the image"), { content: "A cat on a chair.", model: "moondream:1.8b" });
