@@ -22,3 +22,17 @@ test("local image request limits and image MIME validation are enforced before m
   await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64,!!!!"]), /reference images/);
   await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64," + "A".repeat(2_800_001)]), /reference images/);
 });
+
+test("local image request limits and image MIME validation are enforced before model startup", async () => {
+  const { generateImages } = await import("../src/services/mediaGeneration.js");
+  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64,SGVsbG8="]), /MIME does not match/);
+  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64,!!!!"]), /reference images/);
+  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64," + "A".repeat(2_800_001)]), /reference images/);
+});
+
+test("local vision validates image bytes before contacting the configured Ollama model", async () => {
+  const { analyzeImage } = await import("../src/services/vision.js");
+  await assert.rejects(() => analyzeImage("not base64"), /valid PNG, JPEG, or WebP base64 data/);
+  await assert.rejects(() => analyzeImage("data:image/png;base64,SGVsbG8="), /format is unsupported or does not match/);
+  await assert.rejects(() => analyzeImage("data:image/jpeg;base64," + "A".repeat(20_000_000)), /12 MB limit/);
+});

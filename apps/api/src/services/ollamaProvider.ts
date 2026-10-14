@@ -91,6 +91,37 @@ export async function ollamaChat(input: NativeMessage[], provider: "bob" | "codi
   return { content: content.trim(), model };
 }
 
+export async function ollamaVision(imageBase64: string, prompt: string, signal?: AbortSignal) {
+  const model = (process.env.BOBAI_OLLAMA_VISION_MODEL || "moondream:1.8b").trim();
+  if (!model || model.length > 160 || /[\\r\\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama vision model name");
+  if (typeof imageBase64 !== "string" || !imageBase64 || imageBase64.length > Math.ceil(12 * 1024 * 1024 * 4 / 3)) throw new Error("vision image exceeds the 12 MB limit");
+  if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 8_000) throw new Error("vision prompt must be 1-8000 characters");
+  const body = JSON.stringify({ model, messages: [{ role: "user", content: prompt.trim(), images: [imageBase64] }], stream: false, options: { num_predict: 512 } });
+  if (Buffer.byteLength(body, "utf8") > 16 * 1024 * 1024) throw new Error("Ollama vision request is too large");
+  const response = await fetch(`${configuredBaseUrl()}/api/chat`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body,
+    redirect: "error",
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs())]) : AbortSignal.timeout(timeoutMs()),
+  });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    if (response.status === 404) throw new Error(`Ollama vision model '${model}' is not installed. Run: ollama pull ${model}`);
+    if (response.status === 503) throw new Error("Ollama is busy or out of memory. Try a smaller local vision model.");
+    throw new Error(`Ollama vision request failed with HTTP ${response.status}`);
+  }
+  if (!response.body) throw new Error("Ollama returned an empty vision response body");
+  let data: { message?: { content?: unknown }; error?: unknown };
+  try { data = JSON.parse(await readLimited(response)); } catch (error) {
+    if (error instanceof Error && error.message.includes("too large")) throw error;
+    throw new Error("Ollama returned invalid vision JSON");
+  }
+  const content = data.message?.content;
+  if (typeof content !== "string" || !content.trim() || content.length > 8_000) throw new Error("Ollama returned an invalid or empty vision description");
+  return { content: content.trim(), model };
+}
+
 export async function ollamaStream(input: NativeMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
   const model = ollamaModelFor(provider, override);
   const response = await request(normalizeMessages(input), model, true, signal);
