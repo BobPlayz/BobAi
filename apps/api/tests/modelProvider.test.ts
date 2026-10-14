@@ -2,10 +2,10 @@ import { withLocalModelLock } from "../src/services/localModelLock.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
-import { ollamaModelFor, ollamaStatus, ollamaVision, ollamaVisionModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
+import { ollamaEmbedding, ollamaEmbeddingModel, ollamaModelFor, ollamaStatus, ollamaVision, ollamaVisionModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
 
 const originalFetch = globalThis.fetch;
-const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS", "BOBAI_OLLAMA_NUM_CTX", "BOBAI_OLLAMA_NUM_PREDICT"] as const;
+const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS", "BOBAI_OLLAMA_NUM_CTX", "BOBAI_OLLAMA_NUM_PREDICT", "BOBAI_OLLAMA_EMBEDDING_MODEL"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]])) as Record<(typeof keys)[number], string | undefined>;
 function restore() {
   globalThis.fetch = originalFetch;
@@ -21,6 +21,7 @@ test("BobAI defaults to one shared multimodal Ollama model without API credentia
     assert.equal(ollamaModelFor("bob"), "qwen3.5:2b");
     assert.equal(ollamaModelFor("coding"), "qwen3.5:2b");
     assert.equal(ollamaVisionModel(), "qwen3.5:2b");
+    assert.equal(ollamaEmbeddingModel(), "qwen3-embedding:0.6b");
     assert.equal(new BobModelProvider().isConfigured(), true);
   } finally { restore(); }
 });
@@ -88,7 +89,7 @@ test("Ollama status does not expose credentials and reports required local model
     const status = await ollamaStatus();
     assert.equal(status.provider, "ollama");
     assert.equal(status.ready, false);
-    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b", "moondream:1.8b"]);
+    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b", "moondream:1.8b", "qwen3-embedding:0.6b"]);
     assert.equal(JSON.stringify(status).includes("secret"), false);
   } finally { restore(); }
 });
@@ -141,4 +142,27 @@ test("heavy local model work is serialized instead of overlapping in RAM", async
   });
   await Promise.all([task(), task(), task()]);
   assert.equal(maximumActive, 1);
+});
+
+test("semantic embedding requests normalize vectors to the database dimension and unload afterward", async () => {
+  try {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    process.env.BOBAI_OLLAMA_EMBEDDING_MODEL = "qwen3-embedding:0.6b";
+    const calls: Array<{ url: string; body?: Record<string, unknown> }> = [];
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/ps")) return new Response(JSON.stringify({ models: [] }), { status: 200 });
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      calls.push({ url, body });
+      return new Response(JSON.stringify({ embeddings: [[3, 4]] }), { status: 200 });
+    };
+    const vector = await ollamaEmbedding("remember this fact");
+    assert.equal(vector?.length, 1536);
+    assert.ok(Math.abs(vector![0] - 0.6) < 1e-9);
+    assert.ok(Math.abs(vector![1] - 0.8) < 1e-9);
+    assert.equal(vector!.slice(2).every((value) => value === 0), true);
+    assert.equal(calls[0].url, "http://127.0.0.1:11434/api/embed");
+    assert.equal(calls[0].body?.model, "qwen3-embedding:0.6b");
+    assert.equal(calls[0].body?.keep_alive, 0);
+  } finally { restore(); }
 });
