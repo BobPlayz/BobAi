@@ -27,7 +27,7 @@
 7. **Conversations and memory:** persistent conversation history and user-controlled memory. Explain what is saved, allow viewing/deleting memories when implemented, and keep user data separated.
 8. **Account and privacy:** secure sign-in, account/session management, data deletion path, secrets kept server-side, and concise privacy explanations.
 9. **Deployment and domain:** deploy to a stable HTTPS host and connect a purchased `.com` or `.ai` domain only after checking the full first-year and renewal price. Do not spend the whole ₹2,000 on the domain if that leaves no room for essential hosting.
-10. **No model training:** use an existing hosted model API through the provider adapter. Ollama is removed. Keep unused training workflows out of normal setup and deployment; do not train a model.
+10. **No model training:** use existing local Ollama models and local specialist runtimes. Keep training workflows out of normal setup and deployment; do not train a model.
 
 ### Important implementation rules
 - Existing BobAI APIs, auth, database, conversation store, memory, research, and speech integrations remain the source of truth when they work.
@@ -43,7 +43,7 @@
 - **Audience:** students across age groups. Age-appropriate safety, privacy, account security, and legal review are launch gates, not optional polish.
 - **Release:** public beta, with balanced priorities across reliability, security, usability, and cost.
 - **Feature ambition:** the full practical ChatGPT-like experience, especially coding assistance/agent workflows and web research with traceable citations. Also include chat, writing, tutoring, files, image understanding, data analysis, voice input/output, conversation history, user-controlled memory, projects, image generation/editing, and safe integrations where real providers and runtime support exist. This is a target list, not a claim of proprietary feature parity.
-- **AI spend:** ₹500/month target. Keep paid usage disabled until provider-side spending limits are configured and independently checked. The application currently uses an operator-attestation gate; it is not a billing API and cannot itself prove the provider cap is active.
+- **AI spend:** no hosted AI-model API usage is required. Keep inference local; verify separate Neon, Resend, hosting, and domain costs before enabling paid infrastructure.
 - **Cancellation:** choose hosting and AI plans that are monthly or usage-based and cancellable after one month where the provider permits it. Document renewal, cancellation timing, export, and deletion behavior before the owner approves a vendor.
 - **Publisher:** Origin Productions. Do not publish personal contact details. A real support/privacy contact and responsible adult/legal review remain prerequisites for a student-facing public beta.
 - **Coding execution:** public users must never get arbitrary host/computer command access. Use a network-disabled isolated sandbox, explicit approvals for repository writes and external side effects, resource/time limits, and per-user authorization.
@@ -88,14 +88,14 @@
 
 - [x] Add a local Ollama adapter with configurable local chat/coding models, bounded request/response sizes, timeouts, and streamed output. See [Local AI setup](docs/LOCAL_AI.md).
 - [ ] Install the selected local Ollama chat/coding models and verify real chat, coding, streaming, and cancellation on the target machine.
-- [x] Keep hosted provider keys in server-side environment configuration and expose only configuration status to the browser; build/runtime verification is pending.
+- [x] Keep the local Ollama endpoint and model configuration server-side; expose configuration/readiness status without secrets.
 - [x] Add a visible Stop response control that aborts the active browser chat stream and preserves partial text in the UI and persisted assistant-message record. Build/runtime verification is pending.
-- [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage. The API now propagates disconnect cancellation into hosted, native, and production inference paths; runtime verification remains open.
+- [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage. The API propagates disconnect cancellation into the local Ollama adapter; runtime verification remains open.
 - [x] Handle failed file uploads/file-to-AI processing and failed response regeneration without leaving upload indicators stuck or losing the chat's recovery state.
 - [x] Convert chat HTTP failures into user-friendly messages instead of displaying raw response bodies.
 - [x] Show the configured model/provider status in Settings → About, without exposing secrets. The status is configuration-level and not a live-availability guarantee; build/runtime verification is pending.
 - [x] Add per-user rate limiting to the streamed AI chat endpoint. Build/runtime verification is pending.
-- [x] Propagate browser disconnect cancellation through the stream route, chat engine, model router, hosted adapter and remaining supported runtime paths. Native/production provider behavior and partial-response persistence still need final runtime verification.
+- [x] Propagate browser disconnect cancellation through the stream route, chat engine, model router and local Ollama adapter. Native/production provider behavior and partial-response persistence still need final runtime verification.
 - [x] Abort active stream and upload controllers when the user leaves the chat component.
 - [x] Keep AI inference local so model API usage fees are not required. Internet, Neon, Resend, and hosting may still have their own costs.
 - [x] Route chat and recognized coding prompts through the local Ollama adapter; expose readiness without revealing secrets.
@@ -103,7 +103,7 @@
 - [x] Audit training references: removed all `model:*` training commands from the root package scripts and retired the standalone model-training workflow. Retained the `model-training/` source/artifact path because the optional native runtime still looks there for a prebuilt artifact; do not run training as part of normal setup.
 - [x] Add tests for local Ollama URL safety, missing-model status, local chat, and streamed output.
 - [x] Add mocked tests for local Ollama success, malformed/empty output, stream parsing, and missing model status.
-- [x] Add a hosted-stream unit test proving an already-aborted client signal reaches the provider fetch; broader route-level disconnect and rate/usage-limit coverage remains part of final verification.
+- [x] Add a local-stream unit test proving an already-aborted client signal reaches the Ollama fetch; broader route-level disconnect and rate-limit coverage remains part of final verification.
 
 **Exit criteria:** A new user can install local Ollama models and complete streamed chat/coding without a hosted AI model API or model training.
 
@@ -175,7 +175,7 @@
 - [x] Add a Stop agent control wired to the authenticated server-side queue cancellation endpoint. A structured action summary and end-to-end cancellation verification remain open.
 - [x] Add explicit age-appropriate safety and untrusted-input instructions to agent task prompts; verify all tool side effects and provider boundaries in the final security pass.
 - [x] Add an authenticated per-user active-agent quota (three active tasks) plus a five-submission-per-minute limit. Durable cross-instance quotas remain a production consideration.
-- [ ] Configure hard provider-side monetary limits before enabling paid model usage.
+- [x] No hosted AI model API is configured for the current local-first path. Continue to verify costs for Neon, Resend, hosting, and any future infrastructure.
 - [x] Add an explicit age-appropriate safety and authorization baseline to agent instructions, alongside the core chat safety baseline. Verify provider/tool consistency in the final security pass.
 - [ ] Test prompt injection, tool errors, loops, timeouts, cancellation, and authorization boundaries.
 
@@ -239,8 +239,8 @@
 
 - **Domain:** purchase only after checking current .com and .ai renewal prices. A .ai domain may consume a large share of the budget.
 - **Hosting/database:** start with free tiers if they meet requirements, and verify quotas and sleep/usage limits.
-- **AI provider:** target no more than ₹500/month. Keep paid usage disabled until app-level usage accounting, a hard fail-closed budget guard, and provider-side spending limits are configured and verified. Never promise unlimited free AI.
-- **Voice:** prototype with browser or free/local components first; real-time hosted voice may incur recurring costs.
+- **AI inference:** use local Ollama/Diffusers/Piper/Whisper so hosted model usage fees are not required. Do not promise zero total operating costs: Neon, Resend, hosting, domain, and internet may cost money.
+- **Voice:** use local Piper and Whisper.cpp assets; the local runtimes still need installation and device testing.
 - **Cancellation:** choose monthly/usage-based hosting and AI plans with no long-term commitment where available; verify the exact cancellation and auto-renewal controls before enabling billing.
 - **Reserve:** keep some budget for renewals or unexpected setup costs.
 - **Rule:** no paid service is enabled by default without an explicit choice and clear cost information.
