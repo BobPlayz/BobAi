@@ -1,3 +1,4 @@
+import { withLocalModelLock } from "./localModelLock.js";
 import type { NativeMessage } from "./nativeModel.js";
 
 const MAX_REQUEST_BYTES = 4 * 1024 * 1024;
@@ -17,8 +18,8 @@ function configuredBaseUrl() {
 
 export function ollamaModelFor(provider: "bob" | "coding", override?: string) {
   const configured = (provider === "coding"
-    ? process.env.BOBAI_OLLAMA_CODING_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen2.5-coder:3b"
-    : process.env.BOBAI_OLLAMA_MODEL || "qwen2.5:3b").trim();
+    ? process.env.BOBAI_OLLAMA_CODING_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:2b"
+    : process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:2b").trim();
   const model = (override || configured).trim();
   if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama model name");
   return model;
@@ -78,7 +79,7 @@ async function readLimited(response: Response) {
   return output + decoder.decode();
 }
 
-export async function ollamaChat(input: NativeMessage[], provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
+async function ollamaChatUnlocked(input: NativeMessage[], provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
   const model = ollamaModelFor(provider, override);
   const response = await request(normalizeMessages(input), model, false, signal);
   let data: { message?: { content?: unknown }; error?: unknown };
@@ -92,12 +93,12 @@ export async function ollamaChat(input: NativeMessage[], provider: "bob" | "codi
 }
 
 export function ollamaVisionModel() {
-  const model = (process.env.BOBAI_OLLAMA_VISION_MODEL || "moondream:1.8b").trim();
+  const model = (process.env.BOBAI_OLLAMA_VISION_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:2b").trim();
   if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama vision model name");
   return model;
 }
 
-export async function ollamaVision(imageBase64: string, prompt: string, signal?: AbortSignal) {
+async function ollamaVisionUnlocked(imageBase64: string, prompt: string, signal?: AbortSignal) {
   const model = ollamaVisionModel();
   if (typeof imageBase64 !== "string" || !imageBase64 || imageBase64.length > Math.ceil(12 * 1024 * 1024 * 4 / 3)) throw new Error("vision image exceeds the 12 MB limit");
   if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 8_000) throw new Error("vision prompt must be 1-8000 characters");
@@ -127,7 +128,7 @@ export async function ollamaVision(imageBase64: string, prompt: string, signal?:
   return { content: content.trim(), model };
 }
 
-export async function ollamaStream(input: NativeMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
+async function ollamaStreamUnlocked(input: NativeMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
   const model = ollamaModelFor(provider, override);
   const response = await request(normalizeMessages(input), model, true, signal);
   const reader = response.body!.getReader();
@@ -187,4 +188,52 @@ export async function ollamaStatus(): Promise<{ ready: boolean; provider: "ollam
   } catch (error) {
     return { ready: false, provider: "ollama", error: error instanceof Error ? error.message : "Ollama unavailable" };
   }
+}
+
+/**
+ * Release resident Ollama weights before launching a memory-heavy image pipeline.
+ * If Ollama is not running, image generation may continue without it.
+ */
+export async function unloadOllamaModels(): Promise<string[]> {
+  const base = configuredBaseUrl();
+  let models: string[] = [];
+  try {
+    const response = await fetch(`${base}/api/ps`, { signal: AbortSignal.timeout(3_000), redirect: "error" });
+    if (!response.ok) return [];
+    const data = await response.json() as { models?: Array<{ name?: unknown; model?: unknown }> };
+    models = Array.isArray(data.models)
+      ? [...new Set(data.models.map((item) => typeof item.name === "string" ? item.name : typeof item.model === "string" ? item.model : "").filter(Boolean))]
+      : [];
+  } catch {
+    return [];
+  }
+  const unloaded: string[] = [];
+  for (const model of models) {
+    const response = await fetch(`${base}/api/generate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model, prompt: "", stream: false, keep_alive: 0 }),
+      signal: AbortSignal.timeout(20_000),
+      redirect: "error",
+    });
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new Error(`Could not free Ollama model memory before image generation (HTTP ${response.status})`);
+    }
+    await response.body?.cancel().catch(() => undefined);
+    unloaded.push(model);
+  }
+  return unloaded;
+}
+
+export function ollamaChat(input: NativeMessage[], provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
+  return withLocalModelLock(() => ollamaChatUnlocked(input, provider, override, signal));
+}
+
+export function ollamaVision(imageBase64: string, prompt: string, signal?: AbortSignal) {
+  return withLocalModelLock(() => ollamaVisionUnlocked(imageBase64, prompt, signal));
+}
+
+export function ollamaStream(input: NativeMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
+  return withLocalModelLock(() => ollamaStreamUnlocked(input, onToken, provider, override, signal));
 }
