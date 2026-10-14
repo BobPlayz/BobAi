@@ -1,13 +1,12 @@
-# Retired: hosted AI provider
+# Hosted AI providers are not used
 
-BobAI's current direction is local-first. This document is kept temporarily so old links do not break, but its former hosted-provider setup is no longer supported by the active backend.
+BobAI's current architecture does not use OpenAI or other hosted AI providers for chat, coding, research synthesis, image generation, or voice.
 
-Use Ollama for chat and coding:
-- Install Ollama locally.
-- Pull the configured models shown in .env.example.
-- Set BOBAI_OLLAMA_BASE_URL, BOBAI_OLLAMA_MODEL, and BOBAI_OLLAMA_CODING_MODEL.
-- Follow the current setup steps in README.md and docs/FEATURE_SETUP_GUIDE.md.
+- Chat and coding: local Ollama models.
+- Image generation: local Diffusers model, directly integrated without ComfyUI.
+- Research: BobAI's own web-search/evidence pipeline, with synthesis through local Ollama.
+- Voice: local Piper and Whisper.cpp, using the English Alan and Telugu Venkatesh voice assets from the Ai-Glasses profile.
+- Database: Neon PostgreSQL via the existing DATABASE_URL connection.
+- Email OTP: Resend adapter, with SMTP as a fallback.
 
-Image generation uses the local Diffusers runner and a model directory configured through BOBAI_IMAGE_MODEL_PATH. Voice uses local Piper/Whisper integrations. Research uses BobAI's own search/evidence pipeline and the local Ollama model for synthesis.
-
-Do not configure an OpenAI key or any hosted AI endpoint for the current local-first build. Database and email delivery are separate infrastructure concerns; Neon and Resend must be configured and tested independently.
+Neon and Resend are infrastructure services, not AI model providers. They still require internet access and user-managed credentials. Video generation is disabled until a local video runtime is implemented. Image editing with reference images is not implemented in the current local pipeline.
