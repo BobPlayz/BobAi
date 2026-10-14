@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { domainCredibility, matchesSourceTypes, sourceSearchQuery, sourceTypesFrom, webSearch, type ResearchSource } from "../src/services/research.js";
+import { domainCredibility, matchesSourceTypes, parseBraveResults, sourceSearchQuery, sourceTypesFrom, webSearch, type ResearchSource } from "../src/services/research.js";
 import { deepResearch } from "../src/services/deepResearch.js";
 
 const source = (url: string): ResearchSource => ({ title: "Example", url });
@@ -40,6 +40,21 @@ test("credibility ranking requires an exact trusted-domain boundary", () => {
   assert.equal(domainCredibility("fake-reuters.com").credibility, "low");
   assert.equal(domainCredibility("reuters.com.attacker.example").credibility, "low");
   assert.equal(domainCredibility("notwikipedia.org").credibility, "low");
+});
+
+test("Brave results are normalized, ranked, and reject unsafe URL schemes", () => {
+  const sources = parseBraveResults({
+    web: { results: [
+      { title: "Official guidance", url: "https://www.gov.in/guidance", description: "Verified guidance", page_age: "2026-10-01" },
+      { title: "Bad scheme", url: "javascript:alert(1)", description: "must be ignored" },
+      { title: "Credentials", url: "https://user:pass@example.com/private", description: "must be ignored" },
+      { title: "No URL" },
+    ] },
+  }, "official guidance");
+  assert.equal(sources.length, 1);
+  assert.equal(sources[0].title, "Official guidance");
+  assert.equal(sources[0].credibility, "high");
+  assert.equal(sources[0].url, "https://www.gov.in/guidance");
 });
 
 test("web search rejects an already-aborted request before cache or network access", async () => {
