@@ -4,7 +4,7 @@
 >
 > **Budget assumption:** ₹2,000 INR is the initial setup budget. The separate AI usage target is ₹500 INR per month. Prefer free tiers and monthly/usage-based plans that can be cancelled after one month where provider terms permit. Verify renewal and cancellation terms before any purchase; do not purchase or subscribe without explicit approval.
 >
-> **Model decision:** Do **not** train a model for BobAI. Use a configurable hosted provider through a server-side adapter. Ollama has been removed from the public-beta branch. Keep provider/model configuration flexible without exposing keys to browsers.
+> **Model decision (updated 2026-10-14):** BobAI is local-first. Do not train a model from scratch and do not use OpenAI or other hosted AI model APIs. Neon PostgreSQL and Resend email are infrastructure exceptions. Image generation uses a direct local Diffusers pipeline without ComfyUI. Local video generation remains disabled until a local runtime exists.
 
 ## Product and design contract
 
@@ -31,7 +31,7 @@
 
 ### Important implementation rules
 - Existing BobAI APIs, auth, database, conversation store, memory, research, and speech integrations remain the source of truth when they work.
-- Ollama runtime, configuration, tests, and user-facing setup guidance are removed from this branch.
+- Ollama is the required local language-model runtime. Do not route chat, coding, research synthesis, image generation, or voice through hosted AI APIs.
 - Never expose provider keys to the browser or commit secrets.
 - Research citations must point to sources actually retrieved; do not fabricate sources.
 - Keep upload validation, rate limits, timeouts, cost caps, and abuse protections server-side.
@@ -47,7 +47,7 @@
 - **Cancellation:** choose hosting and AI plans that are monthly or usage-based and cancellable after one month where the provider permits it. Document renewal, cancellation timing, export, and deletion behavior before the owner approves a vendor.
 - **Publisher:** Origin Productions. Do not publish personal contact details. A real support/privacy contact and responsible adult/legal review remain prerequisites for a student-facing public beta.
 - **Coding execution:** public users must never get arbitrary host/computer command access. Use a network-disabled isolated sandbox, explicit approvals for repository writes and external side effects, resource/time limits, and per-user authorization.
-- **Provider direction:** hosted provider only for the public beta; Ollama has been removed on this branch. No model training as part of normal development or deployment.
+- **Provider direction:** local Ollama for chat/coding/research synthesis; local Diffusers for image generation; local Piper/Whisper for voice. Neon and Resend are external infrastructure only. No model training as part of normal development or deployment.
 
 ---
 
@@ -82,12 +82,12 @@
 
 **Exit criteria:** Light and Dark both work throughout the app; no sci-fi-only visual system remains; no broken navigation or unreadable content.
 
-## Phase 3/10 — Provider-based AI chat, without training
+## Phase 3/10 — Local Ollama AI chat and coding, without training
 
-**Goal:** Use an existing chatbot model rather than training BobAI's own model.
+**Goal:** Use existing local Ollama models rather than training BobAI's own model.
 
-- [x] Add an opt-in OpenAI-compatible hosted chat adapter with configurable model/base URL, server-side key handling, bounded request/response sizes, timeouts, and streamed output. See [Hosted AI setup](docs/HOSTED_AI.md).
-- [ ] Choose and verify the production provider/model based on current quality, supported modalities, privacy terms, and cost. The hosted adapter is opt-in and still needs live end-to-end verification.
+- [x] Add a local Ollama adapter with configurable local chat/coding models, bounded request/response sizes, timeouts, and streamed output. See [Local AI setup](docs/LOCAL_AI.md).
+- [ ] Install the selected local Ollama chat/coding models and verify real chat, coding, streaming, and cancellation on the target machine.
 - [x] Keep hosted provider keys in server-side environment configuration and expose only configuration status to the browser; build/runtime verification is pending.
 - [x] Add a visible Stop response control that aborts the active browser chat stream and preserves partial text in the UI and persisted assistant-message record. Build/runtime verification is pending.
 - [ ] Verify stream cancellation end to end and complete retry, timeout, and rate-limit coverage. The API now propagates disconnect cancellation into hosted, native, and production inference paths; runtime verification remains open.
@@ -97,15 +97,15 @@
 - [x] Add per-user rate limiting to the streamed AI chat endpoint. Build/runtime verification is pending.
 - [x] Propagate browser disconnect cancellation through the stream route, chat engine, model router, hosted adapter and remaining supported runtime paths. Native/production provider behavior and partial-response persistence still need final runtime verification.
 - [x] Abort active stream and upload controllers when the user leaves the chat component.
-- [ ] Add hard provider-side monetary budgets and verify global cost/usage safeguards before enabling paid API calls.
-- [x] Remove Ollama support from the provider router, vision pipeline, environment template, test scripts, and user-facing setup documentation.
+- [x] Keep AI inference local so model API usage fees are not required. Internet, Neon, Resend, and hosting may still have their own costs.
+- [x] Route chat and recognized coding prompts through the local Ollama adapter; expose readiness without revealing secrets.
 - [x] Keep model-training commands out of normal user-facing setup instructions.
 - [x] Audit training references: removed all `model:*` training commands from the root package scripts and retired the standalone model-training workflow. Retained the `model-training/` source/artifact path because the optional native runtime still looks there for a prebuilt artifact; do not run training as part of normal setup.
-- [x] Add tests for provider URL safety and missing-key/configuration status.
-- [x] Add mocked tests for provider success, HTTP 401/429 failures, malformed/empty responses, and basic SSE streaming.
+- [x] Add tests for local Ollama URL safety, missing-model status, local chat, and streamed output.
+- [x] Add mocked tests for local Ollama success, malformed/empty output, stream parsing, and missing model status.
 - [x] Add a hosted-stream unit test proving an already-aborted client signal reaches the provider fetch; broader route-level disconnect and rate/usage-limit coverage remains part of final verification.
 
-**Exit criteria:** A new user can configure one supported provider and complete a streamed chat safely, without training a model.
+**Exit criteria:** A new user can install local Ollama models and complete streamed chat/coding without a hosted AI model API or model training.
 
 ## Phase 4/10 — Conversations, accounts, and memory
 
@@ -130,12 +130,12 @@
 
 **Exit criteria:** Conversation history and memory persist reliably, are user-scoped, and can be controlled without exposing another user's data.
 
-## Phase 5/10 — Image and file understanding
+## Phase 5/10 — Local image generation and file understanding
 
 **Goal:** Let users work with useful files and images safely.
 
 - [x] Align the chat file picker with supported PDF, text, and PNG/JPEG/WebP upload formats; the API rejects unsupported image formats. Remaining MIME/extension edge cases still need final verification.
-- [x] Implement image understanding through the configured hosted provider when available, with the configured hosted provider or supported vision specialist. Live provider verification is pending.
+- [ ] Finish and verify image understanding with a compatible local vision model. The current local chat model is not automatically a vision model.
 - [x] Add file attachment previews, upload progress, and clear upload size/type errors; cancel/retry remains unfinished.
 - [x] Add per-file upload cancellation, progress display, and an explicit cancel control; propagate cancellation through file processing and the resulting AI analysis request, and distinguish transfer progress from processing state. Automatic retry is not implemented; verify cancel/error cleanup during final testing.
 - [x] Use OCR/text extraction for supported formats and return explicit extraction failures where available; end-to-end verification is pending.
@@ -181,7 +181,7 @@
 
 **Exit criteria:** Each agent has a defined scope, bounded execution, truthful progress, and confirmation for consequential actions.
 
-## Phase 8/10 — Natural voice-to-voice
+## Phase 8/10 — Local Jarvis voice-to-voice
 
 **Goal:** Make speaking with BobAI feel conversational, not like a chain of awkward buttons.
 
@@ -191,8 +191,8 @@
 - [x] Add stop controls for recorded input and read-aloud playback, and clean up active recorder tracks/audio URLs when controls unmount. True seamless voice-to-voice turn-taking and interruption during generation remain unfinished.
 - [x] Show microphone recording state and surface permission/transcription errors; choose a MediaRecorder MIME type supported by the current browser instead of assuming WAV support.
 - [x] Place dictation output in the editable chat composer before sending. Verify noisy-input/mobile-browser behavior during final testing.
-- [ ] Support language/voice selection only when the chosen service actually supports it.
-- [ ] Keep voice costs and third-party data processing transparent; use free/local options where practical.
+- [x] Configure language-aware local Piper selection for English Alan and Telugu Venkatesh, matching the Ai-Glasses voice profile. Install assets and verify playback/transcription on the target machine.
+- [x] Keep speech recognition and synthesis on local Whisper.cpp/Piper assets; no hosted voice API is used.
 - [ ] Test permission denial, noisy input, silence, interruption, network loss, long responses, and mobile browsers.
 
 **Exit criteria:** A user can speak, receive a spoken response, interrupt it, and continue the same conversation reliably with explicit microphone control.
@@ -221,9 +221,9 @@
 **Goal:** Launch a dependable public website without overspending.
 
 - [ ] Compare current full first-year and renewal prices for a `.com` and `.ai` domain through reputable registrars. Do not decide based on promotional first-year pricing alone.
-- [ ] Keep the initial total budget around ₹2,000 INR; prefer free hosting/database tiers where suitable and do not enable paid model usage without explicit budget controls.
+- [ ] Keep the initial total budget around ₹2,000 INR; use local AI inference, and verify Neon, Resend, hosting, and domain costs before enabling any paid infrastructure.
 - [ ] Choose a deployment target that supports the app's actual Next.js/API/database requirements; confirm free-tier limits before committing.
-- [ ] Configure DNS, HTTPS, environment secrets, database migrations, allowed origins, and production auth settings.
+- [ ] Configure Neon DATABASE_URL, Resend sender/key, DNS, HTTPS, environment secrets, database migrations, allowed origins, and production auth settings.
 - [ ] Configure health checks, useful privacy-safe logs, backups, and a restore/rollback plan.
 - [ ] Test signup/login, chat streaming, conversation reload, memory controls, file/image upload, research citations, agents, voice, and theme persistence in staging.
 - [ ] Test mobile layout, accessibility, performance, and both themes before launch.
@@ -249,7 +249,7 @@
 
 - [ ] Clean ChatGPT-style conversation-first UI, with working Light and Dark modes.
 - [ ] No sci-fi/HUD/robot/reactor decoration or unused alternate themes.
-- [ ] Hosted AI provider works without model training; Ollama is removed and the provider path is verified.
+- [ ] Local Ollama chat/coding, local Diffusers image generation, local research synthesis, and local Piper/Whisper voice are verified without hosted AI APIs or model training.
 - [ ] Conversation persistence and memory are reliable and user-controlled.
 - [ ] Image/file understanding is validated and usable.
 - [ ] Research source preferences and citations work end to end.
@@ -315,6 +315,8 @@
 
 ## Handoff notes for the next ChatGPT session
 
-Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FEATURE_INVENTORY.md`](docs/FEATURE_INVENTORY.md). All repository Markdown files were reviewed and updated on 2026-10-13 with implementation/verification distinctions. The code has received additional static changes for public-page theming, chat teardown cancellation, provider abort propagation, research no-evidence handling, agent prompt safety, and fail-closed distributed rate limiting. **Do not tell the user the roadmap is fully done yet.** The remaining unchecked tasks are real work, including live verification, provider/SMTP/database setup, age/privacy/legal decisions, domain/deployment, and screenshots. Follow the user instruction: do not run the final build/tests until implementation work is finished; then run them and report actual results only.
+Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FEATURE_INVENTORY.md`](docs/FEATURE_INVENTORY.md). All repository Markdown files were reviewed and updated on 2026-10-13 with implementation/verification distinctions. The code has received additional static changes for local Ollama chat/coding, direct Diffusers image generation, local Piper/Whisper voice, local research synthesis, Neon DATABASE_URL support, and a Resend OTP adapter. The remaining unchecked tasks are real work, including build/test verification, real local model execution, Neon/Resend setup, age/privacy/legal decisions, deployment, and screenshots. Do not mark those complete until actually verified.
 
 - **2026-10-13:** Updated every existing repository Markdown document with a handoff/status note, including API, style, database, feature inventory, hosted/local AI, auth, security, and README. Added public-site theme integration, provider cancellation, teardown cleanup, agent prompt safety, fail-closed distributed rate limiting, and research empty-evidence handling to this roadmap. These edits are committed but not build/test verified.
+
+- **2026-10-14:** Product direction corrected to local-first: Ollama chat/coding/research synthesis, direct Diffusers image generation without ComfyUI, Ai-Glasses Jarvis Piper voices, Neon PostgreSQL, and Resend OTP email. Added the local image runner, Resend adapter and environment settings; repaired the image-generation API route and disabled video tools until a local runtime exists. Build/tests still need to run after the implementation pass.
