@@ -134,3 +134,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - CI now parses the local Diffusers Python script with Python `ast` in both the main and backend workflows without creating bytecode files; the backend workflow also watches `scripts/**` and `requirements-image.txt` changes.
 
 - The API error handler now maps oversized JSON bodies to HTTP 413 and malformed JSON to HTTP 400 instead of incorrectly reporting both as generic server errors.
+
+- Memory workspace/project context now validates requested project IDs against the selected workspace and rejects archived/deleted or cross-workspace projects before read/write operations.

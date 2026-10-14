@@ -332,3 +332,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Finished the remaining runtime-facing brand strings for Jarvis in workspace labels, core chat/research/agent prompts, web chat stream errors, and media errors. Legacy package scopes and `BOBAI_*` environment variable names remain compatibility identifiers.
 - **2026-10-14:** Added Python syntax validation for the local image-generation script to both CI workflows and added the script/dependency manifest to backend workflow path filters, so Python changes cannot bypass backend CI.
 - **2026-10-14:** Added explicit HTTP 413/400 handling for JSON body-size and parse failures, so media payload limits produce accurate client errors instead of HTTP 500.
+- **2026-10-14:** Hardened memory context resolution so a caller cannot attach memory operations to a project from another workspace by supplying an arbitrary project UUID; archived/deleted projects are rejected.
