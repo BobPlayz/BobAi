@@ -51,14 +51,18 @@ The shared Qwen3.5 4B model is the quality-first default for chat, research synt
 
 ## Local image generation
 
-Jarvis uses a local Diffusers pipeline directly, without ComfyUI and without a hosted generation API.
+Jarvis generates new images locally through Hugging Face Diffusers. It does not require ComfyUI, a hosted image API, or a paid generation key.
 
-1. Install the optional dependencies into the Python environment selected by BOBAI_PYTHON: python -m pip install -r requirements-image.txt
-2. Download a Diffusers-compatible image model to a local directory once, respecting its license and usage restrictions.
-3. Set BOBAI_IMAGE_MODEL_PATH to that directory in .env.
-4. Restart the API and test one 512x512 image first.
+On Windows, copy `.env.example` to `.env`, install Node dependencies, then run:
 
-The model must already be on disk because inference uses local_files_only=True. CPU generation can be very slow and may run out of memory on an 8 GB laptop. Image generation is serialized with Ollama and asks Ollama to unload resident weights before starting the Diffusers worker. Reference-image editing uses Diffusers `AutoPipelineForImage2Image` when the selected local model supports it. Actual generation/editing still needs to be tested with the downloaded model.
+    npm run setup:image-generation
+    npm run test:image-generation
+
+The setup command creates a dedicated Python 3.11 virtual environment, installs CPU-only PyTorch plus the optional Diffusers dependencies, downloads Segmind Tiny-SD (about 1.1 GB), and writes the local Python/model paths into your private `.env`. It does not overwrite unrelated environment settings. The first setup needs internet; after the model is downloaded, inference uses local files only. Tiny-SD is distributed under the CreativeML Open RAIL-M license, so review its terms before using or redistributing outputs.
+
+The smoke test performs actual 512x512 CPU inference and saves `storage/image-generation-smoke.png`. On an 8 GB laptop it can take several minutes and may fail if other applications consume too much RAM. Close heavy applications before running it. The API serializes image inference with Ollama and unloads Ollama model weights before generation to reduce memory pressure.
+
+The authenticated API endpoint is `POST /images/generate` with JSON such as `{"prompt":"a tiny robot in a cyan glass laboratory","width":512,"height":512,"count":1}`. The response contains generated PNG data URLs and stores the image in the user's image history. Reference-image editing is available only when the selected Diffusers model supports the image-to-image pipeline.
 
 ## Jarvis voice
 
