@@ -62,7 +62,12 @@ def main() -> int:
         return 3
 
     try:
+        # Keep CPU inference predictable on laptops with limited RAM and avoid
+        # spawning a large thread pool that competes with the API process.
+        os.environ.setdefault("OMP_NUM_THREADS", "4")
+        os.environ.setdefault("MKL_NUM_THREADS", "4")
         import torch
+        torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
         from io import BytesIO
         from PIL import Image, ImageOps
         if input_images:
