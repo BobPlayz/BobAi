@@ -107,7 +107,7 @@ export function ollamaEmbeddingEnabled() {
 
 export function ollamaEmbeddingModel() {
   const model = (process.env.BOBAI_OLLAMA_EMBEDDING_MODEL || "qwen3-embedding:0.6b").trim();
-  if (!model || model.length > 160 || /[\\r\\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama embedding model name");
+  if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama embedding model name");
   return model;
 }
 
