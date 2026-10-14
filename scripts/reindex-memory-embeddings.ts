@@ -1,11 +1,12 @@
 import "dotenv/config";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, memories, memoryEmbeddings } from "@bobai/db";
 import { generateModelEmbeddingWithModel } from "../apps/api/src/services/embeddings.js";
 import { isSensitiveMemory } from "../apps/api/src/store/memoryDb.js";
 import { ollamaStatus } from "../apps/api/src/services/ollamaProvider.js";
 
-const BATCH_SIZE = Math.min(100, Math.max(1, Number(process.env.BOBAI_MEMORY_REINDEX_BATCH_SIZE || 20)));
+const RAW_BATCH_SIZE = Number(process.env.BOBAI_MEMORY_REINDEX_BATCH_SIZE || 20);
+const BATCH_SIZE = Math.min(100, Math.max(1, Number.isFinite(RAW_BATCH_SIZE) ? Math.trunc(RAW_BATCH_SIZE) : 20));
 
 async function main() {
   const status = await ollamaStatus();
