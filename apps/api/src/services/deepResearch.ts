@@ -1,13 +1,13 @@
 import { webSearch, type ResearchSource } from "./research.js";
 import { runChat } from "./chatEngine.js";
-import { assertPublicTargetUrl, boundedText } from "./httpSafety.js";
+import { assertPublicTargetUrl, boundedText, targetUrl } from "./httpSafety.js";
 const MAX_SUBQUERIES = 6; const DEFAULT_MAX_SOURCES = 24; const MAX_SOURCE_TEXT = 12_000; const MAX_SOURCE_RESPONSE_BYTES = 5 * 1024 * 1024; const MAX_SYNTHESIS_INPUT = 90_000; const DEFAULT_TIMEOUT_MS = 45_000;
 export type DeepResearchResult = { query: string; sources: ResearchSource[]; evidence: Array<{ url: string; title: string; excerpt: string }>; synthesis: string };
 function cleanQuery(value: unknown): string { const query = typeof value === "string" ? value.trim() : ""; if (!query) throw new Error("research query is required"); if (query.length > 2_000) throw new Error("research query is too long"); return query; }
 function maxSources() { const configured = Number(process.env.BOBAI_DEEP_RESEARCH_MAX_SOURCES || DEFAULT_MAX_SOURCES); return Number.isFinite(configured) ? Math.min(Math.max(Math.floor(configured), 4), 50) : DEFAULT_MAX_SOURCES; }
 function makeSubqueries(query: string): string[] { return [query, `${query} key facts evidence`, `${query} latest developments`, `${query} competing perspectives`].slice(0, MAX_SUBQUERIES); }
 function sanitizeSourceText(text: string, isHtml: boolean) { const cleaned = isHtml ? text.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<noscript[\s\S]*?<\/noscript>/gi, " ").replace(/<[^>]+>/g, " ") : text; return cleaned.replace(/\s+/g, " ").trim(); }
-function dedupeSources(sourceLists: ResearchSource[][]): ResearchSource[] { const seen = new Set<string>(); const output: ResearchSource[] = []; for (const source of sourceLists.flat()) { const parsed = safeSourceUrl(source.url); if (!parsed) continue; parsed.hash = ""; const key = parsed.toString(); if (seen.has(key)) continue; seen.add(key); output.push({ ...source, url: key }); if (output.length >= maxSources()) break; } return output; }
+function dedupeSources(sourceLists: ResearchSource[][]): ResearchSource[] { const seen = new Set<string>(); const output: ResearchSource[] = []; for (const source of sourceLists.flat()) { let parsed: URL; try { parsed = targetUrl(source.url); } catch { continue; } if (!parsed) continue; parsed.hash = ""; const key = parsed.toString(); if (seen.has(key)) continue; seen.add(key); output.push({ ...source, url: key }); if (output.length >= maxSources()) break; } return output; }
 async function fetchEvidence(source: ResearchSource, signal?: AbortSignal): Promise<{ url: string; title: string; excerpt: string } | null> {
   let safeUrl: URL;
   try { safeUrl = await assertPublicTargetUrl(source.url); } catch { if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("research cancelled"); return null; }
