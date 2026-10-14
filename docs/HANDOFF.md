@@ -58,3 +58,5 @@
 - Voice-turn orchestration reads the chat engine’s `message.content` response field before passing text to local Piper.
 
 - Fixed production CSRF cookie detection consistency by aligning authentication cookie names with the Jarvis cookie names checked by the API security middleware. The local `/voice/turn` endpoint also receives the same 34 MB JSON limit as transcription so base64 audio is not rejected by the global 2 MB parser.
+
+- Updated the authentication middleware and malformed-cookie regression test to use the same `jarvis_access` cookie as the auth route and CSRF middleware, closing a session-cookie naming mismatch across the API.
