@@ -4,7 +4,7 @@ import { Router } from "express";
 import { db, settings } from "@bobai/db";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { status, synthesize, transcribe } from "../services/voice.js";
-import { prepareChat, runChat } from "../services/chatEngine.js";
+import { getRequestedModelId, prepareChat, runChat } from "../services/chatEngine.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 import { dbRecallRelevant, dbRemember, isSensitiveMemory } from "../store/memoryDb.js";
 import { dbSaveConversation } from "../store/conversationDb.js";
@@ -46,7 +46,7 @@ router.post("/turn", limit, async (req, res) => {
     if (!spokenText) return res.status(422).json({ error: "no speech was recognized; try recording again" });
     if (spokenText.length > 20_000) return res.status(413).json({ error: "recognized speech is too long" });
 
-    const selectedModelId = typeof req.body?.modelId === "string" ? req.body.modelId : "bob";
+    const selectedModelId = getRequestedModelId(req.body?.modelId) || "bob";
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     const settingRows = await db.select({ key: settings.key, value: settings.value }).from(settings)
       .where(and(eq(settings.userId, req.user!.id), eq(settings.workspaceId, workspace.id))).limit(50);
