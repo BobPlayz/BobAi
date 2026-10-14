@@ -62,12 +62,12 @@ router.post("/generate", limit, async (req, res) => {
       workspaceId: workspace.id,
       createdBy: req.user!.id,
       prompt,
-      model: process.env.BOBAI_IMAGE_MODEL_PATH ? "local-diffusers" : "unconfigured",
+      model: (process.env.BOBAI_IMAGE_PROVIDER || "local").trim().toLowerCase() === "openai" ? (process.env.BOBAI_IMAGE_API_MODEL?.trim() || "gpt-image-1") : process.env.BOBAI_IMAGE_MODEL_PATH ? "local-diffusers" : "unconfigured",
       width: item.width ?? width,
       height: item.height ?? height,
       seed: item.seed ?? seed ?? null,
       operation: inputImages?.length ? "edit" : "generate",
-      metadata: { url: item.url, index: item.index, source: "local" },
+      metadata: { url: item.url, index: item.index, source: (process.env.BOBAI_IMAGE_PROVIDER || "local").trim().toLowerCase() === "openai" ? "openai" : "local" },
     }))).returning();
 
     const response = { images: created.map((row, index) => ({ ...row, url: generated[index].url, prompt })) };
@@ -75,7 +75,7 @@ router.post("/generate", limit, async (req, res) => {
   } catch (error) {
     if (controller.signal.aborted || res.destroyed) return;
     const message = error instanceof Error ? error.message : "";
-    const clientError = /^(image prompt.{0,100}|count must be.{0,100}|width and height.{0,100}|seed must be.{0,100}|steps must be.{0,100}|guidanceScale must be.{0,100}|negativePrompt must be.{0,100}|local image editing is not configured.{0,100}|up to 4 input images are supported|reference images.{0,100}|MIME does not match.{0,100}|media request violates the safety policy|image request exceeds the 12 MB limit)$/i.test(message);
+    const clientError = /^(image prompt.{0,100}|count must be.{0,100}|width and height.{0,100}|seed must be.{0,100}|steps must be.{0,100}|guidanceScale must be.{0,100}|negativePrompt must be.{0,100}|local image editing is not configured.{0,100}|Power image mode currently supports text-to-image only.{0,100}|up to 4 input images are supported|reference images.{0,100}|MIME does not match.{0,100}|media request violates the safety policy|image request exceeds the 12 MB limit)$/i.test(message);
     const safeMessage = clientError ? message : "Local image generation is not ready. Run npm run setup:image-generation and npm run test:image-generation, then restart Jarvis.";
     return res.status(clientError ? 400 : 502).json({ error: safeMessage });
   } finally {
