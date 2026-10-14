@@ -14,8 +14,11 @@ router.post("/", limit, async (req, res) => {
     const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options)
       ? req.body.options as Record<string, unknown>
       : {};
+    const query = typeof req.body?.query === "string" ? req.body.query.trim() : "";
+    if (!query) return res.status(400).json({ error: "research query is required" });
+    if (query.length > 2_000) return res.status(400).json({ error: "research query is too long" });
     const reservation = await reserveResearchRequest(req.user!.id);
-    const result = await deepResearch(req.body?.query, options);
+    const result = await deepResearch(query, options);
     const quota = await recordResearchSources(req.user!.id, result.sources.length, reservation.windowStart);
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     const sessionId = randomUUID();
