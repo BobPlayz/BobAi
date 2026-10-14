@@ -20,8 +20,8 @@ You'll need:
 
 - Node.js 24 or newer
 - npm
-- PostgreSQL, with the extensions required by your setup
-- Credentials for whichever providers or services you want to use
+- PostgreSQL for persistent, database-backed features
+- Credentials for whichever providers or services you want to try
 
 Clone the repo and install its dependencies:
 
@@ -38,6 +38,11 @@ Make a local environment file:
 copy .env.example .env
 ```
 
+**Windows (PowerShell):**
+```powershell
+Copy-Item .env.example .env
+```
+
 **macOS / Linux:**
 ```bash
 cp .env.example .env
@@ -45,15 +50,24 @@ cp .env.example .env
 
 Open `.env` and fill in the settings needed for the features you want to try. Don't put real secrets in the repo.
 
-## Useful commands
+## One-command development startup
 
 ```bash
-npm run ai     # Start the development services
-npm run build  # Build the project
-npm test       # Run tests
+npm run ai
 ```
 
-If something doesn't work right away, check the environment settings first. This project has a few moving parts, and I'm still improving how they fit together.
+This command runs the automated test suite configured by `npm test` first. If a test fails, it exits without starting the API or website. If the suite passes, it starts the API and web app together, then attempts to open [http://localhost:3000](http://localhost:3000). Keep the terminal open while using BobAI and press **Ctrl+C** to stop the services.
+
+Useful commands when troubleshooting:
+
+```bash
+npm test       # Run configured automated tests only
+npm run build  # Build the API, BobHS, and web workspaces
+npm run smoke  # Run repository smoke checks
+npm run audit  # Check dependency advisories
+```
+
+Passing automated tests does not prove every UI route or external integration works. Database setup, email delivery, model-provider credentials, and other feature-specific services may still be required. Follow the [feature setup checklist](docs/FEATURE_SETUP_GUIDE.md) and the [feature inventory](docs/FEATURE_INVENTORY.md).
 
 ## A quick security note
 
@@ -75,7 +89,6 @@ BobAI can use an existing OpenAI-compatible chat API. This does not train a mode
 
 Ollama support has been retired. BobAI's public-beta AI path uses a configurable hosted provider; paid usage must remain disabled until provider-side limits and the ₹500 monthly budget safeguards are configured. See [hosted AI setup](docs/HOSTED_AI.md).
 
+## Project handoff (2026-10-14)
 
-## Project handoff (2026-10-13)
-
-The repo is actively being implemented against [`roadmap.md`](roadmap.md). Features documented here may depend on provider credentials, PostgreSQL migrations, SMTP, or local services. Recent changes include cancellable streaming, file uploads, voice dictation/read-aloud, research sources, and public Light/Dark theming, but they have not yet had the requested final build/test pass. The current static map is [`docs/FEATURE_INVENTORY.md`](docs/FEATURE_INVENTORY.md). Do not describe the service as production-ready until the roadmap's verification and launch gates are complete.
+The repo is actively being implemented against [`roadmap.md`](roadmap.md). Features documented here may depend on provider credentials, PostgreSQL migrations, SMTP, or local services. The feature inventory is a static review, not a certification that every route or integration works. Do not describe the service as production-ready until the roadmap's verification and launch gates are complete.
