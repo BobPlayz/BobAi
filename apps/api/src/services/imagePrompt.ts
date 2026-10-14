@@ -10,6 +10,6 @@ export function extractImagePrompt(text: string): string | null {
     const prompt = desired[1].trim();
     return (prompt || "a polished, high-quality digital illustration").slice(0, 8_000);
   }
-  const direct = normalized.match(/^(?:draw|paint)\s+(?:(?:me|us)\s+)?(?:a|an|the)\s+([\s\S]+)$/i);
-  return direct ? direct[1].trim().slice(0, 8_000) || null : null;
+  const direct = normalized.match(/^(?:draw|paint)\s+(?:(?:me|us)\s+)?(?:(a|an|the)\s+)?([\s\S]+)$/i);
+  return direct ? `${direct[1] ? `${direct[1]} ` : ""}${direct[2].trim()}`.slice(0, 8_000) || null : null;
 }

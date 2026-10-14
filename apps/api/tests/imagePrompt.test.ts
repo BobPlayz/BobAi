@@ -12,7 +12,7 @@ test("explicit image requests extract only the image subject", () => {
 
 test("draw and paint requests work without the word image", () => {
   assert.equal(extractImagePrompt("draw a dragon flying above a mountain"), "a dragon flying above a mountain");
-  assert.equal(extractImagePrompt("paint me a watercolor garden"), "watercolor garden");
+  assert.equal(extractImagePrompt("paint me a watercolor garden"), "a watercolor garden");
 });
 
 test("ordinary questions are not misrouted to image generation", () => {
