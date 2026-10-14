@@ -1,7 +1,7 @@
 import { getTool, type BobTool } from "./toolRegistry.js";
 import { randomUUID } from "node:crypto";
 import { db, images, researchSessions } from "@bobai/db";
-import { consumeResearchQuota } from "./researchQuota.js";
+import { recordResearchSources, reserveResearchRequest } from "./researchQuota.js";
 import type { ToolExecutionContext } from "./toolExecution.js";
 import { assertPublicTargetUrl, boundedText, providerUrl, safeError } from "./httpSafety.js";
 
@@ -42,8 +42,9 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
 
 const EXECUTORS: Record<string, Executor> = {
   research: async (args, context) => {
+    const reservation = await reserveResearchRequest(context.userId);
     const result = await (await import("./deepResearch.js")).deepResearch(args.query, {}, context.signal);
-    await consumeResearchQuota(context.userId, result.sources.length);
+    await recordResearchSources(context.userId, result.sources.length, reservation.windowStart);
     const sessionId = randomUUID();
     await db.insert(researchSessions).values({
       id: sessionId, workspaceId: context.workspaceId, userId: context.userId,
