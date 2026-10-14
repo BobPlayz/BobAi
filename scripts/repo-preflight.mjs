@@ -37,6 +37,7 @@ async function main() {
     "docs/HOSTED_AI.md",
     "docs/QUICK_START_AUTH.md",
     "docs/FEATURE_INVENTORY.md",
+    "docs/FEATURE_SETUP_GUIDE.md",
     "docs/HANDOFF.md",
   ]);
   const disallowedMarkdown = markdown.filter((path) => !allowedMarkdown.has(path));
