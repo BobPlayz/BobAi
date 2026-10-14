@@ -30,7 +30,7 @@ router.get("/status", async (_req, res) => res.json(await status()));
 
 router.post("/turn", limit, async (req, res) => {
   const controller = new AbortController();
-  const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
+  const onDisconnect = () => { if (!res.writableEnded) controller.abort(new Error("client disconnected")); };
   req.once("aborted", onDisconnect);
   res.once("close", onDisconnect);
   try {
