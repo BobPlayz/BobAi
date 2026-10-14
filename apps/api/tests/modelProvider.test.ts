@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
+import { ollamaModelFor, ollamaStatus } from "../src/services/ollamaProvider.js";
 
 const originalFetch = globalThis.fetch;
-const keys = ["NODE_ENV", "BOBAI_PROVIDER", "BOBAI_MODEL_NAME", "BOBAI_CODING_MODEL_NAME", "OPENAI_API_KEY", "BOBAI_OPENAI_BASE_URL", "BOBAI_OPENAI_MODEL"] as const;
+const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]])) as Record<(typeof keys)[number], string | undefined>;
 function restore() {
   globalThis.fetch = originalFetch;
@@ -13,51 +14,75 @@ function restore() {
   }
 }
 
-test("retired Ollama model id is rejected instead of routed to a local service", async () => {
+test("BobAI defaults to local Ollama models without API credentials", () => {
   try {
-    delete process.env.BOBAI_PROVIDER;
-    process.env.BOBAI_MODEL_NAME = "ollama-local";
-    await assert.rejects(new BobModelProvider().chat([{ role: "user", content: "hello" }]), /unsupported model/);
-  } finally {
-    restore();
-  }
+    for (const key of keys) delete process.env[key];
+    assert.equal(ollamaModelFor("bob"), "qwen2.5:3b");
+    assert.equal(ollamaModelFor("coding"), "qwen2.5-coder:3b");
+    assert.equal(new BobModelProvider().isConfigured(), true);
+  } finally { restore(); }
 });
 
-test("hosted provider selection also routes coding model requests to the hosted adapter", async () => {
+test("Ollama chat sends requests only to the configured local runtime", async () => {
   try {
-    process.env.BOBAI_PROVIDER = "openai";
-    process.env.OPENAI_API_KEY = "test-key";
-    process.env.BOBAI_OPENAI_BASE_URL = "https://api.openai.com/v1";
-    process.env.BOBAI_OPENAI_MODEL = "test-model";
-    delete process.env.BOBAI_MODEL_NAME;
-    delete process.env.BOBAI_CODING_MODEL_NAME;
-    globalThis.fetch = async (_input, init) => {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    process.env.BOBAI_OLLAMA_MODEL = "qwen2.5:3b";
+    globalThis.fetch = async (input, init) => {
+      assert.equal(String(input), "http://127.0.0.1:11434/api/chat");
+      assert.equal(init?.method, "POST");
       const body = JSON.parse(String(init?.body));
-      assert.equal(body.model, "test-model");
-      return new Response(JSON.stringify({ choices: [{ message: { content: "coding answer" } }] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
+      assert.equal(body.model, "qwen2.5:3b");
+      assert.equal(body.stream, false);
+      return new Response(JSON.stringify({ message: { content: "  local answer  " }, done: true }), { status: 200 });
+    };
+    const result = await new BobModelProvider().chat([{ role: "user", content: "hello" }]);
+    assert.deepEqual(result, { content: "local answer", model: "qwen2.5:3b", provider: "bob" });
+  } finally { restore(); }
+});
+
+test("coding requests use the separate local coder model", async () => {
+  try {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://localhost:11434";
+    process.env.BOBAI_OLLAMA_CODING_MODEL = "qwen2.5-coder:3b";
+    globalThis.fetch = async (_input, init) => {
+      assert.equal(JSON.parse(String(init?.body)).model, "qwen2.5-coder:3b");
+      return new Response(JSON.stringify({ message: { content: "function add(a, b) { return a + b; }" } }), { status: 200 });
     };
     const result = await new BobModelProvider().chat([{ role: "user", content: "write a function" }], "coding");
-    assert.equal(result.content, "coding answer");
-    assert.equal(result.model, "test-model");
+    assert.equal(result.model, "qwen2.5-coder:3b");
     assert.equal(result.provider, "coding");
-  } finally {
-    restore();
-  }
+  } finally { restore(); }
 });
 
-test("production accepts only the configured hosted model", async () => {
+test("Ollama streaming parses newline-delimited JSON tokens", async () => {
   try {
-    process.env.NODE_ENV = "production";
-    process.env.BOBAI_PROVIDER = "openai";
-    process.env.OPENAI_API_KEY = "test-key";
-    await assert.rejects(
-      new BobModelProvider().chat([{ role: "user", content: "hello" }], "bob", "bob-production"),
-      /Only the configured hosted provider is available in production/,
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    globalThis.fetch = async () => new Response(
+      '{"message":{"content":"Hello"},"done":false}\n{"message":{"content":" world"},"done":true}\n',
+      { status: 200, headers: { "content-type": "application/x-ndjson" } },
     );
-  } finally {
-    restore();
-  }
+    const tokens: string[] = [];
+    const result = await new BobModelProvider().stream([{ role: "user", content: "hello" }], token => tokens.push(token));
+    assert.equal(result.content, "Hello world");
+    assert.deepEqual(tokens, ["Hello", " world"]);
+  } finally { restore(); }
+});
+
+test("Ollama rejects insecure remote HTTP endpoints", async () => {
+  try {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://example.com:11434";
+    await assert.rejects(new BobModelProvider().chat([{ role: "user", content: "hello" }]), /must use HTTPS/);
+  } finally { restore(); }
+});
+
+test("Ollama status does not expose credentials and reports required local models", async () => {
+  try {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    globalThis.fetch = async () => new Response(JSON.stringify({ models: [{ name: "qwen2.5:3b" }] }), { status: 200 });
+    const status = await ollamaStatus();
+    assert.equal(status.provider, "ollama");
+    assert.equal(status.ready, false);
+    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b"]);
+    assert.equal(JSON.stringify(status).includes("secret"), false);
+  } finally { restore(); }
 });
