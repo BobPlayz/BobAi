@@ -15,3 +15,10 @@ test("native media conversion rejects formats outside its explicit service bound
   await assert.rejects(() => convertMedia(Buffer.alloc(0), "mp4"), /PCM16 WAV only/);
   assert.deepEqual(buildFfmpegArgs("input", "output.wav", "wav"), ["input", "output.wav", "wav"]);
 });
+
+test("local image request limits and image MIME validation are enforced before model startup", async () => {
+  const { generateImages } = await import("../src/services/mediaGeneration.js");
+  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64,SGVsbG8="]), /MIME does not match/);
+  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64,!!!!"]), /reference images/);
+  await assert.rejects(() => generateImages("test", 1, ["data:image/png;base64," + "A".repeat(2_800_001)]), /reference images/);
+});
