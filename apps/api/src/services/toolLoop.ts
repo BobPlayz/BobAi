@@ -46,7 +46,7 @@ const EXECUTORS: Record<string, Executor> = {
   blender: async (args, context) => callConfiguredProvider(getTool("blender")!, args, context.signal),
   documents: async (args, context) => callConfiguredProvider(getTool("documents")!, args, context.signal),
   knowledge: async (args, context) => callConfiguredProvider(getTool("knowledge")!, args, context.signal),
-  "data-analysis": async (args) => callConfiguredProvider(getTool("data-analysis")!, args),
+  "data-analysis": async (args, context) => callConfiguredProvider(getTool("data-analysis")!, args, context.signal),
   diagrams: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("diagram_generation", args),
   "sketch-to-ui": async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("sketch_to_ui", args),
   voice: async (args) => { if (args.operation !== "synthesize" || typeof args.text !== "string") throw new Error("local voice tool supports synthesis and requires text"); return (await import("./voice.js")).synthesize(args.text); },
