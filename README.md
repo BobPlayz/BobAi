@@ -1,12 +1,12 @@
-# BobAI 🤖
+# Jarvis 🤖
 
-BobAI is a local-first AI platform built around Ollama. Ollama runs the language models; BobAI adds the product around them: chat, streaming, tool calling, memory, internet research, coding assistance, local voice, and local image generation.
+Jarvis is a local-first AI platform built around Ollama. Ollama runs the language models; Jarvis adds the product around them: chat, streaming, tool calling, memory, internet research, coding assistance, local voice, and local image generation.
 
 ## Current direction
 
 - No external AI APIs for chat, coding, research synthesis, or voice.
-- Ollama runs downloaded language models locally. BobAI does not require training a model from scratch.
-- BobAI's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access.
+- Ollama runs downloaded language models locally. Jarvis does not require training a model from scratch.
+- Jarvis's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access.
 - Image generation uses a direct local Diffusers integration, not ComfyUI and not a hosted image API.
 - Jarvis voice profile: Piper English en_GB-alan-medium and Telugu te_IN-venkatesh-medium, with local speech recognition configured separately.
 - Database and email are infrastructure integrations. Set them up privately and never commit credentials.
@@ -44,7 +44,7 @@ You can choose other locally installed Ollama models in your private .env. For a
 
 ## Local image generation
 
-BobAI uses a local Diffusers pipeline directly, without ComfyUI and without a hosted generation API.
+Jarvis uses a local Diffusers pipeline directly, without ComfyUI and without a hosted generation API.
 
 1. Install the optional dependencies into the Python environment selected by BOBAI_PYTHON: python -m pip install -r requirements-image.txt
 2. Download a Diffusers-compatible image model to a local directory once, respecting its license and usage restrictions.
@@ -55,7 +55,7 @@ The model must already be on disk because inference uses local_files_only=True. 
 
 ## Jarvis voice
 
-BobAI's voice service uses local Piper and local Whisper.cpp integration. For the same offline voice profile as Ai-Glasses, configure:
+Jarvis's voice service uses local Piper and local Whisper.cpp integration. For the same offline voice profile as Ai-Glasses, configure:
 
 - English Piper model: en_GB-alan-medium.onnx and its matching .onnx.json
 - Telugu Piper model: te_IN-venkatesh-medium.onnx and its matching .onnx.json
@@ -69,8 +69,8 @@ Run npm test, npm run build, npm run smoke, then npm run ai. The ai command runs
 
 ## Security
 
-Never commit .env, database URLs, credentials, or private keys. Keep Ollama bound to loopback unless you deliberately configure and secure a network deployment. Before exposing BobAI to the public internet, review authentication, authorization, CORS, HTTPS, rate limits, data retention, and account isolation.
+Never commit .env, database URLs, credentials, or private keys. Keep Ollama bound to loopback unless you deliberately configure and secure a network deployment. Before exposing Jarvis to the public internet, review authentication, authorization, CORS, HTTPS, rate limits, data retention, and account isolation.
 
 ## Project status
 
-BobAI is an active work in progress. The feature setup checklist, feature inventory, and roadmap describe what still needs setup and verification.
+Jarvis is an active work in progress. The feature setup checklist, feature inventory, and roadmap describe what still needs setup and verification.

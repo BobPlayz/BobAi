@@ -8,9 +8,9 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 
 export const metadata: Metadata = {
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
-  title: { default: "Bob AI", template: "%s | Bob AI" },
+  title: { default: "Jarvis", template: "%s | Jarvis" },
   description: "An AI workspace for chat, research, creation, development, memory, files, tools, agents, and automations.",
-  applicationName: "Bob AI",
+  applicationName: "Jarvis",
   creator: "Origin Productions",
   publisher: "Origin Productions",
   generator: "Next.js",
@@ -19,16 +19,16 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   ...(siteUrl ? { alternates: { canonical: siteUrl } } : {}),
   openGraph: {
-    title: "Bob AI",
+    title: "Jarvis",
     description: "An AI workspace for chat, research, creation, and development.",
     type: "website",
     ...(siteUrl ? { url: siteUrl } : {}),
-    siteName: "Bob AI",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Bob AI workspace" }],
+    siteName: "Jarvis",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Jarvis workspace" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bob AI",
+    title: "Jarvis",
     description: "An AI workspace for chat, research, creation, and development.",
     images: ["/opengraph-image"],
   },
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <div id="bobai-root" className="relative min-h-screen overflow-hidden">
+        <div id="jarvis-root" className="relative min-h-screen overflow-hidden">
           <div className="relative z-10 min-h-screen">
             <ThemeProvider>
               <SiteNav />

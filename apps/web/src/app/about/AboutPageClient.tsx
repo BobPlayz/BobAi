@@ -15,9 +15,9 @@ export default function AboutPageClient() {
     <main className={`min-h-screen overflow-auto px-6 pb-20 pt-28 ${colors.page}`}>
       <div className="mx-auto max-w-4xl">
         <Breadcrumbs current="About" />
-        <h1 className="text-4xl font-bold tracking-tight">about bob ai</h1>
+        <h1 className="text-4xl font-bold tracking-tight">about jarvis</h1>
         <p className={`mt-5 max-w-2xl text-lg leading-8 ${colors.muted}`}>
-          Bob AI is being built as a practical AI workspace for conversation, research, creation, files, and developer tools.
+          Jarvis is being built as a practical AI workspace for conversation, research, creation, files, and developer tools.
         </p>
         <p className={`mt-3 text-sm ${colors.muted}`}>Published by <strong className={light ? "text-[#202123]" : "text-white"}>Origin Productions</strong>.</p>
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
@@ -35,7 +35,7 @@ export default function AboutPageClient() {
         <div className={`mt-10 rounded-2xl border p-6 ${colors.panel}`}>
           <h2 className="font-semibold">the team</h2>
           <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>
-            Bob AI is an independent project published by Origin Productions. The public beta will only describe features that are actually available and verified.
+            Jarvis is an independent project published by Origin Productions. The public beta will only describe features that are actually available and verified.
           </p>
         </div>
         <Link href="/contact" className={`mt-8 inline-flex rounded-xl border px-5 py-3 font-semibold ${colors.link}`}>Contact</Link>
