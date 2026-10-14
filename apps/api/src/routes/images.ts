@@ -9,6 +9,7 @@ const router = Router();
 const limit = createUserRateLimit(5, 60_000);
 const MAX_PROMPT = 8_000;
 const MAX_DATA_URL = 12 * 1024 * 1024;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 router.get("/", async (req, res) => {
   try {
@@ -68,10 +69,12 @@ router.post("/generate", limit, async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
+  const id = String(req.params.id);
+  if (!UUID.test(id)) return res.status(400).json({ error: "invalid image id" });
   try {
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     const [row] = await db.select().from(images)
-      .where(and(eq(images.id, req.params.id), eq(images.workspaceId, workspace.id), eq(images.createdBy, req.user!.id), isNull(images.deletedAt)))
+      .where(and(eq(images.id, id), eq(images.workspaceId, workspace.id), eq(images.createdBy, req.user!.id), isNull(images.deletedAt)))
       .limit(1);
     if (!row) return res.status(404).json({ error: "image not found" });
     const metadata = row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
@@ -87,6 +90,8 @@ router.get("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
+  const id = String(req.params.id);
+  if (!UUID.test(id)) return res.status(400).json({ error: "invalid image id" });
   try {
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     const [row] = await db.update(images).set({ deletedAt: new Date(), updatedAt: new Date() })
