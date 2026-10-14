@@ -17,8 +17,8 @@ const authBuckets = new Map<string, { startedAt: number; count: number }>();
 const AUTH_WINDOW_MS = 15 * 60_000;
 const AUTH_MAX_ATTEMPTS = 10;
 const MAX_AUTH_BUCKETS = 10_000;
-const REFRESH_COOKIE = "bobai_refresh";
-const ACCESS_COOKIE = "bobai_access";
+const REFRESH_COOKIE = "jarvis_refresh";
+const ACCESS_COOKIE = "jarvis_access";
 function pruneAuthBuckets(now = Date.now()) { const cutoff = now - AUTH_WINDOW_MS; for (const [key, bucket] of authBuckets) if (bucket.startedAt < cutoff) authBuckets.delete(key); }
 function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = authBuckets.get(bucketKey); if (!current || now - current.startedAt >= AUTH_WINDOW_MS) { if (authBuckets.size >= MAX_AUTH_BUCKETS) pruneAuthBuckets(now); if (authBuckets.size >= MAX_AUTH_BUCKETS) return true; authBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > AUTH_MAX_ATTEMPTS; }
 setInterval(() => pruneAuthBuckets(), AUTH_WINDOW_MS).unref();
