@@ -42,7 +42,7 @@ router.post("/generate", limit, async (req, res) => {
   if (req.body?.inputImages !== undefined && (!Array.isArray(req.body.inputImages) || req.body.inputImages.length > 4 || req.body.inputImages.some((image: unknown) => typeof image !== "string"))) return res.status(400).json({ error: "inputImages must be an array of up to 4 reference images" });
   const inputImages = req.body?.inputImages as string[] | undefined;
   const controller = new AbortController();
-  const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
+  const onDisconnect = () => { if (!res.writableEnded) controller.abort(new Error("client disconnected")); };
   req.once("aborted", onDisconnect);
   res.once("close", onDisconnect);
 
