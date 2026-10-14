@@ -7,6 +7,7 @@ export type QueueJob = { id: string; description: string; kind?: AgentTaskKind; 
 const queue: QueueJob[] = []; const jobs = new Map<string, QueueJob>(); const pendingPersistence = new Set<string>(); let running = 0;
 const concurrency = Math.max(1, Math.min(4, Number(process.env.BOBAI_AGENT_CONCURRENCY || 1))); const maxAttempts = Math.max(1, Math.min(5, Number(process.env.BOBAI_AGENT_MAX_ATTEMPTS || 2)));
 export function enqueueAgentTask(input: Omit<QueueJob, "id" | "attempts" | "status" | "createdAt">) { if (queue.length >= 100) throw new Error("agent queue is full"); const job: QueueJob = { ...input, id: randomUUID(), attempts: 0, status: "queued", createdAt: new Date().toISOString(), context: { ...input.context, taskId: undefined } }; job.context = { ...job.context, taskId: job.id }; queue.push(job); jobs.set(job.id, job); pendingPersistence.add(job.id); void persistAgentTask({ id: job.id, workspaceId: job.context?.workspaceId, createdBy: job.context?.createdBy, title: job.description.slice(0, 120), description: job.description, type: job.kind || "coding", status: "queued", payload: { mode: job.mode, skills: job.skills, budget: job.context?.budget, checkpointToken: job.context?.checkpointToken } }).then((persisted) => { if (!persisted && process.env.DATABASE_URL && job.context?.workspaceId && job.status === "queued") { job.status = "failed"; job.error = "agent task could not be persisted"; } }).catch(() => { if (process.env.DATABASE_URL && job.context?.workspaceId && job.status === "queued") { job.status = "failed"; job.error = "agent task could not be persisted"; } }).finally(() => { pendingPersistence.delete(job.id); void drain(); }); return job; }
+function isCancelled(job: QueueJob): boolean { return job.status === "cancelled"; }
 export function getQueueJob(id: string) { return jobs.get(id) || null; }
 export function listQueueJobs() { return [...jobs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
 export function cancelQueueJob(id: string) { const job = jobs.get(id); if (!job || !["queued", "running", "waiting"].includes(job.status)) return false; if (job.status === "running") cancelAgentTask(job.id); job.status = "cancelled"; job.error = "agent task cancelled"; void updatePersistedAgentTask({ id: job.id, status: "cancelled", error: job.error }).catch(() => undefined); return true; }
@@ -34,7 +35,7 @@ async function drain() { await recoveryPromise; while (running < concurrency) { 
 async function run(job: QueueJob) {
   let heartbeat: NodeJS.Timeout | undefined;
   try {
-    if (job.status === "cancelled") return;
+    if (isCancelled(job)) return;
     const durable = Boolean(process.env.DATABASE_URL && job.context?.workspaceId);
     const claimed = await claimPersistedAgentTask(job.id, durable).catch(() => false);
     if (!claimed) {
@@ -47,14 +48,14 @@ async function run(job: QueueJob) {
       heartbeat = setInterval(() => { void touchPersistedAgentTask(job.id).catch(() => undefined); }, 30_000);
       heartbeat.unref();
     }
-    if (job.status === "cancelled") return;
+    if (isCancelled(job)) return;
     job.result = await executeAgentTask(job.description, job.kind, job.skills, job.mode, job.context);
-    if (job.status !== "cancelled") {
+    if (!isCancelled(job)) {
       job.status = "completed";
       await updatePersistedAgentTask({ id: job.id, status: "completed", result: job.result }).catch(() => undefined);
     }
   } catch (error) {
-    if (job.status === "cancelled") return;
+    if (isCancelled(job)) return;
     job.error = error instanceof Error ? error.message : "agent execution failed";
     if (/checkpoint approval is required/i.test(job.error)) {
       job.status = "waiting";
