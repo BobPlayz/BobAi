@@ -142,8 +142,8 @@ def main() -> int:
                     prompt=prompt.strip(),
                     width=width,
                     height=height,
-                    num_inference_steps=20,
-                    guidance_scale=7.0,
+                    num_inference_steps=steps,
+                    guidance_scale=float(guidance_scale),
                     generator=generator,
                 )
             image = result.images[0]
