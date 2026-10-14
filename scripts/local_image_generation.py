@@ -122,11 +122,20 @@ def main() -> int:
                 pass
         else:
             pipe = pipe.to("cpu")
+            # Quality models are larger; max slicing reduces peak attention memory
+            # at the cost of speed, which is preferable to crashing an 8 GB laptop.
             try:
-                pipe.enable_attention_slicing()
-                pipe.enable_vae_slicing()
+                if os.environ.get("BOBAI_IMAGE_PROFILE", "fast").strip().lower() == "quality":
+                    pipe.enable_attention_slicing("max")
+                else:
+                    pipe.enable_attention_slicing()
             except Exception:
                 pass
+            for method in ("enable_vae_slicing", "enable_vae_tiling"):
+                try:
+                    getattr(pipe, method)()
+                except Exception:
+                    pass
 
         outputs = []
         for index in range(count):
