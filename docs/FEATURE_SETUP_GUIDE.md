@@ -1,121 +1,114 @@
 # BobAI feature setup checklist
 
-This guide separates **code-side work** from the setup that must happen on your computer or in external provider accounts. A feature appearing in the UI does not mean its end-to-end behavior has been verified.
+This guide describes the current local-first direction. Chat, coding responses, research synthesis, and voice should use local software/models. Neon and Resend account setup can be completed separately; never commit their credentials.
 
 ## 1. Install and start the project
 
 1. Install Node.js 24 or newer and Git.
-2. Open Command Prompt or PowerShell and go to the repository folder.
-3. Pull the latest `main` branch:
-   ```bash
-   git pull origin main
-   ```
-4. Install the exact lockfile dependencies:
-   ```bash
-   npm ci
-   ```
-5. Create a local environment file if you do not already have one:
-   - Command Prompt: `copy .env.example .env`
-   - PowerShell: `Copy-Item .env.example .env`
-6. Start BobAI:
-   ```bash
-   npm run ai
-   ```
-   The command runs the repository's configured `npm test` suite first. If any test fails, it stops and does not launch the services. If tests pass, it starts the API and web app and attempts to open `http://localhost:3000`. Keep the terminal open; press Ctrl+C to stop the services.
-7. If the command stops at a failed test, fix that failure before trying again. Do not bypass failing tests to claim the app is verified.
+2. Pull the latest main branch and run npm ci.
+3. Copy .env.example to .env using the command for your terminal.
+4. Configure DATABASE_URL with your Neon PostgreSQL connection string when you are ready to enable database-backed features.
+5. Install Ollama and pull the default models:
+   - ollama pull qwen2.5:3b
+   - ollama pull qwen2.5-coder:3b
+6. Confirm Ollama is running at http://127.0.0.1:11434.
+7. Run npm test, then npm run build. After failures are fixed, use npm run ai to start the API and web app.
 
-## 2. Configure the database and accounts
+Do not treat a successful start as proof that every feature works. The database must be reachable and migrated, and local models/assets must be installed.
 
-1. Install and run PostgreSQL, or provision a PostgreSQL instance you control.
-2. Create a dedicated database and a database user with only the permissions BobAI needs.
-3. Put the connection string in your private `.env` as `DATABASE_URL=...`. Do not commit `.env`.
-4. Review the DB workspace's documented migration process before applying schema changes. Use the repository's migration commands only after checking the target database and making a backup if it contains data.
-5. Start BobAI and test health/readiness, account creation/login, session expiry, and conversation persistence.
-6. Use test accounts and non-sensitive test data. Test that one account cannot access another account's conversations, files, or memories.
+## 2. Local chat and coding
 
-A database is not required for every isolated UI preview, but persistent accounts, conversations, memory, and other database-backed features cannot be considered working without a correctly migrated database.
+The API uses Ollama's local chat endpoint. Default settings:
 
-## 3. Enable chat with an AI model
+- BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
+- BOBAI_OLLAMA_MODEL=qwen2.5:3b
+- BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
 
-BobAI's documented public-beta AI path uses a hosted OpenAI-compatible provider; Ollama is not supported in this branch.
+These are example defaults, not hard requirements. Choose models that are actually installed in Ollama. Small models are more practical on an 8 GB RAM computer but may produce weaker results. Coding requests are routed to the local coder model when recognized; this is code generation and debugging, not a fully autonomous repository-editing agent by itself.
 
-1. Choose a provider/model and review its pricing, data-processing terms, and age restrictions.
-2. In the provider dashboard, set a hard spending cap and usage limits before making requests. Alerts alone may not stop spending.
-3. In the private server environment, set:
-   ```dotenv
-   BOBAI_PROVIDER=openai
-   OPENAI_API_KEY=your_server_side_key
-   BOBAI_OPENAI_BASE_URL=https://api.openai.com/v1
-   BOBAI_OPENAI_MODEL=gpt-4o-mini
-   ```
-4. Keep `OPENAI_API_KEY` server-side only. Never put it in a `NEXT_PUBLIC_*` variable, frontend code, screenshots, or Git.
-5. Only after independently verifying the provider-side cap, set `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true` and keep `BOBAI_PROVIDER_MONTHLY_BUDGET_INR=500` if that is the intended budget. This flag is an operator attestation, not an automatic check of the provider dashboard.
-6. Restart BobAI and test model status, a short chat, streaming, stopping a response, and provider-error handling. Verify the selected model really supports each modality you plan to use.
+No OpenAI key or hosted AI API is required for the local chat path.
 
-Hosted chat, image generation, and other paid provider features may cost money. Do not test them until limits and pricing are understood.
+## 3. Internet research
 
-## 4. Email OTP and account security
+BobAI's research service runs its own query, result parsing, source ranking, caching, source filtering, evidence fetching, and local-model synthesis. It does not need a hosted AI API. Live web research still requires an internet connection and depends on the public search website being reachable. Verify every citation against the page text; search results and scraped pages can be incomplete or misleading.
 
-1. Set up an SMTP account/provider you are authorized to use.
-2. Fill in `BOBAI_SMTP_HOST`, `BOBAI_SMTP_PORT`, `BOBAI_SMTP_USER`, `BOBAI_SMTP_PASSWORD`, and `BOBAI_SMTP_FROM` in the private environment.
-3. Configure the MFA encryption key and any required terms/privacy settings according to the auth implementation and deployment environment.
-4. Test sending and verifying a one-time code, invalid/expired codes, resend limits, sign-out, and session expiration.
-5. Test account recovery and deletion only with test accounts. Confirm deletion/export behavior before storing real data.
+Test:
+- Empty, oversized, and malformed queries.
+- Empty search results and temporary search failures.
+- Broken or redirected pages.
+- Whether the evidence excerpts support the final synthesis.
+- Source preferences, caching, timeouts, and per-user quota behavior.
 
-Social login is optional. Google, GitHub, and Apple login also require credentials and callback URLs configured in each provider's dashboard; blank variables do not enable those providers.
+## 4. Local image generation, no ComfyUI
 
-## 5. Feature-by-feature configuration
+BobAI now has a direct Python Diffusers runner. It does not call a hosted image-generation API and does not use ComfyUI.
 
-| Feature | What you need to configure or verify |
-|---|---|
-| Chat + streaming | Hosted provider, server-side key, supported model, database if saving history; test stop/cancel and refresh persistence. |
-| Conversation history | PostgreSQL, migrations, session authentication, ownership-isolation tests. |
-| Long-term memory | Database/migrations, user consent and memory controls; test disable, clear, and per-user isolation. |
-| File uploads and document understanding | Writable storage directory, upload size/type limits, OCR dependencies where required, malformed/oversized file tests, and cleanup/retention checks. |
-| Image understanding (vision) | A configured model that actually accepts image inputs; test supported formats and provider errors. |
-| Image generation/editing | Provider key and image-model access; test a real generated image, supported reference format/size, error handling, and usage cost. |
-| Web search / research | Configure any required search/research provider settings in the relevant route/service; test citations against source evidence, broken links, empty results, and stale/conflicting information. |
-| Voice dictation | Browser microphone permission and a configured/supported transcription path; test permission denial, noisy audio, and editing the transcript before sending. |
-| Read answers aloud | Browser speech support or the configured speech provider/local executable paths; test stop/cleanup and missing-provider behavior. |
-| Agents and tools | Keep tool execution disabled unless needed, configure agent secrets/URLs only for services you actually run, and verify approvals, quotas, cancellation, timeouts, and tenant isolation. |
-| OAuth/social login | Provider dashboard credentials, exact callback URLs, allowed origins, and a private server environment. |
-| Account export/deletion | Database/storage configured; test reauthentication, archive contents, grace period, and final removal with disposable accounts. |
-| BobHS support service | Configure its host/port, mode, data directory, and strong controller/join/node tokens according to the service's deployment mode. It is separate from the normal web/API startup unless you explicitly start it. |
-| Reminders, automations, integrations | Verify persistence, any required worker/scheduler, credentials for each integration, permission scopes, retries, and duplicate execution protection. |
-| Theme and UI preferences | No external provider is normally needed; verify light/dark themes, mobile layout, keyboard navigation, and persisted settings. |
+1. Install Python 3.11 or another version supported by the selected PyTorch/Diffusers packages.
+2. Install the optional dependencies with: python -m pip install -r requirements-image.txt
+3. Download a compatible Diffusers image model to a local folder. Downloading is a one-time setup step; check the model license and usage restrictions first.
+4. Set BOBAI_IMAGE_MODEL_PATH in .env to the local model folder.
+5. Set BOBAI_PYTHON if the API should use a specific Python executable.
+6. Restart the API and test one 512x512 image.
 
-The names and exact requirements of environment variables can vary by feature. Use `.env.example` and the specific route/service implementation as the source of truth rather than inventing values.
+Generation uses local_files_only mode, so the model must already exist on disk. The runner attempts to use CUDA if available and otherwise uses CPU. CPU generation can be very slow and may exhaust 8 GB of RAM. Do not promise usable generation speed until it has been tested on the target computer. Reference-image editing is not implemented in this local pipeline yet.
 
-## 6. Run the verification commands directly
+## 5. Jarvis voice from Ai-Glasses
 
-Run these separately when diagnosing a failure:
+The selected offline voice profile is the same one established in Ai-Glasses:
 
-```bash
-npm test
-npm run build
-npm run smoke
-npm run audit
-```
+- English: Piper en_GB-alan-medium
+- Telugu: Piper te_IN-venkatesh-medium
+- Speech recognition: local Whisper.cpp model
+- No cloud voice provider
 
-- `npm test`: the automated tests configured in the root package scripts. It does not prove every UI flow or every external integration works.
-- `npm run build`: builds the API, BobHS, and web workspaces.
-- `npm run smoke`: repository smoke checks; inspect the script and its prerequisites before relying on the result.
-- `npm run audit`: checks dependency advisories reported by npm; review any findings rather than blindly forcing dependency upgrades.
+Configure these environment variables in the private .env:
+- BOBAI_PIPER_EN_MODEL_PATH
+- BOBAI_PIPER_EN_CONFIG_PATH
+- BOBAI_PIPER_TE_MODEL_PATH
+- BOBAI_PIPER_TE_CONFIG_PATH
+- BOBAI_ESPEAK_DATA_PATH
+- BOBAI_WHISPER_MODEL_PATH
 
-After each change, rerun the relevant tests. The `npm run ai` command runs the configured test suite before launching development services, but it does not currently run build, smoke, or audit automatically.
+The .onnx model and matching .onnx.json config files must exist locally. Set the paths to the assets you downloaded for Ai-Glasses or install matching copies into BobAI's local model directory. The Whisper model must also exist locally. The voice API currently uses BobAI's native media integration, so build it with npm run native:media:build after installing the required C++ build tools and compatible native dependencies. Run the voice status endpoint and test English, Telugu, empty audio, invalid WAV files, and missing model paths. Reuse the exact voice assets and licenses; do not assume the model files are already present in the BobAI repository.
 
-## 7. Before a public deployment
+The online Microsoft voice mode used in one Ai-Glasses setting is intentionally not used here because BobAI's voice must stay local/offline.
 
-These are not code-only tasks:
+## 6. Database and email
 
-- Choose hosting and a managed database; configure secrets in the hosting dashboard.
-- Configure a real domain, HTTPS, allowed origins, secure cookies, backups, monitoring, and rollback.
-- Set and verify provider-side spending limits.
-- Publish accurate privacy/terms pages, operator and support contacts, provider/data-retention disclosures, and obtain appropriate legal guidance for the intended audience.
-- Review every route for authorization, rate limiting, CORS/CSRF, input validation, and cross-account data isolation.
-- Run a fresh-database migration test, an upgrade test, the full build/test/audit/smoke pass, and manual desktop/mobile checks.
-- Do not claim a feature works until its live path has been exercised and its failure modes checked.
+Neon is compatible with the PostgreSQL connection used by the existing database package. Add the Neon connection string as DATABASE_URL in .env and run the documented database migration workflow after checking the target database. Do not paste database credentials into chat or commit them.
 
-## What remains code-side
+Resend is intended for email delivery setup, but the current OTP delivery implementation must be explicitly wired to Resend before a Resend API key alone will send emails. Do not assume setting a RESEND_API_KEY is sufficient until the adapter is implemented and tested. Test sending and verifying OTPs, expired codes, resend limits, account recovery, and deletion with disposable accounts.
 
-The repository's feature inventory marks multiple capabilities as implemented but unverified or partial. Remaining engineering work is to fix failures discovered by the tests/build, add missing UI and integration tests, verify database migrations and API route security, test cancellation and persistence end to end, and close the specific gaps listed in [the feature inventory](FEATURE_INVENTORY.md). Configuration steps above cannot replace those code changes or verification.
+## 7. Existing backend capabilities
+
+| Feature | Current implementation direction | Still needs verification |
+|---|---|---|
+| Chat and streaming | Local Ollama adapter | Real local model response, cancellation, model-not-installed errors |
+| Coding generation | Local Ollama coder model | Prompt routing and quality on chosen model |
+| Internet research | BobAI search/evidence pipeline plus Ollama synthesis | Search reliability, source-to-claim grounding, stale/broken sources |
+| Image generation | Local Diffusers pipeline, no ComfyUI | Python packages, local model folder, actual output and memory use |
+| Voice | Local Piper + Whisper.cpp integration | Native media build, English/Telugu model paths, playback and transcription |
+| Memory and conversations | Existing PostgreSQL/Drizzle layer | Neon connection, migrations, persistence, cross-account isolation |
+| Email OTP | Existing delivery abstraction | Resend adapter, secret configuration, real delivery and failure handling |
+| Image understanding | Local vision-specialist interface | Compatible local vision artifact must be installed; not provided by the Ollama chat model automatically |
+| Coding workspace agent | Separate sandbox bridge when configured | Requires a local bridge with strong authentication and sandbox verification |
+
+## 8. Verification commands
+
+Run these separately:
+
+    npm test
+    npm run build
+    npm run smoke
+    npm run audit
+
+Review failures and audit findings instead of forcing upgrades blindly. The configured test suite does not prove live Neon/Resend behavior, local model inference, image generation, or voice playback. Verify those paths directly after setup.
+
+## 9. Before public deployment
+
+- Configure HTTPS, secure cookies, CORS, rate limits, backups, monitoring, and rollback.
+- Confirm Ollama is not exposed to the public internet without an authenticated, secured gateway.
+- Review each API route for authorization, validation, and cross-account isolation.
+- Publish accurate privacy/terms, retention, operator, and support information.
+- Test a fresh database migration and a database upgrade using disposable data.
+- Do not claim a feature works until the real local model or infrastructure path has been exercised.
