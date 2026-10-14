@@ -1,24 +1,42 @@
+import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Avoid plugin-react auto-detection through the legacy ESLint context API.
+export default defineConfig([
+  js.configs.recommended,
+  {
+    files: ["**/*.{js,jsx,ts,tsx,mjs,mts}"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        fetch: "readonly",
+        window: "readonly",
+        document: "readonly",
+        navigator: "readonly",
+        localStorage: "readonly",
+        sessionStorage: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        AbortController: "readonly",
+        Request: "readonly",
+        Response: "readonly",
+        Headers: "readonly",
+        FormData: "readonly",
+        Blob: "readonly",
+        File: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        queueMicrotask: "readonly",
+        structuredClone: "readonly",
+      },
+    },
+  },
   {
     settings: { react: { version: "19.2" } },
-    // This app intentionally hydrates browser-only preferences from localStorage in effects.
-    rules: { "react-hooks/set-state-in-effect": "off" },
+    rules: { "no-undef": "off" },
   },
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "node_modules/**"]),
 ]);
-
-export default eslintConfig;
