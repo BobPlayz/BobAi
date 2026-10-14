@@ -1,7 +1,8 @@
 import { assertMediaPromptSafe } from "./mediaSafety.js";
 import { fluxGenerate } from "./flux.js";
+import { openAIImageGenerate } from "./openAIImageProvider.js";
 
-type GeneratedImage = { url: string; prompt: string; index: number; seed?: number; width?: number; height?: number };
+export type GeneratedImage = { url: string; prompt: string; index: number; seed?: number; width?: number; height?: number };
 type MediaOptions = { prompt: string; count?: number; width?: number; height?: number; seed?: number };
 const MAX_PROMPT_LENGTH = 8000;
 const MAX_INPUT_IMAGES = 4;
@@ -38,6 +39,12 @@ export async function generateImages(prompt:string,count=1,inputImages?:string[]
  if(!Number.isInteger(width)||width<256||width>768||width%8!==0||!Number.isInteger(height)||height<256||height>768||height%8!==0) throw new Error("image width and height must be multiples of 8 between 256 and 768");
  if(seed!==undefined&&(!Number.isInteger(seed)||seed<0||seed>2_147_483_647)) throw new Error("image seed must be an integer between 0 and 2147483647");
  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("image generation cancelled");
+ const provider=(process.env.BOBAI_IMAGE_PROVIDER || "local").trim().toLowerCase();
+ if(provider!=="local"&&provider!=="openai")throw new Error("BOBAI_IMAGE_PROVIDER must be local or openai");
+ if(provider==="openai"){
+  if(images.length)throw new Error("Power image mode currently supports text-to-image only; switch BOBAI_IMAGE_PROVIDER=local to edit reference images.");
+  return openAIImageGenerate(normalized,requested,signal,{width,height});
+ }
  const generated=await fluxGenerate(normalized,requested,images,signal,{width,height,seed,steps,guidanceScale,negativePrompt});
  if(generated?.length)return generated;
  throw new Error("image generation is unavailable; configure a supported image-generation provider");
