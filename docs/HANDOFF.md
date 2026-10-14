@@ -136,3 +136,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - The API error handler now maps oversized JSON bodies to HTTP 413 and malformed JSON to HTTP 400 instead of incorrectly reporting both as generic server errors.
 
 - Memory workspace/project context now validates requested project IDs against the selected workspace and rejects archived/deleted or cross-workspace projects before read/write operations.
+
+- Image generation now rejects malformed `inputImages` fields at the route boundary and returns client errors for unsupported/mismatched image payloads and blocked prompts, instead of misclassifying them as model failures.

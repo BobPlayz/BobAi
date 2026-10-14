@@ -33,7 +33,8 @@ router.post("/generate", limit, async (req, res) => {
   if (!Number.isInteger(count) || count < 1 || count > 4) return res.status(400).json({ error: "count must be between 1 and 4" });
   if (!Number.isInteger(width) || width < 256 || width > 768 || width % 8 !== 0 || !Number.isInteger(height) || height < 256 || height > 768 || height % 8 !== 0) return res.status(400).json({ error: "width and height must be multiples of 8 between 256 and 768" });
   if (seed !== undefined && (!Number.isInteger(seed) || seed < 0 || seed > 2_147_483_647)) return res.status(400).json({ error: "seed must be an integer between 0 and 2147483647" });
-  const inputImages = Array.isArray(req.body?.inputImages) ? req.body.inputImages as string[] : undefined;
+  if (req.body?.inputImages !== undefined && (!Array.isArray(req.body.inputImages) || req.body.inputImages.length > 4 || req.body.inputImages.some((image: unknown) => typeof image !== "string"))) return res.status(400).json({ error: "inputImages must be an array of up to 4 reference images" });
+  const inputImages = req.body?.inputImages as string[] | undefined;
   const controller = new AbortController();
   const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
   req.once("aborted", onDisconnect);
@@ -68,10 +69,9 @@ router.post("/generate", limit, async (req, res) => {
   } catch (error) {
     if (controller.signal.aborted || res.destroyed) return;
     const message = error instanceof Error ? error.message : "";
-    const safeMessage = /^(image prompt.{0,100}|count must be.{0,100}|local image.{0,200}|image generation is unavailable.{0,100}|up to 4 input images are supported|reference images.{0,100})$/i.test(message)
-      ? message
-      : "local image generation failed; check the local model setup and API logs";
-    return res.status(502).json({ error: safeMessage });
+    const clientError = /^(image prompt.{0,100}|count must be.{0,100}|width and height.{0,100}|seed must be.{0,100}|local image editing is not configured.{0,100}|image generation is unavailable.{0,100}|up to 4 input images are supported|reference images.{0,100}|MIME does not match.{0,100}|media request violates the safety policy|image request exceeds the 12 MB limit)$/i.test(message);
+    const safeMessage = clientError ? message : "local image generation failed; check the local model setup and API logs";
+    return res.status(clientError ? 400 : 502).json({ error: safeMessage });
   } finally {
     req.off("aborted", onDisconnect);
     res.off("close", onDisconnect);
