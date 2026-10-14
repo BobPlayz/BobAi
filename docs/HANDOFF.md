@@ -132,3 +132,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - Replaced remaining runtime-facing assistant/product labels in workspace creation, system prompts, research synthesis, agent safety prompts, chat stream errors, and native-media errors with Jarvis. Legacy package scopes and `BOBAI_*` environment identifiers remain unchanged for compatibility.
 
 - CI now parses the local Diffusers Python script with Python `ast` in both the main and backend workflows without creating bytecode files; the backend workflow also watches `scripts/**` and `requirements-image.txt` changes.
+
+- The API error handler now maps oversized JSON bodies to HTTP 413 and malformed JSON to HTTP 400 instead of incorrectly reporting both as generic server errors.
