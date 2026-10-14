@@ -72,7 +72,9 @@ router.get("/:id", async (req, res) => {
       ? row.metadata as Record<string, unknown> : {};
     const url = typeof metadata.url === "string" ? metadata.url : null;
     if (!url) return res.status(410).json({ error: "image data is unavailable" });
-    return res.json({ image: { ...row, url } });
+    const safeMetadata = { ...metadata };
+    delete safeMetadata.url;
+    return res.json({ image: { ...row, metadata: safeMetadata, url } });
   } catch {
     return res.status(503).json({ error: "image retrieval unavailable" });
   }
