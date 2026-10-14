@@ -56,3 +56,5 @@
 - The `/voice/turn` endpoint now chains local Whisper.cpp transcription, bounded Ollama chat context, and local Piper speech synthesis, with request validation and client-disconnect checks between stages.
 
 - Voice-turn orchestration reads the chat engine’s `message.content` response field before passing text to local Piper.
+
+- Fixed production CSRF cookie detection consistency by aligning authentication cookie names with the Jarvis cookie names checked by the API security middleware. The local `/voice/turn` endpoint also receives the same 34 MB JSON limit as transcription so base64 audio is not rejected by the global 2 MB parser.

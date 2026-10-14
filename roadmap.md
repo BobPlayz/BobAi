@@ -341,3 +341,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - [x] Add an authenticated local `/voice/turn` backend flow that transcribes an audio turn, continues a bounded user/assistant context through local chat, synthesizes a local spoken reply, and stops processing when the client disconnects. Native synchronous inference may not stop mid-call; live interruption and latency remain runtime-verification items.
 
 - Corrected the voice-turn orchestrator to read the actual chat-engine response shape (`reply.message.content`) before synthesizing speech.
+- **2026-10-14:** Aligned auth cookies (`jarvis_access`/`jarvis_refresh`) with production CSRF middleware and applied the voice payload limit to `/voice/turn` as well as `/voice/transcribe`.
