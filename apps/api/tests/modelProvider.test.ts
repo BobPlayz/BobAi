@@ -18,9 +18,9 @@ function restore() {
 test("BobAI defaults to one shared multimodal Ollama model without API credentials", () => {
   try {
     for (const key of keys) delete process.env[key];
-    assert.equal(ollamaModelFor("bob"), "qwen3.5:2b");
-    assert.equal(ollamaModelFor("coding"), "qwen3.5:2b");
-    assert.equal(ollamaVisionModel(), "qwen3.5:2b");
+    assert.equal(ollamaModelFor("bob"), "qwen3.5:4b");
+    assert.equal(ollamaModelFor("coding"), "qwen2.5-coder:3b");
+    assert.equal(ollamaVisionModel(), "qwen3.5:4b");
     assert.equal(ollamaEmbeddingModel(), "qwen3-embedding:0.6b");
     assert.equal(new BobModelProvider().isConfigured(), true);
   } finally { restore(); }
@@ -31,6 +31,7 @@ test("Ollama chat sends requests only to the configured local runtime", async ()
     process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
     process.env.BOBAI_OLLAMA_MODEL = "qwen2.5:3b";
     globalThis.fetch = async (input, init) => {
+      if (String(input).endsWith("/api/ps")) return new Response(JSON.stringify({ models: [] }), { status: 200 });
       assert.equal(String(input), "http://127.0.0.1:11434/api/chat");
       assert.equal(init?.method, "POST");
       const body = JSON.parse(String(init?.body));
@@ -61,10 +62,12 @@ test("coding requests use the separate local coder model", async () => {
 test("Ollama streaming parses newline-delimited JSON tokens", async () => {
   try {
     process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
-    globalThis.fetch = async () => new Response(
-      '{"message":{"content":"Hello"},"done":false}\n{"message":{"content":" world"},"done":true}\n',
-      { status: 200, headers: { "content-type": "application/x-ndjson" } },
-    );
+    globalThis.fetch = async (input) => String(input).endsWith("/api/ps")
+      ? new Response(JSON.stringify({ models: [] }), { status: 200 })
+      : new Response(
+          '{"message":{"content":"Hello"},"done":false}\n{"message":{"content":" world"},"done":true}\n',
+          { status: 200, headers: { "content-type": "application/x-ndjson" } },
+        );
     const tokens: string[] = [];
     const result = await new BobModelProvider().stream([{ role: "user", content: "hello" }], token => tokens.push(token));
     assert.equal(result.content, "Hello world");
@@ -99,6 +102,7 @@ test("Ollama vision sends image bytes only to the configured local runtime", asy
     process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
     process.env.BOBAI_OLLAMA_VISION_MODEL = "moondream:1.8b";
     globalThis.fetch = async (input, init) => {
+      if (String(input).endsWith("/api/ps")) return new Response(JSON.stringify({ models: [] }), { status: 200 });
       assert.equal(String(input), "http://127.0.0.1:11434/api/chat");
       const body = JSON.parse(String(init?.body));
       assert.equal(body.model, "moondream:1.8b");
