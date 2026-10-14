@@ -74,3 +74,5 @@
 - Document chunk retrieval now only returns chunks from uploads whose persisted processing state is `indexed`, so partial chunks from an interrupted or failed indexing attempt are not exposed as completed search results.
 
 - Hardened audit-event sanitization to redact prompt/content/transcript/audio/image/file payload fields and redact free-form root values, preventing audit records from becoming a secondary store for private prompts, recordings, or uploaded content.
+
+- Document re-indexing now prepares embeddings before an atomic database swap, locks the upload row, and commits chunk rows plus the `indexed` state together. This prevents partial chunks from becoming searchable and coordinates with concurrent soft deletion.

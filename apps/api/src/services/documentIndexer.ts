@@ -14,8 +14,9 @@ export async function indexUpload(uploadId:string,workspaceId:string,projectId?:
   const effectiveProjectId=projectId||upload.projectId||undefined;
   const setProcessing=async(processing:string,extra:Record<string,unknown>={})=>{
     currentMetadata={...currentMetadata,...extra,processing};
-    await db.update(uploads).set({metadata:currentMetadata,updatedAt:new Date()})
-      .where(and(eq(uploads.id,uploadId),eq(uploads.workspaceId,workspaceId),isNull(uploads.deletedAt)));
+    const [updated]=await db.update(uploads).set({metadata:currentMetadata,updatedAt:new Date()})
+      .where(and(eq(uploads.id,uploadId),eq(uploads.workspaceId,workspaceId),isNull(uploads.deletedAt))).returning({id:uploads.id});
+    if(!updated)throw new Error("upload not found or already deleted");
   };
   try{
     if(effectiveProjectId){
@@ -25,15 +26,29 @@ export async function indexUpload(uploadId:string,workspaceId:string,projectId?:
     }
     await setProcessing("indexing",{indexingStartedAt:new Date().toISOString(),indexingError:null});
     const chunks=chunkText(upload.text||"");
-    await db.delete(documentChunks).where(and(eq(documentChunks.uploadId,uploadId),eq(documentChunks.workspaceId,workspaceId)));
+    const records: Array<{id:string;workspaceId:string;uploadId:string;projectId:string|undefined;chunkIndex:number;content:string;embedding:number[]|null;metadata:{indexedAt:string}}> = [];
     let embedded=0;
     for(let index=0;index<chunks.length;index++){
       const content=chunks[index];
       const embedding=await generateEmbedding(content);
-      await db.insert(documentChunks).values({id:stableUuid(uploadId,index),workspaceId,uploadId,projectId:effectiveProjectId,chunkIndex:index,content,embedding,metadata:{indexedAt:new Date().toISOString()}});
+      records.push({id:stableUuid(uploadId,index),workspaceId,uploadId,projectId:effectiveProjectId,chunkIndex:index,content,embedding,metadata:{indexedAt:new Date().toISOString()}});
       if(embedding)embedded++;
     }
-    await setProcessing("indexed",{indexedAt:new Date().toISOString(),chunkCount:chunks.length,embeddedChunkCount:embedded,indexingError:null});
+    const indexedAt=new Date().toISOString();
+    await db.transaction(async(tx)=>{
+      const [active]=await tx.select({id:uploads.id,metadata:uploads.metadata}).from(uploads)
+        .where(and(eq(uploads.id,uploadId),eq(uploads.workspaceId,workspaceId),isNull(uploads.deletedAt))).for("update").limit(1);
+      if(!active)throw new Error("upload not found or already deleted");
+      await tx.delete(documentChunks).where(and(eq(documentChunks.uploadId,uploadId),eq(documentChunks.workspaceId,workspaceId)));
+      for(let offset=0;offset<records.length;offset+=100) {
+        const batch=records.slice(offset,offset+100);
+        if(batch.length) await tx.insert(documentChunks).values(batch);
+      }
+      const latestMetadata=active.metadata&&typeof active.metadata==="object"&&!Array.isArray(active.metadata)?active.metadata as Record<string,unknown>:{};
+      const [updated]=await tx.update(uploads).set({metadata:{...latestMetadata,processing:"indexed",indexedAt,chunkCount:chunks.length,embeddedChunkCount:embedded,indexingError:null},updatedAt:new Date()})
+        .where(and(eq(uploads.id,uploadId),eq(uploads.workspaceId,workspaceId),isNull(uploads.deletedAt))).returning({id:uploads.id});
+      if(!updated)throw new Error("upload not found or already deleted");
+    });
     return{uploadId,chunks:chunks.length,embedded};
   }catch(error){
     const message=error instanceof Error?error.message:"document indexing failed";
