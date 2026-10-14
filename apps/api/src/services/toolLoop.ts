@@ -110,7 +110,7 @@ export async function executeApprovedTool(toolId: string, args: Record<string, u
   catch (error) { await recordAudit({ action: "tool_execution_failed", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId, error: safeError(error) } }); throw error; }
 }
 export function serializeToolResult(value: unknown): string { let text = "[unserializable tool result]"; try { const serialized = JSON.stringify(value); if (typeof serialized === "string") text = serialized; } catch {} return text.slice(0, MAX_TOOL_RESULT_CHARS); }
-export async function runToolLoop(initialMessages: ToolLoopMessage[], context: ToolLoopContext, decide: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ action: "respond" | "use_tools"; calls: Array<{ tool: string; arguments: Record<string, unknown> }>; reason?: string }>, respond: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ content: string }>, execute: (toolId: string, args: Record<string, unknown>, context: ToolLoopContext) => Promise<unknown> = executeApprovedTool): Promise<ToolLoopResult> {
+export async function runToolLoop(initialMessages: ToolLoopMessage[], context: ToolLoopContext, decide: (messages: ToolLoopMessage[], modelId?: string, signal?: AbortSignal) => Promise<{ action: "respond" | "use_tools"; calls: Array<{ tool: string; arguments: Record<string, unknown> }>; reason?: string }>, respond: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ content: string }>, execute: (toolId: string, args: Record<string, unknown>, context: ToolLoopContext) => Promise<unknown> = executeApprovedTool): Promise<ToolLoopResult> {
   let messages = [...initialMessages]; const usedTools: string[] = []; const backgroundJobIds: string[] = []; let toolCalls = 0;
   const rounds = Math.min(Math.max(Math.floor(context.maxRounds ?? MAX_ROUNDS), 1), MAX_ROUNDS);
   const throwIfAborted = () => { if (context.signal?.aborted) throw context.signal.reason instanceof Error ? context.signal.reason : new Error("tool loop cancelled"); };
@@ -118,7 +118,7 @@ export async function runToolLoop(initialMessages: ToolLoopMessage[], context: T
   for (let round = 0; round < rounds; round++) {
     throwIfAborted();
     if (process.env.BOBAI_TOOLS_ENABLED === "false") { const response = await respond(messages, context.modelId); return { status: "completed", message: response.content, toolCalls, usedTools, backgroundJobIds }; }
-    const decision = await decide(messages, context.modelId); throwIfAborted();
+    const decision = await decide(messages, context.modelId, context.signal); throwIfAborted();
     if (decision.action === "respond") { const response = await respond(messages, context.modelId); throwIfAborted(); return { status: "completed", message: response.content, toolCalls, usedTools, backgroundJobIds }; }
     if (decision.calls.length > MAX_TOOL_CALLS - toolCalls) return { status: "limit_reached", message: "BobAI reached the maximum number of tool calls for this request.", toolCalls, usedTools, backgroundJobIds };
     for (const call of decision.calls) {
