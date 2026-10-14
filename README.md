@@ -11,7 +11,7 @@ Jarvis is a local-first AI platform built around Ollama. Ollama runs the languag
 - Jarvis voice profile: Piper English en_GB-alan-medium and Telugu te_IN-venkatesh-medium, with local speech recognition configured separately.
 - Database and email are infrastructure integrations. Set them up privately and never commit credentials.
 
-Not every feature works out of the box. Local model files and optional runtimes must be installed, and the full test/build suite still needs to be run against the current checkout.
+Not every feature works out of the box. Local model files and optional runtimes must be installed, and real inference still needs to be verified on the target computer.
 
 ## Requirements
 
@@ -31,21 +31,20 @@ Set DATABASE_URL after creating your database, then configure the local model se
 
 Start Ollama, then pull the default local models:
 
-    ollama pull qwen2.5:3b
-    ollama pull qwen2.5-coder:3b
+    ollama pull qwen3.5:2b
 
 The default environment values are:
 
     BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
-    BOBAI_OLLAMA_MODEL=qwen2.5:3b
-    BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
-    BOBAI_OLLAMA_VISION_MODEL=moondream:1.8b
+    BOBAI_OLLAMA_MODEL=qwen3.5:2b
+    BOBAI_OLLAMA_CODING_MODEL=qwen3.5:2b
+    BOBAI_OLLAMA_VISION_MODEL=qwen3.5:2b
+    BOBAI_OLLAMA_NUM_CTX=4096
+    BOBAI_OLLAMA_NUM_PREDICT=512
 
-Pull the separate local vision model before using image understanding:
+The default uses one shared text-and-image model for chat, coding, research synthesis, and image understanding. This avoids keeping three different LLMs resident in RAM. Ollama calls are serialized, context/output sizes are capped, and image generation first asks Ollama to unload resident models. This reduces memory pressure but makes the next chat request slower while the model reloads.
 
-    ollama pull moondream:1.8b
-
-You can choose other locally installed Ollama models in your private .env. For an 8 GB RAM computer, start with small quantized models and expect generation to be slower. Model quality and speed depend on hardware.
+Qwen3.5-4B can be tested as a quality upgrade only if the 2B model runs reliably and Windows still has enough free memory. Do not start by loading separate chat, coder, and vision models at once. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
 
 ## Local image generation
 
@@ -56,7 +55,7 @@ Jarvis uses a local Diffusers pipeline directly, without ComfyUI and without a h
 3. Set BOBAI_IMAGE_MODEL_PATH to that directory in .env.
 4. Restart the API and test one 512x512 image first.
 
-The model must already be on disk because inference uses local_files_only=True. CPU generation can be very slow and may run out of memory on an 8 GB laptop. Reference-image editing is implemented through Diffusers `AutoPipelineForImage2Image` when the selected local model supports it. Actual generation/editing still needs to be tested with the downloaded model.
+The model must already be on disk because inference uses local_files_only=True. CPU generation can be very slow and may run out of memory on an 8 GB laptop. Image generation is serialized with Ollama and asks Ollama to unload resident weights before starting the Diffusers worker. Reference-image editing uses Diffusers `AutoPipelineForImage2Image` when the selected local model supports it. Actual generation/editing still needs to be tested with the downloaded model.
 
 ## Jarvis voice
 
@@ -70,7 +69,7 @@ Set BOBAI_PIPER_EN_MODEL_PATH, BOBAI_PIPER_EN_CONFIG_PATH, BOBAI_PIPER_TE_MODEL_
 
 ## Start and verify
 
-Run npm test, npm run build, npm run smoke, then npm run ai. The ai command runs the configured tests before starting the API and web app. A passing test suite is not a substitute for live tests with Ollama, database migrations, local model files, and microphone/audio playback.
+Run npm ci, npm test, npm run build, npm run smoke, and npm run audit. After those pass, install the local models and media assets, configure the private .env, run the database migration workflow, and launch with npm run ai. A passing test suite is not a substitute for live tests with Ollama, database migrations, local model files, and microphone/audio playback.
 
 ## Security
 
