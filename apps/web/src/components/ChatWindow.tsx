@@ -8,6 +8,7 @@ import VoiceButton from "@/components/VoiceButton";
 type Props = {
   messages: ChatMessage[];
   loading: boolean;
+  loadingLabel?: string;
   onPinMessage: (id: string) => void;
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
@@ -16,6 +17,7 @@ type Props = {
 export default function ChatWindow({
   messages,
   loading,
+  loadingLabel = "working on it",
   onPinMessage,
   onDeleteMessage,
   onRegenerate,
@@ -241,7 +243,7 @@ export default function ChatWindow({
                   </div>
 
                   <span className="text-xs font-medium tracking-wide text-white/45">
-                    bob is thinking
+                    {loadingLabel}
                   </span>
                 </div>
               </div>
