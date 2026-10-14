@@ -12,6 +12,8 @@
 - [ ] Resolve the native build blocker: install/configure compatible Windows x64 Piper and whisper.cpp C++ development packages, including headers and import libraries. Set process-level `BOBAI_PIPER_ROOT` and `BOBAI_WHISPER_ROOT`, then rerun `npm run setup:native-media`. The voice ONNX files alone cannot build this addon.
 - [ ] Confirm the native addon file exists at `native/media/build/Release/bobai_media.node` and check `GET /voice/status` reports speech synthesis and recognition ready.
 - [ ] If voice is not required for the first UI demo, mark it **not ready**, do not claim it works, and continue with the non-voice checklist.
+- [ ] Run `npm run setup:image-generation` to install the dedicated Python 3.11 CPU runtime and download the local Tiny-SD model; review the CreativeML Open RAIL-M license.
+- [ ] Run `npm run test:image-generation` and confirm a real PNG is saved to `storage/image-generation-smoke.png`; then test `POST /images/generate` through the authenticated app and verify image history, error handling, and offline inference.
 
 ## 2. Full local verification
 
