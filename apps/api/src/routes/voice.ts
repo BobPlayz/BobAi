@@ -88,7 +88,7 @@ router.post("/turn", limit, async (req, res) => {
       modelId: selectedModelId,
       mode: typeof req.body?.mode === "string" ? req.body.mode : undefined,
       signal: controller.signal,
-    }, async (providerMessages) => decideTools(providerMessages as any, selectedModelId), async (providerMessages) => {
+    }, async (providerMessages, _modelId, signal) => decideTools(providerMessages as any, selectedModelId, signal), async (providerMessages) => {
       const result = await runChat(providerMessages as any, selectedModelId, controller.signal);
       return { content: result.message.content };
     });
