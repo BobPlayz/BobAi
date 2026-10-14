@@ -73,8 +73,11 @@ function connect(configValue: SmtpConfig): Promise<net.Socket | tls.TLSSocket> {
 }
 
 function address(value: string) {
+  if (/[\r\n\0]/.test(value)) throw new Error("invalid email header");
   const match = value.match(/<([^<>\s]+)>/);
-  return (match?.[1] || value).trim();
+  const result = (match?.[1] || value).trim();
+  if (!/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(result)) throw new Error("invalid email address");
+  return result;
 }
 
 function encodeHeader(value: string) {
