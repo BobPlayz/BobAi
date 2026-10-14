@@ -40,6 +40,7 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
     if (signal?.aborted) { abort(); return; }
     signal?.addEventListener("abort", abort, { once: true });
     child.once("error", (error) => finish(new Error("could not start local image runtime: " + error.message)));
+    child.stdin.on("error", (error) => finish(new Error("could not send request to local image runtime: " + error.message)));
     child.stdout.on("data", (chunk: Buffer) => {
       stdoutBytes += chunk.length;
       if (stdoutBytes > MAX_STDOUT_BYTES) {
@@ -63,7 +64,11 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
         const images = parsed.images.map((item) => {
           if (!item || typeof item !== "object") throw new Error("local image runtime returned an invalid image");
           const image = item as Record<string, unknown>;
-          if (typeof image.url !== "string" || image.url.length > 12 * 1024 * 1024 || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image.url)) throw new Error("local image runtime returned invalid PNG data");
+          if (typeof image.url !== "string" || image.url.length > 12 * 1024 * 1024) throw new Error("local image runtime returned invalid PNG data");
+          const encoded = image.url.startsWith("data:image/png;base64,") ? image.url.slice("data:image/png;base64,".length) : "";
+          if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error("local image runtime returned invalid PNG data");
+          const png = Buffer.from(encoded, "base64");
+          if (!png.length || png.length > 9 * 1024 * 1024 || png.toString("base64").replace(/=+$/, "") !== encoded.replace(/=+$/, "") || !png.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) throw new Error("local image runtime returned invalid PNG data");
           return { url: image.url, prompt: typeof image.prompt === "string" ? image.prompt.slice(0, 8000) : prompt, index: typeof image.index === "number" ? image.index : 0, ...(typeof image.seed === "number" ? { seed: image.seed } : {}), width: typeof image.width === "number" ? image.width : width, height: typeof image.height === "number" ? image.height : height };
         });
         finish(undefined, { images });
