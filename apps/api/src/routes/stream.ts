@@ -15,6 +15,7 @@ import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
 import { extractImagePrompt } from "../services/imagePrompt.js";
 const router = Router();
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const streamLimit = createUserRateLimit(20, 60_000);
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
 function latestUserText(value: unknown) { if (!Array.isArray(value)) return ""; for (let index = value.length - 1; index >= 0; index -= 1) { const message = value[index]; if (!message || typeof message !== "object") continue; const record = message as Record<string, unknown>; if (record.role === "user" && typeof record.content === "string") return record.content; } return ""; }
@@ -29,6 +30,7 @@ router.post("/", streamLimit, async (req, res) => {
   res.once("close", markClientDisconnected);
   const { send } = initSSE(res); const conversationId = typeof req.body?.conversationId === "string" && req.body.conversationId.trim() ? req.body.conversationId.trim() : randomUUID(); let assistantId: string | null = null; let workspaceId: string | null = null;
   try {
+    if (req.body?.conversationId !== undefined && (typeof req.body.conversationId !== "string" || !UUID.test(req.body.conversationId))) { send("error", { message: "invalid conversationId" }); return res.end(); }
     if (req.body?.modelId !== undefined && (typeof req.body.modelId !== "string" || req.body.modelId.length > 160)) { send("error", { message: "invalid modelId" }); return res.end(); }
     if (req.body?.messages !== undefined && (!Array.isArray(req.body.messages) || req.body.messages.length > 100 || req.body.messages.some((message: unknown) => !message || typeof message !== "object" || !["user", "assistant", "system"].includes((message as Record<string, unknown>).role as string) || typeof (message as Record<string, unknown>).content !== "string" || ((message as Record<string, unknown>).content as string).length > 100_000))) { send("error", { message: "messages must contain up to 100 user/assistant/system messages with text under 100,000 characters each" }); return res.end(); }
     const workspace = await ensurePersonalWorkspace(req.user!.id); workspaceId = workspace.id;
