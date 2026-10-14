@@ -77,7 +77,7 @@ The online Microsoft voice mode used in one Ai-Glasses setting is intentionally 
 
 Neon is compatible with the PostgreSQL connection used by the existing database package. Add the Neon connection string as DATABASE_URL in .env and run the documented database migration workflow after checking the target database. Do not paste database credentials into chat or commit them.
 
-Resend is intended for email delivery setup, but the current OTP delivery implementation must be explicitly wired to Resend before a Resend API key alone will send emails. Do not assume setting a RESEND_API_KEY is sufficient until the adapter is implemented and tested. Test sending and verifying OTPs, expired codes, resend limits, account recovery, and deletion with disposable accounts.
+Resend is wired as the preferred OTP delivery method, with SMTP as a fallback. Set RESEND_API_KEY and RESEND_FROM_EMAIL in the private .env file and use a sender/domain verified by Resend. Production startup refuses to proceed without a complete Resend or SMTP configuration. Test real delivery, invalid keys, provider failures, OTP expiry/attempt limits, MFA, and account-deletion reauthentication. Test sending and verifying OTPs, expired codes, resend limits, account recovery, and deletion with disposable accounts.
 
 ## 7. Existing backend capabilities
 
