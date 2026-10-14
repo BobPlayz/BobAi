@@ -13,7 +13,8 @@
 - [ ] Confirm the native addon file exists at `native/media/build/Release/bobai_media.node` and check `GET /voice/status` reports speech synthesis and recognition ready.
 - [ ] If voice is not required for the first UI demo, mark it **not ready**, do not claim it works, and continue with the non-voice checklist.
 - [ ] Run `npm run setup:image-generation` to install the dedicated Python 3.11 CPU runtime and download the local Tiny-SD model; review the CreativeML Open RAIL-M license.
-- [ ] Run `npm run test:image-generation` and confirm a real PNG is saved to `storage/image-generation-smoke.png`; then test `POST /images/generate` through the authenticated app and verify image history, chat reload/reopen persistence, cancellation, clear setup errors, and offline inference.
+- [ ] For Local mode, run `npm run test:image-generation` and confirm a real PNG is saved to `storage/image-generation-smoke.png`; then test `POST /images/generate` through the authenticated app and verify image history, chat reload/reopen persistence, cancellation, clear setup errors, and offline inference.
+- [ ] If Power mode is desired, set `BOBAI_IMAGE_PROVIDER=openai` and a valid private `BOBAI_IMAGE_API_KEY`; verify a real hosted generation, quota/error handling, cancellation, saved history, and that reference-image editing is clearly reported as unsupported in this mode. Confirm billing and privacy expectations before enabling it.
 
 ## 2. Full local verification
 
