@@ -76,7 +76,8 @@ router.post("/generate", limit, async (req, res) => {
     if (controller.signal.aborted || res.destroyed) return;
     const message = error instanceof Error ? error.message : "";
     const clientError = /^(image prompt.{0,100}|count must be.{0,100}|width and height.{0,100}|seed must be.{0,100}|steps must be.{0,100}|guidanceScale must be.{0,100}|negativePrompt must be.{0,100}|local image editing is not configured.{0,100}|Power image mode currently supports text-to-image only.{0,100}|up to 4 input images are supported|reference images.{0,100}|MIME does not match.{0,100}|media request violates the safety policy|image request exceeds the 12 MB limit)$/i.test(message);
-    const safeMessage = clientError ? message : "Local image generation is not ready. Run npm run setup:image-generation and npm run test:image-generation, then restart Jarvis.";
+    const powerMode = (process.env.BOBAI_IMAGE_PROVIDER || "local").trim().toLowerCase() === "openai";
+    const safeMessage = clientError ? message : powerMode && /^(power image|Power image)/.test(message) ? message : powerMode ? "Power image generation failed. Check the API key, account quota, and network connection." : "Local image generation is not ready. Run npm run setup:image-generation and npm run test:image-generation, then restart Jarvis.";
     return res.status(clientError ? 400 : 502).json({ error: safeMessage });
   } finally {
     req.off("aborted", onDisconnect);
