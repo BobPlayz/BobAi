@@ -63,6 +63,7 @@ router.post("/turn", limit, async (req, res) => {
       tone: getSetting("tone"),
       personality: getSetting("personality"),
       customInstructions: getSetting("customInstructions"),
+      signal: controller.signal,
       memoryContext: relevantMemories(memories),
     });
     if (prepared.validationError) return res.status(400).json({ error: prepared.validationError });
