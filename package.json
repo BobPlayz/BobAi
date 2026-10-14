@@ -22,6 +22,7 @@
     "db:generate": "npm run db:generate --workspace=@bobai/db",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:migrate:drizzle": "npm run db:migrate --workspace=@bobai/db",
+    "memory:reindex": "tsx scripts/reindex-memory-embeddings.ts",
     "db:backup": "tsx scripts/db-backup.ts",
     "db:backup:verify": "tsx scripts/db-backup-verify.ts",
     "account:delete": "tsx scripts/account-deletion.ts",
