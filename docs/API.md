@@ -28,7 +28,8 @@ The authenticated API currently groups functionality under paths such as:
 | `/messages` | Message operations |
 | `/settings` | User settings |
 | `/memory` | Memory operations |
-| `/files` | File operations |
+| `/files` | File upload/list/download/delete, text search, and processing status |
+| `POST /files/:id/reindex` | Retry extraction/indexing or image OCR for an owned upload; returns `202 Accepted` |
 | `/research/search` | Basic web search with source preferences and saved research sessions |
 | `/deep-research` | Multi-query research with fetched evidence and local Ollama synthesis |
 | `/images/generate` | Local Diffusers image generation and image-to-image editing; requires local model files |
