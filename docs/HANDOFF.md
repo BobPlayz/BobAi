@@ -78,3 +78,5 @@
 - Document re-indexing now prepares embeddings before an atomic database swap, locks the upload row, and commits chunk rows plus the `indexed` state together. This prevents partial chunks from becoming searchable and coordinates with concurrent soft deletion.
 
 - API documentation now lists the upload reprocessing route and the file API's processing-state behavior.
+
+- OCR now ignores uploads that have already been soft-deleted and records an intermediate OCR-complete/indexing state instead of prematurely declaring the upload indexed.
