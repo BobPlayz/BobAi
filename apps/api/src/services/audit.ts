@@ -17,7 +17,7 @@ const MAX_METADATA_BYTES = 32 * 1024;
 const MAX_ID = 256;
 const MAX_IP = 128;
 const MAX_USER_AGENT = 1024;
-const SENSITIVE_KEY = /(password|passwd|secret|token|authorization|cookie|api[-_]?key|private[-_]?key|credential|otp|code|prompt|content|transcript|recording|audio|image|base64|file.?data)/i;
+const SENSITIVE_KEY = /(password|passwd|secret|token|authorization|cookie|api[-_]?key|private[-_]?key|credential|otp|code|prompt|content|transcript|recording|audio|image|base64|file.?data|query|search.?term|message|user.?text)/i;
 
 function sanitize(value: unknown, depth = 0): unknown {
   if (depth > 6) return "[truncated]";

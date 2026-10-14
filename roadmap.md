@@ -352,3 +352,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Marked backend upload retention as implemented and documented the one-shot voice-to-voice orchestration endpoint; runtime checks remain separate from implementation.
 - **2026-10-14:** Hardened audit-log redaction for private prompt/content/transcript/media payloads and root-level free-form values.
 - **2026-10-14:** Made document re-indexing atomic: chunk rows and the completed processing state commit together after embedding preparation, with an upload-row lock to coordinate deletion.
+- **2026-10-14:** Expanded audit redaction to query/message/user-text metadata and blocked nudity-related image-generation prompts for the general-audience safety baseline.

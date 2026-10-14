@@ -16,7 +16,7 @@ export type AuditEvent = {
 };
 
 
-const PRIVATE_KEY = /(password|passwd|secret|token|authorization|cookie|api[-_]?key|private[-_]?key|credential|otp|prompt|content|transcript|recording|audio|image|base64|file.?data)/i;
+const PRIVATE_KEY = /(password|passwd|secret|token|authorization|cookie|api[-_]?key|private[-_]?key|credential|otp|prompt|content|transcript|recording|audio|image|base64|file.?data|query|search.?term|message|user.?text)/i;
 function safeAuditValue(value: unknown, depth = 0, root = false): unknown {
   if (depth > 5) return "[truncated]";
   if (typeof value === "string") return root ? "[redacted]" : value.length > 1000 ? `${value.slice(0, 1000)}...[truncated]` : value;
