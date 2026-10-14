@@ -76,13 +76,13 @@ export async function listConversations(includeArchived = false): Promise<Conver
       const item = message as Record<string, unknown>;
       const attachments = item.attachments as Record<string, unknown> | null;
       const rawImages = attachments && Array.isArray(attachments.images) ? attachments.images : [];
-      const images = (await Promise.all(rawImages.filter((image): image is Record<string, unknown> => Boolean(image) && typeof image === "object" && !Array.isArray(image)).map(loadSavedImage))).filter((image): image is NonNullable<typeof image> => image !== null);
+      const images = (await Promise.all(rawImages.filter((image): image is Record<string, unknown> => Boolean(image) && typeof image === "object" && !Array.isArray(image)).map(loadSavedImage))).filter((image) => image !== null);
       return {
         id: String(item.id),
         role: item.role === "assistant" ? "assistant" as const : "user" as const,
         content: typeof item.content === "string" ? item.content : "",
         ...(images.length ? { images } : {}),
-        ...(attachments && typeof attachments === "object" && Array.isArray(attachments.files) ? { files: attachments.files } : {}),
+        ...(attachments && typeof attachments === "object" && Array.isArray(attachments.files) ? { files: attachments.files as ChatMessage["files"] } : {}),
         ...(attachments?.pinned === true ? { pinned: true } : {}),
       };
     })),
