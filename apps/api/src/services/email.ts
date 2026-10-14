@@ -87,6 +87,9 @@ function dotStuff(value: string) {
 
 async function sendSmtp(to: string, subject: string, text: string) {
   const c = config();
+  address(c.from);
+  address(to);
+  if (/[\\r\\n\\0]/.test(subject)) throw new Error("invalid email subject");
   let socket = await connect(c);
   try {
     let response = await readResponse(socket);
@@ -102,8 +105,8 @@ async function sendSmtp(to: string, subject: string, text: string) {
         upgraded.once("error", error => { clearTimeout(timer); reject(error); });
       });
       response = await command(socket, "EHLO bobai", [250]);
-    } else if (c.user && c.port !== 465) {
-      throw new Error("SMTP server did not advertise STARTTLS; refusing to send credentials without TLS");
+    } else if (c.port !== 465) {
+      throw new Error("SMTP server did not advertise STARTTLS; refusing to send email without TLS");
     }
 
     if (c.user) {
