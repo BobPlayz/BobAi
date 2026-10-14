@@ -76,3 +76,25 @@ test("malformed numeric HTML entities in provider titles do not crash web resear
   assert.equal(sources.length, 1);
   assert.equal(sources[0].title, "Safe title &#x110000; &#55296;");
 });
+
+test("cached research results cannot be mutated by a caller", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.BOBAI_BRAVE_SEARCH_API_KEY;
+  process.env.BOBAI_BRAVE_SEARCH_API_KEY = "test-search-key";
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    web: { results: [{ title: "Immutable cache result", url: "https://example.com/cache-isolation", description: "A result used to verify cache isolation" }] },
+  }), { status: 200, headers: { "content-type": "application/json" } });
+  try {
+    const first = await webSearch("cache isolation regression 2026-10-14", {});
+    assert.equal(first.sources.length, 1);
+    first.sources[0].title = "tampered";
+    first.sources.push({ title: "injected", url: "https://attacker.example" });
+    const second = await webSearch("cache isolation regression 2026-10-14", {});
+    assert.equal(second.sources.length, 1);
+    assert.equal(second.sources[0].title, "Immutable cache result");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.BOBAI_BRAVE_SEARCH_API_KEY;
+    else process.env.BOBAI_BRAVE_SEARCH_API_KEY = originalKey;
+  }
+});
