@@ -337,3 +337,7 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Added image prompt-injection instructions to the local vision system message and propagated disconnect cancellation through `/vision/analyze`, with regression coverage for the system prompt and local-only image request.
 - **2026-10-14:** Aligned the local Ollama vision request limit with the 12 MB decoded image limit, allowing the base64 and JSON envelope without rejecting valid maximum-size images.
 - **2026-10-14:** Corrected README/API/hosted-provider docs to reflect local Ollama vision, local Diffusers image editing, and the API router’s actual root-mounted route paths.
+
+- [x] Add an authenticated local `/voice/turn` backend flow that transcribes an audio turn, continues a bounded user/assistant context through local chat, synthesizes a local spoken reply, and stops processing when the client disconnects. Native synchronous inference may not stop mid-call; live interruption and latency remain runtime-verification items.
+
+- Corrected the voice-turn orchestrator to read the actual chat-engine response shape (`reply.message.content`) before synthesizing speech.
