@@ -66,6 +66,7 @@ router.post("/turn", limit, async (req, res) => {
       signal: controller.signal,
       memoryContext: relevantMemories(memories),
     });
+    if (controller.signal.aborted || res.destroyed) return;
     if (prepared.validationError) return res.status(400).json({ error: prepared.validationError });
 
     if (prepared.memoryRequest && prepared.latestUserMessage) {
