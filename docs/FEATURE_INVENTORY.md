@@ -32,17 +32,17 @@ Static status across these routes is **implemented or partial, not runtime-certi
 
 | Capability | Main implementation | Static status | Remaining verification |
 |---|---|---|---|
-| Hosted AI | `apps/api/src/services/openAIProvider.ts`, `modelProvider.ts`, `chatEngine.ts` | Implemented, opt-in | Ollama routing removed on the public-beta branch. Confirm production provider/model, privacy terms, modalities, provider-side cost controls, and live streamed response. |
+| Local AI | `apps/api/src/services/ollamaProvider.ts`, `modelProvider.ts`, `chatEngine.ts`, `modelRegistry.ts` | Implemented in source, runtime unverified | Pull the configured Ollama chat/coding models, verify local streaming and cancellation, and ensure no hosted AI path is called. |
 | Streaming | `apps/api/src/routes/stream.ts`, `apps/web/src/lib/api.ts` | Implemented | Confirm LF/CRLF frames, abort/disconnect handling, partial response persistence, retries, and rate limits. |
 | Accounts / OTP | `apps/api/src/routes/auth.ts`, `apps/web/src/app/login/page.tsx` | Implemented | SMTP, existing account, MFA, terms version, refresh, sign-out, expiry, and cookies. |
 | Conversations | `apps/api/src/routes/conversations.ts`, `apps/api/src/store/conversationDb.ts`, `apps/web/src/hooks/useChat.ts` | Implemented | Refresh/reopen behavior, ownership isolation, duplicate turns, deletion/rename/pin persistence. |
 | Memory | `apps/api/src/routes/memory.ts`, `apps/api/src/store/memoryDb.ts`, Settings | Implemented | Per-user isolation, consent semantics, clear-all, disabled-memory behavior, and sensitive-content checks. |
 | Uploads | `apps/api/src/routes/files.ts`, `documentIndexer.ts`, `ocr.ts`, `malwareScanner.ts` | Implemented | Supported-type consistency, limits, corrupt files, page/pixel limits, cancellation, retention, and outage behavior. |
 | Vision | `apps/api/src/services/vision.ts`, `openAIProvider.ts`, `visionChat.ts` | Implemented, provider-dependent | Live image request with a model that truly supports image input. Ollama fallback was removed. |
-| Image generation/editing | `apps/api/src/services/openAIProvider.ts`, `mediaGeneration.ts`, `flux.ts`, `/images/generate`, AssistantHub | Implemented in source, provider-dependent | Uses the configured hosted Images API with a low-quality default and one-image UI default; supports one validated reference image up to 1 MB through the JSON API. Verify model access, real output, edit behavior, session-only output handling, provider errors, and costs before public release. No fake SVG fallback remains. |
-| Web search / research | `apps/api/src/services/research.ts`, `deepResearch.ts`, `apps/api/src/routes/research.ts`, AssistantHub | Implemented in source, unverified | AssistantHub now exposes separate Web Search and Deep Research modes. Verify citation-to-evidence matching, stale/conflicting sources, dead links, empty results, and source preference behavior. |
+| Image generation/editing | `apps/api/src/services/mediaGeneration.ts`, `flux.ts`, `scripts/local_image_generation.py`, `/images/generate` | Local generation integrated, runtime unverified | Uses a local Diffusers model from `BOBAI_IMAGE_MODEL_PATH`; no ComfyUI or hosted AI API. Install Python dependencies and local model weights. Reference-image editing is not implemented in the local pipeline. Verify real output, timeouts, memory use, and session-only output handling. |
+| Web search / research | `apps/api/src/services/research.ts`, `deepResearch.ts`, `apps/api/src/routes/research.ts`, AssistantHub | Implemented in source, unverified | BobAI runs query construction, search-result parsing, ranking, caching, evidence fetching, and local Ollama synthesis. Internet access is still required. Verify citation-to-evidence matching, stale/conflicting sources, dead links, empty results, and source preference behavior. |
 | Tools / agents | `toolRegistry.ts`, `toolExecution.ts`, `toolLoop.ts`, `agents.ts`, `agentTasks.ts` | Implemented, partial | Quotas/cost limits, end-to-end approval coverage, cancel/timeout/loop and cross-user tests. |
-| Voice | `apps/api/src/routes/voice.ts`, `services/voice.ts`, `VoiceButton.tsx`, NeuralComposer | Implemented, provider-dependent | Permission denial, noisy input, editing transcript, mobile support, language/voice options, interruption. |
+| Voice | `apps/api/src/routes/voice.ts`, `services/voice.ts`, `services/bobVoice.ts`, `services/whisperCpp.ts` | Local path wired, runtime unverified | Piper English Alan and Telugu Venkatesh assets are selected by language; Whisper.cpp handles transcription. Configure local assets and build native media. Verify playback/transcription and that no online voice adapter is used. |
 | Account deletion/export | `apps/api/src/routes/account.ts`, `accountPurge.ts`, `retention.ts` | Implemented, unverified | Confirm export contents, reauthentication, grace period, workspace ownership and final deletion. |
 | Theme | `ThemeProvider.tsx`, neural shell/composer/sidebar | Partial | Public pages, message menus, markdown/code, upload panels, dialog states, contrast, keyboard, reduced motion. |
 
@@ -83,14 +83,14 @@ These cannot safely be completed by code changes alone:
 7. Obtain qualified legal/adult guidance on the intended age range and any required child-data consent or age-assurance mechanism.
 8. Supply deployment credentials and approve DNS changes; configure HTTPS, backups, monitoring, and rollback.
 9. Run the final CI/build/test/audit/smoke-test pass after the implementation pass is complete.
-10. Capture real desktop/mobile screenshots in both themes and review accessibility on actual target browsers/devices.
+10. Capture real desktop/mobile screenshots in both themes and review accessibility on actual target browsers/devices.\n11. Install and verify the local Diffusers model and the Piper/Whisper assets on the actual target hardware.
 
 
 ## Latest implementation notes (2026-10-13)
 
 - The public SiteNav and landing page now consume the shared theme provider; the cookie-consent UI is placed inside that provider and follows the selected theme.
 - Leaving the chat aborts the active stream and in-progress upload controllers.
-- Client-disconnect cancellation is passed from the stream route through `runStream` and the model-provider adapters. This path needs tests against the remaining supported provider paths, partial message persistence, and abort timing. Ollama was removed on the public-beta branch.
+- Chat and coding responses now route through the local Ollama adapter. Confirm cancellation behavior with the actual local runtime, partial message persistence, and abort timing.
 - When research pages yield no readable evidence, search-result links are retained for transparency rather than returning an empty source list.
 - If distributed rate limiting is configured, failure of the shared limiter now fails closed. Confirm this matches the deployed backend and expected availability policy.
 
