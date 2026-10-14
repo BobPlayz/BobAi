@@ -19,16 +19,17 @@ router.post("/turn", limit, async (req, res) => {
   req.once("aborted", onDisconnect);
   res.once("close", onDisconnect);
   try {
+    const supplied = req.body?.messages;
+    if (supplied !== undefined && (!Array.isArray(supplied) || supplied.length > 30 || supplied.some((item: unknown) => !item || typeof item !== "object" || !["user", "assistant"].includes((item as Record<string, unknown>).role as string) || typeof (item as Record<string, unknown>).content !== "string" || ((item as Record<string, unknown>).content as string).length > 8_000))) {
+      return res.status(400).json({ error: "messages must contain up to 30 user/assistant turns with text under 8,000 characters each" });
+    }
+    if (req.body?.modelId !== undefined && (typeof req.body.modelId !== "string" || req.body.modelId.length > 160)) return res.status(400).json({ error: "invalid modelId" });
     const audio = decode(req.body?.audio, 25 * 1024 * 1024);
     const transcript = await transcribe(audio, req.body?.options);
     if (controller.signal.aborted || res.destroyed) return;
     const spokenText = typeof transcript?.text === "string" ? transcript.text.trim() : "";
     if (!spokenText) return res.status(422).json({ error: "no speech was recognized; try recording again" });
     if (spokenText.length > 20_000) return res.status(413).json({ error: "recognized speech is too long" });
-    const supplied = req.body?.messages;
-    if (supplied !== undefined && (!Array.isArray(supplied) || supplied.length > 30 || supplied.some((item: unknown) => !item || typeof item !== "object" || !["user", "assistant"].includes((item as Record<string, unknown>).role as string) || typeof (item as Record<string, unknown>).content !== "string" || ((item as Record<string, unknown>).content as string).length > 8_000))) {
-      return res.status(400).json({ error: "messages must contain up to 30 user/assistant turns with text under 8,000 characters each" });
-    }
     const messages = [...(Array.isArray(supplied) ? supplied : []), { role: "user", content: spokenText }];
     const prepared = await prepareChat({ messages, modelId: typeof req.body?.modelId === "string" ? req.body.modelId : undefined });
     if (prepared.validationError) return res.status(400).json({ error: prepared.validationError });
