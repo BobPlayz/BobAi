@@ -32,6 +32,7 @@ Set DATABASE_URL after creating your database, then configure the local model se
 Start Ollama, then pull the default local models:
 
     ollama pull qwen3.5:2b
+    ollama pull qwen3-embedding:0.6b
 
 The default environment values are:
 
@@ -39,10 +40,11 @@ The default environment values are:
     BOBAI_OLLAMA_MODEL=qwen3.5:2b
     BOBAI_OLLAMA_CODING_MODEL=qwen3.5:2b
     BOBAI_OLLAMA_VISION_MODEL=qwen3.5:2b
+    BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
     BOBAI_OLLAMA_NUM_CTX=4096
     BOBAI_OLLAMA_NUM_PREDICT=512
 
-The default uses one shared text-and-image model for chat, coding, research synthesis, and image understanding. This avoids keeping three different LLMs resident in RAM. Ollama calls are serialized, context/output sizes are capped, and image generation first asks Ollama to unload resident models. This reduces memory pressure but makes the next chat request slower while the model reloads.
+The default uses one shared text-and-image model for chat, coding, research synthesis, and image understanding. This avoids keeping three different LLMs resident in RAM. Ollama calls are serialized, context/output sizes are capped, and image generation first asks Ollama to unload resident models. This reduces memory pressure but makes the next chat request slower while the model reloads. Semantic memory also loads Qwen3 Embedding 0.6B only when needed, then unloads it; set BOBAI_OLLAMA_EMBEDDING_MODEL=disabled to use lexical fallback instead.
 
 Qwen3.5-4B can be tested as a quality upgrade only if the 2B model runs reliably and Windows still has enough free memory. Do not start by loading separate chat, coder, and vision models at once. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
 
