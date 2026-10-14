@@ -38,6 +38,7 @@ async function run(job: QueueJob) {
     const durable = Boolean(process.env.DATABASE_URL && job.context?.workspaceId);
     const claimed = await claimPersistedAgentTask(job.id, durable).catch(() => false);
     if (!claimed) {
+      jobs.delete(job.id);
       job.status = "cancelled";
       job.error = "agent task was already claimed or could not be claimed";
       return;
