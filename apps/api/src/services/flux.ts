@@ -4,7 +4,7 @@ import path from "node:path";
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
-export async function fluxGenerate(prompt: string, count: number, inputImages: string[] = []) {
+export async function fluxGenerate(prompt: string, count: number, inputImages: string[] = [], signal?: AbortSignal) {
   if (inputImages.length) throw new Error("local image editing is not configured yet; BobAI will not send reference images to an external provider");
   const modelPath = process.env.BOBAI_IMAGE_MODEL_PATH?.trim();
   if (!modelPath) throw new Error("local image generation needs BOBAI_IMAGE_MODEL_PATH pointing to a downloaded Diffusers model directory");
@@ -20,6 +20,7 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
   let stdoutBytes = 0;
   let settled = false;
   const result = await new Promise<{ images?: Array<{ url: string; prompt: string; index: number }>; error?: string }>((resolve, reject) => {
+    const abort = () => { child.kill(); finish(signal?.reason instanceof Error ? signal.reason : new Error("local image generation cancelled")); };
     const timer = setTimeout(() => {
       child.kill();
       reject(new Error("local image generation timed out; try one 512x512 image or a smaller local model"));
@@ -28,8 +29,11 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
       if (error) reject(error); else resolve(value || {});
     };
+    if (signal?.aborted) { abort(); return; }
+    signal?.addEventListener("abort", abort, { once: true });
     child.once("error", (error) => finish(new Error("could not start local image runtime: " + error.message)));
     child.stdout.on("data", (chunk: Buffer) => {
       stdoutBytes += chunk.length;
