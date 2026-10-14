@@ -115,4 +115,4 @@ The code changes recorded above were committed through GitHub file operations bu
 
 - Added request-disconnect cancellation propagation from the basic and deep-research endpoints through DuckDuckGo fetches, retry backoff, source fetching, and local Ollama synthesis. Search retries stop promptly when cancelled, and cancelled results are not cached.
 - Added request-disconnect cancellation propagation to local image generation so the spawned Diffusers process can be terminated when the client leaves; image records are not written after a disconnected request.
-- These changes are committed to `main`; GitHub Actions results must be inspected before claiming build/test success. External model assets and live provider/database behavior remain unverified.
+- These changes are committed to `main`; GitHub Actions results must be inspected before claiming build/test success. Cancellation paths also check for disconnects before persisting research sessions or generated-image records, and synthesis must propagate cancellation rather than silently falling back to a partial report. External model assets and live provider/database behavior remain unverified.

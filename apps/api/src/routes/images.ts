@@ -50,6 +50,7 @@ router.post("/generate", limit, async (req, res) => {
     }
 
     const workspace = await ensurePersonalWorkspace(req.user!.id);
+    if (controller.signal.aborted || res.destroyed) return;
     const created = await db.insert(images).values(generated.map((item) => ({
       workspaceId: workspace.id,
       createdBy: req.user!.id,
