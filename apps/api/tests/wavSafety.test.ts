@@ -14,3 +14,17 @@ test("PCM16 WAV validation rejects malformed chunks and channel counts", () => {
   const broken = wav(16_000, 100); broken.writeUInt32LE(10_000, 40); assert.throws(() => validatePcm16Wav(broken, 25 * 1024 * 1024), /truncated/);
   assert.throws(() => validatePcm16Wav(wav(16_000, 100, 3), 25 * 1024 * 1024), /channel count/);
 });
+
+test("PCM16 WAV validation rejects non-16-bit data and inconsistent format metadata", () => {
+  const nonPcm16 = wav(16_000, 100);
+  nonPcm16.writeUInt16LE(24, 34);
+  assert.throws(() => validatePcm16Wav(nonPcm16, 25 * 1024 * 1024), /PCM16 WAV/);
+
+  const wrongByteRate = wav(16_000, 100);
+  wrongByteRate.writeUInt32LE(1, 28);
+  assert.throws(() => validatePcm16Wav(wrongByteRate, 25 * 1024 * 1024), /PCM16 WAV/);
+
+  const wrongRiffLength = wav(16_000, 100);
+  wrongRiffLength.writeUInt32LE(20, 4);
+  assert.throws(() => validatePcm16Wav(wrongRiffLength, 25 * 1024 * 1024), /truncated|chunk boundary/);
+});
