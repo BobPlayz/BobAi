@@ -7,9 +7,32 @@ $glassesCandidates = @(
   (Join-Path $repoRoot "Ai-Glasses")
 )
 $glassesRoot = $glassesCandidates | Where-Object { Test-Path (Join-Path $_ "models\tts\en_GB-alan-medium.onnx") } | Select-Object -First 1
+
+# If the separate AI Glasses checkout/assets are absent, download the exact same
+# public Piper voices into Jarvis-local ignored model storage instead.
 if (-not $glassesRoot) {
-  throw "Could not find Ai-Glasses\models\tts\en_GB-alan-medium.onnx beside Jarvis. Open the Ai-Glasses repo and run its setup first, then rerun this command."
+  $glassesRoot = $repoRoot
+  $ttsDir = Join-Path $repoRoot "models\tts"
+  New-Item -ItemType Directory -Force -Path $ttsDir | Out-Null
+  $voiceFiles = @(
+    @{ Name = "en_GB-alan-medium.onnx"; Url = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium/en_GB-alan-medium.onnx?download=true" },
+    @{ Name = "en_GB-alan-medium.onnx.json"; Url = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium/en_GB-alan-medium.onnx.json?download=true" },
+    @{ Name = "te_IN-venkatesh-medium.onnx"; Url = "https://huggingface.co/rhasspy/piper-voices/resolve/main/te/te_IN/venkatesh/medium/te_IN-venkatesh-medium.onnx?download=true" },
+    @{ Name = "te_IN-venkatesh-medium.onnx.json"; Url = "https://huggingface.co/rhasspy/piper-voices/resolve/main/te/te_IN/venkatesh/medium/te_IN-venkatesh-medium.onnx.json?download=true" }
+  )
+  foreach ($voiceFile in $voiceFiles) {
+    $destination = Join-Path $ttsDir $voiceFile.Name
+    if (-not (Test-Path $destination) -or (Get-Item $destination).Length -lt 1000) {
+      Write-Host ("Downloading " + $voiceFile.Name + " from the Piper voice repository...") -ForegroundColor Cyan
+      Invoke-WebRequest -Uri $voiceFile.Url -OutFile $destination -UseBasicParsing
+    }
+    if (-not (Test-Path $destination) -or (Get-Item $destination).Length -lt 1000) {
+      throw ("Voice download failed or file is incomplete: " + $destination)
+    }
+  }
+  Write-Host "AI Glasses checkout not found; voice models were downloaded into Jarvis\models\tts." -ForegroundColor Green
 }
+
 $tts = Join-Path $glassesRoot "models\tts"
 $alan = Join-Path $tts "en_GB-alan-medium.onnx"
 $alanConfig = "$alan.json"
@@ -17,7 +40,7 @@ $venkatesh = Join-Path $tts "te_IN-venkatesh-medium.onnx"
 $venkateshConfig = "$venkatesh.json"
 foreach ($file in @($alan, $alanConfig, $venkatesh, $venkateshConfig)) {
   if (-not (Test-Path $file) -or (Get-Item $file).Length -lt 1000) {
-    throw "Voice asset missing or incomplete: $file. Run Ai-Glasses\scripts\install_british_voice.ps1 first."
+    throw "Voice asset missing or incomplete: $file."
   }
 }
 if (-not (Test-Path $envPath)) {
