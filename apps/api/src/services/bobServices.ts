@@ -9,7 +9,7 @@ export type BobService = {
 };
 
 const definitions: Array<[BobServiceId, string, string, string]> = [
-  ["bobdb", "BobDB", "BOBDB_URL", "separate database service used by BobAI and other Bob products"],
+  ["bobdb", "BobDB", "BOBDB_URL", "separate database service used by Jarvis and other Bob products"],
   ["bobauth", "BobAuth", "BOBAUTH_URL", "shared authentication service"],
   ["bobstorage", "BobStorage", "BOBSTORAGE_URL", "shared file/object storage service"],
   ["bobapi", "BobAPI", "BOBAPI_URL", "shared API gateway/service surface"],

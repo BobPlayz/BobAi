@@ -30,16 +30,16 @@ export default function OnboardingPage() {
 
   return <main className="onboarding-page">
     <div className="onboarding-heading">
-      <div className="onboarding-brand"><BobLogo /><span>bobai</span><small>SETUP / 01</small></div>
+      <div className="onboarding-brand"><BobLogo /><span>jarvis</span><small>SETUP / 01</small></div>
       <p className="onboarding-kicker">personalization protocol</p>
       <h1>make the conversation<br /><em>feel like yours.</em></h1>
-      <p className="onboarding-intro">A few quick choices give bobai a useful starting point. Nothing is permanent.</p>
+      <p className="onboarding-intro">A few quick choices give jarvis a useful starting point. Nothing is permanent.</p>
     </div>
     <Stepper initialStep={1} nextButtonText="Continue" backButtonText="Back" onFinalStepCompleted={complete} renderStepNavigation={(currentStep, goTo) => <div className="onboarding-nav"><GooeyNav items={["01", "02", "03", "04", "05", "06"]} activeIndex={currentStep - 1} onChange={(index) => goTo(index + 1)} /></div>}>
-      <Step><Question number="01" title="What should bobai call you?" description="This is how bobai will address you."><input className="onboarding-input" value={answers.name} onChange={(event) => updateAnswer("name", event.target.value)} placeholder="Your name" autoComplete="given-name" /></Question></Step>
+      <Step><Question number="01" title="What should jarvis call you?" description="This is how jarvis will address you."><input className="onboarding-input" value={answers.name} onChange={(event) => updateAnswer("name", event.target.value)} placeholder="Your name" autoComplete="given-name" /></Question></Step>
       <Step><Question number="02" title="What brings you here most often?" description="Choose the closest fit."><div className="choice-grid">{usageOptions.map((option) => <ChoiceButton key={option} selected={answers.usage === option} onClick={() => updateAnswer("usage", option)}>{option}</ChoiceButton>)}</div></Question></Step>
-      <Step><Question number="03" title="How should bobai sound?" description="Pick the personality that feels natural."><div className="choice-grid">{personalityOptions.map((option) => <ChoiceButton key={option} selected={answers.personality === option} onClick={() => updateAnswer("personality", option)}>{option}</ChoiceButton>)}</div></Question></Step>
-      <Step><Question number="04" title="How much detail do you want?" description="bobai will tune its answers around this preference."><div className="choice-grid">{responseStyleOptions.map((option) => <ChoiceButton key={option} selected={answers.responseStyle === option} onClick={() => updateAnswer("responseStyle", option)}>{option}</ChoiceButton>)}</div></Question></Step>
+      <Step><Question number="03" title="How should jarvis sound?" description="Pick the personality that feels natural."><div className="choice-grid">{personalityOptions.map((option) => <ChoiceButton key={option} selected={answers.personality === option} onClick={() => updateAnswer("personality", option)}>{option}</ChoiceButton>)}</div></Question></Step>
+      <Step><Question number="04" title="How much detail do you want?" description="jarvis will tune its answers around this preference."><div className="choice-grid">{responseStyleOptions.map((option) => <ChoiceButton key={option} selected={answers.responseStyle === option} onClick={() => updateAnswer("responseStyle", option)}>{option}</ChoiceButton>)}</div></Question></Step>
       <Step><Question number="05" title="What are you into?" description="Choose as many as you like."><div className="choice-grid">{interestOptions.map((option) => <ChoiceButton key={option} selected={answers.interests.includes(option)} onClick={() => toggleInterest(option)}>{option}</ChoiceButton>)}</div></Question></Step>
       <Step><Question number="06" title="Your starting profile" description="You can change any of these preferences later."><div className="summary">{[["name", answers.name || "Not provided"], ["main use", answers.usage || "Not selected"], ["personality", answers.personality || "Not selected"], ["response style", answers.responseStyle || "Not selected"], ["interests", answers.interests.join(", ") || "None selected"]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div></Question></Step>
     </Stepper>
