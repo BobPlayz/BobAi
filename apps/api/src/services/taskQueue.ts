@@ -4,7 +4,7 @@ import type { AgentSkillId } from "./agentSkills.js";
 import { claimPersistedAgentTask, recoverAgentTasks, persistAgentTask, touchPersistedAgentTask, updatePersistedAgentTask } from "../store/agentTaskDb.js";
 import type { AgentBudget, AgentStep } from "./agentOrchestration.js";
 export type QueueJob = { id: string; description: string; kind?: AgentTaskKind; skills?: AgentSkillId[]; mode?: string; context?: { workspaceId?: string; createdBy?: string; plan?: AgentStep[]; budget?: Partial<AgentBudget>; checkpointToken?: string; taskId?: string }; attempts: number; status: "queued" | "running" | "completed" | "failed" | "cancelled" | "waiting"; createdAt: string; result?: unknown; error?: string };
-const queue: QueueJob[] = []; const jobs = new Map<string, QueueJob>(); const pendingPersistence = new Set<string>(); let running = 0; let recoveryStarted = false;
+const queue: QueueJob[] = []; const jobs = new Map<string, QueueJob>(); const pendingPersistence = new Set<string>(); let running = 0;
 const concurrency = Math.max(1, Math.min(4, Number(process.env.BOBAI_AGENT_CONCURRENCY || 1))); const maxAttempts = Math.max(1, Math.min(5, Number(process.env.BOBAI_AGENT_MAX_ATTEMPTS || 2)));
 export function enqueueAgentTask(input: Omit<QueueJob, "id" | "attempts" | "status" | "createdAt">) { if (queue.length >= 100) throw new Error("agent queue is full"); const job: QueueJob = { ...input, id: randomUUID(), attempts: 0, status: "queued", createdAt: new Date().toISOString(), context: { ...input.context, taskId: undefined } }; job.context = { ...job.context, taskId: job.id }; queue.push(job); jobs.set(job.id, job); pendingPersistence.add(job.id); void persistAgentTask({ id: job.id, workspaceId: job.context?.workspaceId, createdBy: job.context?.createdBy, title: job.description.slice(0, 120), description: job.description, type: job.kind || "coding", status: "queued", payload: { mode: job.mode, skills: job.skills, budget: job.context?.budget, checkpointToken: job.context?.checkpointToken } }).catch(() => false).finally(() => { pendingPersistence.delete(job.id); void drain(); }); return job; }
 export function getQueueJob(id: string) { return jobs.get(id) || null; }
@@ -12,8 +12,6 @@ export function listQueueJobs() { return [...jobs.values()].sort((a, b) => b.cre
 export function cancelQueueJob(id: string) { const job = jobs.get(id); if (!job || !["queued", "running", "waiting"].includes(job.status)) return false; if (job.status === "running") cancelAgentTask(job.id); job.status = "cancelled"; job.error = "agent task cancelled"; void updatePersistedAgentTask({ id: job.id, status: "cancelled", error: job.error }).catch(() => undefined); return true; }
 export function wakeAgentQueue() { void drain(); }
 async function recoverPersistedJobs() {
-  if (recoveryStarted) return;
-  recoveryStarted = true;
   try {
     const persisted = await recoverAgentTasks();
     for (const task of persisted) {
@@ -31,6 +29,7 @@ async function recoverPersistedJobs() {
   }
 }
 const recoveryPromise = recoverPersistedJobs();
+const recoveryTimer = setInterval(() => { void recoverPersistedJobs().then(() => drain()); }, 30_000); recoveryTimer.unref();
 async function drain() { await recoveryPromise; while (running < concurrency) { const index = queue.findIndex((candidate) => candidate.status === "queued" && !pendingPersistence.has(candidate.id)); if (index === -1) return; const [job] = queue.splice(index, 1); if (!job || job.status !== "queued") continue; job.status = "running"; job.attempts += 1; running += 1; void run(job).finally(() => { running -= 1; void drain(); }); } }
 async function run(job: QueueJob) {
   let heartbeat: NodeJS.Timeout | undefined;
