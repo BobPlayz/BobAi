@@ -1,3 +1,4 @@
+import { unloadOllamaModels } from "./ollamaProvider.js";
 import { withLocalModelLock } from "./localModelLock.js";
 import path from "node:path";
 import { statSync } from "node:fs";
@@ -26,6 +27,7 @@ export async function synthesizeLocal(text: string, options?: Record<string, unk
   const safeOptions = asOptions(options);
   const rawScale = typeof safeOptions.lengthScale === "number" && Number.isFinite(safeOptions.lengthScale) ? safeOptions.lengthScale : 0.88;
   const lengthScale = Math.min(Math.max(rawScale, 0.5), 2);
+  await unloadOllamaModels();
   const audio = nativeMedia.require().synthesize(path.resolve(model), config ? path.resolve(config) : "", path.resolve(ESPEAK_DATA), text.trim(), lengthScale);
   if (!audio.length || audio.length > 64 * 1024 * 1024) throw new Error("BobVoice output is invalid or too large");
   validatePcm16Wav(audio, 64 * 1024 * 1024);
