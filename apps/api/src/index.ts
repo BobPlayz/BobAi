@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createServer } from "node:http";
 import { app } from "./app.js";
 import { configureOtpDelivery } from "./services/otpDelivery.js";
-import { dbClient } from "@jarvis/db";
+import { dbClient } from "@bobai/db";
 import { validateProductionConfig } from "./config/validateProduction.js";
 
 const PORT = Number(process.env.PORT || 3001);
