@@ -78,9 +78,9 @@ async function readLimited(response: Response) {
   return output + decoder.decode();
 }
 
-export async function ollamaChat(input: NativeMessage[], provider: "bob" | "coding" = "bob", override?: string) {
+export async function ollamaChat(input: NativeMessage[], provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
   const model = ollamaModelFor(provider, override);
-  const response = await request(normalizeMessages(input), model, false);
+  const response = await request(normalizeMessages(input), model, false, signal);
   let data: { message?: { content?: unknown }; error?: unknown };
   try { data = JSON.parse(await readLimited(response)); } catch (error) {
     if (error instanceof Error && error.message.includes("too large")) throw error;
