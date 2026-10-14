@@ -170,3 +170,28 @@ test("semantic embedding requests normalize vectors to the database dimension an
     assert.equal(calls[0].body?.keep_alive, 0);
   } finally { restore(); }
 });
+
+test("switching models unloads other resident tags but keeps the selected tag", async () => {
+  try {
+    process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    process.env.BOBAI_OLLAMA_MODEL = "qwen3.5:4b";
+    const calls: Array<{ url: string; body?: Record<string, unknown> }> = [];
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/ps")) return new Response(JSON.stringify({
+        models: [{ name: "qwen3.5:4b" }, { name: "qwen2.5-coder:3b" }],
+      }), { status: 200 });
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
+      calls.push({ url, body });
+      if (url.endsWith("/api/generate")) return new Response(JSON.stringify({ response: "", done: true }), { status: 200 });
+      return new Response(JSON.stringify({ message: { content: "ready" } }), { status: 200 });
+    };
+    const result = await new BobModelProvider().chat([{ role: "user", content: "hello" }]);
+    assert.equal(result.model, "qwen3.5:4b");
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].url, "http://127.0.0.1:11434/api/generate");
+    assert.equal(calls[0].body?.model, "qwen2.5-coder:3b");
+    assert.equal(calls[0].body?.keep_alive, 0);
+    assert.equal(calls[1].url, "http://127.0.0.1:11434/api/chat");
+  } finally { restore(); }
+});
