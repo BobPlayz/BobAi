@@ -49,7 +49,7 @@ async function main() {
     for (const file of files) {
       const id = file.replace(/\.sql$/, ""); const contents = await readFile(path.join(migrationsDir, file), "utf8"); const checksum = createHash("sha256").update(contents).digest("hex");
       const [existing] = await sql`SELECT checksum FROM bobai_migrations WHERE id = ${id} LIMIT 1`;
-      if (existing) { if (existing.checksum && existing.checksum !== checksum) throw new Error(`migration ${id} was modified after it was applied`); if (!existing.checksum) await sql`UPDATE bobai_migrations SET checksum = ${checksum} WHERE id = ${id}`; continue; }
+      if (existing) { if (existing.checksum && existing.checksum !== checksum) { if (!(await migrationAlreadySatisfied(sql, id))) throw new Error(`migration ${id} was modified after it was applied and its expected schema is not present; refusing to rewrite migration history`); await sql`UPDATE bobai_migrations SET checksum = ${checksum} WHERE id = ${id}`; console.log(`reconciled checksum for already-satisfied migration ${id}`); } else if (!existing.checksum) await sql`UPDATE bobai_migrations SET checksum = ${checksum} WHERE id = ${id}`; continue; }
       if (await migrationAlreadySatisfied(sql, id)) { await sql`INSERT INTO bobai_migrations (id, checksum) VALUES (${id}, ${checksum})`; console.log(`recorded existing migration ${id}`); continue; }
       await sql.begin(async (tx) => { await tx.unsafe(contents); await tx`INSERT INTO bobai_migrations (id, checksum) VALUES (${id}, ${checksum})`; });
       console.log(`applied migration ${id}`);
