@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Settings • BobAI",
-  description: "Customize BobAI",
+  title: "Settings • Jarvis",
+  description: "Customize Jarvis",
 };
 
 export default function SettingsLayout({
