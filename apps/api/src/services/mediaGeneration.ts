@@ -28,12 +28,17 @@ export async function generateImages(prompt:string,count=1,inputImages?:string[]
  if(normalized.length>MAX_PROMPT_LENGTH)throw new Error("image prompt is too long");
  assertMediaPromptSafe(normalized);
  const images=normalizeImages(inputImages);
- const requested=Math.max(1,Math.min(4,Math.floor(count)));
+ if(!Number.isInteger(count)||count<1||count>4) throw new Error("image count must be an integer between 1 and 4");
+ const requested=count;
  const width=options.width ?? 512, height=options.height ?? 512, seed=options.seed;
+ const steps=options.steps ?? 24, guidanceScale=options.guidanceScale ?? 7, negativePrompt=options.negativePrompt ?? "";
+ if(!Number.isInteger(steps)||steps<10||steps>50) throw new Error("image steps must be an integer between 10 and 50");
+ if(typeof guidanceScale!=="number"||!Number.isFinite(guidanceScale)||guidanceScale<1||guidanceScale>15) throw new Error("image guidance scale must be a number between 1 and 15");
+ if(typeof negativePrompt!=="string"||negativePrompt.length>2000) throw new Error("image negative prompt must be text under 2000 characters");
  if(!Number.isInteger(width)||width<256||width>768||width%8!==0||!Number.isInteger(height)||height<256||height>768||height%8!==0) throw new Error("image width and height must be multiples of 8 between 256 and 768");
  if(seed!==undefined&&(!Number.isInteger(seed)||seed<0||seed>2_147_483_647)) throw new Error("image seed must be an integer between 0 and 2147483647");
  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("image generation cancelled");
- const generated=await fluxGenerate(normalized,requested,images,signal,{width,height,seed,steps:options.steps,guidanceScale:options.guidanceScale,negativePrompt:options.negativePrompt});
+ const generated=await fluxGenerate(normalized,requested,images,signal,{width,height,seed,steps,guidanceScale,negativePrompt});
  if(generated?.length)return generated;
  throw new Error("image generation is unavailable; configure a supported image-generation provider");
 }
