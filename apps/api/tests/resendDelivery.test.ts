@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sendResendOtp } from "../src/services/otpDelivery.js";
+
+// This unit test stubs the email provider and must not require a real database.
+// The database package validates DATABASE_URL during module initialization, so
+// provide a deliberately unreachable test-only URL before importing the service.
+process.env.DATABASE_URL ||= "postgres://test:test@127.0.0.1:1/test";
+const { sendResendOtp } = await import("../src/services/otpDelivery.js");
 
 const originalFetch = globalThis.fetch;
 const originalKey = process.env.RESEND_API_KEY;
