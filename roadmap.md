@@ -1,10 +1,10 @@
-# BobAI: 10-Phase Product Roadmap
+# Jarvis: 10-Phase Product Roadmap
 
 > **Product goal:** Build a polished, trustworthy, ChatGPT-style AI website that feels familiar and uncluttered, with useful privacy, research, voice, memory, and file features. This is a product roadmap, not a claim that every feature is already implemented.
 >
 > **Budget assumption:** ₹2,000 INR is the initial setup budget. The separate AI usage target is ₹500 INR per month. Prefer free tiers and monthly/usage-based plans that can be cancelled after one month where provider terms permit. Verify renewal and cancellation terms before any purchase; do not purchase or subscribe without explicit approval.
 >
-> **Model decision (updated 2026-10-14):** BobAI is local-first. Do not train a model from scratch and do not use OpenAI or other hosted AI model APIs. Neon PostgreSQL and Resend email are infrastructure exceptions. Image generation uses a direct local Diffusers pipeline without ComfyUI. Local video generation remains disabled until a local runtime exists.
+> **Model decision (updated 2026-10-14):** Jarvis is local-first. Do not train a model from scratch and do not use OpenAI or other hosted AI model APIs. Neon PostgreSQL and Resend email are infrastructure exceptions. Image generation uses a direct local Diffusers pipeline without ComfyUI. Local video generation remains disabled until a local runtime exists.
 
 ## Product and design contract
 
@@ -30,7 +30,7 @@
 10. **No model training:** use existing local Ollama models and local specialist runtimes. Keep training workflows out of normal setup and deployment; do not train a model.
 
 ### Important implementation rules
-- Existing BobAI APIs, auth, database, conversation store, memory, research, and speech integrations remain the source of truth when they work.
+- Existing Jarvis APIs, auth, database, conversation store, memory, research, and speech integrations remain the source of truth when they work.
 - Ollama is the required local language-model runtime. Do not route chat, coding, research synthesis, image generation, or voice through hosted AI APIs.
 - Never expose provider keys to the browser or commit secrets.
 - Research citations must point to sources actually retrieved; do not fabricate sources.
@@ -68,7 +68,7 @@
 
 ## Phase 2/10 — Clean UI and theme foundation
 
-**Goal:** Make BobAI neat, calm, and easy to use.
+**Goal:** Make Jarvis neat, calm, and easy to use.
 
 - [x] Remove the unused sci-fi intro/scene components and decorative beams/particles as recorded in the change log.
 - [x] Establish a conversation-first shell and a restrained visual direction.
@@ -84,7 +84,7 @@
 
 ## Phase 3/10 — Local Ollama AI chat and coding, without training
 
-**Goal:** Use existing local Ollama models rather than training BobAI's own model.
+**Goal:** Use existing local Ollama models rather than training Jarvis's own model.
 
 - [x] Add a local Ollama adapter with configurable local chat/coding models, bounded request/response sizes, timeouts, and streamed output. See [Local AI setup](docs/LOCAL_AI.md).
 - [ ] Install the selected local Ollama chat/coding models and verify real chat, coding, streaming, and cancellation on the target machine.
@@ -183,7 +183,7 @@
 
 ## Phase 8/10 — Local Jarvis voice-to-voice
 
-**Goal:** Make speaking with BobAI feel conversational, not like a chain of awkward buttons.
+**Goal:** Make speaking with Jarvis feel conversational, not like a chain of awkward buttons.
 
 - [x] Implement a browser microphone recording path with server-side transcription and a speech-synthesis endpoint; provider/latency/language tradeoffs still need a live evaluation.
 - [x] Use explicit press-to-record controls; the app does not silently listen in the background.
@@ -261,7 +261,7 @@
 
 ## Change log
 
-- **2026-10-13:** Created a ten-phase roadmap for merging the AI-Glasses UI ideas into BobAI without importing the physical-device product.
+- **2026-10-13:** Created a ten-phase roadmap for merging the AI-Glasses UI ideas into Jarvis without importing the physical-device product.
 - **2026-10-13:** Fixed repository preflight allowlists so the root roadmap and quick-start auth guide are accepted Markdown files.
 - **2026-10-13:** Added per-request Deep Research source preferences and source-filter unit tests; the tests have intentionally not been run yet because final verification is deferred until implementation work is complete.
 - **2026-10-13:** Added saved-memory review, edit, individual-delete, and clear-all controls; added a user-facing account export control; and made the privacy page follow the selected theme. Build/runtime verification and account-specific end-to-end checks remain pending.
@@ -307,7 +307,7 @@
 - **2026-10-13:** Product direction clarified: clean layout, Light/Dark only, no sci-fi visuals, no model training, use an existing chatbot provider, and target an initial ₹2,000 budget for domain and early costs. Research/source preferences, age-appropriate controls, agents, natural voice, files/images, memory, and deployment are now explicit roadmap goals.
 
 - **2026-10-13, public-beta branch:** Recorded the student-facing public-beta scope, Origin Productions publisher identity, ₹500/month AI budget target, and requirement to prefer cancellable monthly services. Removed Ollama routing, runtime/test files, environment settings, and setup instructions; added hosted coding-provider routing regression tests and a production startup gate requiring a verified provider-side spending-cap attestation. The gate is not an in-app billing API.
-- **2026-10-13, public-beta branch:** Removed the fake SVG image-generation fallback so an unavailable real image model now returns an explicit error. Added Origin Productions publisher metadata, changed the About page to support Light/Dark, and removed the unconfirmed `bobai.app` default URL. All changes remain unverified until the deferred final build/test pass.
+- **2026-10-13, public-beta branch:** Removed the fake SVG image-generation fallback so an unavailable real image model now returns an explicit error. Added Origin Productions publisher metadata, changed the About page to support Light/Dark, and removed the unconfirmed `jarvis.app` default URL. All changes remain unverified until the deferred final build/test pass.
 
 - **2026-10-13, public-beta branch:** Added separate Web Search and Deep Research modes using the existing authenticated research endpoints and source filters. Added a hosted Images API path for image generation/editing, reference-image validation, and an AssistantHub Image mode. Voice mode now sends the prompt to the assistant and reads its reply aloud with an interruption control. These changes need the deferred build/test and live-provider verification.
 - **2026-10-13, public-beta branch:** Tightened settings API validation to accept only Light/Dark themes and removed the model-training opt-in setting from the supported settings surface. Enabled same-origin microphone policy on API responses; the web app already allows same-origin microphone use in its own security headers.
