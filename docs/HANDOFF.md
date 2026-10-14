@@ -126,3 +126,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - Ollama readiness now includes the configured vision model in `requiredModels`/`missingModels`, and regression tests cover the multimodal request path against a mocked local endpoint.
 
 - The local image subprocess validates the complete request size before spawning Python and discards subprocess stderr to avoid pipe backpressure from library warnings; the image-specific JSON limit is now documented in both environment templates.
+
+- Added endpoint-specific JSON body limits for direct vision analysis, chat image attachments, browser voice transcription, and the native media endpoints. The previous global 2 MB parser silently prevented normal 3-minute WAV transcription and some image requests from reaching their handlers.
