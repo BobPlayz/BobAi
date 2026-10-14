@@ -1,4 +1,5 @@
 import path from "node:path";
+import { statSync } from "node:fs";
 import { nativeMedia } from "./nativeMedia.js";
 
 const PIPER_MODEL = process.env.BOBAI_PIPER_MODEL_PATH || "";
@@ -26,14 +27,32 @@ export async function synthesizeLocal(text: string, options?: Record<string, unk
   if (!audio.length || audio.length > 64 * 1024 * 1024) throw new Error("BobVoice output is invalid or too large");
   return { audio: audio.toString("base64"), mimeType: "audio/wav", engine: "BobVoice/Piper", model: path.basename(model), language: telugu ? "Telugu" : "English", offline: true, voiceProfile: "Ai-Glasses Jarvis offline profile" };
 }
+function existsFile(value: string) { try { return Boolean(value && statSync(path.resolve(value)).isFile()); } catch { return false; } }
+function existsDirectory(value: string) { try { return Boolean(value && statSync(path.resolve(value)).isDirectory()); } catch { return false; } }
 export async function piperStatus() {
+  const native = nativeMedia.status();
+  const englishModelExists = existsFile(PIPER_EN_MODEL);
+  const teluguModelExists = existsFile(PIPER_TE_MODEL);
+  const englishConfigExists = !PIPER_EN_CONFIG || existsFile(PIPER_EN_CONFIG);
+  const teluguConfigExists = !PIPER_TE_CONFIG || existsFile(PIPER_TE_CONFIG);
+  const espeakDataExists = existsDirectory(ESPEAK_DATA);
+  const englishReady = englishModelExists && englishConfigExists && espeakDataExists && native.ready;
+  const teluguReady = teluguModelExists && teluguConfigExists && espeakDataExists && native.ready;
   return {
-    ...nativeMedia.status(),
+    ...native,
+    ready: englishReady || teluguReady,
     modelConfigured: Boolean(PIPER_EN_MODEL || PIPER_TE_MODEL),
     englishVoiceConfigured: Boolean(PIPER_EN_MODEL),
     teluguVoiceConfigured: Boolean(PIPER_TE_MODEL),
     englishModel: PIPER_EN_MODEL ? path.basename(PIPER_EN_MODEL) : null,
     teluguModel: PIPER_TE_MODEL ? path.basename(PIPER_TE_MODEL) : null,
+    englishModelExists,
+    teluguModelExists,
+    englishConfigExists,
+    teluguConfigExists,
     espeakDataConfigured: Boolean(ESPEAK_DATA),
+    espeakDataExists,
+    englishReady,
+    teluguReady,
   };
 }

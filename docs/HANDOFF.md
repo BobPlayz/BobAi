@@ -82,3 +82,5 @@
 - OCR now ignores uploads that have already been soft-deleted and records an intermediate OCR-complete/indexing state instead of prematurely declaring the upload indexed.
 
 - Extended sensitive audit metadata redaction to cover research queries, search terms, messages, and user-text fields; image-generation screening also rejects nudity-related prompts for the general-audience product.
+
+- Voice readiness now checks whether configured Whisper/Piper model files, optional Piper config files, and the eSpeak data directory actually exist; configured environment strings alone no longer imply that the voice runtime is ready.
