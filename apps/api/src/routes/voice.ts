@@ -46,6 +46,7 @@ router.post("/turn", limit, async (req, res) => {
     if (!spokenText) return res.status(422).json({ error: "no speech was recognized; try recording again" });
     if (spokenText.length > 20_000) return res.status(413).json({ error: "recognized speech is too long" });
 
+    const selectedModelId = typeof req.body?.modelId === "string" ? req.body.modelId : "bob";
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     const settingRows = await db.select({ key: settings.key, value: settings.value }).from(settings)
       .where(and(eq(settings.userId, req.user!.id), eq(settings.workspaceId, workspace.id))).limit(50);
@@ -55,7 +56,7 @@ router.post("/turn", limit, async (req, res) => {
     const memories = memoryEnabled ? await dbRecallRelevant(workspace.id, req.user!.id, spokenText, 12) : [];
     const prepared = await prepareChat({
       messages,
-      modelId: "bob",
+      modelId: selectedModelId,
       language: getSetting("language"),
       responseStyle: getSetting("responseStyle"),
       responseLength: getSetting("responseLength"),
@@ -80,11 +81,11 @@ router.post("/turn", limit, async (req, res) => {
       userId: req.user!.id,
       workspaceId: workspace.id,
       approvalToken: typeof req.body?.approvalToken === "string" ? req.body.approvalToken : undefined,
-      modelId: "bob",
+      modelId: selectedModelId,
       mode: typeof req.body?.mode === "string" ? req.body.mode : undefined,
       signal: controller.signal,
     }, async (providerMessages) => decideTools(providerMessages as any, "bob"), async (providerMessages) => {
-      const result = await runChat(providerMessages as any, "bob", controller.signal);
+      const result = await runChat(providerMessages as any, selectedModelId, controller.signal);
       return { content: result.message.content };
     });
     if (controller.signal.aborted || res.destroyed) return;
@@ -120,7 +121,7 @@ router.post("/turn", limit, async (req, res) => {
       mimeType: speech?.mimeType ?? null,
       voice: speech ? { engine: speech.engine, model: speech.model, language: speech.language, offline: speech.offline } : null,
       voiceError: speech ? undefined : "speech synthesis is unavailable; the text reply is still available",
-      model: "bob",
+      model: selectedModelId,
       conversationId,
       persisted,
       toolStatus: loop.status,
