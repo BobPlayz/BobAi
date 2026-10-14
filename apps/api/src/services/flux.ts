@@ -1,6 +1,7 @@
 import { withLocalModelLock } from "./localModelLock.js";
 import { unloadOllamaModels } from "./ollamaProvider.js";
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024;
@@ -95,6 +96,10 @@ export function fluxGenerate(
 ) {
   return withLocalModelLock(async () => {
     if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("local image generation cancelled");
+    const modelPath = process.env.BOBAI_IMAGE_MODEL_PATH?.trim();
+    if (!modelPath || !existsSync(path.resolve(modelPath))) {
+      throw new Error("local image generation needs BOBAI_IMAGE_MODEL_PATH pointing to an existing downloaded Diffusers model directory");
+    }
     await unloadOllamaModels();
     return fluxGenerateUnlocked(prompt, count, inputImages, signal, options);
   });
