@@ -1,3 +1,4 @@
+import { withLocalModelLock } from "./localModelLock.js";
 import path from "node:path";
 import { statSync } from "node:fs";
 import { nativeMedia } from "./nativeMedia.js";
@@ -15,6 +16,7 @@ export function buildPiperArgs(modelPath: string, outputPath: string, lengthScal
 function containsTelugu(text: string) { return /[\u0C00-\u0C7F]/.test(text); }
 
 export async function synthesizeLocal(text: string, options?: Record<string, unknown> | null) {
+  return withLocalModelLock(async () => {
   if (!ESPEAK_DATA) throw new Error("BobVoice requires BOBAI_ESPEAK_DATA_PATH");
   if (!text.trim() || text.length > 20_000) throw new Error("text exceeds 20,000 character limit");
   const telugu = containsTelugu(text);
@@ -28,6 +30,7 @@ export async function synthesizeLocal(text: string, options?: Record<string, unk
   if (!audio.length || audio.length > 64 * 1024 * 1024) throw new Error("BobVoice output is invalid or too large");
   validatePcm16Wav(audio, 64 * 1024 * 1024);
   return { audio: audio.toString("base64"), mimeType: "audio/wav", engine: "BobVoice/Piper", model: path.basename(model), language: telugu ? "Telugu" : "English", offline: true, voiceProfile: "Ai-Glasses Jarvis offline profile" };
+  });
 }
 function existsFile(value: string) { try { return Boolean(value && statSync(path.resolve(value)).isFile()); } catch { return false; } }
 function existsDirectory(value: string) { try { return Boolean(value && statSync(path.resolve(value)).isDirectory()); } catch { return false; } }
