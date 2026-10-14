@@ -59,7 +59,7 @@ router.post("/generate", limit, async (req, res) => {
       width: item.width ?? width,
       height: item.height ?? height,
       seed: item.seed ?? seed ?? null,
-      operation: "generate",
+      operation: inputImages?.length ? "edit" : "generate",
       metadata: { url: item.url, index: item.index, source: "local" },
     }))).returning();
 

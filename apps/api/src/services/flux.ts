@@ -2,10 +2,11 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024;
+const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
 export async function fluxGenerate(prompt: string, count: number, inputImages: string[] = [], signal?: AbortSignal, options: { width?: number; height?: number; seed?: number } = {}) {
-  if (inputImages.length) throw new Error("local image editing is not configured yet; BobAI will not send reference images to an external provider");
+  if (inputImages.length > 4) throw new Error("up to 4 reference images are supported");
   const modelPath = process.env.BOBAI_IMAGE_MODEL_PATH?.trim();
   if (!modelPath) throw new Error("local image generation needs BOBAI_IMAGE_MODEL_PATH pointing to a downloaded Diffusers model directory");
   const python = (process.env.BOBAI_PYTHON || "python").trim();
@@ -18,6 +19,8 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
   });
   const width = options.width ?? 512;
   const height = options.height ?? 512;
+  const requestBody = JSON.stringify({ prompt, count, width, height, inputImages, ...(options.seed === undefined ? {} : { seed: options.seed }) });
+  if (Buffer.byteLength(requestBody, "utf8") > MAX_REQUEST_BYTES) { child.kill(); throw new Error("image request exceeds the 12 MB limit"); }
   const stdout: Buffer[] = [];
   let stdoutBytes = 0;
   let settled = false;
@@ -66,7 +69,7 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
         finish(undefined, { images });
       } catch (error) { finish(error instanceof Error ? error : new Error("local image runtime returned invalid JSON")); }
     });
-    child.stdin.end(JSON.stringify({ prompt, count, width, height, ...(options.seed === undefined ? {} : { seed: options.seed }) }));
+    child.stdin.end(requestBody);
   });
   if (Buffer.byteLength(JSON.stringify(result), "utf8") > MAX_STDOUT_BYTES) throw new Error("local image generation result exceeded the size limit");
   return Array.isArray(result.images) ? result.images : [];

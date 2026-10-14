@@ -5,7 +5,23 @@ type GeneratedImage = { url: string; prompt: string; index: number; seed?: numbe
 type MediaOptions = { prompt: string; count?: number; width?: number; height?: number; seed?: number };
 const MAX_PROMPT_LENGTH = 8000;
 const MAX_INPUT_IMAGES = 4;
-function normalizeImages(inputImages: string[] | undefined) { if (inputImages === undefined) return []; if (!Array.isArray(inputImages) || inputImages.length > MAX_INPUT_IMAGES) throw new Error("up to 4 input images are supported"); return inputImages.map((image) => { if (typeof image !== "string" || image.length > 2_800_000 || !/^data:image\/(?:png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(image)) throw new Error("reference images must be PNG, JPEG, or WebP data URLs under 2 MB"); return image; }); }
+function normalizeImages(inputImages: string[] | undefined) {
+ if (inputImages === undefined) return [];
+ if (!Array.isArray(inputImages) || inputImages.length > MAX_INPUT_IMAGES) throw new Error("up to 4 input images are supported");
+ return inputImages.map((image) => {
+  if (typeof image !== "string" || image.length > 2_800_000) throw new Error("reference images must be PNG, JPEG, or WebP data URLs under 2 MB");
+  const match = /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(image);
+  if (!match) throw new Error("reference images must be PNG, JPEG, or WebP data URLs under 2 MB");
+  const bytes = Buffer.from(match[2], "base64");
+  if (!bytes.length || bytes.length > 2 * 1024 * 1024 || bytes.toString("base64").replace(/=+$/, "") !== match[2].replace(/=+$/, "")) throw new Error("reference images must be PNG, JPEG, or WebP data URLs under 2 MB");
+  const mime = match[1].toLowerCase();
+  const valid = mime === "png" ? bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+   : mime === "webp" ? bytes.length >= 12 && bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP"
+   : bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (!valid) throw new Error("reference image MIME does not match its content");
+  return image;
+ });
+}
 export async function generateImages(prompt:string,count=1,inputImages?:string[],signal?:AbortSignal,options: { width?: number; height?: number; seed?: number } = {}):Promise<GeneratedImage[]> {
  const normalized=prompt.trim();
  if(!normalized)throw new Error("image prompt is required");
