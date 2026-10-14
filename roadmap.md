@@ -62,7 +62,7 @@
 - [x] Classify major features as implemented/unverified, partial, draft, or externally blocked in `docs/FEATURE_INVENTORY.md`.
 - [x] Map the main chat, upload, voice, research, agent, memory, account, and theme controls to their handlers/endpoints in `docs/FEATURE_INVENTORY.md`.
 - [ ] Capture desktop and mobile baseline screenshots for both themes. These require a running browser session and remain external to static repository editing.
-- [ ] Run build, lint/type checks, tests, repository preflight, and dependency audit; record existing failures separately. Deferred until the implementation pass is complete, per the handoff request.
+- [ ] Run build, lint/type checks, tests, repository preflight, and dependency audit; record existing failures separately. Deferred by explicit request; run after the implementation-only pass is signed off.
 
 **Exit criteria:** A verified feature inventory, screenshots, and a baseline CI report. Do not call unverified features complete.
 
@@ -211,7 +211,7 @@
 - [x] Add a user-facing account data export control backed by the authenticated export endpoint. Build/test verification is pending.
 - [ ] Verify auth, authorization, CSRF/CORS protections as applicable, rate limits, secret handling, secure cookies, and HTTPS.
 - [ ] Review dependency advisories and update vulnerable packages with a consistent lockfile and tests.
-- [ ] Avoid logging private prompts, access tokens, uploaded content, or voice recordings unnecessarily.
+- [x] Keep request/security logs free of request-body content; redact prompt/content/transcript/audio/image/file/query/message fields from audit metadata and redact free-form audit values. Continue reviewing new audit fields before adding them.
 - [ ] Test cross-user data access, injection attempts, abuse limits, and failure recovery.
 
 **Exit criteria:** Security checks pass or documented blockers are fixed before public launch; age and privacy claims match real behavior.
