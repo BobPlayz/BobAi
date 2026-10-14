@@ -22,8 +22,8 @@ export const RUNTIME_MODELS: RuntimeModel[] = [
 function messageText(messages: unknown) { if (!Array.isArray(messages)) return ""; return messages.map((item)=>item&&typeof item==="object"&&typeof (item as {content?:unknown}).content==="string"?(item as {content:string}).content:"").join(" ").toLowerCase().slice(-12000); }
 export function inferTaskPlan(input:{messages?:unknown;hasImage?:boolean;hasAudio?:boolean;wantsImage?:boolean;wantsSpeech?:boolean}):TaskPlan {
  const text=messageText(input.messages);
- const wantsImage=Boolean(input.wantsImage)||/\b(generate|create|draw|make|render)\b.{0,40}\b(image|picture|art|illustration|wallpaper|poster)\b/.test(text);
- const wantsSpeech=Boolean(input.wantsSpeech)||/\b(speak|read aloud|voice response|pronounce|say this aloud|text to speech)\b/.test(text);
+ const wantsImage=Boolean(input.wantsImage)||/\b(generate|create|draw|make|render)\b.{0,40}\b(image|picture|art|illustration|wallpaper|poster)\b/.test(text)||/\bi\s+(want|need|would like)\b.{0,40}\b(image|picture|art|illustration|wallpaper|poster)\b/.test(text);
+ const wantsSpeech=Boolean(input.wantsSpeech)||/\b(speak|read aloud|voice response|pronounce|say this aloud|text to speech)\b/.test(text)||/\bread\b.{0,20}\baloud\b/.test(text);
  const wantsVision=Boolean(input.hasImage)||(!wantsImage&&/\b(analy[sz]e|describe|what is in|what's in|identify|look at|see|screenshot|photo|picture|image|vision)\b/.test(text));
  const wantsAsr=Boolean(input.hasAudio)||(!wantsSpeech&&/\b(audio|voice|speech|listen|transcribe|transcription|hear|spoken)\b/.test(text));
  const capabilities:RuntimeCapability[]=[];
