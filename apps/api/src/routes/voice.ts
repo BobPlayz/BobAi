@@ -5,8 +5,10 @@ const router = Router();
 const limit = createUserRateLimit(20, 60_000);
 const decode = (value: unknown, maxBytes: number) => {
   if (typeof value !== "string" || value.length > Math.ceil(maxBytes / 3) * 4 + 16 || !/^[A-Za-z0-9+/\s]*={0,2}$/.test(value)) throw new Error("invalid audio");
-  const data = Buffer.from(value, "base64");
-  if (!data.length || data.length > maxBytes) throw new Error("invalid audio");
+  const normalized = value.replace(/\s/g, "");
+  const data = Buffer.from(normalized, "base64");
+  const canonical = data.toString("base64");
+  if (!data.length || data.length > maxBytes || canonical.replace(/=+$/, "") !== normalized.replace(/=+$/, "")) throw new Error("invalid audio");
   return data;
 };
 router.get("/status", async (_req, res) => res.json(await status()));
