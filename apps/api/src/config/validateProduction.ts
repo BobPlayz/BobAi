@@ -3,6 +3,10 @@ export function validateProductionConfig() {
   const required = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL","BOBAI_MFA_ENCRYPTION_KEY","BOBAI_TERMS_VERSION","BOBAI_TERMS_URL","BOBAI_PRIVACY_URL","BOBAI_LEGAL_CONTACT"];
   const missing = required.filter((key) => !process.env[key]?.trim());
   if (missing.length) throw new Error(`Missing production configuration: ${missing.join(", ")}`);
+  const hasResend = Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim());
+  const hasSmtp = Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim());
+  if (!hasResend && !hasSmtp) throw new Error("Configure Resend (RESEND_API_KEY and RESEND_FROM_EMAIL) or SMTP before production launch");
+  if (Boolean(process.env.RESEND_API_KEY?.trim()) !== Boolean(process.env.RESEND_FROM_EMAIL?.trim())) throw new Error("RESEND_API_KEY and RESEND_FROM_EMAIL must be provided together");
   if (process.env.BOBAI_LEGAL_REVIEWED !== "true") throw new Error("BOBAI_LEGAL_REVIEWED=true is required before production launch");
   const mfaKey = process.env.BOBAI_MFA_ENCRYPTION_KEY!.trim();
   const mfaKeyBytes = /^[0-9a-f]{64}$/i.test(mfaKey) ? Buffer.from(mfaKey, "hex").length : Buffer.from(mfaKey, "base64").length;
