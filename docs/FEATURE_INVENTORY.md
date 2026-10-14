@@ -101,3 +101,11 @@ These are static code observations, not verified outcomes. The roadmap's test/bu
 - Local image generation propagates client disconnect cancellation to the spawned Diffusers process and avoids persisting images after disconnect.
 - Local image-to-image editing is wired through `AutoPipelineForImage2Image`, with MIME/base64/size checks and a 12 MB endpoint-specific JSON parser.
 - Image understanding now uses a local Ollama multimodal model (default `moondream:1.8b`) instead of requiring an unavailable custom trained vision checkpoint. Runtime behavior remains unverified until model assets are installed and exercised.
+
+
+## 2026-10-14 backend static audit addendum
+
+- Fixed the production retention-days validator to accept integer values from 0 through 3650.
+- Production startup now requires PostgreSQL-backed distributed rate limiting, and readiness reports degraded if its required `rate_limit_buckets` table is absent.
+- Agent queue execution now waits for initial persistence to settle, and awaits state writes for running, retry, completed, waiting, and failed transitions to reduce stale durable state.
+- **Still not certified:** this is a static review and code correction, not a full security certification. Multi-instance worker leasing, per-user data isolation, approval coverage, provider failure recovery, citation correctness, and native voice/image/model behavior remain unverified. No tests, builds, migrations, or runtime checks were run.
