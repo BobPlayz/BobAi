@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   publisher: "Origin Productions",
   generator: "Next.js",
   keywords: ["AI workspace", "AI assistant", "AI chat", "AI tools", "research", "coding"],
-  icons: { icon: "/bob-logo.ico" },
+  icons: { icon: "/icon.svg" },
   manifest: "/manifest.webmanifest",
   ...(siteUrl ? { alternates: { canonical: siteUrl } } : {}),
   openGraph: {
