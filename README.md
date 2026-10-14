@@ -72,6 +72,8 @@ Set BOBAI_PIPER_EN_MODEL_PATH, BOBAI_PIPER_EN_CONFIG_PATH, BOBAI_PIPER_TE_MODEL_
 
 ## Start and verify
 
+For the ordered end-to-end completion checklist, including local voice setup, runtime verification, launch blockers, and definition-of-done criteria, see [the final completion checklist](docs/FINAL_COMPLETION_CHECKLIST.md). On Windows, run `npm run setup:native-media` to download the Whisper Base model, obtain eSpeak data where the installed Piper package supports it, update only the relevant local `.env` values, and attempt the native addon build if compatible Piper/whisper.cpp C++ libraries are configured. The script reports a blocker rather than claiming voice works when those libraries are missing.
+
 Run npm ci, npm test, npm run build, npm run smoke, and npm run audit. After those pass, install the local models and media assets, configure the private .env, run the database migration workflow, and launch with npm run ai. A passing test suite is not a substitute for live tests with Ollama, database migrations, local model files, and microphone/audio playback.
 
 ## Security
