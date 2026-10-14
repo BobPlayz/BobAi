@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+  [ValidateSet("fast", "quality")]
+  [string]$Profile = "fast",
   [switch]$SkipModelDownload
 )
 
@@ -52,17 +54,25 @@ Write-Host "[2/4] Installing Diffusers and image dependencies..."
 & $python -m pip install -r (Join-Path $root "requirements-image.txt")
 if ($LASTEXITCODE -ne 0) { throw "Image dependency installation failed." }
 
-$modelPath = Join-Path $root "models\image\tiny-sd"
+if ($Profile -eq "quality") {
+  $modelPath = Join-Path $root "models\image\dreamshaper-8"
+  $modelRepo = "Lykon/dreamshaper-8"
+  $modelDescription = "DreamShaper 8 (higher-quality local model; larger and slower on CPU)"
+} else {
+  $modelPath = Join-Path $root "models\image\tiny-sd"
+  $modelRepo = "segmind/tiny-sd"
+  $modelDescription = "Segmind Tiny-SD (lightweight local model)"
+}
 New-Item -ItemType Directory -Force -Path $modelPath | Out-Null
 if (-not $SkipModelDownload) {
   Write-Host ""
-  Write-Host "[3/4] Downloading Segmind Tiny-SD (about 1.1 GB) for local inference..."
-  Write-Host "This requires internet once. Check the model license before using or redistributing generated outputs."
-  $downloadCode = "from huggingface_hub import snapshot_download; snapshot_download(repo_id='segmind/tiny-sd', local_dir=r'$($modelPath.Replace('\','\\'))')"
+  Write-Host "[3/4] Downloading $modelDescription..."
+  Write-Host "This requires internet once. Check the selected model's license before using or redistributing generated outputs."
+  $downloadCode = "from huggingface_hub import snapshot_download; snapshot_download(repo_id='$modelRepo', local_dir=r'$($modelPath.Replace('\','\\'))')"
   & $python -c $downloadCode
   if ($LASTEXITCODE -ne 0) { throw "Model download failed. Check internet access and available disk space, then rerun." }
 } elseif (-not (Test-Path (Join-Path $modelPath "model_index.json"))) {
-  throw "SkipModelDownload was used, but the model directory does not contain model_index.json."
+  throw "SkipModelDownload was used, but the selected model directory does not contain model_index.json."
 }
 
 if (-not (Test-Path (Join-Path $modelPath "model_index.json"))) {
@@ -72,12 +82,19 @@ if (-not (Test-Path (Join-Path $modelPath "model_index.json"))) {
 Write-Host ""
 Write-Host "[4/4] Configuring the local .env..."
 Set-DotEnvValue "BOBAI_PYTHON" $python
+Set-DotEnvValue "BOBAI_IMAGE_PROVIDER" "local"
 Set-DotEnvValue "BOBAI_IMAGE_MODEL_PATH" $modelPath
+Set-DotEnvValue "BOBAI_IMAGE_PROFILE" $Profile
 
 & $python -c "import torch, diffusers, transformers, PIL; print('PyTorch:', torch.__version__); print('Diffusers:', diffusers.__version__); print('CUDA available:', torch.cuda.is_available())"
 if ($LASTEXITCODE -ne 0) { throw "Python dependency verification failed." }
 
 Write-Host ""
-Write-Host "Image-generation setup is installed and the model files are present."
+Write-Host "Local image-generation profile '$Profile' is configured."
 Write-Host "Next: run npm run test:image-generation to generate a real 512x512 PNG."
-Write-Host "CPU inference can take several minutes and needs free RAM. Close other heavy apps before the test."
+if ($Profile -eq "quality") {
+  Write-Host "DreamShaper 8 can look substantially better than Tiny-SD, but on an 8 GB CPU-only laptop it may be very slow or run out of memory."
+} else {
+  Write-Host "Tiny-SD is the low-memory option. For higher local quality, rerun: npm run setup:image-generation -- -Profile quality"
+}
+Write-Host "After the smoke test, restart Jarvis. No hosted image API is used by this setup."
