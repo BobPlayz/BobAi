@@ -141,7 +141,7 @@
 - [x] Use OCR/text extraction for supported formats and return explicit extraction failures where available; end-to-end verification is pending.
 - [x] Validate supported file signatures where available and enforce a 10 MB upload limit plus extracted-text bounds; verify page/pixel limits and edge cases.
 - [x] Treat retrieved file knowledge as untrusted evidence rather than instructions in the chat system prompt.
-- [ ] Define and enforce a category-specific uploaded-file retention schedule before public launch.
+- [x] Define and enforce a category-specific uploaded-file retention schedule: images default to 30 days and documents to 90 days, configurable through `BOBAI_UPLOAD_IMAGE_RETENTION_DAYS` and `BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS` (set `0` to disable). Review the policy with the operator/legal reviewer before public launch.
 - [ ] Test unsupported files, oversized files, corrupt images, malicious text, and provider outages.
 
 **Exit criteria:** Supported uploads work from selection to answer, with clear limits and no unsafe trust of file contents.
@@ -188,7 +188,7 @@
 - [x] Implement a browser microphone recording path with server-side transcription and a speech-synthesis endpoint; provider/latency/language tradeoffs still need a live evaluation.
 - [x] Use explicit press-to-record controls; the app does not silently listen in the background.
 - [x] Feed recorded speech transcripts into the same text composer used by chat; convert browser-recorded audio to mono 16 kHz PCM16 WAV before sending, matching the local transcription validator. Voice input is capped at three minutes per recording.
-- [x] Add stop controls for recorded input and read-aloud playback, and clean up active recorder tracks/audio URLs when controls unmount. True seamless voice-to-voice turn-taking and interruption during generation remain unfinished.
+- [x] Add stop controls for recorded input and read-aloud playback, clean up active recorder tracks/audio URLs when controls unmount, and add the backend `/voice/turn` orchestration endpoint for transcription → local chat → local speech. Native synchronous inference cannot guarantee immediate interruption mid-call; runtime validation remains open.
 - [x] Show microphone recording state and surface permission/transcription errors; choose a MediaRecorder MIME type supported by the current browser instead of assuming WAV support.
 - [x] Place dictation output in the editable chat composer before sending. Verify noisy-input/mobile-browser behavior during final testing.
 - [x] Configure language-aware local Piper selection for English Alan and Telugu Venkatesh, matching the Ai-Glasses voice profile. Install assets and verify playback/transcription on the target machine.
@@ -349,3 +349,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Implemented category-specific upload retention enforcement (images: 30 days by default, documents: 90 days by default), with environment overrides and cleanup of indexed chunks and object storage.
 - **2026-10-14:** Strengthened backend media safety policy for explicit sexual and graphic self-harm requests, and applied age-appropriate output constraints to local vision analysis.
 - **2026-10-14:** Filtered document chunk retrieval to fully indexed uploads, hiding partial chunks while processing is in progress or has failed.
+- **2026-10-14:** Marked backend upload retention as implemented and documented the one-shot voice-to-voice orchestration endpoint; runtime checks remain separate from implementation.

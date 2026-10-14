@@ -36,7 +36,7 @@
 ## Verification status
 
 - GitHub Actions has passed for recent intermediate commits, including the build/test workflow on commit `b0df8320`. The newest commit's CI, CodeQL, repository-preflight, and Lighthouse results must be checked before calling the implementation pass verified.
-- CI cannot prove real Ollama, Diffusers, Piper, Whisper.cpp, database, SMTP/Resend, or browser microphone behavior. Those require local assets/configuration and end-to-end runtime tests.
+- CI cannot prove real Ollama, Diffusers, Piper, Whisper.cpp, database, SMTP/Resend, or browser microphone behavior. Those require local assets/configuration and end-to-end runtime tests. Backend implementation work now includes category-based upload retention, processing-state recovery/reindexing, and safe soft-delete/index cleanup.
 - The native media addon is synchronous and should be performance-tested under real voice use; do not claim production-grade latency or interruption until tested.
 
 ## Remaining owner/environment tasks
