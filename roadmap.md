@@ -136,9 +136,9 @@
 
 - [x] Align the chat file picker with supported PDF, text, and PNG/JPEG/WebP upload formats; the API rejects unsupported image formats. Remaining MIME/extension edge cases still need final verification.
 - [ ] Install `moondream:1.8b` (or configure another supported local Ollama vision model) and verify real image understanding. Local multimodal integration and input validation are implemented, but model inference remains unverified.
-- [x] Add file attachment previews, upload progress, and clear upload size/type errors; cancel/retry remains unfinished.
+- [x] Add file attachment previews, upload progress, and clear upload size/type errors; add an authenticated `POST /files/:id/reindex` recovery endpoint for manual retry after extraction/indexing failure.
 - [x] Add per-file upload cancellation, progress display, and an explicit cancel control; propagate cancellation through file processing and the resulting AI analysis request, and distinguish transfer progress from processing state. Automatic retry is not implemented; verify cancel/error cleanup during final testing.
-- [x] Use OCR/text extraction for supported formats and return explicit extraction failures where available; end-to-end verification is pending.
+- [x] Use OCR/text extraction for supported formats, persist indexing/OCR states and bounded failure diagnostics, and allow authenticated reprocessing; end-to-end verification is pending.
 - [x] Validate supported file signatures where available and enforce a 10 MB upload limit plus extracted-text bounds; verify page/pixel limits and edge cases.
 - [x] Treat retrieved file knowledge as untrusted evidence rather than instructions in the chat system prompt.
 - [x] Define and enforce a category-specific uploaded-file retention schedule: images default to 30 days and documents to 90 days, configurable through `BOBAI_UPLOAD_IMAGE_RETENTION_DAYS` and `BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS` (set `0` to disable). Review the policy with the operator/legal reviewer before public launch.

@@ -76,3 +76,5 @@
 - Hardened audit-event sanitization to redact prompt/content/transcript/audio/image/file payload fields and redact free-form root values, preventing audit records from becoming a secondary store for private prompts, recordings, or uploaded content.
 
 - Document re-indexing now prepares embeddings before an atomic database swap, locks the upload row, and commits chunk rows plus the `indexed` state together. This prevents partial chunks from becoming searchable and coordinates with concurrent soft deletion.
+
+- API documentation now lists the upload reprocessing route and the file API's processing-state behavior.
