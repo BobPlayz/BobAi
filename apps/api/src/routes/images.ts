@@ -34,9 +34,14 @@ router.post("/generate", limit, async (req, res) => {
   if (!Number.isInteger(width) || width < 256 || width > 768 || width % 8 !== 0 || !Number.isInteger(height) || height < 256 || height > 768 || height % 8 !== 0) return res.status(400).json({ error: "width and height must be multiples of 8 between 256 and 768" });
   if (seed !== undefined && (!Number.isInteger(seed) || seed < 0 || seed > 2_147_483_647)) return res.status(400).json({ error: "seed must be an integer between 0 and 2147483647" });
   const inputImages = Array.isArray(req.body?.inputImages) ? req.body.inputImages as string[] : undefined;
+  const controller = new AbortController();
+  const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
+  req.once("aborted", onDisconnect);
+  res.once("close", onDisconnect);
 
   try {
-    const generated = await generateImages(prompt, count, inputImages, undefined, { width, height, ...(seed === undefined ? {} : { seed }) });
+    const generated = await generateImages(prompt, count, inputImages, controller.signal, { width, height, ...(seed === undefined ? {} : { seed }) });
+    if (controller.signal.aborted || res.destroyed) return;
     if (!generated.length || generated.length > count) throw new Error("local image generation returned no images");
     for (const item of generated) {
       if (typeof item.url !== "string" || item.url.length > MAX_DATA_URL || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.url)) {
@@ -60,11 +65,15 @@ router.post("/generate", limit, async (req, res) => {
     const response = { images: created.map((row, index) => ({ ...row, url: generated[index].url, prompt })) };
     return res.json(response);
   } catch (error) {
+    if (controller.signal.aborted || res.destroyed) return;
     const message = error instanceof Error ? error.message : "";
     const safeMessage = /^(image prompt.{0,100}|count must be.{0,100}|local image.{0,200}|image generation is unavailable.{0,100}|up to 4 input images are supported|reference images.{0,100})$/i.test(message)
       ? message
       : "local image generation failed; check the local model setup and API logs";
     return res.status(502).json({ error: safeMessage });
+  } finally {
+    req.off("aborted", onDisconnect);
+    res.off("close", onDisconnect);
   }
 });
 

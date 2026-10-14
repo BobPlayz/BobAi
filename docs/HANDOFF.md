@@ -32,7 +32,7 @@
 
 All repository Markdown files were updated on 2026-10-13. The Markdown tree was checked and contains: README.md, roadmap.md, docs/API.md, docs/CODE_STYLE.md, docs/DATABASE.md, docs/FEATURE_INVENTORY.md, docs/HOSTED_AI.md, docs/LOCAL_AI.md, docs/QUICK_START_AUTH.md, and docs/SECURITY.md. This handoff file is the new eleventh Markdown document.
 
-## Original main snapshot and current branch changes
+## Current main-branch implementation state
 
 - Hosted AI adapter and provider safety tests exist; hosted provider is opt-in.
 - Email OTP quick-start flow exists. Accounts requiring MFA must not bypass MFA; dedicated MFA behavior needs end-to-end verification.
@@ -51,7 +51,7 @@ All repository Markdown files were updated on 2026-10-13. The Markdown tree was 
 
 ## Local-first implementation changes made on main
 
-- Created branch `implementation/public-beta-student-scope` from `main`; changes are not merged or deployed.
+- Continue all implementation directly on `main`; do not create branches or claim changes exist on another branch.
 - Fixed repository preflight's allowlist to include `docs/HANDOFF.md`.
 - Restored Ollama chat/coding routing and tests; added direct local Diffusers image generation, local Jarvis Piper/Whisper configuration, local research synthesis, Neon through DATABASE_URL, and a Resend OTP sender with SMTP fallback. Video generation remains disabled until a local runtime exists.
 - Added provider-routing regression tests for rejecting the retired Ollama model id and routing coding requests through the configured hosted provider, plus hosted image generation/editing request tests. Tests have not been run yet.
@@ -98,7 +98,7 @@ Some of these may change as implementation work uncovers blockers. The final ans
 - Audience: students; release target: public beta; scope: all roadmap features; priority: balanced.
 - AI provider and hosting: recommend the best reliable options, favor low-cost plans that can be cancelled after one month. No paid provider or hosting purchase without approval.
 - AI usage target: ₹500 per month, with a clear way to disable provider usage before a billing cycle renews.
-- Remove Ollama. Keep model training out of the product. Do not make direct host/computer command execution available to public users; coding execution must use an isolated, network-disabled sandbox with explicit approval for repository writes and other consequential actions.
+- Use local Ollama for chat, coding, and research synthesis. Keep model training out of the product. Do not make direct host/computer command execution available to public users; coding execution must use an isolated, network-disabled sandbox with explicit approval for repository writes and other consequential actions.
 - Domain publisher: Origin Productions. Domain should be cheap, but no registration until first-year and renewal price, renewal controls, DNS requirements, and cancellation/transfer terms are reviewed.
 - Email/SMTP and database: recommend a low-cost, cancellable provider; prefer free tiers and avoid binding the project to a long contract.
 - Data retention: user-controlled; provide appropriate export/deletion controls and transparent defaults. Analytics should be privacy-preserving and minimal.
@@ -110,3 +110,9 @@ Some of these may change as implementation work uncovers blockers. The final ans
 ## Important honesty boundary
 
 The code changes recorded above were committed through GitHub file operations but were not tested in a local runtime at the time of writing. Do not say build, tests, security audit, provider calls, email delivery, database migrations, accessibility, or deployment passed unless the corresponding run actually happened and results are available.\n\n## Current user-approved architecture (2026-10-14)\n\n- Chat and coding: local Ollama.\n- Internet research: Jarvis-owned retrieval/evidence pipeline plus local Ollama synthesis. Live web retrieval still needs internet.\n- Images: direct Diffusers local runtime, no ComfyUI, no hosted image API. Model files and Python dependencies are not bundled.\n- Voice: local Piper English Alan and Telugu Venkatesh plus Whisper.cpp, matching the Ai-Glasses voice profile. Assets/native build need local setup.\n- Database: Neon PostgreSQL via DATABASE_URL.\n- Email: Resend preferred, SMTP fallback. Credentials and verified sender must be supplied by the user.\n- Video: disabled until a local video model/runtime is implemented.\n- Do not claim roadmap complete until build, tests, smoke checks, and runtime paths are actually verified.\n
+
+## Latest implementation pass (2026-10-14)
+
+- Added request-disconnect cancellation propagation from the deep-research endpoint through parallel web searches, source fetching, and local synthesis signal checks. Search retries now stop promptly when the request is cancelled, and cancelled searches are not cached.
+- Added request-disconnect cancellation propagation to local image generation so the spawned Diffusers process can be terminated when the client leaves; avoid writing image records after a disconnected request.
+- These changes are committed to `main`; GitHub Actions results must be inspected before claiming build/test success. External model assets and live provider/database behavior remain unverified.

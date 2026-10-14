@@ -4,7 +4,13 @@ type CacheEntry = { expiresAt: number; result: ResearchResult }; const cache = n
 function decodeHtml(value: string) { return value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16))).replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal))); }
 function stripTags(value: string) { return decodeHtml(value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()); }
 function getTimeoutMs() { const configured = Number(process.env.BOBAI_RESEARCH_TIMEOUT_MS || DEFAULT_TIMEOUT_MS); return Number.isFinite(configured) ? Math.min(Math.max(configured, 5_000), 120_000) : DEFAULT_TIMEOUT_MS; }
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
+  if (signal?.aborted) { reject(signal.reason instanceof Error ? signal.reason : new Error("web search cancelled")); return; }
+  const abort = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); reject(signal?.reason instanceof Error ? signal.reason : new Error("web search cancelled")); };
+  const finish = () => { signal?.removeEventListener("abort", abort); resolve(); };
+  const timer = setTimeout(finish, ms);
+  signal?.addEventListener("abort", abort, { once: true });
+});
 export type ResearchSource = { title: string; url: string; snippet?: string; publishedAt?: string; score?: number; credibility?: "high" | "medium" | "low" }; export type ResearchResult = { query: string; sources: ResearchSource[] };
 function hostIsOrSubdomain(host: string, domain: string) { return host === domain || host.endsWith(`.${domain}`); }
 export function domainCredibility(hostname: string): { score: number; credibility: ResearchSource["credibility"] } { const host = hostname.toLowerCase().replace(/^www\./, ""); if (host.endsWith(".gov") || host.endsWith(".gov.in") || host.endsWith(".edu") || host.endsWith(".ac.in") || host.endsWith(".int")) return { score: 1, credibility: "high" }; if (["who.int", "un.org", "nasa.gov", "nih.gov", "nature.com", "science.org"].some((domain) => hostIsOrSubdomain(host, domain))) return { score: 1, credibility: "high" }; if (["reuters.com", "apnews.com", "bbc.com"].some((domain) => hostIsOrSubdomain(host, domain))) return { score: 0.85, credibility: "high" }; if (["wikipedia.org", "britannica.com"].some((domain) => hostIsOrSubdomain(host, domain))) return { score: 0.65, credibility: "medium" }; return { score: 0.45, credibility: "low" }; }
@@ -46,4 +52,45 @@ function cacheKey(query: string, options: Record<string, unknown>) {
 function getCached(key: string) { const value = cache.get(key); if (!value) return null; if (value.expiresAt <= Date.now()) { cache.delete(key); return null; } return value.result; }
 function putCached(key: string, result: ResearchResult) { if (cache.size >= CACHE_MAX) { const oldest = [...cache.entries()].sort((a, b) => a[1].expiresAt - b[1].expiresAt)[0]; if (oldest) cache.delete(oldest[0]); } cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, result }); }
 function parseDuckDuckGo(html: string, query: string): ResearchSource[] { const sources: ResearchSource[] = []; const blocks = html.match(/<div[^>]+class=["'][^"']*result[^"']*["'][\s\S]*?<\/div>\s*<\/div>/gi) || []; for (const block of blocks) { const link = block.match(/<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i) || block.match(/<a[^>]+href=["']([^"']+)["'][^>]+class=["'][^"']*result__a[^"']*["'][^>]*>([\s\S]*?)<\/a>/i); if (!link) continue; let url = link[1]; try { if (url.startsWith("//")) url = `https:${url}`; const parsed = new URL(url, "https://duckduckgo.com"); const uddg = parsed.searchParams.get("uddg"); if (uddg) url = uddg; else if (!/^https?:$/i.test(parsed.protocol)) continue; } catch { continue; } const snippetMatch = block.match(/<a[^>]+class=["'][^"']*result__snippet[^"']*["'][^>]*>([\s\S]*?)<\/a>/i) || block.match(/<div[^>]+class=["'][^"']*result__snippet[^"']*["'][^>]*>([\s\S]*?)<\/div>/i); sources.push({ title: stripTags(link[2]).slice(0, 500), url, snippet: snippetMatch ? stripTags(snippetMatch[1]).slice(0, 3000) : undefined }); if (sources.length >= 50) break; } return rankSources(query, sources); }
-export async function webSearch(query: string, options: Record<string, unknown> = {}): Promise<ResearchResult> { const normalized = query.trim(); if (!normalized) throw new Error("search query is required"); if (normalized.length > MAX_QUERY_LENGTH) throw new Error("search query is too long"); const key = cacheKey(normalized, options); const cached = getCached(key); if (cached) return cached; for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), getTimeoutMs()); try { const selectedTypes = sourceTypesFrom(options); const searchQuery = sourceSearchQuery(normalized, selectedTypes); const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}`; const response = await fetch(url, { headers: { accept: "text/html", "user-agent": "BobAI/1.0 local-research" }, signal: controller.signal, redirect: "error" }); const text = await boundedText(response, MAX_RESPONSE_BYTES); if (!response.ok) { if (attempt < MAX_RETRIES && (response.status === 408 || response.status === 429 || response.status >= 500)) { await sleep(250 * 2 ** attempt); continue; } throw new Error(`web search returned ${response.status}`); } const result = { query: normalized, sources: parseDuckDuckGo(text, normalized).filter((source) => matchesSourceTypes(source, selectedTypes)) }; putCached(key, result); return result; } catch (error) { if (attempt >= MAX_RETRIES) throw error; await sleep(250 * 2 ** attempt); } finally { clearTimeout(timer); } } throw new Error("web search unavailable"); }
+export async function webSearch(query: string, options: Record<string, unknown> = {}, signal?: AbortSignal): Promise<ResearchResult> {
+  const normalized = query.trim();
+  if (!normalized) throw new Error("search query is required");
+  if (normalized.length > MAX_QUERY_LENGTH) throw new Error("search query is too long");
+  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("web search cancelled");
+  const key = cacheKey(normalized, options);
+  const cached = getCached(key);
+  if (cached) return cached;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("web search cancelled");
+    const controller = new AbortController();
+    const abort = () => controller.abort(signal?.reason);
+    if (signal?.aborted) abort(); else signal?.addEventListener("abort", abort, { once: true });
+    const timer = setTimeout(() => controller.abort(new Error("web search timed out")), getTimeoutMs());
+    try {
+      const selectedTypes = sourceTypesFrom(options);
+      const searchQuery = sourceSearchQuery(normalized, selectedTypes);
+      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}`;
+      const response = await fetch(url, { headers: { accept: "text/html", "user-agent": "Jarvis/1.0 local-research" }, signal: controller.signal, redirect: "error" });
+      const text = await boundedText(response, MAX_RESPONSE_BYTES);
+      if (!response.ok) {
+        if (attempt < MAX_RETRIES && (response.status === 408 || response.status === 429 || response.status >= 500)) {
+          await sleep(250 * 2 ** attempt, signal);
+          continue;
+        }
+        throw new Error(`web search returned ${response.status}`);
+      }
+      const result = { query: normalized, sources: parseDuckDuckGo(text, normalized).filter((source) => matchesSourceTypes(source, selectedTypes)) };
+      if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("web search cancelled");
+      putCached(key, result);
+      return result;
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : error;
+      if (attempt >= MAX_RETRIES) throw error;
+      await sleep(250 * 2 ** attempt, signal);
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+    }
+  }
+  throw new Error("web search unavailable");
+}
