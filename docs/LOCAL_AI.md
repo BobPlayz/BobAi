@@ -1,16 +1,51 @@
-# Local AI integration status
+# Local AI architecture
 
-Ollama support has been retired from the public-beta implementation plan. BobAI's intended public service uses a configured hosted provider for general chat, coding, and provider-backed image understanding. Do not install Ollama or set Ollama environment variables for this project.
+BobAI is local-first and uses Ollama as its language-model runtime. It does not train a model from scratch and does not call a hosted AI API for chat, coding generation, or research synthesis.
 
-BobAI still contains historical native-runtime and model-training source paths. They are not a promise of a supported local-first product and must not be advertised as such. Do not train a model as part of normal setup or deployment.
+## Local chat and coding
 
-## Public-beta rules
+- Install Ollama on the computer running BobAI.
+- Pull the configured chat and coding models.
+- Configure BOBAI_OLLAMA_BASE_URL, BOBAI_OLLAMA_MODEL, BOBAI_OLLAMA_CODING_MODEL, and BOBAI_OLLAMA_TIMEOUT_MS in the private .env file.
+- BobAI routes recognized coding requests to the configured local coder model.
+- The default model names are starter defaults, not a promise of speed or quality. Select models that fit available RAM/VRAM.
 
-- Keep provider credentials on the server and never expose them in browser bundles.
-- Keep hosted AI disabled until a provider is selected, its data-processing terms are reviewed, a hard monthly spending cap is configured, and the ₹500 monthly target has been tested.
-- Prefer a cancellable monthly or usage-based hosting plan with no long-term commitment. Confirm cancellation timing, automatic renewal, data export, and deletion before selecting a provider.
-- Never expose a local inference endpoint or coding-agent bridge directly to the public internet.
-- For coding tasks, use an isolated sandbox with network access disabled by default. Require explicit approval for repository writes and consequential side effects.
-- Provider availability, model capabilities, pricing, and age restrictions must be verified against the chosen provider before public beta.
+## Local image generation
 
-This document records the product decision, not proof that all legacy local-runtime code has already been removed. Final repository-wide reference audit and tests remain required.
+BobAI calls a local Python Diffusers pipeline directly. ComfyUI is not required, and no hosted image API is used.
+
+- Install optional packages from requirements-image.txt in the Python environment selected by BOBAI_PYTHON.
+- Download a Diffusers-compatible model to disk and check its license.
+- Set BOBAI_IMAGE_MODEL_PATH to the model folder.
+- The runtime uses local_files_only=True and does not download model files at request time.
+- The initial pipeline generates 512x512 PNG images and attempts CUDA when available, otherwise CPU. CPU generation may be slow or memory-intensive.
+- Reference-image editing is not implemented in this local pipeline.
+- Local video generation is intentionally disabled until a local video model/runtime and its lifecycle are implemented.
+
+## Local Jarvis voice
+
+- Piper English voice: en_GB-alan-medium.
+- Piper Telugu voice: te_IN-venkatesh-medium.
+- Whisper.cpp handles local speech transcription.
+- Set the Piper model/config, espeak data, and Whisper model paths in .env.
+- Build the native media module and test on the actual device.
+- Microphone access must remain user-initiated. No background always-listening behavior is implied.
+
+## Internet research
+
+Research is BobAI's own pipeline: query construction, search retrieval/parsing, source ranking, evidence fetching, prompt-injection defenses, and synthesis through local Ollama. It needs internet access for live pages, but it does not require a hosted AI model API. Search results and web pages can be incomplete or adversarial, so citations must be checked against fetched evidence.
+
+## Database and email infrastructure
+
+Neon is used through the existing PostgreSQL/Drizzle connection. Set DATABASE_URL to the Neon connection string and run the project's migration workflow after reviewing the target database.
+
+Resend is the preferred email OTP delivery method. Set RESEND_API_KEY and RESEND_FROM_EMAIL in .env. A verified sender/domain is required at Resend. SMTP remains a fallback. No credentials belong in Git.
+
+## Security
+
+- Never expose Ollama's local endpoint or local coding execution bridge directly to the public internet.
+- Keep secrets in the server environment only.
+- Treat web pages, uploads, model output, and tool results as untrusted input.
+- Keep coding execution sandboxed and require confirmation for consequential actions.
+- Do not advertise the app as fully offline: live internet research and remote Neon/Resend services require connectivity.
+- Do not claim a feature is verified until it has been exercised with real local models and infrastructure.
