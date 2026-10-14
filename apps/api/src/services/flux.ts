@@ -40,7 +40,7 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
     if (signal?.aborted) { abort(); return; }
     signal?.addEventListener("abort", abort, { once: true });
     child.once("error", (error) => finish(new Error("could not start local image runtime: " + error.message)));
-    child.stdin.on("error", (error) => finish(new Error("could not send request to local image runtime: " + error.message)));
+    child.stdin.on("error", (error) => { child.kill(); finish(new Error("could not send request to local image runtime: " + error.message)); });
     child.stdout.on("data", (chunk: Buffer) => {
       stdoutBytes += chunk.length;
       if (stdoutBytes > MAX_STDOUT_BYTES) {
