@@ -1,94 +1,76 @@
 # BobAI 🤖
 
-Hey! Welcome to **BobAI**, my attempt at building an AI platform of my own.
+BobAI is a local-first AI platform built around Ollama. Ollama runs the language models; BobAI adds the product around them: chat, streaming, tool calling, memory, internet research, coding assistance, local voice, and local image generation.
 
-The idea is to bring a bunch of useful AI features into one project: model providers, memory, file understanding, agents, automations, and an API that ties things together. It's a big project, and it's still a work in progress, so expect things to change as I keep building and learning.
+## Current direction
 
-## What's in here?
+- No external AI APIs for chat, coding, research synthesis, or voice.
+- Ollama runs downloaded language models locally. BobAI does not require training a model from scratch.
+- BobAI's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access.
+- Image generation uses a direct local Diffusers integration, not ComfyUI and not a hosted image API.
+- Jarvis voice profile: Piper English en_GB-alan-medium and Telugu te_IN-venkatesh-medium, with local speech recognition configured separately.
+- Database and email are infrastructure integrations. Set them up privately and never commit credentials.
 
-- **Model providers** for connecting AI models
-- **Memory** and file-understanding features
-- **Agents and automations** for getting tasks done
-- **An API** and optional supporting services
-- **Self-hosting support**, so you can run your own instance
+Not every feature works out of the box. Local model files and optional runtimes must be installed, and the full test/build suite still needs to be run against the current checkout.
 
-Not every feature works without extra setup. Some need provider credentials, a database, or local services. The hosted chat provider is opt-in and can incur usage charges.
+## Requirements
 
-## Getting started
+- Node.js 24 or newer and npm
+- Ollama installed locally
+- PostgreSQL or a Neon PostgreSQL connection for database-backed features
+- Python 3.11 recommended for optional local image generation and voice runtime setup
+- Enough disk and RAM for the model files you choose
 
-You'll need:
+## Install
 
-- Node.js 24 or newer
-- npm
-- PostgreSQL for persistent, database-backed features
-- Credentials for whichever providers or services you want to try
+Clone the repository, enter the folder, and run npm ci. Create a private .env file by copying .env.example. On Windows Command Prompt use copy .env.example .env; in PowerShell use Copy-Item .env.example .env; on macOS/Linux use cp .env.example .env.
 
-Clone the repo and install its dependencies:
+Set DATABASE_URL after creating your database, then configure the local model settings below.
 
-```bash
-git clone https://github.com/BobPlayz/BobAi.git
-cd BobAi
-npm ci
-```
+## Ollama chat and coding
 
-Make a local environment file:
+Start Ollama, then pull the default local models:
 
-**Windows (Command Prompt):**
-```bat
-copy .env.example .env
-```
+    ollama pull qwen2.5:3b
+    ollama pull qwen2.5-coder:3b
 
-**Windows (PowerShell):**
-```powershell
-Copy-Item .env.example .env
-```
+The default environment values are:
 
-**macOS / Linux:**
-```bash
-cp .env.example .env
-```
+    BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
+    BOBAI_OLLAMA_MODEL=qwen2.5:3b
+    BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
 
-Open `.env` and fill in the settings needed for the features you want to try. Don't put real secrets in the repo.
+You can choose other locally installed Ollama models in your private .env. For an 8 GB RAM computer, start with small quantized models and expect generation to be slower. Model quality and speed depend on hardware.
 
-## One-command development startup
+## Local image generation
 
-```bash
-npm run ai
-```
+BobAI uses a local Diffusers pipeline directly, without ComfyUI and without a hosted generation API.
 
-This command runs the automated test suite configured by `npm test` first. If a test fails, it exits without starting the API or website. If the suite passes, it starts the API and web app together, then attempts to open [http://localhost:3000](http://localhost:3000). Keep the terminal open while using BobAI and press **Ctrl+C** to stop the services.
+1. Install the optional dependencies into the Python environment selected by BOBAI_PYTHON: python -m pip install -r requirements-image.txt
+2. Download a Diffusers-compatible image model to a local directory once, respecting its license and usage restrictions.
+3. Set BOBAI_IMAGE_MODEL_PATH to that directory in .env.
+4. Restart the API and test one 512x512 image first.
 
-Useful commands when troubleshooting:
+The model must already be on disk because inference uses local_files_only=True. CPU generation can be very slow and may run out of memory on an 8 GB laptop. Reference-image editing is not implemented in the local pipeline yet.
 
-```bash
-npm test       # Run configured automated tests only
-npm run build  # Build the API, BobHS, and web workspaces
-npm run smoke  # Run repository smoke checks
-npm run audit  # Check dependency advisories
-```
+## Jarvis voice
 
-Passing automated tests does not prove every UI route or external integration works. Database setup, email delivery, model-provider credentials, and other feature-specific services may still be required. Follow the [feature setup checklist](docs/FEATURE_SETUP_GUIDE.md) and the [feature inventory](docs/FEATURE_INVENTORY.md).
+BobAI's voice service uses local Piper and local Whisper.cpp integration. For the same offline voice profile as Ai-Glasses, configure:
 
-## A quick security note
+- English Piper model: en_GB-alan-medium.onnx and its matching .onnx.json
+- Telugu Piper model: te_IN-venkatesh-medium.onnx and its matching .onnx.json
+- Piper/espeak data path and Whisper model path for transcription
 
-Never commit API keys, bot tokens, private keys, database URLs, or your real `.env` file. Before putting an instance on the public internet, configure HTTPS, authentication, CORS, and a production-ready database properly.
+Set BOBAI_PIPER_EN_MODEL_PATH, BOBAI_PIPER_EN_CONFIG_PATH, BOBAI_PIPER_TE_MODEL_PATH, BOBAI_PIPER_TE_CONFIG_PATH, BOBAI_ESPEAK_DATA_PATH, and BOBAI_WHISPER_MODEL_PATH. Build the native media module using npm run native:media:build after installing its required native build tools. The voice route does not call a cloud speech provider.
 
-## Still building 🚧
+## Start and verify
 
-BobAI is a personal project that I'm growing over time. Suggestions, bug reports, and ideas are welcome!
+Run npm test, npm run build, npm run smoke, then npm run ai. The ai command runs the configured tests before starting the API and web app. A passing test suite is not a substitute for live tests with Ollama, database migrations, local model files, and microphone/audio playback.
 
-## License
+## Security
 
-Check the repository's license information for the current terms.
+Never commit .env, database URLs, credentials, or private keys. Keep Ollama bound to loopback unless you deliberately configure and secure a network deployment. Before exposing BobAI to the public internet, review authentication, authorization, CORS, HTTPS, rate limits, data retention, and account isolation.
 
-## Hosted chat provider
+## Project status
 
-BobAI can use an existing OpenAI-compatible chat API. This does not train a model. Configure `BOBAI_PROVIDER=openai` and `OPENAI_API_KEY` in the private API environment, then restart the API. Never expose the key to browser code. Hosted usage may cost money, so set provider-side usage limits first. See [the hosted AI guide](docs/HOSTED_AI.md).
-
-## Retired local inference
-
-Ollama support has been retired. BobAI's public-beta AI path uses a configurable hosted provider; paid usage must remain disabled until provider-side limits and the ₹500 monthly budget safeguards are configured. See [hosted AI setup](docs/HOSTED_AI.md).
-
-## Project handoff (2026-10-14)
-
-The repo is actively being implemented against [`roadmap.md`](roadmap.md). Features documented here may depend on provider credentials, PostgreSQL migrations, SMTP, or local services. The feature inventory is a static review, not a certification that every route or integration works. Do not describe the service as production-ready until the roadmap's verification and launch gates are complete.
+BobAI is an active work in progress. The feature setup checklist, feature inventory, and roadmap describe what still needs setup and verification.
