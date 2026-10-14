@@ -48,8 +48,6 @@ def main() -> int:
             str(model),
             local_files_only=True,
             torch_dtype=dtype,
-            safety_checker=None,
-            requires_safety_checker=False,
         )
         if use_cuda:
             pipe = pipe.to("cuda")
