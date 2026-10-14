@@ -79,7 +79,7 @@ def main() -> int:
             from io import BytesIO
             output = BytesIO()
             image.save(output, format="PNG", optimize=True)
-            outputs.append({"url": "data:image/png;base64," + base64.b64encode(output.getvalue()).decode("ascii"), "prompt": prompt.strip(), "index": index})
+            outputs.append({"url": "data:image/png;base64," + base64.b64encode(output.getvalue()).decode("ascii"), "prompt": prompt.strip(), "index": index, "seed": current_seed, "width": width, "height": height})
         print(json.dumps({"images": outputs}, separators=(",", ":")))
         return 0
     except Exception as exc:
