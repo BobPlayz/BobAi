@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { boundedExecutionResult } from "./executionGuard.js";
 
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024;
 const TIMEOUT_MS = 10 * 60 * 1000;
@@ -19,7 +18,6 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
   });
   const stdout: Buffer[] = [];
   let stdoutBytes = 0;
-  let stderr = "";
   let settled = false;
   const result = await new Promise<{ images?: Array<{ url: string; prompt: string; index: number }>; error?: string }>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -42,7 +40,6 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
       }
       stdout.push(chunk);
     });
-    child.stderr.on("data", (chunk: Buffer) => { if (stderr.length < 4000) stderr += chunk.toString("utf8").slice(0, 4000 - stderr.length); });
     child.once("close", (code) => {
       if (code !== 0) {
         let message = "";
@@ -65,6 +62,6 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
     });
     child.stdin.end(JSON.stringify({ prompt, count, width: 512, height: 512 }));
   });
-  const checked = boundedExecutionResult(result);
-  return Array.isArray(checked.images) ? checked.images as Array<{ url: string; prompt: string; index: number }> : [];
+  if (Buffer.byteLength(JSON.stringify(result), "utf8") > MAX_STDOUT_BYTES) throw new Error("local image generation result exceeded the size limit");
+  return Array.isArray(result.images) ? result.images : [];
 }
