@@ -61,6 +61,23 @@ router.post("/generate", limit, async (req, res) => {
   }
 });
 
+router.get("/:id", async (req, res) => {
+  try {
+    const workspace = await ensurePersonalWorkspace(req.user!.id);
+    const [row] = await db.select().from(images)
+      .where(and(eq(images.id, req.params.id), eq(images.workspaceId, workspace.id), eq(images.createdBy, req.user!.id), isNull(images.deletedAt)))
+      .limit(1);
+    if (!row) return res.status(404).json({ error: "image not found" });
+    const metadata = row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? row.metadata as Record<string, unknown> : {};
+    const url = typeof metadata.url === "string" ? metadata.url : null;
+    if (!url) return res.status(410).json({ error: "image data is unavailable" });
+    return res.json({ image: { ...row, url } });
+  } catch {
+    return res.status(503).json({ error: "image retrieval unavailable" });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   try {
     const workspace = await ensurePersonalWorkspace(req.user!.id);

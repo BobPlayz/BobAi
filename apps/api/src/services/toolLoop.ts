@@ -1,4 +1,7 @@
 import { getTool, type BobTool } from "./toolRegistry.js";
+import { randomUUID } from "node:crypto";
+import { db, images, researchSessions } from "@bobai/db";
+import { consumeResearchQuota } from "./researchQuota.js";
 import type { ToolExecutionContext } from "./toolExecution.js";
 import { assertPublicTargetUrl, boundedText, providerUrl, safeError } from "./httpSafety.js";
 
@@ -38,7 +41,23 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
 }
 
 const EXECUTORS: Record<string, Executor> = {
-  research: async (args, context) => (await import("./deepResearch.js")).deepResearch(args.query, {}, context.signal),
+  research: async (args, context) => {
+    const result = await (await import("./deepResearch.js")).deepResearch(args.query, {}, context.signal);
+    await consumeResearchQuota(context.userId, result.sources.length);
+    const sessionId = randomUUID();
+    await db.insert(researchSessions).values({
+      id: sessionId, workspaceId: context.workspaceId, userId: context.userId,
+      query: result.query, sources: result.sources, answer: result.synthesis, status: "completed",
+    });
+    return {
+      sessionId, query: result.query, synthesis: result.synthesis,
+      sources: result.sources.map((source, index) => ({
+        index: index + 1, title: source.title, url: source.url,
+        snippet: source.snippet, score: source.score, credibility: source.credibility,
+      })),
+      evidenceCount: result.evidence.length,
+    };
+  },
   browser: async (args, context) => { await assertPublicTargetUrl(args.url); return callConfiguredProvider(getTool("browser")!, args, context.signal); },
   "website-test": async (args, context) => { await assertPublicTargetUrl(args.url); return callConfiguredProvider(getTool("website-test")!, args, context.signal); },
   computer: async (args, context) => callConfiguredProvider(getTool("computer")!, args, context.signal),
@@ -50,7 +69,28 @@ const EXECUTORS: Record<string, Executor> = {
   diagrams: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("diagram_generation", args),
   "sketch-to-ui": async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("sketch_to_ui", args),
   voice: async (args) => { if (args.operation !== "synthesize" || typeof args.text !== "string") throw new Error("local voice tool supports synthesis and requires text"); return (await import("./voice.js")).synthesize(args.text); },
-  image: async (args, context) => { if (typeof args.prompt !== "string") throw new Error("image prompt is required"); return (await import("./mediaGeneration.js")).generateImages(args.prompt, typeof args.count === "number" ? args.count : 1, undefined, context.signal); },
+  image: async (args, context) => {
+    if (typeof args.prompt !== "string") throw new Error("image prompt is required");
+    const prompt = args.prompt.trim();
+    const count = typeof args.count === "number" ? Math.min(4, Math.max(1, Math.floor(args.count))) : 1;
+    const generated = await (await import("./mediaGeneration.js")).generateImages(prompt, count, undefined, context.signal);
+    if (!generated.length || generated.length > count) throw new Error("image generation returned an invalid image list");
+    for (const item of generated) {
+      if (typeof item.url !== "string" || item.url.length > 12 * 1024 * 1024 || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.url)) {
+        throw new Error("image generation returned invalid PNG data");
+      }
+    }
+    const rows = await db.insert(images).values(generated.map((item) => ({
+      workspaceId: context.workspaceId, createdBy: context.userId, prompt,
+      model: "local-diffusers", width: 512, height: 512, seed: null,
+      operation: "generate", metadata: { url: item.url, index: item.index, source: "local", origin: "chat-tool" },
+    }))).returning({ id: images.id, createdAt: images.createdAt });
+    return {
+      generated: true, count: rows.length,
+      images: rows.map((row, index) => ({ id: row.id, createdAt: row.createdAt, prompt, index: generated[index].index })),
+      retrieval: "Use GET /v1/images/:id to retrieve each generated image.",
+    };
+  },
   video: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("video_generation", args),
   music: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("music_generation", args),
   automation: async (args, context) => { const automationId = typeof args.automationId === "string" ? args.automationId.trim() : ""; if (!automationId) throw new Error("automation id is required"); return (await import("./automation.js")).runAutomation(automationId, context.workspaceId, context.userId); },
