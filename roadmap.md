@@ -335,3 +335,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Hardened memory context resolution so a caller cannot attach memory operations to a project from another workspace by supplying an arbitrary project UUID; archived/deleted projects are rejected.
 - **2026-10-14:** Added strict route-level validation for the `inputImages` field and corrected image-generation error status codes for invalid reference images and safety-policy rejections.
 - **2026-10-14:** Added image prompt-injection instructions to the local vision system message and propagated disconnect cancellation through `/vision/analyze`, with regression coverage for the system prompt and local-only image request.
+- **2026-10-14:** Aligned the local Ollama vision request limit with the 12 MB decoded image limit, allowing the base64 and JSON envelope without rejecting valid maximum-size images.

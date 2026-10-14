@@ -48,3 +48,5 @@
 5. Complete runtime tests for authentication/MFA, conversation reload, user isolation, memory controls, uploads, citation quality, tool approvals/cancellation, and browser audio.
 6. Before public launch, finalize retention policy, operator/support contact, privacy/terms, age-appropriate safeguards, deployment secrets, health checks, backups, staging tests, and responsible adult/legal review.
 7. Choose hosting only after confirming local inference requirements. Free frontend hosting alone cannot run Ollama/Diffusers/native audio models.
+
+- Raised the local Ollama vision JSON request cap to 17 MB so a valid 12 MB image plus base64 and JSON envelope fits under the service limit.
