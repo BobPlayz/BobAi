@@ -350,3 +350,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Strengthened backend media safety policy for explicit sexual and graphic self-harm requests, and applied age-appropriate output constraints to local vision analysis.
 - **2026-10-14:** Filtered document chunk retrieval to fully indexed uploads, hiding partial chunks while processing is in progress or has failed.
 - **2026-10-14:** Marked backend upload retention as implemented and documented the one-shot voice-to-voice orchestration endpoint; runtime checks remain separate from implementation.
+- **2026-10-14:** Hardened audit-log redaction for private prompt/content/transcript/media payloads and root-level free-form values.

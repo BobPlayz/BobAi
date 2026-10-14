@@ -72,3 +72,5 @@
 - Expanded image-generation prompt screening to reject explicit sexual content and graphic self-harm requests for the general-audience product, and strengthened the local vision system prompt with age-appropriate, non-graphic output rules.
 
 - Document chunk retrieval now only returns chunks from uploads whose persisted processing state is `indexed`, so partial chunks from an interrupted or failed indexing attempt are not exposed as completed search results.
+
+- Hardened audit-event sanitization to redact prompt/content/transcript/audio/image/file payload fields and redact free-form root values, preventing audit records from becoming a secondary store for private prompts, recordings, or uploaded content.
