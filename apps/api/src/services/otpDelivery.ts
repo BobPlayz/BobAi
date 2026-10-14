@@ -3,7 +3,7 @@ import { sendEmailOtp } from "./email.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 
-async function sendResendOtp(email: string, code: string) {
+export async function sendResendOtp(email: string, code: string) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.RESEND_FROM_EMAIL?.trim();
   if (!apiKey || !from) throw new Error("Resend email delivery is not configured");
