@@ -1,4 +1,4 @@
-import { and, asc, lt, or, eq, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, lt, or, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { db, documentChunks, emailOtps, passwordResets, sessions, uploads, users, workspaces } from "@bobai/db";
 import { deleteObject } from "./objectStorage.js";
 import { purgeUserOwnedData } from "./accountPurge.js";
