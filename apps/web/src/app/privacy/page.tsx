@@ -1,8 +1,8 @@
 import PrivacyPageClient from "./PrivacyPageClient";
 
 export const metadata = {
-  title: "Privacy Policy | Bob AI",
-  description: "How Bob AI handles personal data and privacy.",
+  title: "Privacy Policy | Jarvis",
+  description: "How Jarvis handles personal data and privacy.",
 };
 
 export default function PrivacyPage() {

@@ -1,6 +1,6 @@
 # Database Guide
 
-Schema design, migrations, and operational conventions for BobAI's PostgreSQL database.
+Schema design, migrations, and operational conventions for Jarvis's PostgreSQL database.
 
 ## Purpose
 
@@ -10,7 +10,7 @@ The database stores application records such as users, workspaces, conversations
 
 - PostgreSQL is the primary database.
 - Drizzle ORM defines and queries application data.
-- The `@bobai/db` workspace exports the database client and schema.
+- The `@jarvis/db` workspace exports the database client and schema.
 - Neon can be used as a hosted PostgreSQL provider; deployment configuration is supplied through environment variables.
 
 ## Setup
