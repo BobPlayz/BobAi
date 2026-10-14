@@ -144,6 +144,7 @@ def main() -> int:
                     height=height,
                     num_inference_steps=steps,
                     guidance_scale=float(guidance_scale),
+                    negative_prompt=negative_prompt.strip() or None,
                     generator=generator,
                 )
             image = result.images[0]
