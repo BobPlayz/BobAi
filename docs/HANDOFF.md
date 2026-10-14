@@ -94,3 +94,5 @@
 - This was a static source/configuration review and implementation correction only. No tests, build, database migrations, or runtime checks were run. The previous implementation and runtime verification caveats still apply.
 
 - Fixed an agent-queue persistence race: new jobs are not eligible to execute until their initial database persistence attempt finishes, and the running/terminal/retry status writes are awaited before the worker advances. This reduces stale queued/running states during fast task completion and restart recovery. Distributed multi-instance worker claiming still requires dedicated verification and must not be assumed safe for horizontal scaling.
+
+- Extended the durable agent queue with an atomic queued-to-running database claim, a 30-second worker heartbeat, periodic persisted-queue discovery, and stale-running recovery after a 90-second lease timeout. Competing workers should no longer both execute the same queued row when the database is available. This concurrency behavior is still unverified because tests/runtime checks were intentionally skipped; do not treat this as production-certified distributed execution.
