@@ -1,7 +1,8 @@
 import { boundedText } from "./httpSafety.js";
 const DEFAULT_TIMEOUT_MS = 20_000, MAX_QUERY_LENGTH = 2_000, MAX_RESPONSE_BYTES = 10 * 1024 * 1024, MAX_RETRIES = 2, CACHE_TTL_MS = 2 * 60_000, CACHE_MAX = 500;
 type CacheEntry = { expiresAt: number; result: ResearchResult }; const cache = new Map<string, CacheEntry>();
-function decodeHtml(value: string) { return value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16))).replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal))); }
+function decodeCodePoint(value: string, radix: number) { const point = Number.parseInt(value, radix); return Number.isInteger(point) && point >= 0 && point <= 0x10ffff && !(point >= 0xd800 && point <= 0xdfff) ? String.fromCodePoint(point) : `&#${radix === 16 ? "x" : ""}${value};`; }
+function decodeHtml(value: string) { return value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#x([0-9a-f]+);/gi, (_, hex) => decodeCodePoint(hex, 16)).replace(/&#(\d+);/g, (_, decimal) => decodeCodePoint(decimal, 10)); }
 function stripTags(value: string) { return decodeHtml(value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()); }
 function getTimeoutMs() { const configured = Number(process.env.BOBAI_RESEARCH_TIMEOUT_MS || DEFAULT_TIMEOUT_MS); return Number.isFinite(configured) ? Math.min(Math.max(configured, 5_000), 120_000) : DEFAULT_TIMEOUT_MS; }
 const sleep = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
