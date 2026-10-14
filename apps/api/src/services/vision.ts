@@ -4,7 +4,7 @@ const MAX_PROMPT_LENGTH = 8_000;
 
 function normalizeImage(image: string) {
   const value = image.trim();
-  const dataUrl = /^data:image\\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(value);
+  const dataUrl = /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(value);
   const encoded = dataUrl ? dataUrl[2] : value;
   if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error("image must be valid PNG, JPEG, or WebP base64 data");
   if (encoded.length > Math.ceil(MAX_IMAGE_BYTES * 4 / 3)) throw new Error("image exceeds the 12 MB limit");

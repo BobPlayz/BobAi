@@ -93,7 +93,7 @@ export async function ollamaChat(input: NativeMessage[], provider: "bob" | "codi
 
 export async function ollamaVision(imageBase64: string, prompt: string, signal?: AbortSignal) {
   const model = (process.env.BOBAI_OLLAMA_VISION_MODEL || "moondream:1.8b").trim();
-  if (!model || model.length > 160 || /[\\r\\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama vision model name");
+  if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama vision model name");
   if (typeof imageBase64 !== "string" || !imageBase64 || imageBase64.length > Math.ceil(12 * 1024 * 1024 * 4 / 3)) throw new Error("vision image exceeds the 12 MB limit");
   if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 8_000) throw new Error("vision prompt must be 1-8000 characters");
   const body = JSON.stringify({ model, messages: [{ role: "user", content: prompt.trim(), images: [imageBase64] }], stream: false, options: { num_predict: 512 } });
