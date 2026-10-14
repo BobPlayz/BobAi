@@ -32,7 +32,7 @@ router.post("/", streamLimit, async (req, res) => {
     const workspace = await ensurePersonalWorkspace(req.user!.id); workspaceId = workspace.id;
     const rows = await db.select({ key: settings.key, value: settings.value }).from(settings).where(and(eq(settings.userId, req.user!.id), eq(settings.workspaceId, workspace.id))).limit(50);
     const memoryEnabled = req.body?.memoryEnabled !== false && settingValue(rows, "memoryEnabled") !== false;
-    const enrichedMessages = await enrichMessagesWithVision(req.body?.messages, latestUserText(req.body?.messages)); const latestText = latestUserText(enrichedMessages);
+    const enrichedMessages = await enrichMessagesWithVision(req.body?.messages, latestUserText(req.body?.messages), requestController.signal); const latestText = latestUserText(enrichedMessages);
     const memories = memoryEnabled && latestText ? await dbRecallRelevant(workspace.id, req.user!.id, latestText, 12) : [];
     const fileKnowledge = latestText ? await searchDocumentChunks(workspace.id, req.user!.id, latestText, undefined, 8) : [];
     const knowledgeContext = fileKnowledge.map((item) => `[file ${String(item.uploadId || "unknown")}, chunk ${String(item.chunkIndex ?? "?")}] ${typeof item.content === "string" ? item.content.slice(0, 5_000) : ""}`).filter((item) => item.length > 20);

@@ -38,7 +38,7 @@ Static status across these routes is **implemented or partial, not runtime-certi
 | Conversations | `apps/api/src/routes/conversations.ts`, `apps/api/src/store/conversationDb.ts`, `apps/web/src/hooks/useChat.ts` | Implemented | Refresh/reopen behavior, ownership isolation, duplicate turns, deletion/rename/pin persistence. |
 | Memory | `apps/api/src/routes/memory.ts`, `apps/api/src/store/memoryDb.ts`, Settings | Implemented | Per-user isolation, consent semantics, clear-all, disabled-memory behavior, and sensitive-content checks. |
 | Uploads | `apps/api/src/routes/files.ts`, `documentIndexer.ts`, `ocr.ts`, `malwareScanner.ts` | Implemented | Supported-type consistency, limits, corrupt files, page/pixel limits, cancellation, retention, and outage behavior. |
-| Vision | `apps/api/src/services/vision.ts`, `visionChat.ts`, local specialist runtime | Local interface, model artifact required | Image understanding only works when a compatible local Jarvis vision artifact is installed; the Ollama text model is not treated as a vision model. |
+| Vision | `apps/api/src/services/vision.ts`, `visionChat.ts`, local specialist runtime | Local Ollama multimodal inference implemented, runtime unverified | Uses `BOBAI_OLLAMA_VISION_MODEL` (default `moondream:1.8b`) and sends image bytes only to the configured local Ollama endpoint; requires the model to be pulled locally. |
 | Image generation/editing | `apps/api/src/services/mediaGeneration.ts`, `flux.ts`, `scripts/local_image_generation.py`, `/images/generate` | Local generation integrated, runtime unverified | Uses a local Diffusers model from `BOBAI_IMAGE_MODEL_PATH`; no ComfyUI or hosted AI API. Install Python dependencies and local model weights. Reference-image editing is not implemented in the local pipeline. Verify real output, timeouts, memory use, and session-only output handling. |
 | Web search / research | `apps/api/src/services/research.ts`, `deepResearch.ts`, `apps/api/src/routes/research.ts`, AssistantHub | Implemented in source, unverified | Jarvis runs query construction, search-result parsing, ranking, caching, evidence fetching, and local Ollama synthesis. Internet access is still required. Verify citation-to-evidence matching, stale/conflicting sources, dead links, empty results, and source preference behavior. |
 | Tools / agents | `toolRegistry.ts`, `toolExecution.ts`, `toolLoop.ts`, `agents.ts`, `agentTasks.ts` | Implemented, partial | Quotas/cost limits, end-to-end approval coverage, cancel/timeout/loop and cross-user tests. |
@@ -94,3 +94,10 @@ These cannot safely be completed by code changes alone:
 - If distributed rate limiting is configured, failure of the shared limiter now fails closed. Confirm this matches the deployed backend and expected availability policy.
 
 These are static code observations, not verified outcomes. The roadmap's test/build/security pass is still pending.
+
+## Latest backend changes (2026-10-14)
+
+- Deep Research and basic web search now propagate client disconnect cancellation into active web requests, retry waits, source fetches, and local Ollama synthesis; cancelled research is not cached or persisted after cancellation.
+- Local image generation propagates client disconnect cancellation to the spawned Diffusers process and avoids persisting images after disconnect.
+- Local image-to-image editing is wired through `AutoPipelineForImage2Image`, with MIME/base64/size checks and a 12 MB endpoint-specific JSON parser.
+- Image understanding now uses a local Ollama multimodal model (default `moondream:1.8b`) instead of requiring an unavailable custom trained vision checkpoint. Runtime behavior remains unverified until model assets are installed and exercised.

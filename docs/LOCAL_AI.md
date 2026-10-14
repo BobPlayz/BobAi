@@ -5,7 +5,7 @@ Jarvis is local-first and uses Ollama as its language-model runtime. It does not
 ## Local chat and coding
 
 - Install Ollama on the computer running Jarvis.
-- Pull the configured chat and coding models.
+- Pull the configured chat, coding, and vision models (`ollama pull qwen2.5:3b`, `ollama pull qwen2.5-coder:3b`, and `ollama pull moondream:1.8b` by default).
 - Configure BOBAI_OLLAMA_BASE_URL, BOBAI_OLLAMA_MODEL, BOBAI_OLLAMA_CODING_MODEL, and BOBAI_OLLAMA_TIMEOUT_MS in the private .env file.
 - Jarvis routes recognized coding requests to the configured local coder model.
 - The default model names are starter defaults, not a promise of speed or quality. Select models that fit available RAM/VRAM.
@@ -19,8 +19,14 @@ Jarvis calls a local Python Diffusers pipeline directly. ComfyUI is not required
 - Set BOBAI_IMAGE_MODEL_PATH to the model folder.
 - The runtime uses local_files_only=True and does not download model files at request time.
 - The initial pipeline generates 512x512 PNG images and attempts CUDA when available, otherwise CPU. CPU generation may be slow or memory-intensive.
-- Reference-image editing is not implemented in this local pipeline.
+- Reference-image editing uses `AutoPipelineForImage2Image` with a compatible local Diffusers model; it has not been runtime-verified.
 - Local video generation is intentionally disabled until a local video model/runtime and its lifecycle are implemented.
+
+## Local image understanding
+
+- Image understanding uses Ollama’s local multimodal chat endpoint and `BOBAI_OLLAMA_VISION_MODEL` (default `moondream:1.8b`).
+- Pull the vision model with Ollama before using image attachments. This is separate from the chat/coding models and may increase RAM use.
+- The API validates image data URL/base64 syntax, format signatures, and size before sending image bytes to the local Ollama runtime. No hosted vision API is used.
 
 ## Local Jarvis voice
 
