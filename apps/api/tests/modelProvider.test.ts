@@ -1,3 +1,4 @@
+import { withLocalModelLock } from "../src/services/localModelLock.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
@@ -34,6 +35,7 @@ test("Ollama chat sends requests only to the configured local runtime", async ()
       const body = JSON.parse(String(init?.body));
       assert.equal(body.model, "qwen2.5:3b");
       assert.equal(body.stream, false);
+      assert.equal(body.options.num_ctx, 4096);
       return new Response(JSON.stringify({ message: { content: "  local answer  " }, done: true }), { status: 200 });
     };
     const result = await new BobModelProvider().chat([{ role: "user", content: "hello" }]);
@@ -126,4 +128,17 @@ test("Ollama model unload releases resident weights before a memory-heavy image 
     assert.equal(calls[0].body?.model, "qwen3.5:2b");
     assert.equal(calls[0].body?.keep_alive, 0);
   } finally { restore(); }
+});
+
+test("heavy local model work is serialized instead of overlapping in RAM", async () => {
+  let active = 0;
+  let maximumActive = 0;
+  const task = () => withLocalModelLock(async () => {
+    active += 1;
+    maximumActive = Math.max(maximumActive, active);
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    active -= 1;
+  });
+  await Promise.all([task(), task(), task()]);
+  assert.equal(maximumActive, 1);
 });
