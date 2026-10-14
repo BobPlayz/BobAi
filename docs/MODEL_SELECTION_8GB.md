@@ -29,7 +29,7 @@ ollama pull qwen3-embedding:0.6b
 ollama list
 ```
 
-Use the following model settings in the private `.env` file. Jarvis switches models sequentially and unloads other resident Ollama weights before a different model is used:
+Use the following model settings in the private `.env` file. `BOBAI_OLLAMA_THINK=false` disables Qwen's explicit reasoning mode by default, so the model returns its answer directly instead of emitting a long visible thinking trace. Set it to `true` only when you deliberately want reasoning mode. This reduces reasoning-token overhead but cannot make CPU inference literally instant. Jarvis switches models sequentially and unloads other resident Ollama weights before a different model is used:
 
 ```dotenv
 BOBAI_OLLAMA_MODEL=qwen3.5:4b
@@ -38,6 +38,7 @@ BOBAI_OLLAMA_VISION_MODEL=qwen3.5:4b
 BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
 BOBAI_OLLAMA_NUM_CTX=4096
 BOBAI_OLLAMA_NUM_PREDICT=512
+BOBAI_OLLAMA_THINK=false
 ```
 
 If the embedding model's startup cost is too annoying, set `BOBAI_OLLAMA_EMBEDDING_MODEL=disabled`. Jarvis will then use its available lexical fallback and any installed specialist embedding checkpoint instead of loading Qwen3 Embedding. That reduces semantic recall quality, but avoids a second model load on each memory operation.
