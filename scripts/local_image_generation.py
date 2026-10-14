@@ -65,7 +65,7 @@ def main() -> int:
 
         outputs = []
         for index in range(count):
-            current_seed = int(seed) + index if isinstance(seed, int) and not isinstance(seed, bool) else int.from_bytes(os.urandom(4), "big")
+            current_seed = int(seed) + index if isinstance(seed, int) and not isinstance(seed, bool) else int.from_bytes(os.urandom(4), "big") & 0x7FFFFFFF
             generator = torch.Generator(device="cuda" if use_cuda else "cpu").manual_seed(current_seed)
             result = pipe(
                 prompt=prompt.strip(),

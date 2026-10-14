@@ -15,7 +15,7 @@ export async function generateImages(prompt:string,count=1,inputImages?:string[]
  const requested=Math.max(1,Math.min(4,Math.floor(count)));
  const width=options.width ?? 512, height=options.height ?? 512, seed=options.seed;
  if(!Number.isInteger(width)||width<256||width>768||width%8!==0||!Number.isInteger(height)||height<256||height>768||height%8!==0) throw new Error("image width and height must be multiples of 8 between 256 and 768");
- if(seed!==undefined&&(!Number.isInteger(seed)||seed<0||seed>4_294_967_295)) throw new Error("image seed must be an integer between 0 and 4294967295");
+ if(seed!==undefined&&(!Number.isInteger(seed)||seed<0||seed>2_147_483_647)) throw new Error("image seed must be an integer between 0 and 2147483647");
  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("image generation cancelled");
  const generated=await fluxGenerate(normalized,requested,images,signal,{width,height,seed});
  if(generated?.length)return generated;

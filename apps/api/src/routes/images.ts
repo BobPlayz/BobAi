@@ -31,7 +31,7 @@ router.post("/generate", limit, async (req, res) => {
   if (!prompt || prompt.length > MAX_PROMPT) return res.status(400).json({ error: "image prompt must be 1-8000 characters" });
   if (!Number.isInteger(count) || count < 1 || count > 4) return res.status(400).json({ error: "count must be between 1 and 4" });
   if (!Number.isInteger(width) || width < 256 || width > 768 || width % 8 !== 0 || !Number.isInteger(height) || height < 256 || height > 768 || height % 8 !== 0) return res.status(400).json({ error: "width and height must be multiples of 8 between 256 and 768" });
-  if (seed !== undefined && (!Number.isInteger(seed) || seed < 0 || seed > 4_294_967_295)) return res.status(400).json({ error: "seed must be an integer between 0 and 4294967295" });
+  if (seed !== undefined && (!Number.isInteger(seed) || seed < 0 || seed > 2_147_483_647)) return res.status(400).json({ error: "seed must be an integer between 0 and 2147483647" });
   const inputImages = Array.isArray(req.body?.inputImages) ? req.body.inputImages as string[] : undefined;
 
   try {
