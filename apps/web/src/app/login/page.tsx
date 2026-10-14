@@ -89,7 +89,7 @@ export default function LoginPage() {
       <section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/30 sm:p-8">
         <Link href="/" className="mb-8 flex items-center gap-3">
           <BobLogo />
-          <span className="text-lg font-semibold">BobAI</span>
+          <span className="text-lg font-semibold">Jarvis</span>
         </Link>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Email verification</p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight">{step === "details" ? "Get started" : step === "verify" ? "Check your inbox" : "Verify authenticator"}</h1>
@@ -100,7 +100,7 @@ export default function LoginPage() {
         {step === "details" ? (
           <form onSubmit={submitDetails} className="mt-6 space-y-4">
             <label className="block text-sm text-white/75">Your name
-              <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={80} required placeholder="Name you want BobAI to use" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm outline-none transition focus:border-cyan-300/60" />
+              <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={80} required placeholder="Name you want Jarvis to use" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm outline-none transition focus:border-cyan-300/60" />
             </label>
             <label className="block text-sm text-white/75">Email address
               <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" type="email" required placeholder="you@example.com" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm outline-none transition focus:border-cyan-300/60" />

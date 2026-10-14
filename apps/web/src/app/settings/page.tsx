@@ -8,7 +8,7 @@ import { useTheme } from "@/components/neural/ThemeProvider";
 import { clearMemories, confirmAccountDeletion, deleteMemory, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
 import { logout } from "@/lib/auth";
 
-const SETTINGS_KEY = "bobai.settings.v1";
+const SETTINGS_KEY = "jarvis.settings.v1";
 
 type SettingsState = { personality: string; memory: boolean; sourceTypes: string[] };
 type Tab = "personalization" | "privacy" | "memory" | "research" | "about";
@@ -105,7 +105,7 @@ export default function SettingsPage() {
       setDeleteMessage("Enter the 6-digit code sent to your email.");
       return;
     }
-    if (!window.confirm("Schedule deletion of this BobAI account? Your account will be disabled now and permanent deletion is scheduled after 30 days.")) return;
+    if (!window.confirm("Schedule deletion of this Jarvis account? Your account will be disabled now and permanent deletion is scheduled after 30 days.")) return;
     setDeleteBusy(true);
     setDeleteMessage("");
     try {
@@ -128,7 +128,7 @@ export default function SettingsPage() {
       const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = objectUrl;
-      anchor.download = "bobai-account-export.json";
+      anchor.download = "jarvis-account-export.json";
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -179,7 +179,7 @@ export default function SettingsPage() {
   }
 
   async function removeAllMemories() {
-    if (!window.confirm("Delete all saved Bob AI memories? This cannot be undone.")) return;
+    if (!window.confirm("Delete all saved Jarvis memories? This cannot be undone.")) return;
     setMemoryBusyId("__all__");
     setMemoryError("");
     setMemoryNotice("");
@@ -234,10 +234,10 @@ export default function SettingsPage() {
     <main className={`min-h-screen ${colors.page}`}>
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col sm:flex-row">
         <aside className={`w-full shrink-0 border-b p-4 sm:w-60 sm:border-b-0 sm:border-r sm:p-5 ${colors.sidebar}`}>
-          <Link href="/chat" className="mb-6 flex items-center gap-3" aria-label="Back to Bob AI chat">
+          <Link href="/chat" className="mb-6 flex items-center gap-3" aria-label="Back to Jarvis chat">
             <span className="grid size-9 place-items-center rounded-xl border border-sky-400/25 bg-sky-400/10 font-semibold text-sky-500">B</span>
             <span>
-              <span className="block text-base font-semibold">Bob AI</span>
+              <span className="block text-base font-semibold">Jarvis</span>
               <span className={`block text-xs ${colors.muted}`}>Settings</span>
             </span>
           </Link>
@@ -264,14 +264,14 @@ export default function SettingsPage() {
           <header className="mb-7 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">{tabs.find((item) => item.id === tab)?.label}</h1>
-              <p className={`mt-2 text-sm ${colors.muted}`}>Manage the preferences Bob AI currently supports.</p>
+              <p className={`mt-2 text-sm ${colors.muted}`}>Manage the preferences Jarvis currently supports.</p>
             </div>
             <Link href="/chat" className={`rounded-lg border px-3 py-2 text-sm ${colors.button}`}>Back to chat</Link>
           </header>
 
           {tab === "personalization" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-              <h2 className="text-base font-semibold">How should Bob AI respond?</h2>
+              <h2 className="text-base font-semibold">How should Jarvis respond?</h2>
               <p className={`mt-1 text-sm ${colors.muted}`}>These instructions are sent with your chat requests. Don’t include passwords or private secrets.</p>
               <textarea
                 value={settings.personality}
@@ -289,7 +289,7 @@ export default function SettingsPage() {
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
               <h2 className="text-base font-semibold">Privacy basics</h2>
               <ul className={`mt-4 list-disc space-y-3 pl-5 text-sm leading-6 ${colors.muted}`}>
-                <li>Chat requests are sent to the BobAI API configured for this installation. The model provider depends on that server’s configuration.</li>
+                <li>Chat requests are sent to the Jarvis API configured for this installation. The model provider depends on that server’s configuration.</li>
                 <li>Your response-style and memory preferences are stored in this browser’s local storage.</li>
                 <li>Do not enter secrets into chat or personalization instructions.</li>
                 <li>Use the export and account-deletion controls below for server-side account data. Account deletion has a 30-day grace period; per-category automatic retention controls are not available yet.</li>
@@ -389,7 +389,7 @@ export default function SettingsPage() {
           {tab === "research" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
               <h2 className="text-base font-semibold">Default research sources</h2>
-              <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Choose the default source types for Deep Research. You can change these for an individual request in the research panel. If you clear every option, BobAI searches broadly.</p>
+              <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Choose the default source types for Deep Research. You can change these for an individual request in the research panel. If you clear every option, Jarvis searches broadly.</p>
               <div className="mt-4 space-y-3">
                 {([["official", "Official and government sources", "Government and official institutional sites"], ["academic", "Academic and research sources", "Universities, research archives, and selected journals"], ["news", "Reputable news sources", "Selected news publishers"], ["general", "All web sources", "Do not restrict search to a source category"]] as const).map(([value, label, description]) => (
                   <label key={value} className={`flex items-start gap-3 rounded-xl border p-4 ${colors.field}`}>
@@ -411,8 +411,8 @@ export default function SettingsPage() {
 
           {tab === "about" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-              <h2 className="text-base font-semibold">About Bob AI</h2>
-              <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>Bob AI is a work-in-progress AI chat workspace. Available features depend on the API and provider configured by the person running this installation.</p>
+              <h2 className="text-base font-semibold">About Jarvis</h2>
+              <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>Jarvis is a work-in-progress AI chat workspace. Available features depend on the API and provider configured by the person running this installation.</p>
               <div className={`mt-5 rounded-xl border p-4 text-sm ${colors.field}`}>
                 <div className="font-medium">Current appearance</div>
                 <div className={`mt-1 ${colors.muted}`}>{light ? "Light mode" : "Dark mode"} · saved in this browser</div>
