@@ -13,18 +13,13 @@ import { ensurePersonalWorkspace } from "../services/workspace.js";
 import { enrichMessagesWithVision } from "../services/visionChat.js";
 import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
+import { extractImagePrompt } from "../services/imagePrompt.js";
 const router = Router();
 const streamLimit = createUserRateLimit(20, 60_000);
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
 function latestUserText(value: unknown) { if (!Array.isArray(value)) return ""; for (let index = value.length - 1; index >= 0; index -= 1) { const message = value[index]; if (!message || typeof message !== "object") continue; const record = message as Record<string, unknown>; if (record.role === "user" && typeof record.content === "string") return record.content; } return ""; }
 function persistedInputMessages(messages: Array<{ role: string; content: string }>) { return messages.map((message) => ({ id: randomUUID(), role: message.role, content: message.content, model: null, status: "completed" })); }
 function memoryContext(memories: Array<Record<string, unknown>> | null) { return (memories || []).map((memory) => typeof memory.content === "string" ? memory.content : "").filter(Boolean).slice(0, 12); }
-function requestedImagePrompt(text: string) {
-  const match = text.trim().match(/^\s*(?:please\s+)?(?:generate|create|make|draw|paint|render)\s+(?:(?:me|us)\s+)?(?:an?\s+)?(?:image|picture|illustration|artwork|drawing|wallpaper|logo|poster|photo)\b(?:\s+(?:of|showing|depicting|with|for))?\s*([\s\S]*)$/i);
-  if (!match) return null;
-  const prompt = match[1].trim();
-  return (prompt || "a polished, high-quality digital illustration").slice(0, 8_000);
-}
 function shouldRouteTools(text: string) { return /\b(search|research|verify|latest|current|browse|website|open (?:the )?site|look up|generate (?:an )?(?:image|video)|create (?:an )?(?:image|video|diagram)|edit (?:an )?image|use (?:the )?computer|paint|blender|analyze (?:this )?data|run (?:the )?automation|transcribe|synthesize|voice|music|sketch to ui)\b/i.test(text); }
 router.post("/", streamLimit, async (req, res) => {
   let clientDisconnected = false;
@@ -45,7 +40,7 @@ router.post("/", streamLimit, async (req, res) => {
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
     if (prepared.memoryRequest && prepared.latestUserMessage) { if (!memoryEnabled) { send("done", { reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } if (isSensitiveMemory(prepared.latestUserMessage.content)) { send("done", { reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() }); if (!stored) { send("error", { message: "memory storage unavailable" }); return res.end(); } send("done", { reply: "got it. i will remember that for future conversations.", title: prepared.title, memoryStored: true, conversationId }); return res.end(); }
     if (prepared.latestUserMessage) {
-      const imagePrompt = requestedImagePrompt(prepared.latestUserMessage.content);
+      const imagePrompt = extractImagePrompt(prepared.latestUserMessage.content);
       if (imagePrompt) {
         send("done", { reply: "", title: prepared.title, conversationId, imagePrompt, mode: "image-generation" });
         return res.end();
