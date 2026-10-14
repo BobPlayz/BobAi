@@ -85,3 +85,20 @@ test("tool routing does not bundle multiple approval-required actions", () => {
   assert.equal(decision.action, "respond");
   assert.match(decision.reason || "", /multiple approval-required/);
 });
+
+test("tool loop forwards the request abort signal to the model-based router", async () => {
+  const controller = new AbortController();
+  let receivedSignal: AbortSignal | undefined;
+  const result = await runToolLoop(
+    [{ role: "user", content: "answer this" }],
+    { userId: "u", workspaceId: "w", signal: controller.signal },
+    async (_messages, _modelId, signal) => {
+      receivedSignal = signal;
+      return { action: "respond", calls: [] };
+    },
+    async () => ({ content: "done" }),
+    async () => ({}),
+  );
+  assert.equal(receivedSignal, controller.signal);
+  assert.equal(result.status, "completed");
+});
