@@ -27,3 +27,13 @@ test("ordinary conversation defaults to chat", () => {
   assert.equal(plan.primary, "chat");
   assert.equal(plan.modelId, "bob");
 });
+
+test("natural-language image requests select image generation", () => {
+  const plan = inferTaskPlan({ messages: [{ role: "user", content: "I want an image of a cat" }] });
+  assert.equal(plan.primary, "image");
+});
+
+test("read-this-aloud requests select TTS", () => {
+  const plan = inferTaskPlan({ messages: [{ role: "user", content: "Read this aloud" }] });
+  assert.equal(plan.primary, "tts");
+});
