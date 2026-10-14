@@ -61,7 +61,7 @@ async function main() {
     assert.equal(parseToolResult({ ok: false, error: { code: "bad", message: "nope", retryable: "yes" } }), null);
   });
   test("external write-capable tools require approval", () => {
-    assert.equal(getTool("image")?.requiresUserApproval, true);
+    assert.equal(getTool("image"), undefined, "binary image generation stays out of the text tool loop");
     assert.equal(getTool("music")?.requiresUserApproval, true);
     assert.equal(getTool("diagrams")?.requiresUserApproval, true);
     assert.equal(getTool("sketch-to-ui")?.requiresUserApproval, true);
