@@ -38,6 +38,7 @@ async function main() {
     "docs/QUICK_START_AUTH.md",
     "docs/FEATURE_INVENTORY.md",
     "docs/FEATURE_SETUP_GUIDE.md",
+    "docs/MODEL_SELECTION_8GB.md",
     "docs/HANDOFF.md",
   ]);
   const disallowedMarkdown = markdown.filter((path) => !allowedMarkdown.has(path));
