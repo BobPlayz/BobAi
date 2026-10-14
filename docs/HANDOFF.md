@@ -120,3 +120,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - Local image-to-image editing now accepts up to four validated PNG/JPEG/WebP reference images (2 MB each), uses Diffusers `AutoPipelineForImage2Image`, and records generated rows as `edit`. The image-generation endpoint has a dedicated 12 MB JSON parser while the rest of the API retains the 2 MB default. This requires a compatible local model and runtime verification.
 
 - Image understanding is now routed to the local Ollama multimodal endpoint via `BOBAI_OLLAMA_VISION_MODEL` (default `moondream:1.8b`), with image signature/base64/size validation and cancellation from the streamed chat route. The custom specialist checkpoint is no longer required for image understanding.
+
+- Fixed strict local-vision image validation regexes and classified malformed image formats as client input errors rather than runtime failures.
