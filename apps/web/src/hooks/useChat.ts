@@ -115,16 +115,37 @@ export function useChat() {
     const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
     if (!lastAssistant) return;
     const withoutAssistant = messages.filter((message) => message.id !== lastAssistant.id);
+    const controller = new AbortController();
+    activeStream.current = controller;
+    setStreaming(true);
     setLoadingConversationId(activeId);
     updateConversation(activeId, (conversation) => ({ ...conversation, messages: withoutAssistant }));
     try {
-      const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory, activeId);
-      const aiMessage = result.imagePrompt ? imageMessage(((await generateImage(result.imagePrompt)) as ImageResponse).images) : { id: crypto.randomUUID(), role: "assistant" as const, content: result.reply ?? "" };
+      const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory, activeId, undefined, controller.signal);
+      let aiMessage: ChatMessage;
+      if (result.imagePrompt) {
+        setGeneratingImage(true);
+        try {
+          const generated = await generateImage(result.imagePrompt, [], controller.signal);
+          aiMessage = imageMessage(generated.images);
+        } finally {
+          setGeneratingImage(false);
+        }
+      } else {
+        aiMessage = { id: crypto.randomUUID(), role: "assistant", content: result.reply ?? "" };
+      }
       updateConversation(activeId, (conversation) => ({ ...conversation, title: result.title || conversation.title, messages: [...withoutAssistant, aiMessage] }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "The response could not be regenerated. Please try again.";
-      updateConversation(activeId, (conversation) => ({ ...conversation, messages: [...withoutAssistant, { id: crypto.randomUUID(), role: "assistant", content: message }] }));
-    } finally { setLoadingConversationId(null); }
+      if (!(error instanceof Error && error.name === "AbortError")) {
+        const message = error instanceof Error ? error.message : "The response could not be regenerated. Please try again.";
+        updateConversation(activeId, (conversation) => ({ ...conversation, messages: [...withoutAssistant, { id: crypto.randomUUID(), role: "assistant", content: message }] }));
+      }
+    } finally {
+      if (activeStream.current === controller) activeStream.current = null;
+      setStreaming(false);
+      setGeneratingImage(false);
+      setLoadingConversationId(null);
+    }
   }
   function newChat() { const convo = createConversation(); setConversations((prev) => [convo, ...prev]); setActiveId(convo.id); setInput(""); } function togglePin(id: string) { const current = conversations.find((conversation) => conversation.id === id); if (!current) return; const pinned = !current.pinned; updateConversation(id, (c) => ({ ...c, pinned })); void updateRemoteConversation(id, { isPinned: pinned }).catch(() => undefined); } function togglePinMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) })); } function deleteMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.filter((m) => m.id !== messageId) })); } function renameConversation(id: string, title: string) { const next = title.trim().slice(0, 200); if (next) { updateConversation(id, (c) => ({ ...c, title: next })); void updateRemoteConversation(id, { title: next }).catch(() => undefined); } } function deleteConversation(id: string) { const target = conversations.find((conversation) => conversation.id === id); void deleteRemoteConversation(id).then(() => { setConversations((prev) => { const next = prev.filter((conversation) => conversation.id !== id); if (id === activeId) setActiveId(next[0]?.id || ""); return next; }); }).catch(() => { if (target) updateConversation(id, (conversation) => ({ ...conversation, messages: [...conversation.messages, { id: crypto.randomUUID(), role: "assistant", content: "This conversation could not be deleted from the server. Please try again." }] })); }); }
   function cancelUpload(uploadKey: string) { uploadControllers.current.get(uploadKey)?.abort(); }
