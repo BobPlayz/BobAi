@@ -13,10 +13,10 @@
 - At the end, give a clear, short list of actions the user must do personally, separating these from code tasks the agent can perform.
 - Do not claim a feature works merely because code exists. Mark static implementation separately from verified behavior.
 - Keep the product clean and conversation-first, with exactly Light and Dark themes. No sci-fi/HUD/reactor visuals.
-- Do not train a model. Remove Ollama support end to end; use a configurable hosted provider as the primary AI path.
+- Do not train a model from scratch and do not use hosted AI model APIs. Use Ollama for local chat/coding/research synthesis, direct local Diffusers for image generation (no ComfyUI), and local Piper/Whisper for the Ai-Glasses Jarvis voice. Neon and Resend are the user-approved infrastructure exceptions.
 - Intended audience is students of all ages, so public-beta privacy, safety, accessibility, and age-appropriate safeguards are launch blockers.
 - Scope is the full practical ChatGPT-like roadmap, with special emphasis on coding and web research. Do not claim exact parity with proprietary ChatGPT features.
-- Monthly AI budget target is ₹500. Keep paid AI disabled until usage limits, provider-side spending controls, and cost visibility are configured and tested.
+- Keep AI inference local to avoid per-request hosted AI model charges. Neon, Resend, hosting, and domain can still cost money; do not buy or deploy without approval.
 - Hosting and AI service must be cancellable after one month where provider terms permit; prefer no long-term commitments and document renewal/cancellation terms before the user chooses a vendor.
 - Domain/project publisher identity: Origin Productions. Do not publish private contact details; a real support/privacy contact and responsible adult/legal review are still required.
 - No purchases, paid subscriptions, DNS changes, production deployments, or other external side effects without explicit approval.
@@ -49,11 +49,11 @@ All repository Markdown files were updated on 2026-10-13. The Markdown tree was 
 - docs/FEATURE_INVENTORY.md maps major controls and routes. It is a static inventory, not a certification.
 - Latest relevant commit includes SSE CRLF parser fix afcadcde3465baf5b581fa567032aacd56441432 and documentation/handoff updates. See Git history for later per-file commits.
 
-## Public-beta branch changes made in this session
+## Local-first implementation changes made on main
 
 - Created branch `implementation/public-beta-student-scope` from `main`; changes are not merged or deployed.
 - Fixed repository preflight's allowlist to include `docs/HANDOFF.md`.
-- Removed Ollama provider routing, vision fallback, runtime source, test, package test command, and environment-template options. Updated the hosted-only docs and provider routing. The legacy native/specialist runtime and model-training source directories remain in the repository and must not be marketed as supported Ollama or model-training workflows.
+- Restored Ollama chat/coding routing and tests; added direct local Diffusers image generation, local Jarvis Piper/Whisper configuration, local research synthesis, Neon through DATABASE_URL, and a Resend OTP sender with SMTP fallback. Video generation remains disabled until a local runtime exists.
 - Added provider-routing regression tests for rejecting the retired Ollama model id and routing coding requests through the configured hosted provider, plus hosted image generation/editing request tests. Tests have not been run yet.
 - Production startup now fails closed unless the hosted provider/key, ₹500 monthly target, and `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true` operator attestation are configured. This flag does not prove a real provider cap is active; the owner must verify it in the provider dashboard.
 - Removed the fake SVG image-generation fallback and added a hosted Images API adapter, an Image mode, reference-image editing, and provider tests. Live model access, editing output, storage growth, and UI behavior remain unverified.
@@ -109,4 +109,4 @@ Some of these may change as implementation work uncovers blockers. The final ans
 
 ## Important honesty boundary
 
-The code changes recorded above were committed through GitHub file operations but were not tested in a local runtime at the time of writing. Do not say build, tests, security audit, provider calls, email delivery, database migrations, accessibility, or deployment passed unless the corresponding run actually happened and results are available.
+The code changes recorded above were committed through GitHub file operations but were not tested in a local runtime at the time of writing. Do not say build, tests, security audit, provider calls, email delivery, database migrations, accessibility, or deployment passed unless the corresponding run actually happened and results are available.\n\n## Current user-approved architecture (2026-10-14)\n\n- Chat and coding: local Ollama.\n- Internet research: BobAI-owned retrieval/evidence pipeline plus local Ollama synthesis. Live web retrieval still needs internet.\n- Images: direct Diffusers local runtime, no ComfyUI, no hosted image API. Model files and Python dependencies are not bundled.\n- Voice: local Piper English Alan and Telugu Venkatesh plus Whisper.cpp, matching the Ai-Glasses voice profile. Assets/native build need local setup.\n- Database: Neon PostgreSQL via DATABASE_URL.\n- Email: Resend preferred, SMTP fallback. Credentials and verified sender must be supplied by the user.\n- Video: disabled until a local video model/runtime is implemented.\n- Do not claim roadmap complete until build, tests, smoke checks, and runtime paths are actually verified.\n
