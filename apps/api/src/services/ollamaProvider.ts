@@ -100,6 +100,47 @@ async function ollamaChatUnlocked(input: NativeMessage[], provider: "bob" | "cod
   return { content: content.trim(), model };
 }
 
+export function ollamaEmbeddingModel() {
+  const model = (process.env.BOBAI_OLLAMA_EMBEDDING_MODEL || "qwen3-embedding:0.6b").trim();
+  if (!model || model.length > 160 || /[\\r\\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama embedding model name");
+  return model;
+}
+
+async function ollamaEmbeddingUnlocked(text: string): Promise<number[] | null> {
+  const input = text.trim().slice(0, 8_000);
+  if (!input) return null;
+  const model = ollamaEmbeddingModel();
+  await unloadOllamaModels();
+  const response = await fetch(`${configuredBaseUrl()}/api/embed`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ model, input, truncate: true, keep_alive: 0 }),
+    signal: AbortSignal.timeout(timeoutMs()),
+    redirect: "error",
+  });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    if (response.status === 404) throw new Error(`Ollama embedding model '${model}' is not installed. Run: ollama pull ${model}`);
+    if (response.status === 503) throw new Error("Ollama embedding is busy or out of memory");
+    throw new Error(`Ollama embedding request failed with HTTP ${response.status}`);
+  }
+  const raw = await readLimited(response);
+  let data: { embeddings?: unknown };
+  try { data = JSON.parse(raw) as { embeddings?: unknown }; } catch { throw new Error("Ollama returned invalid embedding JSON"); }
+  if (!Array.isArray(data.embeddings) || !Array.isArray(data.embeddings[0])) throw new Error("Ollama returned no embedding vector");
+  const source = data.embeddings[0] as unknown[];
+  if (!source.length || source.length > 1536 || source.some((value) => typeof value !== "number" || !Number.isFinite(value))) throw new Error("Ollama returned an invalid embedding vector");
+  const vector = new Array<number>(1536).fill(0);
+  for (let i = 0; i < source.length; i++) vector[i] = source[i] as number;
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  if (!Number.isFinite(norm) || norm <= 0) throw new Error("Ollama returned a zero embedding vector");
+  return vector.map((value) => value / norm);
+}
+
+export function ollamaEmbedding(text: string) {
+  return withLocalModelLock(() => ollamaEmbeddingUnlocked(text));
+}
+
 export function ollamaVisionModel() {
   const model = (process.env.BOBAI_OLLAMA_VISION_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:2b").trim();
   if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama vision model name");
@@ -191,7 +232,7 @@ export async function ollamaStatus(): Promise<{ ready: boolean; provider: "ollam
     if (!response.ok) return { ready: false, provider: "ollama", error: `Ollama returned HTTP ${response.status}` };
     const data = await response.json() as { models?: Array<{ name?: string }> };
     const models = Array.isArray(data.models) ? data.models.map((item) => item.name).filter((name): name is string => typeof name === "string") : [];
-    const required = [...new Set([ollamaModelFor("bob"), ollamaModelFor("coding"), ollamaVisionModel()])];
+    const required = [...new Set([ollamaModelFor("bob"), ollamaModelFor("coding"), ollamaVisionModel(), ollamaEmbeddingModel()])];
     return { ready: required.every((model) => models.includes(model) || models.some((name) => name.split(":")[0] === model.split(":")[0] && !model.includes(":"))), provider: "ollama", models, requiredModels: required, missingModels: required.filter((model) => !models.includes(model)) };
   } catch (error) {
     return { ready: false, provider: "ollama", error: error instanceof Error ? error.message : "Ollama unavailable" };
