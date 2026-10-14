@@ -38,7 +38,8 @@ router.post("/", limit, async (req, res) => {
       answer: result.synthesis,
       status: "completed",
     });
-    return res.json({ ...result, sessionId, quota, mode: "deep-research" });
+    const citations = result.sources.map((source, index) => ({ id: `${sessionId}:${index + 1}`, index: index + 1, title: source.title, url: source.url, snippet: source.snippet, publishedAt: source.publishedAt }));
+    return res.json({ ...result, sessionId, quota, mode: "deep-research", citations });
   } catch (error) {
     if (controller.signal.aborted || res.destroyed) return;
     if (process.env.NODE_ENV !== "production") console.error("deep research failed", error);
