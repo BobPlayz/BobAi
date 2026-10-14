@@ -32,7 +32,10 @@ The authenticated API currently groups functionality under paths such as:
 | `/research/search` | Basic web search with source preferences and saved research sessions |
 | `/deep-research` | Multi-query research with fetched evidence and local Ollama synthesis |
 | `/images/generate` | Local Diffusers image generation and image-to-image editing; requires local model files |
-| `/voice` | Local Whisper.cpp transcription and Piper synthesis |
+| `/voice/status` | Local Whisper.cpp/Piper readiness |
+| `/voice/transcribe` | Local Whisper.cpp audio transcription |
+| `/voice/synthesize` | Local Piper speech synthesis |
+| `/voice/turn` | One-shot local voice turn: transcription → local chat → speech synthesis; requires all local runtimes and model assets |
 | `/agents` | Agent execution |
 | `/automation` | Automation management |
 | `/projects` | Project management |
@@ -72,7 +75,18 @@ The exact response fields can vary by route state (for example, a tool approval 
 
 ## Cancellation and failure handling
 
-The streaming route propagates a client disconnect cancellation signal through the chat engine into supported provider adapters. Ollama support has been removed from the public-beta branch. The web stream parser accepts LF and CRLF event separators. These changes have been committed but still require route-level verification for disconnects, partial-response persistence, timeouts, and provider behavior. Rate limiting is configured through the API middleware; if distributed limiting is explicitly enabled and its backing service fails, requests are denied rather than falling back to uncoordinated per-process limits.
+The current main-branch architecture is local-first. Chat and research synthesis use local Ollama; image generation/editing uses local Diffusers; voice uses local Whisper.cpp and Piper. The stream and voice-turn routes propagate client-disconnect signals between supported stages. Native media calls are synchronous, so a disconnect cannot guarantee immediate interruption of an in-progress native transcription or synthesis call. The web stream parser accepts LF and CRLF event separators. End-to-end cancellation, partial-response persistence, timeout behavior, and native runtime performance still require runtime verification.
+
+Rate limiting is configured through API middleware. If distributed limiting is explicitly enabled and its backing service fails, requests are denied rather than falling back to uncoordinated per-process limits.
+
+## Local-first provider notes
+
+- Chat/coding/research synthesis: Ollama at the server-configured local endpoint. Pull the configured models before use.
+- Image understanding: local Ollama multimodal model via `BOBAI_OLLAMA_VISION_MODEL`.
+- Image generation/editing: local Diffusers model at `BOBAI_IMAGE_MODEL_PATH`.
+- Speech recognition/synthesis: local Whisper.cpp/Piper assets and the compiled native media addon.
+- Neon/PostgreSQL and Resend/SMTP are infrastructure services, not hosted AI-model inference.
+- Do not configure hosted AI-model API keys for the local-first runtime. Do not claim a model is ready until local readiness and actual inference have been tested.
 
 ## Public-beta provider notes
 
