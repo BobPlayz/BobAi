@@ -124,3 +124,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - Fixed strict local-vision image validation regexes and classified malformed image formats as client input errors rather than runtime failures.
 
 - Ollama readiness now includes the configured vision model in `requiredModels`/`missingModels`, and regression tests cover the multimodal request path against a mocked local endpoint.
+
+- The local image subprocess validates the complete request size before spawning Python and discards subprocess stderr to avoid pipe backpressure from library warnings; the image-specific JSON limit is now documented in both environment templates.
