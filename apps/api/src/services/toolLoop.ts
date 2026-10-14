@@ -1,7 +1,5 @@
 import { getTool, type BobTool } from "./toolRegistry.js";
 import { randomUUID } from "node:crypto";
-import { db, images, researchSessions } from "@bobai/db";
-import { recordResearchSources, reserveResearchRequest } from "./researchQuota.js";
 import type { ToolExecutionContext } from "./toolExecution.js";
 import { assertPublicTargetUrl, boundedText, providerUrl, safeError } from "./httpSafety.js";
 
@@ -42,9 +40,11 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
 
 const EXECUTORS: Record<string, Executor> = {
   research: async (args, context) => {
+    const { recordResearchSources, reserveResearchRequest } = await import("./researchQuota.js");
     const reservation = await reserveResearchRequest(context.userId);
     const result = await (await import("./deepResearch.js")).deepResearch(args.query, {}, context.signal);
     await recordResearchSources(context.userId, result.sources.length, reservation.windowStart);
+    const { db, researchSessions } = await import("@bobai/db");
     const sessionId = randomUUID();
     await db.insert(researchSessions).values({
       id: sessionId, workspaceId: context.workspaceId, userId: context.userId,
@@ -81,6 +81,7 @@ const EXECUTORS: Record<string, Executor> = {
         throw new Error("image generation returned invalid PNG data");
       }
     }
+    const { db, images } = await import("@bobai/db");
     const rows = await db.insert(images).values(generated.map((item) => ({
       workspaceId: context.workspaceId, createdBy: context.userId, prompt,
       model: "local-diffusers", width: 512, height: 512, seed: null,
