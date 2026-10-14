@@ -139,7 +139,7 @@ export async function ollamaStream(input: NativeMessage[], onToken: (token: stri
   return { content: content.trim(), model };
 }
 
-export async function ollamaStatus(): Promise<{ ready: boolean; provider: "ollama"; error?: string; models?: string[]; requiredModels?: string[]; missingModels?: string[] }> {
+export async function ollamaStatus(): Promise<{ ready: boolean; provider: "ollama"; modelId?: string; model?: string; error?: string; models?: string[]; requiredModels?: string[]; missingModels?: string[] }> {
   try {
     const base = configuredBaseUrl();
     const response = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(3_000), redirect: "error" });
