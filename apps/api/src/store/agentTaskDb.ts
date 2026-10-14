@@ -11,6 +11,22 @@ export async function persistAgentTask(input: { id: string; workspaceId?: string
   return true;
 }
 
+export async function claimPersistedAgentTask(id: string, durable: boolean) {
+  if (!durable) return true;
+  const db = await getDb();
+  if (!db) return false;
+  const now = new Date();
+  const [claimed] = await db.update(tasks).set({ status: "running", startedAt: now, updatedAt: now }).where(and(eq(tasks.id, id), eq(tasks.status, "queued"))).returning({ id: tasks.id });
+  return Boolean(claimed);
+}
+
+export async function touchPersistedAgentTask(id: string) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(tasks).set({ updatedAt: new Date() }).where(and(eq(tasks.id, id), eq(tasks.status, "running")));
+  return true;
+}
+
 export async function updatePersistedAgentTask(input: { id: string; status: string; result?: unknown; error?: string; payload?: unknown; metadata?: unknown }) {
   const db = await getDb(); if (!db) return false;
   const now = new Date(); const update: Record<string, unknown> = { status: input.status, updatedAt: now };
@@ -45,7 +61,8 @@ export async function recoverAgentTasks() {
     const acquired = Boolean((lock[0] as { pg_try_advisory_xact_lock?: boolean } | undefined)?.pg_try_advisory_xact_lock);
     if (!acquired) return [];
     const now = new Date();
-    await tx.update(tasks).set({ status: "queued", updatedAt: now, metadata: { error: "agent worker restarted; task returned to durable queue" } }).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "running")));
+    const staleWorkerCutoff = new Date(now.getTime() - 90_000);
+    await tx.update(tasks).set({ status: "queued", updatedAt: now, metadata: { error: "agent worker lease expired; task returned to durable queue" } }).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "running"), sql`${tasks.updatedAt} < ${staleWorkerCutoff}`));
     return tx.select({ id: tasks.id, workspaceId: tasks.workspaceId, createdBy: tasks.createdBy, title: tasks.title, description: tasks.description, type: tasks.type, status: tasks.status, payload: tasks.payload, createdAt: tasks.createdAt }).from(tasks).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "queued")));
   });
 }
