@@ -68,3 +68,11 @@ test("deep research rejects cancellation before starting parallel searches", asy
   controller.abort(new Error("client disconnected"));
   await assert.rejects(() => deepResearch("test query", {}, controller.signal), /client disconnected/);
 });
+
+test("malformed numeric HTML entities in provider titles do not crash web research", () => {
+  const sources = parseBraveResults({
+    web: { results: [{ title: "Safe title &#x110000; &#55296;", url: "https://example.com", description: "Malformed entities are untrusted input" }] },
+  }, "safe title");
+  assert.equal(sources.length, 1);
+  assert.equal(sources[0].title, "Safe title &#x110000; &#55296;");
+});
