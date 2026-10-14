@@ -37,3 +37,22 @@ test("local vision validates image bytes before contacting the configured Ollama
   await assert.rejects(() => analyzeImage("data:image/png;base64,SGVsbG8="), /format is unsupported or does not match/);
   await assert.rejects(() => analyzeImage("data:image/jpeg;base64," + "A".repeat(20_000_000)), /12 MB limit/);
 });
+
+test("Power image mode requires an explicit private API key and does not silently fall back", async () => {
+  const { openAIImageGenerate } = await import("../src/services/openAIImageProvider.js");
+  const previous = process.env.BOBAI_IMAGE_API_KEY;
+  delete process.env.BOBAI_IMAGE_API_KEY;
+  try {
+    await assert.rejects(() => openAIImageGenerate("a test image", 1), /needs BOBAI_IMAGE_API_KEY/);
+  } finally {
+    if (previous === undefined) delete process.env.BOBAI_IMAGE_API_KEY;
+    else process.env.BOBAI_IMAGE_API_KEY = previous;
+  }
+});
+
+test("Power image mode respects an already-cancelled request before network access", async () => {
+  const { openAIImageGenerate } = await import("../src/services/openAIImageProvider.js");
+  const controller = new AbortController();
+  controller.abort(new Error("cancelled by test"));
+  await assert.rejects(() => openAIImageGenerate("a test image", 1, controller.signal), /cancelled by test/);
+});
