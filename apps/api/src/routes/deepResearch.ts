@@ -10,6 +10,10 @@ const router = Router();
 const limit = createUserRateLimit(4, 60_000);
 
 router.post("/", limit, async (req, res) => {
+  const controller = new AbortController();
+  const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
+  req.once("aborted", onDisconnect);
+  res.once("close", onDisconnect);
   try {
     const options = req.body?.options && typeof req.body.options === "object" && !Array.isArray(req.body.options)
       ? req.body.options as Record<string, unknown>
@@ -18,7 +22,8 @@ router.post("/", limit, async (req, res) => {
     if (!query) return res.status(400).json({ error: "research query is required" });
     if (query.length > 2_000) return res.status(400).json({ error: "research query is too long" });
     const reservation = await reserveResearchRequest(req.user!.id);
-    const result = await deepResearch(query, options);
+    const result = await deepResearch(query, options, controller.signal);
+    if (controller.signal.aborted || res.destroyed) return;
     const quota = await recordResearchSources(req.user!.id, result.sources.length, reservation.windowStart);
     const workspace = await ensurePersonalWorkspace(req.user!.id);
     const sessionId = randomUUID();
@@ -33,11 +38,15 @@ router.post("/", limit, async (req, res) => {
     });
     return res.json({ ...result, sessionId, quota, mode: "deep-research" });
   } catch (error) {
+    if (controller.signal.aborted || res.destroyed) return;
     if (process.env.NODE_ENV !== "production") console.error("deep research failed", error);
     const message = error instanceof Error ? error.message : "deep research unavailable";
     if (/query is required|query is too long/i.test(message)) return res.status(400).json({ error: message });
     if (/quota exceeded/i.test(message)) return res.status(429).json({ error: message });
     return res.status(503).json({ error: "deep research unavailable" });
+  } finally {
+    req.off("aborted", onDisconnect);
+    res.off("close", onDisconnect);
   }
 });
 
