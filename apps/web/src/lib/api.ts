@@ -45,8 +45,50 @@ async function readChatStream(response: Response, onToken?: (token: string) => v
   return state.completed;
 }
 export async function sendMessage(messages: ChatMessage[], personality = "", modelId?: string, memoryEnabled?: boolean, conversationId?: string, onToken?: (token: string) => void, signal?: AbortSignal) { const latestUserMessageId = [...messages].reverse().find((message) => message.role === "user")?.id; const cleanMessages = messages.map((m) => ({ role: m.role, content: m.content, ...(m.id === latestUserMessageId && m.images?.length ? { attachments: m.images.filter((image) => typeof image.url === "string" && image.url.startsWith("data:image/")).slice(0, 3).map((image) => ({ type: "image", mimeType: image.url.slice(5, image.url.indexOf(";") > -1 ? image.url.indexOf(";") : image.url.indexOf(",")), data: image.url })) } : {}) })); let effectiveMemory = memoryEnabled; let projectContext = ""; if (typeof window !== "undefined") { try { const settings = JSON.parse(localStorage.getItem("bobai.settings.v1") || "{}"); if (typeof effectiveMemory !== "boolean") effectiveMemory = settings.memory !== false; if (settings.projectContext && typeof settings.projectContext === "object") { const name = typeof settings.projectContext.name === "string" ? settings.projectContext.name : ""; const instructions = typeof settings.projectContext.instructions === "string" ? settings.projectContext.instructions : ""; if (instructions.trim()) projectContext = `\nActive project: ${name || "untitled"}\nProject instructions:\n${instructions.slice(0, 12_000)}`; } } catch { if (typeof effectiveMemory !== "boolean") effectiveMemory = true; } } if (typeof effectiveMemory !== "boolean") effectiveMemory = true; const res = await request("/stream", { method: "POST", body: JSON.stringify({ messages: cleanMessages, personality: `${personality}${projectContext}`, memoryEnabled: effectiveMemory, ...(conversationId ? { conversationId } : {}), ...(modelId ? { modelId } : {}) }), signal }); if (!res.ok) { const raw = await res.text(); let providerMessage = ""; try { const parsed = JSON.parse(raw) as { error?: unknown }; if (typeof parsed.error === "string") providerMessage = parsed.error; } catch { /* keep provider internals out of the chat UI */ } if (res.status === 401) throw new Error("Your session has expired. Please verify your email again."); if (res.status === 429) throw new Error("Jarvis is receiving too many requests right now. Wait a moment and try again."); if (res.status >= 500) throw new Error("The AI service is temporarily unavailable. Please try again in a moment."); throw new Error(providerMessage || "Jarvis could not process that request. Please try again."); } return await readChatStream(res, onToken); }
-export async function listConversations(includeArchived = false): Promise<Conversation[]> { const res = await request(`/conversations${includeArchived ? "?archived=true" : ""}`); if (!res.ok) throw new Error((await res.text()) || "Failed to load conversations"); const data = await res.json() as { conversations?: Array<Record<string, unknown>> }; return (data.conversations || []).map((conversation) => ({ id: String(conversation.id), title: typeof conversation.title === "string" ? conversation.title : "new chat", createdAt: new Date(String(conversation.createdAt || Date.now())).getTime(), pinned: conversation.isPinned === true, messages: Array.isArray(conversation.messages) ? conversation.messages.map((message) => { const item = message as Record<string, unknown>; const attachments = item.attachments as Record<string, unknown> | null; return { id: String(item.id), role: item.role === "assistant" ? "assistant" as const : "user" as const, content: typeof item.content === "string" ? item.content : "", ...(attachments && typeof attachments === "object" ? attachments : {}) }; }) : [] })); }
-export async function saveConversation(conversation: Conversation) { const res = await request("/conversations", { method: "POST", body: JSON.stringify({ id: conversation.id, title: conversation.title, messages: conversation.messages.map((message) => ({ id: message.id, role: message.role, content: message.content, status: "completed", attachments: { ...(message.images?.length ? { images: message.images.filter((image) => !image.url.startsWith("data:image/")) } : {}), ...(message.files?.length ? { files: message.files } : {}), ...(message.pinned ? { pinned: true } : {}) } })) }) }); if (!res.ok) throw new Error((await res.text()) || "Failed to save conversation"); }
+async function loadSavedImage(image: Record<string, unknown>) {
+  const serverImageId = typeof image.serverImageId === "string" ? image.serverImageId : "";
+  if (!serverImageId) {
+    if (typeof image.url === "string" && !image.url.startsWith("data:image/")) {
+      return { id: typeof image.id === "string" ? image.id : crypto.randomUUID(), url: image.url, prompt: typeof image.prompt === "string" ? image.prompt : "" };
+    }
+    return null;
+  }
+  try {
+    const res = await request(`/images/${encodeURIComponent(serverImageId)}`);
+    if (!res.ok) return null;
+    const data = await res.json() as { image?: { url?: unknown; prompt?: unknown } };
+    if (typeof data.image?.url !== "string" || !data.image.url.startsWith("data:image/")) return null;
+    return { id: serverImageId, serverImageId, url: data.image.url, prompt: typeof image.prompt === "string" ? image.prompt : typeof data.image.prompt === "string" ? data.image.prompt : "" };
+  } catch {
+    return null;
+  }
+}
+export async function listConversations(includeArchived = false): Promise<Conversation[]> {
+  const res = await request(`/conversations${includeArchived ? "?archived=true" : ""}`);
+  if (!res.ok) throw new Error((await res.text()) || "Failed to load conversations");
+  const data = await res.json() as { conversations?: Array<Record<string, unknown>> };
+  return Promise.all((data.conversations || []).map(async (conversation) => ({
+    id: String(conversation.id),
+    title: typeof conversation.title === "string" ? conversation.title : "new chat",
+    createdAt: new Date(String(conversation.createdAt || Date.now())).getTime(),
+    pinned: conversation.isPinned === true,
+    messages: await Promise.all((Array.isArray(conversation.messages) ? conversation.messages : []).map(async (message) => {
+      const item = message as Record<string, unknown>;
+      const attachments = item.attachments as Record<string, unknown> | null;
+      const rawImages = attachments && Array.isArray(attachments.images) ? attachments.images : [];
+      const images = (await Promise.all(rawImages.filter((image): image is Record<string, unknown> => Boolean(image) && typeof image === "object" && !Array.isArray(image)).map(loadSavedImage))).filter((image): image is NonNullable<typeof image> => image !== null);
+      return {
+        id: String(item.id),
+        role: item.role === "assistant" ? "assistant" as const : "user" as const,
+        content: typeof item.content === "string" ? item.content : "",
+        ...(images.length ? { images } : {}),
+        ...(attachments && typeof attachments === "object" && Array.isArray(attachments.files) ? { files: attachments.files } : {}),
+        ...(attachments?.pinned === true ? { pinned: true } : {}),
+      };
+    })),
+  })));
+}
+export async function saveConversation(conversation: Conversation) { const res = await request("/conversations", { method: "POST", body: JSON.stringify({ id: conversation.id, title: conversation.title, messages: conversation.messages.map((message) => ({ id: message.id, role: message.role, content: message.content, status: "completed", attachments: { ...(message.images?.length ? { images: message.images.filter((image) => Boolean(image.serverImageId) || !image.url.startsWith("data:image/")).map((image) => image.serverImageId ? { serverImageId: image.serverImageId, prompt: image.prompt } : image) } : {}), ...(message.files?.length ? { files: message.files } : {}), ...(message.pinned ? { pinned: true } : {}) } })) }) }); if (!res.ok) throw new Error((await res.text()) || "Failed to save conversation"); }
 export async function updateConversation(conversationId: string, changes: { title?: string; isPinned?: boolean; isArchived?: boolean }) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}`, { method: "PATCH", body: JSON.stringify(changes) }); if (!res.ok) throw new Error((await res.text()) || "Failed to update conversation"); return res.json(); }
 export async function branchConversation(conversationId: string, title?: string) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}/branch`, { method: "POST", body: JSON.stringify({ title }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || "Failed to branch conversation"); return data as { id: string; title: string; parentConversationId: string }; }
 export async function deleteConversation(conversationId: string) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}`, { method: "DELETE" }); if (!res.ok && res.status !== 404) throw new Error((await res.text()) || "Failed to delete conversation"); }
