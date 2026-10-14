@@ -49,12 +49,25 @@ function shouldUseCodingModel(messages: ProviderMessage[], modelId?: string) {
 export async function runChat(messages: ProviderMessage[], modelId?: string) {
   const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "bob" });
   const coding = shouldUseCodingModel(messages, modelId);
-  const result = await bobModelProvider.chat(messages, coding ? "coding" : selected.provider, coding ? undefined : selected.model);
-  return { message: { content: result.content }, model: result.model, provider: result.provider };
+  try {
+    const result = await bobModelProvider.chat(messages, coding ? "coding" : selected.provider, coding ? undefined : selected.model);
+    return { message: { content: result.content }, model: result.model, provider: result.provider };
+  } catch (error) {
+    if (!coding) throw error;
+    const fallback = await bobModelProvider.chat(messages, "bob");
+    return { message: { content: fallback.content }, model: fallback.model, provider: fallback.provider };
+  }
 }
 export async function runStream(messages: ProviderMessage[], onToken: (token: string) => void, modelId?: string, signal?: AbortSignal) {
   const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "bob" });
   if (signal?.aborted) throw new DOMException("Chat stream cancelled.", "AbortError");
   const coding = shouldUseCodingModel(messages, modelId);
-  return bobModelProvider.stream(messages, onToken, coding ? "coding" : selected.provider, coding ? undefined : selected.model, signal);
+  if (!coding) return bobModelProvider.stream(messages, onToken, selected.provider, selected.model, signal);
+  let emittedToken = false;
+  try {
+    return await bobModelProvider.stream(messages, (token) => { emittedToken = true; onToken(token); }, "coding", undefined, signal);
+  } catch (error) {
+    if (emittedToken || signal?.aborted) throw error;
+    return bobModelProvider.stream(messages, onToken, "bob", undefined, signal);
+  }
 }
