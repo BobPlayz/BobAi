@@ -30,16 +30,23 @@ function runTests(): boolean {
 
 function run(name: string, script: Service): ChildProcess {
   console.log(`[${name}] starting...`);
+  // The root .env may set PORT=3001 for the API. Do not let that setting make Next.js
+  // use the API's port too. WEB_PORT can override the web port intentionally.
+  const serviceEnv =
+    script === "web"
+      ? { ...process.env, PORT: process.env.WEB_PORT || "3000" }
+      : process.env;
+
   if (process.platform === "win32") {
     return spawn("cmd.exe", ["/d", "/s", "/c", `npm run ${script}`], {
       stdio: "inherit",
-      env: process.env,
+      env: serviceEnv,
     });
   }
 
   return spawn("npm", ["run", script], {
     stdio: "inherit",
-    env: process.env,
+    env: serviceEnv,
   });
 }
 
