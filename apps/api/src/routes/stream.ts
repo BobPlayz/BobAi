@@ -19,6 +19,12 @@ function settingValue(rows: Array<{ key: string; value: unknown }>, key: string)
 function latestUserText(value: unknown) { if (!Array.isArray(value)) return ""; for (let index = value.length - 1; index >= 0; index -= 1) { const message = value[index]; if (!message || typeof message !== "object") continue; const record = message as Record<string, unknown>; if (record.role === "user" && typeof record.content === "string") return record.content; } return ""; }
 function persistedInputMessages(messages: Array<{ role: string; content: string }>) { return messages.map((message) => ({ id: randomUUID(), role: message.role, content: message.content, model: null, status: "completed" })); }
 function memoryContext(memories: Array<Record<string, unknown>> | null) { return (memories || []).map((memory) => typeof memory.content === "string" ? memory.content : "").filter(Boolean).slice(0, 12); }
+function requestedImagePrompt(text: string) {
+  const match = text.trim().match(/^\s*(?:please\s+)?(?:generate|create|make|draw|paint|render)\s+(?:(?:me|us)\s+)?(?:an?\s+)?(?:image|picture|illustration|artwork|drawing|wallpaper|logo|poster|photo)\b(?:\s+(?:of|showing|depicting|with|for))?\s*([\s\S]*)$/i);
+  if (!match) return null;
+  const prompt = match[1].trim();
+  return (prompt || "a polished, high-quality digital illustration").slice(0, 8_000);
+}
 function shouldRouteTools(text: string) { return /\b(search|research|verify|latest|current|browse|website|open (?:the )?site|look up|generate (?:an )?(?:image|video)|create (?:an )?(?:image|video|diagram)|edit (?:an )?image|use (?:the )?computer|paint|blender|analyze (?:this )?data|run (?:the )?automation|transcribe|synthesize|voice|music|sketch to ui)\b/i.test(text); }
 router.post("/", streamLimit, async (req, res) => {
   let clientDisconnected = false;
@@ -38,8 +44,15 @@ router.post("/", streamLimit, async (req, res) => {
     const prepared = await prepareChat({ messages: enrichedMessages, personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), responseLength: settingValue(rows, "responseLength"), tone: settingValue(rows, "tone"), customInstructions: settingValue(rows, "customInstructions"), memoryContext: memoryContext(memories), knowledgeContext });
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
     if (prepared.memoryRequest && prepared.latestUserMessage) { if (!memoryEnabled) { send("done", { reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } if (isSensitiveMemory(prepared.latestUserMessage.content)) { send("done", { reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() }); if (!stored) { send("error", { message: "memory storage unavailable" }); return res.end(); } send("done", { reply: "got it. i will remember that for future conversations.", title: prepared.title, memoryStored: true, conversationId }); return res.end(); }
+    if (prepared.latestUserMessage) {
+      const imagePrompt = requestedImagePrompt(prepared.latestUserMessage.content);
+      if (imagePrompt) {
+        send("done", { reply: "", title: prepared.title, conversationId, imagePrompt, mode: "image-generation" });
+        return res.end();
+      }
+    }
     if (prepared.latestUserMessage && isCodingTask(prepared.latestUserMessage.content) && process.env.BOBAI_CODING_AGENTS_DIR) { const result = await runCodingAgent(prepared.latestUserMessage.content); const reply = result.output || "the coding agent completed without output."; const persisted = await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedInputMessages(prepared.messages), { id: randomUUID(), role: "assistant", content: reply, model: "coding-agent", status: "completed" }] }).catch(() => false); send("done", { reply, title: prepared.title, agent: "coding", warnings: result.warnings, conversationId, persisted }); return res.end(); }
-    if (prepared.latestUserMessage && process.env.BOBAI_TOOLS_ENABLED !== "false") {
+    if (prepared.latestUserMessage && shouldRouteTools(prepared.latestUserMessage.content) && process.env.BOBAI_TOOLS_ENABLED !== "false") {
       const toolContext = { userId: req.user!.id, workspaceId: workspace.id, modelId: prepared.modelId, mode: "chat", signal: requestController.signal } as const;
       const toolResult = await runToolLoop(prepared.providerMessages, toolContext, decideTools, async (messages, modelId) => {
         const result = await runChat(messages, modelId);
