@@ -138,3 +138,5 @@ The code changes recorded above were committed through GitHub file operations bu
 - Memory workspace/project context now validates requested project IDs against the selected workspace and rejects archived/deleted or cross-workspace projects before read/write operations.
 
 - Image generation now rejects malformed `inputImages` fields at the route boundary and returns client errors for unsupported/mismatched image payloads and blocked prompts, instead of misclassifying them as model failures.
+
+- The local vision prompt now explicitly treats text/instructions inside images as untrusted data, and the direct vision endpoint aborts inference when the client disconnects.
