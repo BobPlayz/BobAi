@@ -25,7 +25,9 @@ router.post("/", limit, async (req, res) => {
     const result = await deepResearch(query, options, controller.signal);
     if (controller.signal.aborted || res.destroyed) return;
     const quota = await recordResearchSources(req.user!.id, result.sources.length, reservation.windowStart);
+    if (controller.signal.aborted || res.destroyed) return;
     const workspace = await ensurePersonalWorkspace(req.user!.id);
+    if (controller.signal.aborted || res.destroyed) return;
     const sessionId = randomUUID();
     await db.insert(researchSessions).values({
       id: sessionId,
