@@ -1,18 +1,18 @@
 # Local AI architecture
 
-BobAI is local-first and uses Ollama as its language-model runtime. It does not train a model from scratch and does not call a hosted AI API for chat, coding generation, or research synthesis.
+Jarvis is local-first and uses Ollama as its language-model runtime. It does not train a model from scratch and does not call a hosted AI API for chat, coding generation, or research synthesis.
 
 ## Local chat and coding
 
-- Install Ollama on the computer running BobAI.
+- Install Ollama on the computer running Jarvis.
 - Pull the configured chat and coding models.
 - Configure BOBAI_OLLAMA_BASE_URL, BOBAI_OLLAMA_MODEL, BOBAI_OLLAMA_CODING_MODEL, and BOBAI_OLLAMA_TIMEOUT_MS in the private .env file.
-- BobAI routes recognized coding requests to the configured local coder model.
+- Jarvis routes recognized coding requests to the configured local coder model.
 - The default model names are starter defaults, not a promise of speed or quality. Select models that fit available RAM/VRAM.
 
 ## Local image generation
 
-BobAI calls a local Python Diffusers pipeline directly. ComfyUI is not required, and no hosted image API is used.
+Jarvis calls a local Python Diffusers pipeline directly. ComfyUI is not required, and no hosted image API is used.
 
 - Install optional packages from requirements-image.txt in the Python environment selected by BOBAI_PYTHON.
 - Download a Diffusers-compatible model to disk and check its license.
@@ -33,7 +33,7 @@ BobAI calls a local Python Diffusers pipeline directly. ComfyUI is not required,
 
 ## Internet research
 
-Research is BobAI's own pipeline: query construction, search retrieval/parsing, source ranking, evidence fetching, prompt-injection defenses, and synthesis through local Ollama. It needs internet access for live pages, but it does not require a hosted AI model API. Search results and web pages can be incomplete or adversarial, so citations must be checked against fetched evidence.
+Research is Jarvis's own pipeline: query construction, search retrieval/parsing, source ranking, evidence fetching, prompt-injection defenses, and synthesis through local Ollama. It needs internet access for live pages, but it does not require a hosted AI model API. Search results and web pages can be incomplete or adversarial, so citations must be checked against fetched evidence.
 
 ## Database and email infrastructure
 

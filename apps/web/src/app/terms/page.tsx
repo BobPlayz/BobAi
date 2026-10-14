@@ -1,20 +1,20 @@
 export const metadata = {
-  title: "Terms of Service | Bob AI",
-  description: "The terms that apply when you use Bob AI.",
+  title: "Terms of Service | Jarvis",
+  description: "The terms that apply when you use Jarvis.",
 };
 
 const sections = [
-  ["1. Using Bob AI", "Bob AI provides AI chat, research, creation, development, memory, file, agent, and automation features. Features and limits may change as the service evolves. You are responsible for using the service lawfully and for checking important AI-generated results before relying on them."],
+  ["1. Using Jarvis", "Jarvis provides AI chat, research, creation, development, memory, file, agent, and automation features. Features and limits may change as the service evolves. You are responsible for using the service lawfully and for checking important AI-generated results before relying on them."],
   ["2. Accounts", "Keep your account credentials secure and use only accounts, workspaces, files, conversations, tasks, and integrations you are authorized to access. Do not bypass access controls or attempt to access another person's data."],
   ["3. Agents and automated actions", "Agents and automations may interact with tools or external services. Use least-privilege permissions and review sensitive actions before they run. You remain responsible for permissions and instructions you give to an agent."],
   ["4. Your content", "You retain rights in content you submit, subject to the limited processing needed to provide the requested feature. You must have the rights and authorization needed to submit content."],
   ["5. AI output", "AI-generated text, code, images, audio, video, and research can be inaccurate, incomplete, or unsuitable. Review outputs before using them for important decisions or publishing them."],
-  ["6. Prohibited use", "Do not use Bob AI to obtain unauthorized access to systems or data, distribute malware, evade security controls, abuse other users, violate privacy or intellectual-property rights, or break applicable law."],
+  ["6. Prohibited use", "Do not use Jarvis to obtain unauthorized access to systems or data, distribute malware, evade security controls, abuse other users, violate privacy or intellectual-property rights, or break applicable law."],
   ["7. Third-party services", "Some features may depend on external AI, search, storage, media, email, or other providers. Those providers can have separate terms, privacy notices, availability limits, and content rules."],
-  ["8. Availability and termination", "Bob AI may be changed, suspended, or made unavailable for maintenance, security, abuse prevention, legal compliance, or other operational reasons. Accounts may be restricted when required to protect users or the service."],
-  ["9. Disclaimers and liability", "To the maximum extent permitted by applicable law, Bob AI is provided on an as-available basis and does not promise uninterrupted or error-free operation. Nothing in these terms excludes liability that cannot legally be excluded."],
-  ["10. Privacy", "Our Privacy Policy explains the personal data Bob AI may process, why it is processed, retention and security practices, and how to exercise applicable rights."],
-  ["11. Changes", "When material changes are made, Bob AI will provide notice as required by applicable law. The latest version and effective date will be published on this page."],
+  ["8. Availability and termination", "Jarvis may be changed, suspended, or made unavailable for maintenance, security, abuse prevention, legal compliance, or other operational reasons. Accounts may be restricted when required to protect users or the service."],
+  ["9. Disclaimers and liability", "To the maximum extent permitted by applicable law, Jarvis is provided on an as-available basis and does not promise uninterrupted or error-free operation. Nothing in these terms excludes liability that cannot legally be excluded."],
+  ["10. Privacy", "Our Privacy Policy explains the personal data Jarvis may process, why it is processed, retention and security practices, and how to exercise applicable rights."],
+  ["11. Changes", "When material changes are made, Jarvis will provide notice as required by applicable law. The latest version and effective date will be published on this page."],
 ];
 
 export default function TermsPage() {
@@ -23,7 +23,7 @@ export default function TermsPage() {
       <article className="rounded-3xl border border-white/10 bg-white/[0.03] p-7 shadow-2xl backdrop-blur-xl sm:p-10">
         <p className="text-sm text-white/45">Last updated: September 8, 2026</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Terms of Service</h1>
-        <p className="mt-4 max-w-2xl leading-7 text-white/65">These terms describe the basic rules for using Bob AI. They are a product/legal draft and must be reviewed and completed with the operator&apos;s legal identity, contact details, governing law, and any applicable commercial terms before public launch.</p>
+        <p className="mt-4 max-w-2xl leading-7 text-white/65">These terms describe the basic rules for using Jarvis. They are a product/legal draft and must be reviewed and completed with the operator&apos;s legal identity, contact details, governing law, and any applicable commercial terms before public launch.</p>
         <div className="mt-10 space-y-8">
           {sections.map(([title, body]) => (
             <section key={title}>
