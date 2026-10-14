@@ -11,7 +11,7 @@ const limit = createUserRateLimit(4, 60_000);
 
 router.post("/", limit, async (req, res) => {
   const controller = new AbortController();
-  const onDisconnect = () => { if (!res.writableEnded && !res.destroyed) controller.abort(new Error("client disconnected")); };
+  const onDisconnect = () => { if (!res.writableEnded) controller.abort(new Error("client disconnected")); };
   req.once("aborted", onDisconnect);
   res.once("close", onDisconnect);
   try {
