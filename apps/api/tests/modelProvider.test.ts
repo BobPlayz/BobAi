@@ -78,6 +78,9 @@ test("Ollama rejects insecure remote HTTP endpoints", async () => {
 test("Ollama status does not expose credentials and reports required local models", async () => {
   try {
     process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+    process.env.BOBAI_OLLAMA_MODEL = "qwen2.5:3b";
+    process.env.BOBAI_OLLAMA_CODING_MODEL = "qwen2.5-coder:3b";
+    process.env.BOBAI_OLLAMA_VISION_MODEL = "moondream:1.8b";
     globalThis.fetch = async () => new Response(JSON.stringify({ models: [{ name: "qwen2.5:3b" }] }), { status: 200 });
     const status = await ollamaStatus();
     assert.equal(status.provider, "ollama");

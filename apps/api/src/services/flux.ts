@@ -11,16 +11,16 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
   if (!modelPath) throw new Error("local image generation needs BOBAI_IMAGE_MODEL_PATH pointing to a downloaded Diffusers model directory");
   const python = (process.env.BOBAI_PYTHON || "python").trim();
   const scriptPath = path.resolve("scripts/local_image_generation.py");
-  const child = spawn(python, [scriptPath], {
-    cwd: process.cwd(),
-    windowsHide: true,
-    stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env, BOBAI_IMAGE_MODEL_PATH: path.resolve(modelPath) },
-  });
   const width = options.width ?? 512;
   const height = options.height ?? 512;
   const requestBody = JSON.stringify({ prompt, count, width, height, inputImages, ...(options.seed === undefined ? {} : { seed: options.seed }) });
-  if (Buffer.byteLength(requestBody, "utf8") > MAX_REQUEST_BYTES) { child.kill(); throw new Error("image request exceeds the 12 MB limit"); }
+  if (Buffer.byteLength(requestBody, "utf8") > MAX_REQUEST_BYTES) throw new Error("image request exceeds the 12 MB limit");
+  const child = spawn(python, [scriptPath], {
+    cwd: process.cwd(),
+    windowsHide: true,
+    stdio: ["pipe", "pipe", "ignore"],
+    env: { ...process.env, BOBAI_IMAGE_MODEL_PATH: path.resolve(modelPath) },
+  });
   const stdout: Buffer[] = [];
   let stdoutBytes = 0;
   let settled = false;
