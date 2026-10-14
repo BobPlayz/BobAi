@@ -68,3 +68,5 @@
 - Added `POST /files/:id/reindex` so an authenticated owner can recover a failed or interrupted upload-indexing/OCR job without uploading the file again. It returns `202 Accepted`; processing state and bounded failure details are stored with the upload metadata.
 
 - Added configurable upload retention enforcement to the scheduled cleanup worker: images default to 30 days and documents to 90 days. Set `BOBAI_UPLOAD_IMAGE_RETENTION_DAYS` or `BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS` to `0` to disable automatic deletion for that category, or `1`–`3650` to choose a period. Expired uploads are soft-deleted with their indexed chunks, then stored objects are removed best-effort; cleanup failures are counted without making deleted content searchable.
+
+- Expanded image-generation prompt screening to reject explicit sexual content and graphic self-harm requests for the general-audience product, and strengthened the local vision system prompt with age-appropriate, non-graphic output rules.

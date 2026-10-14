@@ -1,4 +1,6 @@
 const BLOCKED_PATTERNS = [
+  /\b(?:porn(?:ography)?|erotic|explicit sexual|sexual act|sex act|sexual intercourse|fetish content)\b/i,
+  /\b(?:graphic self[- ]harm|graphic suicide|self[- ]mutilation)\b/i,
   /\b(child|minor|underage|kid|teen|teenager)\b.{0,80}\b(nude|naked|sexual|sex|porn|erotic|explicit)\b/i,
   /\b(nude|naked|sexual|sex|porn|erotic|explicit)\b.{0,80}\b(child|minor|underage|kid|teen|teenager)\b/i,
   /\b(gore|gory|dismember|decapitat|graphic violence)\b/i,
