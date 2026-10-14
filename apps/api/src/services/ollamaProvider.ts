@@ -252,17 +252,19 @@ export async function ollamaStatus(): Promise<{ ready: boolean; provider: "ollam
  */
 export async function unloadOllamaModelsExcept(keepModel?: string): Promise<string[]> {
   const base = configuredBaseUrl();
-  let models: string[] = [];
+  let response: Response;
   try {
-    const response = await fetch(`${base}/api/ps`, { signal: AbortSignal.timeout(3_000), redirect: "error" });
-    if (!response.ok) return [];
-    const data = await response.json() as { models?: Array<{ name?: unknown; model?: unknown }> };
-    models = Array.isArray(data.models)
-      ? [...new Set(data.models.map((item) => typeof item.name === "string" ? item.name : typeof item.model === "string" ? item.model : "").filter((name) => Boolean(name) && name !== keepModel))]
-      : [];
+    response = await fetch(`${base}/api/ps`, { signal: AbortSignal.timeout(3_000), redirect: "error" });
   } catch {
     return [];
   }
+  if (!response.ok) throw new Error(`Ollama could not list resident models (HTTP ${response.status})`);
+  let data: { models?: Array<{ name?: unknown; model?: unknown }> };
+  try { data = await response.json() as { models?: Array<{ name?: unknown; model?: unknown }> }; }
+  catch { throw new Error("Ollama returned invalid resident-model data"); }
+  const models = Array.isArray(data.models)
+    ? [...new Set(data.models.map((item) => typeof item.name === "string" ? item.name : typeof item.model === "string" ? item.model : "").filter((name) => Boolean(name) && name !== keepModel))]
+    : [];
   const unloaded: string[] = [];
   for (const model of models) {
     const response = await fetch(`${base}/api/generate`, {
