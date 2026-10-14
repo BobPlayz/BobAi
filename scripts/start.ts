@@ -1,5 +1,6 @@
 import { spawn, spawnSync, ChildProcess } from "node:child_process";
 import { platform } from "node:os";
+import { resolve } from "node:path";
 
 type Service = "api" | "web";
 
@@ -69,6 +70,18 @@ async function main(): Promise<void> {
   if (!runTests()) {
     process.exitCode = 1;
     return;
+  }
+
+  // Load the root .env only after tests finish, so test processes keep their isolated test configuration.
+  // Child workspace commands run from apps/api and apps/web, so load the root file here and pass it down.
+  try {
+    process.loadEnvFile(resolve(process.cwd(), ".env"));
+    console.log("[BobAI] Loaded root .env configuration.");
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
+      throw error;
+    }
+    console.warn("[BobAI] No root .env file found. Services will use the environment variables already set.");
   }
 
   const api = run("API", "api");
