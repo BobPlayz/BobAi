@@ -52,6 +52,46 @@ function cacheKey(query: string, options: Record<string, unknown>) {
 function getCached(key: string) { const value = cache.get(key); if (!value) return null; if (value.expiresAt <= Date.now()) { cache.delete(key); return null; } return value.result; }
 function putCached(key: string, result: ResearchResult) { if (cache.size >= CACHE_MAX) { const oldest = [...cache.entries()].sort((a, b) => a[1].expiresAt - b[1].expiresAt)[0]; if (oldest) cache.delete(oldest[0]); } cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, result }); }
 function parseDuckDuckGo(html: string, query: string): ResearchSource[] { const sources: ResearchSource[] = []; const blocks = html.match(/<div[^>]+class=["'][^"']*result[^"']*["'][\s\S]*?<\/div>\s*<\/div>/gi) || []; for (const block of blocks) { const link = block.match(/<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i) || block.match(/<a[^>]+href=["']([^"']+)["'][^>]+class=["'][^"']*result__a[^"']*["'][^>]*>([\s\S]*?)<\/a>/i); if (!link) continue; let url = link[1]; try { if (url.startsWith("//")) url = `https:${url}`; const parsed = new URL(url, "https://duckduckgo.com"); const uddg = parsed.searchParams.get("uddg"); if (uddg) url = uddg; else if (!/^https?:$/i.test(parsed.protocol)) continue; } catch { continue; } const snippetMatch = block.match(/<a[^>]+class=["'][^"']*result__snippet[^"']*["'][^>]*>([\s\S]*?)<\/a>/i) || block.match(/<div[^>]+class=["'][^"']*result__snippet[^"']*["'][^>]*>([\s\S]*?)<\/div>/i); sources.push({ title: stripTags(link[2]).slice(0, 500), url, snippet: snippetMatch ? stripTags(snippetMatch[1]).slice(0, 3000) : undefined }); if (sources.length >= 50) break; } return rankSources(query, sources); }
+function parseBraveResults(payload: unknown, query: string): ResearchSource[] {
+  if (!payload || typeof payload !== "object") return [];
+  const web = (payload as Record<string, unknown>).web;
+  const results = web && typeof web === "object" ? (web as Record<string, unknown>).results : undefined;
+  if (!Array.isArray(results)) return [];
+  const sources: ResearchSource[] = [];
+  for (const item of results.slice(0, 50)) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    if (typeof row.title !== "string" || typeof row.url !== "string") continue;
+    try {
+      const url = new URL(row.url);
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) continue;
+      sources.push({
+        title: stripTags(row.title).slice(0, 500),
+        url: url.toString(),
+        snippet: typeof row.description === "string" ? stripTags(row.description).slice(0, 3000) : undefined,
+        publishedAt: typeof row.page_age === "string" ? row.page_age : typeof row.published === "string" ? row.published : undefined,
+      });
+    } catch { /* ignore malformed provider results */ }
+  }
+  return rankSources(query, sources);
+}
+async function searchBrave(query: string, apiKey: string, signal?: AbortSignal): Promise<ResearchSource[]> {
+  const url = new URL("https://api.search.brave.com/res/v1/web/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("count", "20");
+  url.searchParams.set("safesearch", "moderate");
+  const response = await fetch(url, {
+    headers: { accept: "application/json", "X-Subscription-Token": apiKey },
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(getTimeoutMs())]) : AbortSignal.timeout(getTimeoutMs()),
+    redirect: "error",
+  });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(`Brave Search returned HTTP ${response.status}`);
+  }
+  const body = await boundedText(response, 2 * 1024 * 1024);
+  return parseBraveResults(JSON.parse(body), query);
+}
 export async function webSearch(query: string, options: Record<string, unknown> = {}, signal?: AbortSignal): Promise<ResearchResult> {
   const normalized = query.trim();
   if (!normalized) throw new Error("search query is required");
@@ -60,6 +100,23 @@ export async function webSearch(query: string, options: Record<string, unknown> 
   const key = cacheKey(normalized, options);
   const cached = getCached(key);
   if (cached) return cached;
+  const selectedTypes = sourceTypesFrom(options);
+  const braveKey = process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim();
+  if (braveKey) {
+    try {
+      const sources = (await searchBrave(sourceSearchQuery(normalized, selectedTypes), braveKey, signal))
+        .filter((source) => matchesSourceTypes(source, selectedTypes));
+      if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("web search cancelled");
+      if (sources.length) {
+        const result = { query: normalized, sources };
+        putCached(key, result);
+        return result;
+      }
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : error;
+      if (process.env.NODE_ENV !== "production") console.warn("Brave Search unavailable; falling back to DuckDuckGo");
+    }
+  }
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("web search cancelled");
     const controller = new AbortController();
@@ -67,7 +124,6 @@ export async function webSearch(query: string, options: Record<string, unknown> 
     if (signal?.aborted) abort(); else signal?.addEventListener("abort", abort, { once: true });
     const timer = setTimeout(() => controller.abort(new Error("web search timed out")), getTimeoutMs());
     try {
-      const selectedTypes = sourceTypesFrom(options);
       const searchQuery = sourceSearchQuery(normalized, selectedTypes);
       const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}`;
       const response = await fetch(url, { headers: { accept: "text/html", "user-agent": "Jarvis/1.0 local-research" }, signal: controller.signal, redirect: "error" });
