@@ -38,7 +38,7 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
 }
 
 const EXECUTORS: Record<string, Executor> = {
-  research: async (args) => (await import("./deepResearch.js")).deepResearch(args.query),
+  research: async (args, context) => (await import("./deepResearch.js")).deepResearch(args.query, {}, context.signal),
   browser: async (args, context) => { await assertPublicTargetUrl(args.url); return callConfiguredProvider(getTool("browser")!, args, context.signal); },
   "website-test": async (args, context) => { await assertPublicTargetUrl(args.url); return callConfiguredProvider(getTool("website-test")!, args, context.signal); },
   computer: async (args, context) => callConfiguredProvider(getTool("computer")!, args, context.signal),
