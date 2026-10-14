@@ -23,7 +23,7 @@ export async function fluxGenerate(prompt: string, count: number, inputImages: s
     const abort = () => { child.kill(); finish(signal?.reason instanceof Error ? signal.reason : new Error("local image generation cancelled")); };
     const timer = setTimeout(() => {
       child.kill();
-      reject(new Error("local image generation timed out; try one 512x512 image or a smaller local model"));
+      finish(new Error("local image generation timed out; try one 512x512 image or a smaller local model"));
     }, TIMEOUT_MS);
     const finish = (error?: Error, value?: { images?: Array<{ url: string; prompt: string; index: number }>; error?: string }) => {
       if (settled) return;
