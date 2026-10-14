@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db, workspaceMembers } from "@bobai/db";
 import { dbRemember, dbRecallAll, dbClearMemory, dbDeleteMemory, dbUpdateMemory, dbMergeMemories, dbListMemoryHistory, isSensitiveMemory } from "../store/memoryDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
