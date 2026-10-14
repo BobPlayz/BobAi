@@ -30,6 +30,9 @@ def main() -> int:
     width = request.get("width", 512)
     height = request.get("height", 512)
     seed = request.get("seed")
+    steps = request.get("steps", 24)
+    guidance_scale = request.get("guidanceScale", 7.0)
+    negative_prompt = request.get("negativePrompt", "")
     input_images = request.get("inputImages", [])
     if not isinstance(input_images, list) or len(input_images) > MAX_INPUT_IMAGES:
         print(json.dumps({"error": "up to 4 reference images are supported"}))
@@ -43,6 +46,16 @@ def main() -> int:
     if any(not isinstance(v, int) or isinstance(v, bool) or v < 256 or v > MAX_SIDE or v % 8 for v in (width, height)):
         print(json.dumps({"error": "width and height must be multiples of 8 between 256 and 768"}))
         return 2
+    if not isinstance(steps, int) or isinstance(steps, bool) or not 10 <= steps <= 50:
+        print(json.dumps({"error": "steps must be an integer between 10 and 50"}))
+        return 2
+    if not isinstance(guidance_scale, (int, float)) or isinstance(guidance_scale, bool) or not 1 <= guidance_scale <= 15:
+        print(json.dumps({"error": "guidanceScale must be a number between 1 and 15"}))
+        return 2
+    if not isinstance(negative_prompt, str) or len(negative_prompt) > 2000:
+        print(json.dumps({"error": "negativePrompt must be text under 2000 characters"}))
+        return 2
+
     model_path = os.environ.get("BOBAI_IMAGE_MODEL_PATH", "").strip()
     if not model_path or not Path(model_path).is_dir():
         print(json.dumps({"error": "local image model directory is missing; set BOBAI_IMAGE_MODEL_PATH to a downloaded Diffusers model folder"}))
@@ -119,8 +132,9 @@ def main() -> int:
                     prompt=prompt.strip(),
                     image=decoded_images[index % len(decoded_images)],
                     strength=0.65,
-                    num_inference_steps=20,
-                    guidance_scale=7.0,
+                    num_inference_steps=steps,
+                    guidance_scale=float(guidance_scale),
+                    negative_prompt=negative_prompt.strip() or None,
                     generator=generator,
                 )
             else:
