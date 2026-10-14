@@ -344,3 +344,4 @@ Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first, then this roadmap and [`docs/FE
 - **2026-10-14:** Aligned auth cookies (`jarvis_access`/`jarvis_refresh`) with production CSRF middleware and applied the voice payload limit to `/voice/turn` as well as `/voice/transcribe`.
 - **2026-10-14:** Aligned the authentication middleware and malformed-cookie regression test with the `jarvis_access` cookie used by the auth route and CSRF middleware.
 - **2026-10-14:** Updated the API guide to match the actual local-first model providers and documented the combined local voice-turn endpoint.
+- **2026-10-14:** Completed upload-processing state transitions and made file deletion a transactional soft-delete with indexed-chunk removal and explicit orphan-object cleanup status.

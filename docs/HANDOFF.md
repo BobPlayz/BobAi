@@ -62,3 +62,5 @@
 - Updated the authentication middleware and malformed-cookie regression test to use the same `jarvis_access` cookie as the auth route and CSRF middleware, closing a session-cookie naming mismatch across the API.
 
 - Reconciled API docs with the current local-first main-branch architecture and documented the new `/voice/turn` endpoint; removed stale hosted-provider instructions that contradicted the active implementation.
+
+- File indexing now records explicit `indexing`, `indexed`, and `indexing_failed` states, including chunk counts and a bounded diagnostic. File deletion is now a transactional soft-delete of the upload and its indexed chunks before best-effort object cleanup, so storage cleanup failures cannot resurrect the file or leave its contents searchable.
