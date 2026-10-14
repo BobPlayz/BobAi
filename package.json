@@ -19,6 +19,7 @@
     "native:media:build": "node-gyp rebuild --directory native/media --release",
     "native:media:clean": "node-gyp clean --directory native/media",
     "setup:glasses-voice": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-glasses-voice.ps1",
+    "setup:native-media": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-native-media.ps1",
     "db:push": "npm run db:push --workspace=@bobai/db",
     "db:generate": "npm run db:generate --workspace=@bobai/db",
     "db:migrate": "tsx scripts/migrate.ts",
