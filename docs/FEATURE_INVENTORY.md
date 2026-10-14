@@ -74,17 +74,16 @@ This is a directory-level inventory, not a migration/schema compatibility audit.
 
 These cannot safely be completed by code changes alone:
 
-1. Choose the real production AI provider/model and accept its data-processing terms.
-2. Set hard provider/account spending limits in the provider dashboard and decide the maximum monthly spend. The production startup gate requires an operator attestation and ₹500 target, but this is not an in-app billing integration. Keep paid AI disabled until the provider cap is independently verified.
-3. Configure production SMTP, database, allowed origins, secrets, and session settings.
-4. Choose and purchase a domain only after comparing full first-year and renewal prices.
-5. Choose hosting/database tiers and confirm they fit the ₹2,000 initial budget and ongoing costs.
-6. Publish the operator identity, support/privacy contact, grievance channel, complete provider inventory, and reviewed retention policy.
-7. Obtain qualified legal/adult guidance on the intended age range and any required child-data consent or age-assurance mechanism.
-8. Supply deployment credentials and approve DNS changes; configure HTTPS, backups, monitoring, and rollback.
-9. Run the final CI/build/test/audit/smoke-test pass after the implementation pass is complete.
-10. Capture real desktop/mobile screenshots in both themes and review accessibility on actual target browsers/devices.\n11. Install and verify the local Diffusers model and the Piper/Whisper assets on the actual target hardware.
-
+1. Install and configure Ollama with the intended local chat and coding models on the machine running the API.
+2. Wire and verify the Resend adapter for OTP delivery; a Resend API key alone is not sufficient yet.
+3. Configure Neon/PostgreSQL, allowed origins, secrets, and session settings.
+4. Choose hosting and a domain only after comparing full first-year and renewal prices.
+5. Publish the operator identity, support/privacy contact, grievance channel, data-retention policy, and accurate privacy/terms pages.
+6. Obtain qualified legal/adult guidance on the intended age range and any required child-data consent or age-assurance mechanism.
+7. Supply deployment credentials and approve DNS changes; configure HTTPS, backups, monitoring, and rollback.
+8. Run the final CI/build/test/audit/smoke-test pass after the implementation pass is complete.
+9. Capture real desktop/mobile screenshots in both themes and review accessibility on actual target browsers/devices.
+10. Install and verify the local Diffusers model and Piper/Whisper assets on the actual target hardware.
 
 ## Latest implementation notes (2026-10-13)
 
