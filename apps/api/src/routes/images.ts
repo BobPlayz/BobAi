@@ -4,7 +4,6 @@ import { db, images } from "@bobai/db";
 import { generateImages } from "../services/mediaGeneration.js";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
-import { claimIdempotency, completeIdempotency, failIdempotency } from "../services/actionIdempotency.js";
 
 const router = Router();
 const limit = createUserRateLimit(5, 60_000);
@@ -29,18 +28,7 @@ router.post("/generate", limit, async (req, res) => {
   if (!prompt || prompt.length > MAX_PROMPT) return res.status(400).json({ error: "image prompt must be 1-8000 characters" });
   if (!Number.isInteger(count) || count < 1 || count > 4) return res.status(400).json({ error: "count must be between 1 and 4" });
 
-  const idempotencyKey = typeof req.header("Idempotency-Key") === "string" ? req.header("Idempotency-Key")!.trim() : "";
-  let claim: Awaited<ReturnType<typeof claimIdempotency>> | null = null;
   try {
-    if (idempotencyKey) {
-      if (idempotencyKey.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(idempotencyKey)) return res.status(400).json({ error: "invalid idempotency key" });
-      claim = await claimIdempotency(req.user!.id, "image-generation", idempotencyKey, { prompt, count });
-      if (!claim.claimed) {
-        if (claim.response) return res.status(200).json(claim.response);
-        return res.status(409).json({ error: "an identical image request is already running" });
-      }
-    }
-
     const generated = await generateImages(prompt, count);
     if (!generated.length || generated.length > count) throw new Error("local image generation returned no images");
     for (const item of generated) {
@@ -63,10 +51,8 @@ router.post("/generate", limit, async (req, res) => {
     }))).returning();
 
     const response = { images: created.map((row, index) => ({ ...row, url: generated[index].url, prompt })) };
-    if (claim?.claimed) await completeIdempotency(req.user!.id, "image-generation", idempotencyKey, response);
     return res.json(response);
   } catch (error) {
-    if (claim?.claimed && idempotencyKey) await failIdempotency(req.user!.id, "image-generation", idempotencyKey).catch(() => undefined);
     const message = error instanceof Error ? error.message : "";
     const safeMessage = /^(image prompt.{0,100}|count must be.{0,100}|local image.{0,200}|image generation is unavailable.{0,100}|up to 4 input images are supported|reference images.{0,100})$/i.test(message)
       ? message
