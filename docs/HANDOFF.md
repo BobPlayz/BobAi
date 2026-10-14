@@ -50,3 +50,5 @@
 7. Choose hosting only after confirming local inference requirements. Free frontend hosting alone cannot run Ollama/Diffusers/native audio models.
 
 - Raised the local Ollama vision JSON request cap to 17 MB so a valid 12 MB image plus base64 and JSON envelope fits under the service limit.
+
+- README and API guide now document the current local Ollama vision model and Diffusers image-editing path, and API route examples match the actual root-mounted route structure.

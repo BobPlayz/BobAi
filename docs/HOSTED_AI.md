@@ -9,4 +9,4 @@ Jarvis's current architecture does not use OpenAI or other hosted AI providers f
 - Database: Neon PostgreSQL via the existing DATABASE_URL connection.
 - Email OTP: Resend adapter, with SMTP as a fallback.
 
-Neon and Resend are infrastructure services, not AI model providers. They still require internet access and user-managed credentials. Video generation is disabled until a local video runtime is implemented. Image editing with reference images is not implemented in the current local pipeline.
+Neon and Resend are infrastructure services, not AI model providers. They still require internet access and user-managed credentials. Video generation is disabled until a local video runtime is implemented. Reference-image editing is implemented through Diffusers `AutoPipelineForImage2Image` when the selected local model supports it; actual output remains runtime-unverified.

@@ -5,7 +5,7 @@ This document describes the API conventions and the current high-level route str
 ## Base configuration
 
 - Local development API: `http://localhost:3001` (unless `PORT` is changed).
-- API routes are mounted under `/v1`, with health endpoints also available at `/health` and `/v1/health`.
+- Business API routes are mounted at the root (for example `/stream`, `/chat`, `/images/generate`, and `/vision/analyze`). Health endpoints are available at `/health` and `/v1/health`.
 - Requests and responses use JSON unless an endpoint explicitly handles another content type.
 - Configure the frontend's API base URL for the environment rather than hard-coding deployment URLs.
 
@@ -22,23 +22,26 @@ The authenticated API currently groups functionality under paths such as:
 
 | Path | Purpose |
 | --- | --- |
-| `/v1/chat` | Chat completion and tool execution |
-| `/v1/stream` | Streaming chat |
-| `/v1/conversations` | Conversation persistence |
-| `/v1/messages` | Message operations |
-| `/v1/settings` | User settings |
-| `/v1/memory` | Memory operations |
-| `/v1/files` | File operations |
-| `/v1/research/search` | Basic web search with source preferences and saved research sessions |
-| `/v1/deep-research` | Multi-query research with fetched evidence and synthesis |
-| `/v1/images/generate` | Hosted image generation and reference-image editing; provider-dependent |
-| `/v1/voice` | Voice transcription and synthesis |
-| `/v1/agents` | Agent execution |
-| `/v1/automation` | Automation management |
-| `/v1/projects` | Project management |
-| `/v1/tools` | Tool discovery and execution |
+| `/chat` | Non-streaming chat completion and tool execution |
+| `/stream` | Streaming chat |
+| `/conversations` | Conversation persistence |
+| `/messages` | Message operations |
+| `/settings` | User settings |
+| `/memory` | Memory operations |
+| `/files` | File operations |
+| `/research/search` | Basic web search with source preferences and saved research sessions |
+| `/deep-research` | Multi-query research with fetched evidence and local Ollama synthesis |
+| `/images/generate` | Local Diffusers image generation and image-to-image editing; requires local model files |
+| `/voice` | Local Whisper.cpp transcription and Piper synthesis |
+| `/agents` | Agent execution |
+| `/automation` | Automation management |
+| `/projects` | Project management |
+| `/tools` | Tool discovery and execution |
 
-Other route groups are registered in `apps/api/src/routes/index.ts`. Check the route implementation for endpoint-specific request schemas and permissions.
+| `/vision/analyze` | Local Ollama multimodal image understanding |
+| `/ffmpeg` | Local native WAV validation/probing |
+
+Other route groups are registered in `apps/api/src/routes/index.ts`. Check the route implementation for endpoint-specific request schemas and permissions. Media routes have bounded body limits that differ from the 2 MB default; oversized requests return HTTP 413.
 
 ## Request and response conventions
 
