@@ -22,7 +22,7 @@ function normalizeImages(inputImages: string[] | undefined) {
   return image;
  });
 }
-export async function generateImages(prompt:string,count=1,inputImages?:string[],signal?:AbortSignal,options: { width?: number; height?: number; seed?: number } = {}):Promise<GeneratedImage[]> {
+export async function generateImages(prompt:string,count=1,inputImages?:string[],signal?:AbortSignal,options: { width?: number; height?: number; seed?: number; steps?: number; guidanceScale?: number; negativePrompt?: string } = {}):Promise<GeneratedImage[]> {
  const normalized=prompt.trim();
  if(!normalized)throw new Error("image prompt is required");
  if(normalized.length>MAX_PROMPT_LENGTH)throw new Error("image prompt is too long");
@@ -33,7 +33,7 @@ export async function generateImages(prompt:string,count=1,inputImages?:string[]
  if(!Number.isInteger(width)||width<256||width>768||width%8!==0||!Number.isInteger(height)||height<256||height>768||height%8!==0) throw new Error("image width and height must be multiples of 8 between 256 and 768");
  if(seed!==undefined&&(!Number.isInteger(seed)||seed<0||seed>2_147_483_647)) throw new Error("image seed must be an integer between 0 and 2147483647");
  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("image generation cancelled");
- const generated=await fluxGenerate(normalized,requested,images,signal,{width,height,seed});
+ const generated=await fluxGenerate(normalized,requested,images,signal,{width,height,seed,steps:options.steps,guidanceScale:options.guidanceScale,negativePrompt:options.negativePrompt});
  if(generated?.length)return generated;
  throw new Error("image generation is unavailable; configure a supported image-generation provider");
 }
