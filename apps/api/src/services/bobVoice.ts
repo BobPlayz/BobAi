@@ -21,7 +21,7 @@ export async function synthesizeLocal(text: string, options?: Record<string, unk
   const config = telugu ? PIPER_TE_CONFIG : PIPER_EN_CONFIG;
   if (!model) throw new Error(`BobVoice requires ${telugu ? "BOBAI_PIPER_TE_MODEL_PATH" : "BOBAI_PIPER_EN_MODEL_PATH"}`);
   const safeOptions = asOptions(options);
-  const rawScale = typeof safeOptions.lengthScale === "number" ? safeOptions.lengthScale : 0.88;
+  const rawScale = typeof safeOptions.lengthScale === "number" && Number.isFinite(safeOptions.lengthScale) ? safeOptions.lengthScale : 0.88;
   const lengthScale = Math.min(Math.max(rawScale, 0.5), 2);
   const audio = nativeMedia.require().synthesize(path.resolve(model), config ? path.resolve(config) : "", path.resolve(ESPEAK_DATA), text.trim(), lengthScale);
   if (!audio.length || audio.length > 64 * 1024 * 1024) throw new Error("BobVoice output is invalid or too large");
