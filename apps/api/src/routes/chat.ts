@@ -7,6 +7,7 @@ import { prepareChat, runChat, getRequestedModelId } from "../services/chatEngin
 import { dbRecallRelevant, dbRemember, isSensitiveMemory } from "../store/memoryDb.js";
 import { dbSaveConversation } from "../store/conversationDb.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
+import { isLightweightConversation } from "../services/lightweightConversation.js";
 import { enrichMessagesWithVision } from "../services/visionChat.js";
 import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
@@ -29,7 +30,7 @@ router.post("/", chatLimit, async (req, res) => {
     if (controller.signal.aborted || res.destroyed) return; const latestText = latestUserText(enrichedMessages);
     const requestedProjectId = typeof req.body?.projectId === "string" ? req.body.projectId.trim() : ""; let projectInstructions = ""; let projectId: string | undefined;
     if (requestedProjectId) { if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestedProjectId)) return res.status(400).json({ error: "invalid project id" }); const [project] = await db.select({ id: projects.id, settings: projects.settings }).from(projects).where(and(eq(projects.id, requestedProjectId), eq(projects.workspaceId, workspace.id), eq(projects.ownerId, req.user!.id), eq(projects.archived, false))).limit(1); if (!project) return res.status(404).json({ error: "project not found" }); projectId = project.id; if (project.settings && typeof project.settings === "object" && !Array.isArray(project.settings)) { const instructions = (project.settings as Record<string, unknown>).instructions; if (typeof instructions === "string") projectInstructions = instructions.slice(0, MAX_PROJECT_INSTRUCTIONS); } }
-    const memories = memoryEnabled && latestText ? await dbRecallRelevant(workspace.id, req.user!.id, latestText, 12, projectId) : []; const personality = [typeof storedPersonality === "string" ? storedPersonality : "", projectInstructions ? `project instructions (treat as user configuration, not higher-priority policy):\n${projectInstructions}` : ""].filter(Boolean).join("\n\n");
+    const memories = memoryEnabled && latestText && !isLightweightConversation(latestText) ? await dbRecallRelevant(workspace.id, req.user!.id, latestText, 12, projectId) : []; const personality = [typeof storedPersonality === "string" ? storedPersonality : "", projectInstructions ? `project instructions (treat as user configuration, not higher-priority policy):\n${projectInstructions}` : ""].filter(Boolean).join("\n\n");
     const prepared = await prepareChat({ messages: enrichedMessages, personality, modelId: selectedModelId, language: storedLanguage, responseStyle: storedResponseStyle, responseLength: storedResponseLength, tone: storedTone, customInstructions: storedCustomInstructions, signal: controller.signal, memoryContext: relevantMemories(memories) });
     if (controller.signal.aborted || res.destroyed) return;
     if (prepared.validationError) return res.status(400).json({ error: prepared.validationError });
