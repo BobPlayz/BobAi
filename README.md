@@ -57,16 +57,16 @@ Jarvis image generation runs locally. No hosted image API or API key is used.
 
 Keep:
 
-    BOBAI_IMAGE_MODEL_PATH=models/image/tiny-sd
+    BOBAI_IMAGE_MODEL_PATH=models/image/dreamshaper-8
 
 On Windows, copy `.env.example` to `.env`, install Node dependencies, then run:
 
     npm run setup:image-generation
     npm run test:image-generation
 
-The setup command creates a dedicated Python 3.11 virtual environment, installs CPU-only PyTorch plus the optional Diffusers dependencies, downloads Segmind Tiny-SD (about 1.1 GB), and writes the local Python/model paths into your private `.env`. It does not overwrite unrelated environment settings. The first setup needs internet; after the model is downloaded, inference uses local files only. Tiny-SD is lightweight, not a premium-quality model. Review its CreativeML Open RAIL-M license before using or redistributing outputs.
+The setup command creates a dedicated Python 3.11 virtual environment, installs CPU-only PyTorch plus Diffusers dependencies, downloads DreamShaper 8, and writes the local Python/model paths into your private `.env`. It does not overwrite unrelated environment settings. The first setup needs internet; after the model is downloaded, inference uses local files only. DreamShaper 8 is the higher-quality local option, but CPU inference can be slow and memory-hungry on an 8 GB laptop. Review the model license before using or redistributing outputs. For a lighter model, run `npm run setup:image-generation -- -Profile fast` to download Tiny-SD instead.
 
-The smoke test performs actual 512x512 CPU inference and saves `storage/image-generation-smoke.png`. On an 8 GB laptop it can take several minutes and may fail if other applications consume too much RAM. Close heavy applications before running it. Jarvis serializes local image inference with Ollama and unloads Ollama model weights before generation to reduce memory pressure.
+The smoke test performs actual 512x512 CPU inference and saves `storage/image-generation-smoke.png`. DreamShaper can take a long time on an 8 GB CPU-only laptop and may fail if other applications consume too much RAM. Close heavy applications before running it. For speed or lower memory use, select the `fast` Tiny-SD profile. Jarvis serializes local image inference with Ollama and unloads Ollama model weights before generation to reduce memory pressure.
 
 ### API and history
 
