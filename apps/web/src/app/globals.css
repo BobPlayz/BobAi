@@ -156,3 +156,19 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .jarvis-glass-light .jarvis-glass-brandline small{color:#527f89}
 .jarvis-glass-light .jarvis-corner{border-color:#a76d00}
 @media(max-width:640px){.jarvis-corner{width:18px;height:18px}.jarvis-glass-brandline span{font-size:10px}.jarvis-glass-brandline small{font-size:7px}}
+
+
+.jarvis-reactor{position:relative;width:152px;height:152px;display:grid;place-items:center;isolation:isolate}
+.jarvis-reactor:before{content:"";position:absolute;inset:10px;border:1px solid #087f916b;border-radius:50%;box-shadow:0 0 30px #27eaff0c,inset 0 0 24px #27eaff0b}
+.jarvis-reactor-ring{position:absolute;border:1px solid #27eaff70;border-radius:50%;box-shadow:0 0 14px #27eaff10}
+.jarvis-reactor-ring-one{inset:0;animation:jarvisSpin 18s linear infinite;border-left-color:#ffc95c;border-right-color:#27eaff}
+.jarvis-reactor-ring-two{inset:17px;transform:rotateX(64deg) rotate(25deg);border-style:dashed;animation:jarvisSpin 14s linear infinite reverse}
+.jarvis-reactor-ring-three{inset:28px;transform:rotateY(65deg) rotate(-22deg);border-color:#087f91}
+.jarvis-reactor-orbit{position:absolute;width:108px;height:36px;border:1px solid #ffc95c80;border-radius:50%;transform:rotate(-38deg);animation:jarvisOrbit 8s ease-in-out infinite}
+.jarvis-reactor-core{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d9ffff,#27eaff 42%,#087f91 76%);box-shadow:0 0 16px #27eaffaa,0 0 42px #27eaff45;animation:jarvisPulse 3s ease-in-out infinite}
+@keyframes jarvisSpin{to{transform:rotate(360deg)}}
+@keyframes jarvisOrbit{50%{transform:rotate(38deg) scale(.92)}}
+@keyframes jarvisPulse{50%{box-shadow:0 0 24px #27eaffcc,0 0 56px #27eaff65}}
+.jarvis-glass-light .jarvis-reactor-ring{border-color:#007f9170}
+.jarvis-glass-light .jarvis-reactor-orbit{border-color:#a76d0080}
+@media(prefers-reduced-motion:reduce){.jarvis-reactor-ring,.jarvis-reactor-orbit,.jarvis-reactor-core{animation:none}}
