@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BobLogo from "@/components/BobLogo";
-import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin } from "@/lib/auth";
+import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin, refreshSession } from "@/lib/auth";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const TERMS_VERSION = process.env.NEXT_PUBLIC_TERMS_VERSION || "2026-10-13";
@@ -23,6 +23,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    void refreshSession().then((session) => {
+      if (!cancelled && session) router.replace("/chat");
+    });
     const pending = getPendingVerificationEmail();
     const pendingName = getPendingVerificationName();
     if (pending) {
@@ -31,7 +35,8 @@ export default function LoginPage() {
       setStep("verify");
       setNotice("Enter the 6-digit code sent to your email.");
     }
-  }, []);
+    return () => { cancelled = true; };
+  }, [router]);
 
   async function submitDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
