@@ -288,34 +288,26 @@ function EmptyState() {
   const { theme } = useTheme();
   const light = theme === "light";
   return (
-    <div className="flex min-h-[calc(100vh-260px)] items-center justify-center">
+    <div className="flex min-h-[calc(100vh-290px)] items-center justify-center px-4">
       <div className="w-full max-w-xl text-center">
-        <div className="mx-auto mb-5 grid size-12 place-items-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-lg font-semibold text-sky-600" aria-hidden="true">B</div>
-
-        <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300/55">
-          bob ai
+        <div className="jarvis-reactor mx-auto mb-7" aria-label="JARVIS core ready" role="img">
+          <i className="jarvis-reactor-ring jarvis-reactor-ring-one" />
+          <i className="jarvis-reactor-ring jarvis-reactor-ring-two" />
+          <i className="jarvis-reactor-ring jarvis-reactor-ring-three" />
+          <i className="jarvis-reactor-orbit" />
+          <i className="jarvis-reactor-core" />
         </div>
-
-        <h1 className={"text-3xl font-semibold tracking-tight sm:text-4xl " + (light ? "text-[#202123]" : "text-white")}>
-          what are we building today?
-        </h1>
-
-        <p className={"mx-auto mt-3 max-w-md text-sm leading-6 " + (light ? "text-[#6b7280]" : "text-white/35")}>
-          ask a question, build something, analyze a file, or just throw an
-          idea at bob.
+        <div className={"mb-3 text-[10px] font-semibold uppercase tracking-[0.32em] " + (light ? "text-[#007f91]" : "text-[#27eaff]/75")}>J.A.R.V.I.S. / CORE ONLINE</div>
+        <h1 className={"text-2xl font-normal tracking-[0.12em] sm:text-3xl " + (light ? "text-[#14313b]" : "text-[#c9e4ed]")}>READY WHEN YOU ARE</h1>
+        <p className={"mx-auto mt-3 max-w-md text-xs leading-6 tracking-wide " + (light ? "text-[#52717d]" : "text-[#638092]")}>
+          Ask a question, build something, analyze a file, or start a voice conversation.
         </p>
-
         <div className="mt-8 flex flex-wrap justify-center gap-2">
-          {["build something", "explain an idea", "analyze a file"].map(
-            (suggestion) => (
-              <div
-                key={suggestion}
-                className={"rounded-full border px-3 py-1.5 text-xs " + (light ? "border-[#e5e7eb] bg-white text-[#4b5563]" : "border-white/[0.07] bg-white/[0.025] text-white/35")}
-              >
-                {suggestion}
-              </div>
-            )
-          )}
+          {["Ask a question", "Analyze a file", "Build something"].map((suggestion) => (
+            <span key={suggestion} className={"border px-3 py-2 text-[10px] uppercase tracking-wider " + (light ? "border-[#82bac5] bg-white/70 text-[#155765]" : "border-[#087f91]/70 bg-[#06121b]/80 text-[#70a5b4]")}>
+              {suggestion}
+            </span>
+          ))}
         </div>
       </div>
     </div>
@@ -386,7 +378,7 @@ function AssistantMessage({
     <div className="relative">
       <div className="mb-3 flex items-center gap-2">
         <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-cyan-300/15 bg-cyan-300/[0.05]">
-          <span className="text-[10px] font-bold text-cyan-300">B</span>
+          <span className="text-[10px] font-bold text-cyan-300">J</span>
         </div>
 
         <span className={"text-[11px] font-semibold uppercase tracking-[0.18em] " + (light ? "text-[#6b7280]" : "text-white/30")}>
@@ -394,7 +386,7 @@ function AssistantMessage({
         </span>
 
         <span className="h-1 w-1 rounded-full bg-cyan-300/50" />
-        <span className={"text-[10px] " + (light ? "text-[#9ca3af]" : "text-white/20")}>ai</span>
+        <span className={"text-[10px] " + (light ? "text-[#9ca3af]" : "text-white/20")}>core</span>
         {message.content.trim() && <div className="ml-auto"><VoiceButton onTranscript={() => undefined} readAloudText={message.content} /></div>}
       </div>
 
