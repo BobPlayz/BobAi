@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [ValidateSet("fast", "quality")]
-  [string]$Profile = "fast",
+  [string]$Profile = "quality",
   [switch]$SkipModelDownload
 )
 
@@ -82,7 +82,6 @@ if (-not (Test-Path (Join-Path $modelPath "model_index.json"))) {
 Write-Host ""
 Write-Host "[4/4] Configuring the local .env..."
 Set-DotEnvValue "BOBAI_PYTHON" $python
-Set-DotEnvValue "BOBAI_IMAGE_PROVIDER" "local"
 Set-DotEnvValue "BOBAI_IMAGE_MODEL_PATH" $modelPath
 Set-DotEnvValue "BOBAI_IMAGE_PROFILE" $Profile
 
