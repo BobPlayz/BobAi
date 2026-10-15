@@ -7,7 +7,7 @@ Jarvis is a local-first AI platform built around Ollama. Ollama runs the languag
 - No external AI APIs for chat, coding, research synthesis, or voice.
 - Ollama runs downloaded language models locally. Jarvis does not require training a model from scratch.
 - Jarvis's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access.
-- Image generation defaults to local Diffusers for offline use; optional Power mode uses a hosted OpenAI image API and may cost money.
+- Image generation uses local Diffusers only. It needs no image API key and sends no prompts to a hosted image provider.
 - Jarvis voice profile: Piper English en_GB-alan-medium and Telugu te_IN-venkatesh-medium, with local speech recognition configured separately.
 - Database and email are infrastructure integrations. Set them up privately and never commit credentials.
 
@@ -49,15 +49,14 @@ The default shares Qwen3.5 4B between chat, research synthesis, and image unders
 
 The shared Qwen3.5 4B model is the quality-first default for chat, research synthesis, and image understanding. Jarvis unloads other Ollama models before switching to the dedicated Qwen2.5-Coder 3B model, so the tags do not stay resident together. If 4B causes paging or out-of-memory errors, switch chat and vision to qwen3.5:2b. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
 
-## Image generation: Local and Power modes
+## Image generation: Local-only mode
 
-Jarvis has two image-generation modes. Choose one in your private `.env`.
+Jarvis image generation runs locally. No hosted image API or API key is used.
 
 ### Local mode (offline and free after setup)
 
 Keep:
 
-    BOBAI_IMAGE_PROVIDER=local
     BOBAI_IMAGE_MODEL_PATH=models/image/tiny-sd
 
 On Windows, copy `.env.example` to `.env`, install Node dependencies, then run:
@@ -68,20 +67,6 @@ On Windows, copy `.env.example` to `.env`, install Node dependencies, then run:
 The setup command creates a dedicated Python 3.11 virtual environment, installs CPU-only PyTorch plus the optional Diffusers dependencies, downloads Segmind Tiny-SD (about 1.1 GB), and writes the local Python/model paths into your private `.env`. It does not overwrite unrelated environment settings. The first setup needs internet; after the model is downloaded, inference uses local files only. Tiny-SD is lightweight, not a premium-quality model. Review its CreativeML Open RAIL-M license before using or redistributing outputs.
 
 The smoke test performs actual 512x512 CPU inference and saves `storage/image-generation-smoke.png`. On an 8 GB laptop it can take several minutes and may fail if other applications consume too much RAM. Close heavy applications before running it. Jarvis serializes local image inference with Ollama and unloads Ollama model weights before generation to reduce memory pressure.
-
-### Power mode (stronger hosted image generation)
-
-Power mode sends the prompt to OpenAI's hosted image API, which can produce substantially more detailed images than Tiny-SD. It requires internet, an OpenAI API key with image-generation access, and available API billing/credits. **It is not free or offline.** Check current provider pricing and limits before enabling it.
-
-Set these values in your private `.env`:
-
-    BOBAI_IMAGE_PROVIDER=openai
-    BOBAI_IMAGE_API_KEY=your_private_api_key
-    BOBAI_IMAGE_API_MODEL=gpt-image-1
-
-Restart Jarvis after changing the provider. Keep the API key out of Git, screenshots, logs, and shared files. Requests and prompts leave your computer when Power mode is enabled. If the key is missing, rejected, or out of quota, Jarvis returns a clear setup error instead of pretending it generated an image.
-
-Power mode currently supports text-to-image generation, not reference-image editing. Switch back to `BOBAI_IMAGE_PROVIDER=local` for the local Diffusers image-to-image pipeline. The Power provider maps requested aspect ratio to the hosted model's supported image sizes; output dimensions can therefore differ from the local mode's exact width and height.
 
 ### API and history
 
