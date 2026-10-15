@@ -42,8 +42,8 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Message Bob AI"
-          aria-label="Message Bob AI"
+          placeholder="Message JARVIS"
+          aria-label="Message JARVIS"
           rows={2}
           disabled={disabled}
           className={`block min-h-[76px] w-full resize-none rounded-t-2xl bg-transparent px-4 pt-4 text-[15px] leading-7 outline-none placeholder:opacity-50 disabled:opacity-50 ${light ? "text-[#202123] placeholder:text-[#6b7280]" : "text-white placeholder:text-white/45"}`}
