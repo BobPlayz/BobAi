@@ -40,8 +40,8 @@ function thinkingEnabled() {
   return ["1", "true", "yes", "on"].includes(raw);
 }
 
-function inferenceOptions(defaultPredict = 512) {
-  const rawContext = Number(process.env.BOBAI_OLLAMA_NUM_CTX || 4096);
+function inferenceOptions(defaultPredict = 256) {
+  const rawContext = Number(process.env.BOBAI_OLLAMA_NUM_CTX || 3072);
   const rawPredict = Number(process.env.BOBAI_OLLAMA_NUM_PREDICT || defaultPredict);
   const num_ctx = Math.min(8192, Math.max(1024, Number.isFinite(rawContext) ? Math.trunc(rawContext) : 4096));
   const num_predict = Math.min(2048, Math.max(64, Number.isFinite(rawPredict) ? Math.trunc(rawPredict) : defaultPredict));
@@ -54,7 +54,7 @@ function timeoutMs() {
 }
 
 async function request(messages: ReturnType<typeof normalizeMessages>, model: string, stream: boolean, signal?: AbortSignal) {
-  const body = JSON.stringify({ model, messages, stream, think: thinkingEnabled(), options: inferenceOptions() });
+  const body = JSON.stringify({ model, messages, stream, think: thinkingEnabled(), keep_alive: "10m", options: inferenceOptions() });
   if (Buffer.byteLength(body) > MAX_REQUEST_BYTES) throw new Error("Ollama request is too large");
   await unloadOllamaModelsExcept(model);
   const response = await fetch(`${configuredBaseUrl()}/api/chat`, {
