@@ -114,3 +114,45 @@ button, a { -webkit-tap-highlight-color: transparent; }
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* AI-Glasses dashboard visual language, adapted for the live Jarvis chat UI. */
+.jarvis-glass-shell {
+  --glass-bg:#03080e; --glass-panel:rgba(5,17,27,.96); --glass-cyan:#27eaff;
+  --glass-muted:#638092; --glass-text:#c9e4ed; --glass-gold:#ffc95c; --glass-line:#087f91;
+  color:var(--glass-text); background:radial-gradient(ellipse at 50% 38%,#0a202d 0%,#03080e 52%,#010409 100%);
+  font-family:Consolas,"Courier New",ui-monospace,monospace; letter-spacing:.025em;
+}
+.jarvis-glass-shell:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:linear-gradient(#12677812 1px,transparent 1px),linear-gradient(90deg,#12677812 1px,transparent 1px);background-size:36px 36px;transform:perspective(850px) rotateX(5deg) scale(1.08);transform-origin:center 30%}
+.jarvis-glass-shell:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 50% 35%,#00d9ed0c,transparent 60%)}
+.jarvis-glass-frame{margin:0;border:1px solid #087f916b;background:rgba(3,8,14,.52)}
+.jarvis-glass-sidebar{border-right:1px solid #087f916b;background:rgba(3,10,17,.92)}
+.jarvis-glass-main{background:rgba(3,8,14,.42)}
+.jarvis-glass-topbar{border-bottom:1px solid #087f916b;background:rgba(4,13,21,.94)}
+.jarvis-glass-brandline{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;padding:7px 12px 8px;border-bottom:1px solid #087f9140;color:#a8e5ee;text-align:center}
+.jarvis-glass-brandline span{font-size:12px;letter-spacing:.45em;padding-left:.45em}
+.jarvis-glass-brandline small{color:#1b7588;font-size:8px;letter-spacing:.2em}
+.jarvis-corner{position:absolute;width:30px;height:30px;border-color:var(--glass-gold);z-index:20;pointer-events:none;opacity:.85}
+.jarvis-corner-tl{top:8px;left:8px;border-top:2px solid;border-left:2px solid}
+.jarvis-corner-tr{top:8px;right:8px;border-top:2px solid;border-right:2px solid}
+.jarvis-corner-bl{bottom:8px;left:8px;border-bottom:2px solid;border-left:2px solid}
+.jarvis-corner-br{bottom:8px;right:8px;border-bottom:2px solid;border-right:2px solid}
+.jarvis-glass-sidebar .group>button:first-child{border-radius:2px!important}
+.jarvis-glass-sidebar button,.jarvis-glass-sidebar input{border-radius:2px!important}
+.jarvis-glass-composer{border-top:1px solid #087f916b;background:rgba(3,9,15,.96)}
+.jarvis-glass-shell .neural-panel{background:var(--glass-panel);border-color:#087f916b;border-radius:3px;box-shadow:inset 0 0 24px #00c9df07}
+.jarvis-glass-shell textarea,.jarvis-glass-shell input{border-radius:2px}
+.jarvis-glass-shell button{transition:color 140ms ease,border-color 140ms ease,background-color 140ms ease}
+.jarvis-glass-shell button:focus-visible,.jarvis-glass-shell input:focus-visible,.jarvis-glass-shell textarea:focus-visible{outline:1px solid var(--glass-cyan);outline-offset:2px}
+.jarvis-reactor-mark{position:relative;display:grid;width:25px;height:25px;place-items:center;border:1px solid #087f91;border-radius:50%;box-shadow:0 0 12px #27eaff22}
+.jarvis-reactor-mark:before,.jarvis-reactor-mark:after{content:"";position:absolute;border:1px solid #27eaff88;border-radius:50%;inset:4px}
+.jarvis-reactor-mark:after{inset:8px;background:#27eaff;box-shadow:0 0 8px #27eaff}
+.jarvis-glass-light{--glass-bg:#edf7fa;--glass-panel:rgba(250,254,255,.97);--glass-cyan:#007f91;--glass-muted:#52717d;--glass-text:#14313b;--glass-gold:#a76d00;--glass-line:#82bac5;color:var(--glass-text);background:radial-gradient(ellipse at 50% 38%,#d8f4f8 0%,#edf7fa 52%,#e2eff2 100%)}
+.jarvis-glass-light:before{background:linear-gradient(#087f910d 1px,transparent 1px),linear-gradient(90deg,#087f910d 1px,transparent 1px);background-size:36px 36px}
+.jarvis-glass-light .jarvis-glass-frame{border-color:#82bac5;background:#f4fbfcbb}
+.jarvis-glass-light .jarvis-glass-sidebar,.jarvis-glass-light .jarvis-glass-topbar,.jarvis-glass-light .jarvis-glass-composer{background:rgba(242,250,252,.96);border-color:#82bac5}
+.jarvis-glass-light .jarvis-glass-main{background:#f3fafbbd}
+.jarvis-glass-light .jarvis-glass-brandline{border-color:#82bac566;color:#155765}
+.jarvis-glass-light .jarvis-glass-brandline small{color:#527f89}
+.jarvis-glass-light .jarvis-corner{border-color:#a76d00}
+@media(max-width:640px){.jarvis-corner{width:18px;height:18px}.jarvis-glass-brandline span{font-size:10px}.jarvis-glass-brandline small{font-size:7px}}
