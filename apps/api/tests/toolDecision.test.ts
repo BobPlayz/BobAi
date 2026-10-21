@@ -19,3 +19,9 @@ test("router prompt exposes registered tools without granting permissions", () =
   assert.match(messages[0].content, /research:/);
   assert.match(messages[0].content, /requests only/);
 });
+
+test("live weather and cricket tools are selectable with validated arguments", () => {
+  assert.equal(validateToolDecision({ action: "use_tools", calls: [{ tool: "weather", arguments: { city: "Delhi" } }] }).action, "use_tools");
+  assert.equal(validateToolDecision({ action: "use_tools", calls: [{ tool: "cricket", arguments: { query: "latest international cricket match score" } }] }).action, "use_tools");
+  assert.equal(validateToolDecision({ action: "use_tools", calls: [{ tool: "weather", arguments: {} }] }).action, "respond");
+});
