@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [ValidateSet("fast", "quality")]
-  [string]$Profile = "quality",
+  [string]$Profile = "fast",
   [switch]$SkipModelDownload
 )
 
