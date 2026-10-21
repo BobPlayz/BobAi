@@ -19,7 +19,6 @@ export function validateProductionConfig() {
   if (process.env.BOBAI_AUTH_REDIRECT_BASE_URL!.endsWith("/")) throw new Error("BOBAI_AUTH_REDIRECT_BASE_URL must not end with / in production");
   if (process.env.CORS_ORIGIN!.split(",").some((origin) => !/^https:\/\/[^\s,*]+$/i.test(origin.trim()))) throw new Error("CORS_ORIGIN must contain only explicit HTTPS origins in production");
   if (process.env.TRUST_PROXY === "true") { const hops = Number(process.env.TRUST_PROXY_HOPS); if (!Number.isInteger(hops) || hops < 1 || hops > 10) throw new Error("TRUST_PROXY_HOPS must be an integer from 1 to 10"); }
-  if (process.env.BOBAI_DISTRIBUTED_RATE_LIMIT !== "true") throw new Error("BOBAI_DISTRIBUTED_RATE_LIMIT=true is required in production so rate limits are shared across API instances");
   for (const key of ["BOBAI_UPLOAD_IMAGE_RETENTION_DAYS", "BOBAI_UPLOAD_DOCUMENT_RETENTION_DAYS"]) {
     const raw = process.env[key];
     if (raw !== undefined && (!/^\d+$/.test(raw) || Number(raw) > 3650)) throw new Error(`${key} must be an integer from 0 to 3650 (0 disables automatic deletion)`);
