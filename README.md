@@ -4,7 +4,7 @@ Jarvis is a local-first AI platform built around Ollama. Ollama runs the languag
 
 ## Current direction
 
-- No external AI APIs for chat, coding, research synthesis, or voice.
+- The default setup uses local Ollama for chat, coding, and research synthesis, with no external AI-model API key.
 - Ollama runs downloaded language models locally. Jarvis does not require training a model from scratch.
 - Jarvis's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access.
 - Image generation uses local Diffusers only. It needs no image API key and sends no prompts to a hosted image provider.
@@ -40,8 +40,8 @@ The default environment values are:
     BOBAI_OLLAMA_CODING_MODEL=qwen3.5:4b
     BOBAI_OLLAMA_VISION_MODEL=qwen3.5:4b
     BOBAI_OLLAMA_EMBEDDING_MODEL=disabled
-    BOBAI_OLLAMA_NUM_CTX=4096
-    BOBAI_OLLAMA_NUM_PREDICT=512
+    BOBAI_OLLAMA_NUM_CTX=3072
+    BOBAI_OLLAMA_NUM_PREDICT=256
 
 The default uses one Ollama model, Qwen3.5 4B, for chat, coding, research synthesis, and image understanding. Semantic embeddings are disabled by default to avoid downloading or loading a second model; memory can use the application's available non-embedding retrieval fallback. Context/output sizes are capped, and image generation unloads Ollama weights before starting Diffusers.
 
