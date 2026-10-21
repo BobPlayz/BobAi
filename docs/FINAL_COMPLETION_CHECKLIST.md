@@ -6,7 +6,7 @@
 
 - [ ] Confirm the root `.env` has the real `DATABASE_URL`; never commit it.
 - [ ] Start PostgreSQL/Neon and run `npm run db:migrate`; verify a fresh database and an upgrade path.
-- [ ] Confirm Ollama is running and the intended local models are installed: `qwen3.5:4b`, `qwen2.5-coder:3b`, `qwen3-embedding:0.6b`, and the configured vision model. Keep `BOBAI_OLLAMA_THINK=false` for the shorter default responses.
+- [ ] Confirm Ollama is running and `qwen3.5:4b` is installed for the shared chat, coding, research-synthesis, and vision default. Keep `BOBAI_OLLAMA_THINK=false` for shorter default responses. Embeddings are disabled by default; install a separate embedding model only if you explicitly enable `BOBAI_OLLAMA_EMBEDDING_MODEL`.
 - [ ] Run `npm run setup:glasses-voice` if the Alan/Venkatesh voice files need to be restored.
 - [ ] Run `npm run setup:native-media` to obtain/check eSpeak data, download the Whisper Base model, update the two corresponding `.env` paths, and attempt a native build if compatible C++ libraries are configured.
 - [ ] Resolve the native build blocker: install/configure compatible Windows x64 Piper and whisper.cpp C++ development packages, including headers and import libraries. Set process-level `BOBAI_PIPER_ROOT` and `BOBAI_WHISPER_ROOT`, then rerun `npm run setup:native-media`. The voice ONNX files alone cannot build this addon.
