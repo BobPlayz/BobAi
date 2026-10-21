@@ -18,7 +18,7 @@ function configuredBaseUrl() {
 
 export function ollamaModelFor(provider: "bob" | "coding", override?: string) {
   const configured = (provider === "coding"
-    ? process.env.BOBAI_OLLAMA_CODING_MODEL || "qwen2.5-coder:3b"
+    ? process.env.BOBAI_OLLAMA_CODING_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:4b"
     : process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:4b").trim();
   const model = (override || configured).trim();
   if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama model name");
