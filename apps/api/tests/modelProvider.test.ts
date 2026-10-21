@@ -2,7 +2,7 @@ import { withLocalModelLock } from "../src/services/localModelLock.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
-import { ollamaEmbedding, ollamaEmbeddingModel, ollamaModelFor, ollamaStatus, ollamaVision, ollamaVisionModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
+import { ollamaEmbedding, ollamaEmbeddingEnabled, ollamaEmbeddingModel, ollamaModelFor, ollamaStatus, ollamaVision, ollamaVisionModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
 
 const originalFetch = globalThis.fetch;
 const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS", "BOBAI_OLLAMA_NUM_CTX", "BOBAI_OLLAMA_NUM_PREDICT", "BOBAI_OLLAMA_THINK", "BOBAI_OLLAMA_EMBEDDING_MODEL"] as const;
@@ -21,6 +21,7 @@ test("BobAI defaults to one shared multimodal Ollama model without API credentia
     assert.equal(ollamaModelFor("bob"), "qwen3.5:4b");
     assert.equal(ollamaModelFor("coding"), "qwen3.5:4b");
     assert.equal(ollamaVisionModel(), "qwen3.5:4b");
+    assert.equal(ollamaEmbeddingEnabled(), false);
     assert.equal(ollamaEmbeddingModel(), "qwen3-embedding:0.6b");
     assert.equal(new BobModelProvider().isConfigured(), true);
   } finally { restore(); }
@@ -89,11 +90,12 @@ test("Ollama status does not expose credentials and reports required local model
     process.env.BOBAI_OLLAMA_MODEL = "qwen2.5:3b";
     process.env.BOBAI_OLLAMA_CODING_MODEL = "qwen2.5-coder:3b";
     process.env.BOBAI_OLLAMA_VISION_MODEL = "moondream:1.8b";
+    process.env.BOBAI_OLLAMA_EMBEDDING_MODEL = "disabled";
     globalThis.fetch = async () => new Response(JSON.stringify({ models: [{ name: "qwen2.5:3b" }] }), { status: 200 });
     const status = await ollamaStatus();
     assert.equal(status.provider, "ollama");
     assert.equal(status.ready, false);
-    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b", "moondream:1.8b", "qwen3-embedding:0.6b"]);
+    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b", "moondream:1.8b"]);
     assert.equal(JSON.stringify(status).includes("secret"), false);
   } finally { restore(); }
 });
