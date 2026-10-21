@@ -50,6 +50,9 @@ jobs:
       - name: Pull production settings
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
+      - name: Apply production database migrations
+        run: node --env-file=.vercel/.env.production.local node_modules/tsx/dist/cli.mjs scripts/migrate.ts
+
       - name: Build production deployment
         run: vercel build --prod --token="$VERCEL_TOKEN"
 
