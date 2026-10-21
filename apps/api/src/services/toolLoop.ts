@@ -42,7 +42,7 @@ const EXECUTORS: Record<string, Executor> = {\n  weather: async (args, context) 
   cricket: async (args, context) => {
     const query = String(args.query || "").trim();
     if (!query || query.length > 300) throw new Error("cricket search requires a short match or score query");
-    const result = await (await import("./research.js")).webSearch(query, { sourceTypes: ["news"] }, context.signal);
+    const result = await (await import("./research.js")).webSearch(`latest cricket match score ${query}`, {}, context.signal);
     return {
       query: result.query,
       checkedAt: new Date().toISOString(),
