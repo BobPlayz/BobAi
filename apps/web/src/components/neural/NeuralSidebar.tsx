@@ -110,7 +110,6 @@ export default function NeuralSidebar({
     <aside className={["flex h-full w-full flex-col", light ? "bg-[#f1f2f4] text-[#202123]" : "bg-[#090a0c] text-white"].join(" ")}>
       <div className="flex items-center justify-between px-4 pb-3 pt-5">
         <Link href="/chat" className={["text-[17px] font-semibold tracking-tight", light ? "text-[#202123]" : "text-white"].join(" ")} aria-label="Jarvis home">J.A.R.V.I.S.</Link>
-        <span className={["rounded-md border px-2 py-1 text-[10px]", light ? "border-[#d1d5db] text-[#6b7280]" : "border-white/[0.08] text-white/35"].join(" ")}>GLASS</span>
       </div>
 
       <div className="px-3 pb-3">
