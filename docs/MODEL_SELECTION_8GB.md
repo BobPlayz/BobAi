@@ -1,6 +1,6 @@
 # Jarvis model profile for an 8 GB Windows laptop
 
-This profile prioritizes reliable operation on limited RAM, not the biggest model number. Keep heavy inference sequential. Jarvis now serializes Ollama chat/vision calls with image generation, limits the default context to 4,096 tokens, and unloads Ollama weights before a Diffusers image job. Semantic embeddings are also run sequentially and are unloaded immediately after each request.
+This profile prioritizes reliable operation on limited RAM, not the biggest model number. Keep heavy inference sequential. Jarvis now serializes Ollama chat/vision calls with image generation, limits the default context to 3,072 tokens, and unloads Ollama weights before a Diffusers image job. Semantic embeddings are also run sequentially and are unloaded immediately after each request.
 
 ## Recommended baseline
 
@@ -31,11 +31,9 @@ Use the following model settings in the private `.env` file. `BOBAI_OLLAMA_THINK
 
 ```dotenv
 BOBAI_OLLAMA_MODEL=qwen3.5:4b
-BOBAI_OLLAMA_CODING_MODEL=qwen3.5:4b
-BOBAI_OLLAMA_VISION_MODEL=qwen3.5:4b
 BOBAI_OLLAMA_EMBEDDING_MODEL=disabled
-BOBAI_OLLAMA_NUM_CTX=4096
-BOBAI_OLLAMA_NUM_PREDICT=512
+BOBAI_OLLAMA_NUM_CTX=3072
+BOBAI_OLLAMA_NUM_PREDICT=256
 BOBAI_OLLAMA_THINK=false
 ```
 
@@ -47,11 +45,11 @@ Change `BOBAI_OLLAMA_MODEL` and `BOBAI_OLLAMA_VISION_MODEL` to `qwen3.5:2b`, the
 
 ## Image-generation setup
 
-1. Install the optional Python dependencies in the Python environment selected by `BOBAI_PYTHON`: `python -m pip install -r requirements-image.txt`.
-2. Download a Diffusers-compatible Stable Diffusion 1.5 model to a local directory. Read its model card and licence first.
-3. Set `BOBAI_IMAGE_MODEL_PATH` to that directory in `.env`.
+1. Copy `.env.example` to `.env` and install Python 3.11 x64.
+2. Run `npm run setup:image-generation` to install CPU-only PyTorch and Diffusers, download the lightweight Tiny-SD model, and configure the local model path.
+3. Run `npm run test:image-generation` and confirm `storage/image-generation-smoke.png` is created.
 4. Close other RAM-heavy applications and start with one 512×512 image.
-5. Allow the first run extra time for model loading. CPU-only generation may take several minutes or fail under memory pressure. Do not test multiple images or large dimensions until a single image succeeds.
+5. Allow the first run extra time for model loading. CPU-only generation may take several minutes or fail under memory pressure. Do not test multiple images or large dimensions until a single image succeeds. For higher quality, use `npm run setup:image-generation -- -Profile quality` only after the lightweight profile works.
 
 Jarvis will serialize this work against its Ollama inference queue and ask Ollama to unload resident model weights before launching Diffusers. This is deliberate: the next chat request may need to reload its model.
 
