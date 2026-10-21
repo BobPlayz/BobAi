@@ -16,7 +16,8 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "multer": "^2.3.1",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
