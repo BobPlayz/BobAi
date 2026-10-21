@@ -107,7 +107,7 @@ async function ollamaChatUnlocked(input: NativeMessage[], provider: "bob" | "cod
 }
 
 export function ollamaEmbeddingEnabled() {
-  const configured = process.env.BOBAI_OLLAMA_EMBEDDING_MODEL?.trim().toLowerCase();
+  const configured = (process.env.BOBAI_OLLAMA_EMBEDDING_MODEL || "disabled").trim().toLowerCase();
   return configured !== "disabled" && configured !== "off" && configured !== "none";
 }
 
