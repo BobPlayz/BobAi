@@ -140,7 +140,6 @@ export default function LoginPage() {
 
         {error && <p role="alert" className="mt-4 rounded-xl border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">{error}</p>}
         {notice && <p role="status" className="mt-4 rounded-xl border border-cyan-300/15 bg-cyan-300/5 p-3 text-sm text-cyan-100/80">{notice}</p>}
-        <p className="mt-6 text-xs leading-5 text-white/35">Never share your verification code. Email delivery must be configured by the server administrator. A hosted AI provider may process prompts when enabled.</p>
       </section>
     </main>
   );
