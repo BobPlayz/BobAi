@@ -32,22 +32,20 @@ Set DATABASE_URL after creating your database, then configure the local model se
 Start Ollama, then pull the default local models:
 
     ollama pull qwen3.5:4b
-    ollama pull qwen2.5-coder:3b
-    ollama pull qwen3-embedding:0.6b
 
 The default environment values are:
 
     BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
     BOBAI_OLLAMA_MODEL=qwen3.5:4b
-    BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
+    BOBAI_OLLAMA_CODING_MODEL=qwen3.5:4b
     BOBAI_OLLAMA_VISION_MODEL=qwen3.5:4b
-    BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
+    BOBAI_OLLAMA_EMBEDDING_MODEL=disabled
     BOBAI_OLLAMA_NUM_CTX=4096
     BOBAI_OLLAMA_NUM_PREDICT=512
 
-The default shares Qwen3.5 4B between chat, research synthesis, and image understanding, with Qwen2.5-Coder 3B dedicated to coding. Before a model switch, Jarvis unloads other Ollama weights so different tags do not remain resident together. Context/output sizes are capped, image generation unloads Ollama weights before starting Diffusers, and Qwen3 Embedding 0.6B is unloaded after each semantic-memory request. These choices reduce memory pressure at the cost of slower model switches.
+The default uses one Ollama model, Qwen3.5 4B, for chat, coding, research synthesis, and image understanding. Semantic embeddings are disabled by default to avoid downloading or loading a second model; memory can use the application's available non-embedding retrieval fallback. Context/output sizes are capped, and image generation unloads Ollama weights before starting Diffusers.
 
-The shared Qwen3.5 4B model is the quality-first default for chat, research synthesis, and image understanding. Jarvis unloads other Ollama models before switching to the dedicated Qwen2.5-Coder 3B model, so the tags do not stay resident together. If 4B causes paging or out-of-memory errors, switch chat and vision to qwen3.5:2b. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
+The shared Qwen3.5 4B model is the single-model default across chat, coding, research synthesis, and image understanding. If 4B causes paging or out-of-memory errors, switch chat and vision to qwen3.5:2b. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
 
 ## Image generation: Local-only mode
 
