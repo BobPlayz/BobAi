@@ -24,3 +24,6 @@ app.get("/", (_req, res) => res.json({ name: "Jarvis API", status: "ok" })); app
   console.error(JSON.stringify({ event: "api_error", requestId: res.getHeader("x-request-id"), error: error instanceof Error ? error.message : "unknown error" }));
   if (!res.headersSent) return res.status(500).json({ error: "internal server error" });
 });
+
+// Vercel's Express runtime requires the application as a default export.
+export default app;
