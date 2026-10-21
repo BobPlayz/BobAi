@@ -3,12 +3,10 @@
   "services": {
     "web": {
       "entrypoint": "apps/web",
-      "routePrefix": "/",
       "framework": "nextjs"
     },
     "api": {
       "entrypoint": "apps/api/src/app.ts",
-      "routePrefix": "/api",
       "framework": "express"
     }
   },
