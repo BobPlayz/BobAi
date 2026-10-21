@@ -146,7 +146,7 @@ export async function sendEmail(to: string, subject: string, text: string) {
 }
 
 export async function sendEmailOtp(email: string, code: string) {
-  await sendEmail(email, "Your BobAI verification code", `Your BobAI verification code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`);
+  await sendEmail(email, "Your Jarvis verification code", `Your Jarvis verification code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`);
 }
 
 export async function sendPasswordResetEmail(email: string, rawToken: string) {
