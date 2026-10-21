@@ -16,8 +16,8 @@ export async function sendResendOtp(email: string, code: string) {
       body: JSON.stringify({
         from,
         to: [email],
-        subject: "Your BobAI verification code",
-        text: `Your BobAI verification code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`,
+        subject: "Your Jarvis verification code",
+        text: `Your Jarvis verification code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`,
       }),
       redirect: "error",
       signal: controller.signal,
