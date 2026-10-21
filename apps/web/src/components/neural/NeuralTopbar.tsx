@@ -12,7 +12,7 @@ export default function NeuralTopbar() {
         <span aria-hidden="true" className="jarvis-reactor-mark" />
         <div>
           <div className={["text-xs font-semibold tracking-[0.24em]", light ? "text-[#155765]" : "text-[#a8e5ee]"].join(" ")}>JARVIS</div>
-          <div className={["text-[9px] tracking-[0.16em]", light ? "text-[#527f89]" : "text-[#1b7588]"].join(" ")}>LOCAL ASSISTANT INTERFACE</div>
+          <div className={["text-[9px] tracking-[0.16em]", light ? "text-[#527f89]" : "text-[#1b7588]"].join(" ")}>AI WORKSPACE</div>
         </div>
       </div>
       <button type="button" onClick={toggleTheme} aria-label={light ? "Switch to dark mode" : "Switch to light mode"} title={light ? "Switch to dark mode" : "Switch to light mode"} className={["flex h-8 items-center gap-2 border px-3 text-xs", light ? "border-[#82bac5] bg-white/70 text-[#155765] hover:bg-white" : "border-[#087f91]/70 bg-[#06121b] text-[#70eafa] hover:bg-[#0b2530]"].join(" ")}>
