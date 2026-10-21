@@ -38,7 +38,27 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
   } finally { clearTimeout(timeout); signal?.removeEventListener("abort", onAbort); }
 }
 
-const EXECUTORS: Record<string, Executor> = {
+const EXECUTORS: Record<string, Executor> = {\n  weather: async (args, context) => (await import("./toolExecution.js")).fetchWeatherData(String(args.city || ""), context.signal),
+  cricket: async (args, context) => {
+    const query = String(args.query || "").trim();
+    if (!query || query.length > 300) throw new Error("cricket search requires a short match or score query");
+    const result = await (await import("./research.js")).webSearch(query, { sourceTypes: ["news"] }, context.signal);
+    return {
+      query: result.query,
+      checkedAt: new Date().toISOString(),
+      sources: result.sources.slice(0, 10).map((source) => ({
+        title: source.title,
+        url: source.url,
+        snippet: source.snippet,
+        publishedAt: source.publishedAt,
+        credibility: source.credibility,
+      })),
+      note: result.sources.length
+        ? "Use the linked source text to verify the score and match status. If the search results do not show a current score, say so instead of guessing."
+        : "No usable current cricket sources were returned. Do not guess a score.",
+    };
+  },
+
   research: async (args, context) => {
     const { recordResearchSources, reserveResearchRequest } = await import("./researchQuota.js");
     const reservation = await reserveResearchRequest(context.userId);
