@@ -38,7 +38,8 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
   } finally { clearTimeout(timeout); signal?.removeEventListener("abort", onAbort); }
 }
 
-const EXECUTORS: Record<string, Executor> = {\n  weather: async (args, context) => (await import("./toolExecution.js")).fetchWeatherData(String(args.city || ""), context.signal),
+const EXECUTORS: Record<string, Executor> = {
+  weather: async (args, context) => (await import("./toolExecution.js")).fetchWeatherData(String(args.city || ""), context.signal),
   cricket: async (args, context) => {
     const query = String(args.query || "").trim();
     if (!query || query.length > 300) throw new Error("cricket search requires a short match or score query");
