@@ -6,7 +6,7 @@ Jarvis is a local-first AI platform built around Ollama. Ollama runs the languag
 
 - The default setup uses local Ollama for chat, coding, and research synthesis, with no external AI-model API key.
 - Ollama runs downloaded language models locally. Jarvis does not require training a model from scratch.
-- Jarvis's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access.
+- Jarvis's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access. The chat tool router also has a no-key Open-Meteo tool for live weather and a sourced web-search tool for current cricket scores; these depend on the hosted API having outbound internet access and must not invent results when sources are missing.
 - Image generation uses local Diffusers only. It needs no image API key and sends no prompts to a hosted image provider.
 - Jarvis voice profile: Piper English en_GB-alan-medium and Telugu te_IN-venkatesh-medium, with local speech recognition configured separately.
 - Database and email are infrastructure integrations. Set them up privately and never commit credentials.
