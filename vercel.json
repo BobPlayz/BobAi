@@ -2,12 +2,13 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
     "web": {
-      "root": "apps/web",
+      "entrypoint": "apps/web",
+      "routePrefix": "/",
       "framework": "nextjs"
     },
     "api": {
-      "root": "apps/api",
-      "entrypoint": "src/app.ts",
+      "entrypoint": "apps/api/src/app.ts",
+      "routePrefix": "/api",
       "framework": "express"
     }
   },
