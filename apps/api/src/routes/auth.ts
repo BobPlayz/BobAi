@@ -48,7 +48,7 @@ router.post("/quick-start/request", async (req, res) => {
     await requestEmailOtp(address, "verification");
     return res.status(202).json({ message: "If this email can be used, a verification code has been sent.", email: address });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") console.error("[AUTH] quick-start request failed", error);
+    console.error(JSON.stringify({ event: "quick_start_request_failed", error: error instanceof Error ? error.message.replace(/[^\\s@]+@[^\\s@]+\\.[^\\s@]+/g, "[redacted-email]").slice(0, 300) : "unknown error" }));
     return res.status(503).json({ error: "could not send a verification code right now; check email delivery configuration and try again" });
   }
 });
