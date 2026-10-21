@@ -13,6 +13,14 @@ Jarvis is a local-first AI platform built around Ollama. Ollama runs the languag
 
 Not every feature works out of the box. Local model files and optional runtimes must be installed, and real inference still needs to be verified on the target computer.
 
+## Hosting and production setup
+
+Vercel can host the web app and the Express API, but it cannot connect to Ollama at `http://127.0.0.1:11434` on your personal computer. For a hosted demo, set `BOBAI_OLLAMA_BASE_URL` to a reachable, authenticated HTTPS Ollama gateway or host the API alongside Ollama on a machine you control. Never expose Ollama's unauthenticated port directly to the public internet.
+
+Production also requires a reachable PostgreSQL/Neon database, explicit HTTPS values for `CORS_ORIGIN`, `BOBAI_WEB_URL`, and `BOBAI_AUTH_REDIRECT_BASE_URL`, a random `BOBAI_AGENT_KEY` of at least 32 characters, a 32-byte `BOBAI_MFA_ENCRYPTION_KEY` encoded as 64 hex characters or Base64, and a working Resend sender or SMTP configuration for email verification. Keep all secrets in the hosting provider's environment settings, not in Git.
+
+Vercel's free deployment/build limits can temporarily prevent a new deployment. A successful Git push does not by itself prove that production has updated; verify the deployment and test email verification and a real chat before presenting the hosted demo.
+
 ## Requirements
 
 - Node.js 24 or newer and npm
