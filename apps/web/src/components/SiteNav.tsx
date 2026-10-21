@@ -25,7 +25,7 @@ export default function SiteNav() {
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6">
       <nav className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-xl ${light ? "border-[#e5e7eb] bg-white/90" : "border-white/10 bg-black/30"}`} aria-label="Primary navigation">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight" aria-label="Jarvis home">
-          <span className={`grid size-8 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm ${light ? "text-sky-700" : "text-cyan-200"}`} aria-hidden="true">B</span>
+          <span className={`grid size-8 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm ${light ? "text-sky-700" : "text-cyan-200"}`} aria-hidden="true">J</span>
           <span>Jarvis</span>
         </Link>
         <div className="hidden items-center gap-1 sm:flex">
