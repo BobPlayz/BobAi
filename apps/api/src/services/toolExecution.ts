@@ -40,6 +40,9 @@ export async function fetchWeatherData(cityInput: string, signal?: AbortSignal) 
   if (!response.ok) throw new Error("live weather provider is unavailable");
   const data = await response.json() as { current?: Record<string, unknown>; current_units?: Record<string, string>; daily?: Record<string, unknown>; daily_units?: Record<string, string> };
   if (!data.current) throw new Error("live weather provider returned no current conditions");
+  const highs = data.daily?.temperature_2m_max;
+  const lows = data.daily?.temperature_2m_min;
+  const precipitationProbabilities = data.daily?.precipitation_probability_max;
   const code = Number(data.current.weather_code);
   const conditions: Record<number, string> = { 0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast", 45: "Fog", 48: "Rime fog", 51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle", 56: "Freezing drizzle", 57: "Heavy freezing drizzle", 61: "Light rain", 63: "Moderate rain", 65: "Heavy rain", 66: "Freezing rain", 67: "Heavy freezing rain", 71: "Light snow", 73: "Moderate snow", 75: "Heavy snow", 77: "Snow grains", 80: "Light rain showers", 81: "Moderate rain showers", 82: "Violent rain showers", 85: "Snow showers", 86: "Heavy snow showers", 95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with heavy hail" };
   return {
@@ -59,9 +62,9 @@ export async function fetchWeatherData(cityInput: string, signal?: AbortSignal) 
       precipitationUnit: data.current_units?.precipitation,
     },
     today: {
-      high: Array.isArray(data.daily?.temperature_2m_max) ? data.daily?.temperature_2m_max[0] : undefined,
-      low: Array.isArray(data.daily?.temperature_2m_min) ? data.daily?.temperature_2m_min[0] : undefined,
-      precipitationProbabilityMax: Array.isArray(data.daily?.precipitation_probability_max) ? data.daily?.precipitation_probability_max[0] : undefined,
+      high: Array.isArray(highs) ? highs[0] : undefined,
+      low: Array.isArray(lows) ? lows[0] : undefined,
+      precipitationProbabilityMax: Array.isArray(precipitationProbabilities) ? precipitationProbabilities[0] : undefined,
     },
     source: "Open-Meteo",
     sourceUrl: "https://open-meteo.com/",
