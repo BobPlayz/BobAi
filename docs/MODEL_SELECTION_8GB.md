@@ -8,8 +8,8 @@ This profile prioritizes reliable operation on limited RAM, not the biggest mode
 |---|---|---|
 | Chat and research synthesis | `qwen3.5:4b` through Ollama | Stronger shared text-and-image model with multilingual support and reasoning/tool-use capabilities. |
 | Image understanding | The same `qwen3.5:4b` | Qwen3.5 supports image input, so a second vision model is not required by default. |
-| Coding | `qwen2.5-coder:3b` through Ollama | A coding-specialized model. Jarvis unloads the chat/vision model before switching to it. |
-| Memory retrieval | `qwen3-embedding:0.6b` through Ollama | A real embedding model improves semantic matching. It is unloaded after each embedding call to limit RAM use, so memory operations can add latency. |
+| Coding | The same `qwen3.5:4b` through Ollama | One model keeps setup simple and avoids extra model downloads. A dedicated coding model can be added later if desired. |
+| Memory retrieval | Built-in non-embedding fallback by default | Avoids a second model download. Semantic recall may be less accurate; an embedding model remains an optional upgrade. |
 | Speech recognition | Whisper.cpp multilingual **small** model | Better recognition potential than tiny/base at a higher CPU/RAM cost. Start with base if small is too slow. |
 | Speech output | Piper English and Telugu **medium** voice assets | Local/offline neural TTS. Model files and their individual licenses must be checked. |
 | Image generation | Local Diffusers Stable Diffusion 1.5 model at 512×512 | A practical quality/size baseline for CPU-only use. Image generation is slow on an Intel integrated-graphics laptop and is not guaranteed to fit alongside other processes without closing memory-heavy apps. |
@@ -24,8 +24,6 @@ Run these commands in Windows Terminal after installing Ollama:
 
 ```powershell
 ollama pull qwen3.5:4b
-ollama pull qwen2.5-coder:3b
-ollama pull qwen3-embedding:0.6b
 ollama list
 ```
 
@@ -33,19 +31,19 @@ Use the following model settings in the private `.env` file. `BOBAI_OLLAMA_THINK
 
 ```dotenv
 BOBAI_OLLAMA_MODEL=qwen3.5:4b
-BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
+BOBAI_OLLAMA_CODING_MODEL=qwen3.5:4b
 BOBAI_OLLAMA_VISION_MODEL=qwen3.5:4b
-BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
+BOBAI_OLLAMA_EMBEDDING_MODEL=disabled
 BOBAI_OLLAMA_NUM_CTX=4096
 BOBAI_OLLAMA_NUM_PREDICT=512
 BOBAI_OLLAMA_THINK=false
 ```
 
-If the embedding model's startup cost is too annoying, set `BOBAI_OLLAMA_EMBEDDING_MODEL=disabled`. Jarvis will then use its available lexical fallback and any installed specialist embedding checkpoint instead of loading Qwen3 Embedding. That reduces semantic recall quality, but avoids a second model load on each memory operation.
+The default sets `BOBAI_OLLAMA_EMBEDDING_MODEL=disabled` to honor the one-model setup. Jarvis uses its available lexical fallback and any already-installed specialist embedding checkpoint instead of loading a second Ollama model. This reduces semantic recall quality, but avoids additional model downloads and model switching.
 
 ### If the 4B model is too heavy
 
-Change `BOBAI_OLLAMA_MODEL` and `BOBAI_OLLAMA_VISION_MODEL` to `qwen3.5:2b`, then pull that tag with `ollama pull qwen3.5:2b`. Keep the dedicated coder and embedding models only if Windows remains responsive. Do not increase context length until the baseline has passed memory tests.
+Change `BOBAI_OLLAMA_MODEL` and `BOBAI_OLLAMA_VISION_MODEL` to `qwen3.5:2b`, then pull that tag with `ollama pull qwen3.5:2b`. Only add specialist coder or embedding models later if you decide the quality gain is worth the extra downloads and RAM pressure. Do not increase context length until the baseline has passed memory tests.
 
 ## Image-generation setup
 
