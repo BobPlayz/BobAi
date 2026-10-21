@@ -15,7 +15,7 @@ async function consumeApproval(token: string | undefined, toolId: string, userId
 export async function prepareToolExecution(toolId: string, context: ToolExecutionContext): Promise<ToolExecutionResult> { const tool = getTool(toolId); if (!tool) throw new Error("tool not found"); if (process.env.BOBAI_TOOLS_ENABLED === "false") return { status: "unavailable", tool, reason: "tool execution is disabled" }; const workspaceId = context.workspaceId.trim(); if (!workspaceId) return { status: "unauthorized", tool }; const current = await member(context.userId, workspaceId); if (!current || !permissionAllowed(current, tool.permission)) return { status: "unauthorized", tool }; if (context.permission && context.permission !== tool.permission) return { status: "unauthorized", tool }; const inputError = validateToolInput(tool, context.arguments ?? {}); if (inputError) return { status: "invalid_arguments", tool, reason: inputError }; if (!providerConfigured(tool.id)) return { status: "unavailable", tool, reason: "provider is not configured" }; if (tool.requiresUserApproval && !await consumeApproval(context.approvalToken, tool.id, context.userId, workspaceId)) return { status: "approval_required", tool }; return { status: "ready", tool }; }
 export async function cleanupExpiredToolApprovals() { await db.delete(toolApprovals).where(lt(toolApprovals.expiresAt, new Date())); }
 
-async function fetchWeather(cityInput: string, signal?: AbortSignal) {
+export async function fetchWeatherData(cityInput: string, signal?: AbortSignal) {
   const city = cityInput.trim();
   if (!city || city.length > 120) throw new Error("weather requires a city name");
   const timeout = signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000);
