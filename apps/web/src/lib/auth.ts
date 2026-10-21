@@ -2,7 +2,7 @@ const ONBOARDING_KEY = "bobai_onboarding";
 const PENDING_EMAIL_KEY = "bobai_pending_verification_email";
 const PENDING_NAME_KEY = "bobai_pending_verification_name";
 const LEGACY_SESSION_KEY = "bobai_session";
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:3001");
 type ApiError = { error?: string };
 export type Session = { accessToken: ""; expiresIn: number; email?: string; role?: string; username?: string };
 export type LoginResult = { ok: true; mfaRequired?: false } | { ok: true; mfaRequired: true; challengeToken: string; expiresInSeconds: number } | { ok: false; error: string };
