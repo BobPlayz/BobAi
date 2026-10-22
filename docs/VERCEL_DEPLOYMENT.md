@@ -1,42 +1,59 @@
 # Vercel deployment
 
-This repository is a monorepo. The root `vercel.json` routes the Next.js app and Express API through Vercel Services. In the Vercel project settings, select **Services** as the framework if that option is available for your account. Services are currently a Vercel beta feature; if your account does not have access, deploy `apps/web` and `apps/api` as separate Vercel projects instead.
+The repo deploys as one Vercel project using **Vercel Services** (`vercel.json`): the Next.js website (`apps/web`) and the Express API (`apps/api`). The website sends `/api/*` to the API service.
 
-## Minimum production environment
+## How a push to `main` deploys
 
-Do not import the full `.env.example`. Start with these values in Vercel Project Settings → Environment Variables:
+- **Vercel Git integration** builds and deploys the website and API from every push (previews for other branches). It does **not** run database migrations.
+- **GitHub Actions → "Deploy Jarvis to Vercel"** (`.github/workflows/vercel-deploy.yml`) builds, then runs `scripts/migrate.ts` against the production database, then deploys. If migrations fail, that workflow stops before deploying. It needs the `VERCEL_TOKEN` secret.
+- Migrations only add tables, columns and indexes (`IF NOT EXISTS`); none drop or rewrite data.
 
-- `NODE_ENV=production`
-- `DATABASE_URL`: hosted PostgreSQL connection string (Neon is supported)
-- `CORS_ORIGIN`: exact HTTPS origin of the deployed app, e.g. `https://your-project.vercel.app`
-- `BOBAI_WEB_URL`: same deployed HTTPS origin
-- `BOBAI_AUTH_REDIRECT_BASE_URL`: same origin without a trailing slash
-- `BOBAI_AGENT_KEY`: generate a random secret of at least 32 characters
-- `BOBAI_MFA_ENCRYPTION_KEY`: random 32-byte key encoded as 64 hex characters
-- `BOBAI_TERMS_VERSION`: date in `YYYY-MM-DD` format
-- `BOBAI_TERMS_URL`: public HTTPS URL to the terms page
-- `BOBAI_PRIVACY_URL`: public HTTPS URL to the privacy page
-- `BOBAI_LEGAL_CONTACT`: monitored contact address
-- `BOBAI_LEGAL_REVIEWED=true`: only after the production legal pages have actually been reviewed
-- `BOBAI_ADMIN_EMAILS`: comma-separated valid admin email address(es)
-- `BOBAI_DISTRIBUTED_RATE_LIMIT=true`: required only when the configured distributed rate-limit backend is ready
-- Email delivery: either `RESEND_API_KEY` + `RESEND_FROM_EMAIL`, or `BOBAI_SMTP_HOST` + `BOBAI_SMTP_FROM`
+## Project settings (Vercel dashboard)
 
-Use real secrets and values in Vercel, never commit them to Git. Do not set placeholder legal URLs or mark legal review complete just to make a deployment pass. Production startup intentionally fails when required security, legal, database, or email settings are missing.
+- **Framework preset:** Services. **Root directory:** repository root.
+- **Node.js version:** 22.x or 24.x (20.x is no longer accepted by Vercel). The API also declares `engines.node >= 22`.
 
-## Features not available in a serverless deployment
+## Environment variables (Production)
 
-- Vercel sets `VERCEL=1`; the API no longer starts recurring maintenance, automation, reminder, or research workers in that environment. Those jobs need a separate always-on worker or scheduled job before relying on them in production.
-- Ollama, local model files, local Piper/Whisper assets, and local Diffusers image generation are not hosted by Vercel. Local-only AI features need a separately reachable model host or should remain disabled.
-- Confirm uploads and generated media use durable object storage. Do not rely on the serverless filesystem for persistent files.
-- Streaming, long-running inference, large request bodies, database extensions, auth redirects, and email delivery require live deployment checks.
+Required for the API to start (otherwise `/api/*` answers `503 misconfigured` and the deployment logs say which variable is missing):
 
-## Deploy
+| Name | Value |
+| --- | --- |
+| `DATABASE_URL` | Neon connection string. Use the **direct** (non-`-pooler`) host for migrations. |
+| `CORS_ORIGIN` | Your site's exact HTTPS origin, e.g. `https://jarvis-x-ai-two.vercel.app` |
+| `BOBAI_WEB_URL` | Same origin |
+| `BOBAI_AUTH_REDIRECT_BASE_URL` | Same origin, no trailing slash |
+| `BOBAI_AGENT_KEY` | Random secret, 32+ characters |
+| `BOBAI_MFA_ENCRYPTION_KEY` | 64 hex characters (32 random bytes) |
+| `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | Resend key and a sender on a **domain verified in Resend** (see below) |
 
-1. Import `BobPlayz/BobAi` into Vercel and select the `main` branch.
-2. Configure the framework as Services if available, and leave the project root at the repository root.
-3. Add only the production variables listed above that match the features you have configured.
-4. Deploy, then check `/` and `/api` and test sign-in, email delivery, database-backed chat, file uploads, and streaming.
-5. If Services is unavailable, create separate Vercel projects with root directories `apps/web` and `apps/api`. Configure the API's URL in the frontend using the project's existing API base URL setting and set the API CORS origin to the frontend URL.
+For hosted chat, also follow [OLLAMA_GATEWAY.md](OLLAMA_GATEWAY.md): `BOBAI_OLLAMA_BASE_URL`, `BOBAI_OLLAMA_API_KEY`, `BOBAI_OLLAMA_MODEL`.
 
-A successful build is not proof that the complete application is production-ready. Verify all feature integrations on the deployed URLs.
+Optional: `BOBAI_CRICKET_API_KEY` (live cricket feed), `BOBAI_BRAVE_SEARCH_API_KEY` (better search), `BOBAI_MALWARE_SCANNER_URL` (otherwise set `BOBAI_MALWARE_SCAN_REQUIRED=false` to allow uploads without a scanner).
+
+**Environment changes only apply to new deployments.** After editing variables: Deployments → latest → ⋯ → Redeploy.
+
+## Email sign-in (Resend)
+
+- Without a verified domain, Resend only delivers to the email address that owns the Resend account. Verify a domain (Resend → Domains) and use an address on it for `RESEND_FROM_EMAIL`, e.g. `Jarvis <login@yourdomain.com>`.
+- Codes are 6 digits, expire after 10 minutes, are single use, allow 5 attempts, and are stored hashed.
+- If sending fails, the API returns "could not send a verification code" and logs Resend's reason (never the code or the full email address).
+
+## Checking a deployment
+
+- `GET /api/health` → `{"status":"ok"}` when the API is running.
+- `GET /api/ready` → yes/no checks: `databaseReachable`, `databaseSchemaReady`, `emailConfigured`, `modelReachable`. No secrets or hostnames are shown.
+- If the API cannot start at all, `/api/*` answers `503` with `status: "startup_failed"` and a redacted one-line reason; full details are in Vercel → Deployments → Functions logs.
+
+## What does not run on Vercel
+
+- Ollama models (use the gateway), local voice (Piper/Whisper) and local image generation: these run on your own computer with `npm run ai`.
+- Background workers (reminders, research briefs, maintenance) are skipped when `VERCEL=1`.
+- Uploaded file bytes are stored in the function's temporary folder and are not kept between requests; extracted text and search chunks are saved in Postgres.
+
+## Fixed problems (October 2026)
+
+- The API crashed at startup on every route (`FUNCTION_INVOCATION_FAILED`): `pdf-parse` touched `DOMMatrix` when imported, which needs a canvas polyfill Vercel does not bundle. PDF and OCR libraries now load only when used.
+- Uploads tried to create a folder in the read-only deployment directory at startup; they now use the temp folder.
+- Requests arrived with the `/api` prefix and missed every route; the entry point now strips it.
+- The first migration used the `vector` type before enabling pgvector, so a fresh database failed; early migrations are now idempotent.

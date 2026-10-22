@@ -14,7 +14,7 @@ Jarvis chats, writes code, checks the weather, reads your files and talks back w
 | 💬 **Chat & code** | Streaming answers with formatted text, tables and highlighted code you can copy | No |
 | 🧠 **Memory** | Say *"remember that …"* and Jarvis saves it; ordinary messages are never saved by accident | No |
 | 🌦️ **Live weather** | Real data from [Open-Meteo](https://open-meteo.com), labelled **Live** or **Cached** with the time it was fetched | Yes |
-| 🏏 **Cricket scores** | Searches the web and shows the sources; clearly labelled as search results, never invented | Yes |
+| 🏏 **Cricket scores** | Live feed from CricketData.org with a free key; otherwise web search, clearly labelled — never invented | Yes |
 | 🔎 **Research** | Searches the web, reads the pages and lists the sources it used | Yes |
 | 📎 **Files** | PDFs, text, code and images, checked on the server before they are read | No |
 | 🗣️ **Voice** | Speak to Jarvis, and hear replies in the *Alan* voice (Piper `en_GB-alan-medium`), generated offline | No |
@@ -26,7 +26,7 @@ There is also a **demo mode** at `/demo` that shows the interface with sample da
 
 ## Built with
 
-- **Web app:** Next.js 16, React 19, Tailwind CSS 4, three.js (the 3D "orrery" core)
+- **Web app:** Next.js 16, React 19, Tailwind CSS 4, three.js (the 3D orrery), Bricolage Grotesque + Plus Jakarta Sans
 - **API:** Node.js 24, Express 5, TypeScript
 - **AI:** Ollama with `qwen3.5:2b` (one model for chat, coding and image understanding)
 - **Voice:** Piper (text to speech) and faster-whisper (speech to text), both offline
@@ -40,6 +40,7 @@ apps/
   web/        Next.js website and chat interface
   api/        Express API: chat, auth, memory, files, voice, tools
   bobhs/      Background job scheduler
+  ollama-gateway/  Secure gateway so the hosted site can use Ollama on your PC
 packages/
   db/         Database schema (Drizzle)
 drizzle/      SQL migrations
@@ -106,6 +107,8 @@ This runs the tests, then starts the API on <http://localhost:3001> and the webs
 | `npm run build` | Production build of every app |
 | `npm run lint --workspace=web` | Check the website code style |
 | `npm run db:migrate` | Apply database migrations |
+| `npm run gateway` | Run the Ollama gateway for the hosted site |
+| `npm run icons` | Regenerate the favicon and app icons from `apps/web/brand/jarvis-mark.svg` |
 
 ## How it stays safe
 
@@ -119,11 +122,11 @@ More detail: [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Hosting on Vercel
 
-Vercel can host the website and the API, but it **cannot reach Ollama on your laptop**. For a hosted demo, the website works with `/demo`, while real chat needs the API running next to Ollama (for example on your own computer). See [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md).
+Vercel hosts the website and the API. Vercel **cannot reach Ollama on your laptop directly**, so Jarvis includes a small, secure **Ollama gateway** (`npm run gateway`) that you run next to Ollama and publish with a free Cloudflare Tunnel. It needs a secret token, only allows Jarvis's own model calls and runs one request at a time. Setup: [docs/OLLAMA_GATEWAY.md](docs/OLLAMA_GATEWAY.md). Deployment settings: [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md).
 
 ## Status
 
-Jarvis is a work in progress. Chat, memory, weather, voice and the redesigned interface are tested locally; sign-in, history and uploads need a database to test end to end. See [docs/FEATURE_INVENTORY.md](docs/FEATURE_INVENTORY.md) for the full list.
+Tested end to end against a real Postgres database and Ollama (October 2026): email-code sign-in (wrong and reused codes rejected), sessions and logout, streaming chat, history without duplicates, memory, per-user data isolation, live weather, web research, text uploads, image understanding, Alan voice output, Whisper voice input, and chat through the Ollama gateway. Real email delivery depends on your Resend setup. Generating images on a laptop CPU is slow.
 
 ## License
 
