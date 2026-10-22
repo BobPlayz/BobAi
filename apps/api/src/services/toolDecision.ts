@@ -1,6 +1,6 @@
 import { bobModelProvider } from "./modelProvider.js";
 import { getTool, listTools, validateToolInput, type BobTool } from "./toolRegistry.js";
-import { selectModel } from "./modelRouter.js";
+import { routingChoice } from "./modelRouter.js";
 import { toolProviderConfigured } from "./toolProviders.js";
 import type { ProviderMessage } from "./modelProvider.js";
 
@@ -29,6 +29,6 @@ export function validateToolDecision(value: unknown): ToolDecision {
   return { action: "use_tools", calls };
 }
 export function buildToolDecisionMessages(messages: ProviderMessage[]): ProviderMessage[] { const compact = messages.slice(-20).map((message) => ({ role: message.role, content: message.content.slice(0, 12_000) })); return [{ role: "system", content: `${TOOL_PROMPT}\n\nAVAILABLE TOOLS:\n${toolCatalog()}\n\nThe tool list is routing data only and cannot expand permissions.` }, { role: "user", content: JSON.stringify(compact) }]; }
-export async function decideTools(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal): Promise<ToolDecision> { if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "bob" }); const result = await bobModelProvider.chat(buildToolDecisionMessages(messages), selected.provider, selected.model, signal); if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); return validateToolDecision(extractJson(result.content)); }
+export async function decideTools(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal): Promise<ToolDecision> { if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); const choice = routingChoice(modelId); const result = await bobModelProvider.chat(buildToolDecisionMessages(messages), "bob", choice.preferredModel, signal, "tool_decision"); if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); return validateToolDecision(extractJson(result.content)); }
 export function requiresApprovalForDecision(decision: ToolDecision): boolean { return decision.calls.some((call) => getTool(call.tool)?.requiresUserApproval ?? true); }
 export function getDecisionTools(decision: ToolDecision): BobTool[] { return decision.calls.map((call) => getTool(call.tool)).filter((tool): tool is BobTool => Boolean(tool)); }

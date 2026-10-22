@@ -1,15 +1,14 @@
-import { ollamaModelFor } from "./ollamaProvider.js";
-
 export type ModelCapability = "chat" | "reasoning" | "coding" | "fast" | "vision";
 export type ModelProvider = "bob" | "coding";
 export type ModelDefinition = { id: string; name: string; provider: ModelProvider; model: string; capabilities: ModelCapability[]; description: string; visionReady: boolean };
 
-const CHAT_MODEL = ollamaModelFor("bob");
-const CODING_MODEL = ollamaModelFor("coding");
+// Jarvis "modes" the client can ask for. The actual Ollama model is picked per request by the model router.
+const CHAT_MODEL = "auto";
+const CODING_MODEL = "auto";
 
 export const MODEL_REGISTRY: ModelDefinition[] = [
-  { id: "bob", name: "BobAI", provider: "bob", model: CHAT_MODEL, capabilities: ["chat", "reasoning", "fast"], description: "Local Ollama model for BobAI conversations.", visionReady: false },
-  { id: "bob-coder", name: "BobAI Coder", provider: "coding", model: CODING_MODEL, capabilities: ["coding"], description: "Local Ollama coding model for code generation and debugging.", visionReady: false },
+  { id: "bob", name: "BobAI", provider: "bob", model: CHAT_MODEL, capabilities: ["chat", "reasoning", "fast"], description: "Jarvis conversations; the best available Ollama model is picked per request.", visionReady: false },
+  { id: "bob-coder", name: "BobAI Coder", provider: "coding", model: CODING_MODEL, capabilities: ["coding"], description: "Coding help; routed to the best available Ollama model for code.", visionReady: false },
 ];
 
 export type BobAgentId = "worker";

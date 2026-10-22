@@ -7,8 +7,8 @@ Browser ──► Vercel (website + API) ──HTTPS + secret token──► Clo
 ```
 
 - Ollama stays bound to `127.0.0.1`. It is **never** exposed directly.
-- The gateway only forwards the five endpoints Jarvis needs (`/api/chat`, `/api/generate`, `/api/embed`, `/api/tags`, `/api/ps`). Model downloads, deletes and copies are refused.
-- Every request needs `Authorization: Bearer <GATEWAY_TOKEN>`. Only models in `GATEWAY_ALLOWED_MODELS` are allowed.
+- The gateway only forwards the endpoints Jarvis needs (`/api/chat`, `/api/generate`, `/api/embed`, `/api/show`, `/api/tags`, `/api/ps`, `/api/version`). Model downloads, deletes and copies are refused.
+- Every request needs `Authorization: Bearer <GATEWAY_TOKEN>`. By default any model already installed can be used (Jarvis picks automatically); set `GATEWAY_ALLOWED_MODELS` to limit that.
 - One request runs at a time by default (right for 8 GB RAM); a few more wait in a queue, the rest get "busy, try again".
 - Answers stream through; if the user closes the page, Ollama stops working on it.
 
@@ -26,7 +26,8 @@ Add to your `.env` (root of the repo):
 
 ```
 GATEWAY_TOKEN=<the token you just generated>
-GATEWAY_ALLOWED_MODELS=qwen3.5:2b
+# Optional: limit which installed models the gateway serves (default: all installed)
+# GATEWAY_ALLOWED_MODELS=qwen3.5:2b
 ```
 
 Then run it in its own terminal:
@@ -55,7 +56,6 @@ In Vercel → your project → Settings → Environment Variables (Production), 
 | --- | --- |
 | `BOBAI_OLLAMA_BASE_URL` | your tunnel address, e.g. `https://something-random.trycloudflare.com` |
 | `BOBAI_OLLAMA_API_KEY` | the same `GATEWAY_TOKEN` |
-| `BOBAI_OLLAMA_MODEL` | `qwen3.5:2b` |
 
 Environment variable changes only apply to **new** deployments: redeploy after saving (Deployments → ⋯ → Redeploy).
 

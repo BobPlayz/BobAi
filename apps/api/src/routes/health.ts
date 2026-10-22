@@ -30,11 +30,15 @@ healthRouter.get("/ready", async (_req, res) => {
     databaseSchemaReady: database.schemaReady,
     emailConfigured,
     emailProvider: otpDeliveryProvider(),
+    emailProvidersConfigured: { smtp: Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim()), resend: Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim()) },
     modelConfigured: Boolean(process.env.BOBAI_OLLAMA_BASE_URL?.trim()) || process.env.VERCEL !== "1",
     modelHosted: model.hosted,
     modelReachable: model.ready,
     ...(model.problem ? { modelProblem: model.problem } : {}),
-    ...(production ? {} : { modelId: model.model ?? model.requiredModels?.[0], codingAgentsConfigured: Boolean(process.env.BOBAI_CODING_AGENTS_DIR), configuredCapabilities }),
+    modelDiscovery: model.discovery,
+    // Which model the router would pick for each task right now (names are public catalogue entries, not secrets).
+    modelPicks: model.picks,
+    ...(production ? {} : { codingAgentsConfigured: Boolean(process.env.BOBAI_CODING_AGENTS_DIR), configuredCapabilities }),
   };
   return res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "degraded", checks });
 });

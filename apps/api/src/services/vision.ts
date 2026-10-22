@@ -1,4 +1,4 @@
-import { ollamaVision } from "./ollamaProvider.js";
+import { routeVision } from "./modelRouter.js";
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const MAX_PROMPT_LENGTH = 8_000;
 
@@ -24,7 +24,7 @@ export async function analyzeImage(imageBase64: string, prompt = "analyze this i
   if (typeof prompt !== "string" || prompt.length > MAX_PROMPT_LENGTH) throw new Error("vision prompt is too long");
   const normalized = normalizeImage(imageBase64);
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("vision analysis cancelled");
-  const result = await ollamaVision(normalized, prompt.trim() || "Describe the image and relevant details.", signal);
+  const result = await routeVision(normalized, prompt.trim() || "Describe the image and relevant details.", { signal });
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("vision analysis cancelled");
   return { model: result.model, response: result.content.slice(0, 8_000), provider: "local-ollama" as const };
 }

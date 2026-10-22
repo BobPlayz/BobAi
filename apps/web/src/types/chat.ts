@@ -45,6 +45,8 @@ export type ChatMessage = {
   pinned?: boolean;
   liveData?: LiveDataInfo;
   approval?: ToolApproval;
+  /** The Ollama model that actually produced this answer, when the server reported it. */
+  model?: string;
   /** Sent to the model for this turn only (e.g. extracted file text); never stored as a chat message. */
   ephemeral?: boolean;
 };

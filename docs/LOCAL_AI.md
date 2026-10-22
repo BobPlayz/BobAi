@@ -6,7 +6,7 @@ Jarvis is local-first and uses Ollama as its language-model runtime. It does not
 
 - Install Ollama on the computer running Jarvis.
 - Pull the configured chat, coding, and vision models (`ollama pull qwen2.5:3b`, `ollama pull qwen2.5-coder:3b`, and `ollama pull moondream:1.8b` by default).
-- Configure BOBAI_OLLAMA_BASE_URL, BOBAI_OLLAMA_MODEL, BOBAI_OLLAMA_CODING_MODEL, and BOBAI_OLLAMA_TIMEOUT_MS in the private .env file.
+- Configure BOBAI_OLLAMA_BASE_URL (and BOBAI_OLLAMA_API_KEY for a gateway or Ollama Cloud) in the private .env file. Models are discovered automatically; BOBAI_OLLAMA_MODEL is an optional preference.
 - Jarvis routes recognized coding requests to the configured local coder model.
 - The default model names are starter defaults, not a promise of speed or quality. Select models that fit available RAM/VRAM.
 

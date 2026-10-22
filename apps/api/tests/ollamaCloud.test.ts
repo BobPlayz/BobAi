@@ -57,7 +57,7 @@ test("Ollama Cloud streaming joins content tokens and ignores thinking-only chun
 });
 
 test("provider failures become specific, user-safe errors", async () => {
-  const cases: Array<[number, string]> = [[401, "auth"], [403, "auth"], [404, "model_missing"], [429, "rate_limited"], [503, "busy"], [504, "timeout"], [502, "unreachable"]];
+  const cases: Array<[number, string]> = [[401, "auth"], [403, "access_denied"], [404, "model_missing"], [429, "rate_limited"], [503, "busy"], [504, "timeout"], [502, "unreachable"], [500, "failed"]];
   for (const [status, problem] of cases) {
     await withFakeOllama(cloud, () => new Response(JSON.stringify({ error: "nope" }), { status }), async () => {
       await assert.rejects(ollamaStream([{ role: "user", content: "hi" }], () => undefined), (error: unknown) => {
@@ -78,7 +78,7 @@ test("a generation error inside the stream is reported, not turned into an answe
 
 test("missing configuration fails before any request", async () => {
   await withFakeOllama({ VERCEL: "1" }, () => { throw new Error("must not be called"); }, async (calls) => {
-    await assert.rejects(ollamaStream([{ role: "user", content: "hi" }], () => undefined), (error: unknown) => error instanceof ModelUnavailableError && error.problem === "not_configured");
+    await assert.rejects(ollamaStream([{ role: "user", content: "hi" }], () => undefined, "bob", "any-model:1b"), (error: unknown) => error instanceof ModelUnavailableError && error.problem === "not_configured");
     assert.equal(calls.length, 0);
   });
   await withFakeOllama({ BOBAI_OLLAMA_BASE_URL: "https://ollama.com", BOBAI_OLLAMA_MODEL: "gemma4:31b" }, () => { throw new Error("must not be called"); }, async (calls) => {
@@ -87,35 +87,25 @@ test("missing configuration fails before any request", async () => {
   });
 });
 
-test("Ollama Cloud readiness checks the key with /api/me and the model with /api/show", async () => {
-  const handler = (good: { key: boolean; model: boolean }) => (call: Call) => {
-    if (call.url.endsWith("/api/me")) return good.key ? Response.json({ name: "tester" }) : Response.json({ error: "invalid credentials" }, { status: 401 });
-    if (call.url.endsWith("/api/show")) return good.model ? Response.json({ capabilities: ["completion"] }) : Response.json({ error: "not found" }, { status: 404 });
-    return new Response("<html>homepage</html>", { status: 200, headers: { "content-type": "text/html" } });
-  };
-  await withFakeOllama(cloud, handler({ key: true, model: true }), async (calls) => {
-    const status = await ollamaStatus();
-    assert.equal(status.ready, true);
-    assert.equal(status.hosted, true);
-    assert.ok(!calls.some((call) => call.url.endsWith("/api/tags")), "tags is not a key check on ollama.com");
+test("Ollama Cloud provider status checks the key with /api/me and never lists models with credentials", async () => {
+  await withFakeOllama(cloud, (call) => call.url.endsWith("/api/me") ? Response.json({ name: "tester" }) : new Response("<html>", { status: 200 }), async (calls) => {
+    assert.deepEqual(await ollamaStatus(), { ready: true, provider: "ollama", hosted: true });
+    assert.equal(calls.length, 1);
   });
-  await withFakeOllama(cloud, handler({ key: false, model: true }), async () => {
+  await withFakeOllama(cloud, () => Response.json({ error: "invalid credentials" }, { status: 401 }), async () => {
     const status = await ollamaStatus();
     assert.equal(status.ready, false);
     assert.equal(status.problem, "auth");
   });
-  await withFakeOllama(cloud, handler({ key: true, model: false }), async () => {
-    const status = await ollamaStatus();
-    assert.equal(status.problem, "model_missing");
-    assert.deepEqual(status.missingModels, ["gemma4:31b"]);
-  });
 });
 
-test("local Ollama readiness still uses /api/tags and reports missing models", async () => {
-  await withFakeOllama({ BOBAI_OLLAMA_BASE_URL: "http://127.0.0.1:11434", BOBAI_OLLAMA_MODEL: "qwen3.5:2b" }, () => Response.json({ models: [{ name: "llama3:8b" }] }), async () => {
-    const status = await ollamaStatus();
-    assert.equal(status.ready, false);
-    assert.equal(status.hosted, false);
-    assert.equal(status.problem, "model_missing");
+test("a 403 that names an allowed model passes the suggestion on to the router", async () => {
+  await withFakeOllama(cloud, () => Response.json({ error: "model 'big:1t' is not in your plan. Try gemma4:31b-cloud, which is in the Free plan." }, { status: 403 }), async () => {
+    await assert.rejects(ollamaChat([{ role: "user", content: "hi" }], "bob", "big:1t"), (error: unknown) => {
+      assert.ok(error instanceof ModelUnavailableError);
+      assert.equal(error.problem, "access_denied");
+      assert.equal(error.suggestedModel, "gemma4:31b");
+      return true;
+    });
   });
 });

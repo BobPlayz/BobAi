@@ -11,8 +11,7 @@ const BATCH_SIZE = Math.min(100, Math.max(1, Number.isFinite(RAW_BATCH_SIZE) ? M
 async function main() {
   const status = await ollamaStatus();
   if (!status.ready) {
-    const missing = status.missingModels?.join(", ") || status.error || "required local models are unavailable";
-    throw new Error(`Ollama is not ready for memory reindexing: ${missing}`);
+    throw new Error(`Ollama is not ready for memory reindexing: ${status.error || status.problem || "unavailable"}`);
   }
 
   let afterId = "";

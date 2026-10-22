@@ -47,12 +47,15 @@ export async function dbSaveConversation(input: { id: string; userId: string; wo
     if (existing[0] && (existing[0].userId !== input.userId || existing[0].workspaceId !== input.workspaceId)) throw new Error("conversation ownership mismatch");
     if (existing[0]) await tx.update(conversations).set({ title: input.title, updatedAt: new Date() }).where(eq(conversations.id, input.id));
     else await tx.insert(conversations).values({ id: input.id, userId: input.userId, workspaceId: input.workspaceId, title: input.title });
-    for (const message of input.messages) {
+    // now() is the same for every row in a transaction, so give each new message its own increasing timestamp;
+    // otherwise a user message and its reply saved together come back in random order.
+    const base = Date.now();
+    for (const [index, message] of input.messages.entries()) {
       if (!message.id) continue;
       if (!["user", "assistant", "system"].includes(message.role)) throw new Error("invalid conversation message role");
       const priorMessage = await tx.select({ conversationId: messages.conversationId }).from(messages).where(eq(messages.id, message.id)).limit(1);
       if (priorMessage[0] && priorMessage[0].conversationId !== input.id) throw new Error("message ownership mismatch");
-      await tx.insert(messages).values({ id: message.id, conversationId: input.id, role: message.role, content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null }).onConflictDoUpdate({ target: messages.id, set: { content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null, updatedAt: new Date() } });
+      await tx.insert(messages).values({ id: message.id, conversationId: input.id, role: message.role, content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null, createdAt: new Date(base + index) }).onConflictDoUpdate({ target: messages.id, set: { content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null, updatedAt: new Date() } });
     }
   }); return true;
 }

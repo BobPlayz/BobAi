@@ -22,14 +22,14 @@ Do not treat a successful start as proof that every feature works. The database 
 The API uses Ollama's local chat endpoint. Default settings:
 
 - BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
-- BOBAI_OLLAMA_MODEL=qwen3.5:4b
+- BOBAI_OLLAMA_MODEL= (optional preference; models are picked automatically)
 - BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
-- BOBAI_OLLAMA_VISION_MODEL=qwen3.5:4b
+- BOBAI_OLLAMA_VISION_MODEL= (optional)
 - BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
 - BOBAI_OLLAMA_NUM_CTX=4096
 - BOBAI_OLLAMA_NUM_PREDICT=512
 
-Jarvis shares one Qwen3.5 4B tag for chat and vision, and uses a dedicated Qwen2.5-Coder 3B model for coding. Before each model switch, Jarvis unloads other Ollama weights so separate tags do not remain resident together. Qwen3 Embedding 0.6B is used for semantic memory, then unloaded after each request. This improves quality but adds model-switch latency. If 4B causes paging or out-of-memory errors, change chat and vision to qwen3.5:2b. If semantic embedding reloads are too slow, set BOBAI_OLLAMA_EMBEDDING_MODEL=disabled to use the lexical fallback. Exact model and after-code steps are documented in [MODEL_SELECTION_8GB.md](MODEL_SELECTION_8GB.md). Coding requests are routed to the local model when recognized; this is code generation and debugging, not a fully autonomous repository-editing agent by itself.
+Jarvis discovers installed models and routes each request to the best fit (see MODEL_SELECTION_8GB.md).
 
 No OpenAI key or hosted AI API is required for the local chat path.
 

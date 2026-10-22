@@ -66,8 +66,9 @@ async function loadSavedImage(image: Record<string, unknown>) {
 export async function listConversations(includeArchived = false): Promise<Conversation[]> {
   const res = await request(`/conversations${includeArchived ? "?archived=true" : ""}`);
   if (!res.ok) throw new Error((await res.text()) || "Failed to load conversations");
-  const data = await res.json() as { conversations?: Array<Record<string, unknown>> };
-  return Promise.all((data.conversations || []).map(async (conversation) => ({
+  // The API pages conversations as { items, nextCursor }; older builds answered { conversations }.
+  const data = await res.json() as { items?: Array<Record<string, unknown>>; conversations?: Array<Record<string, unknown>> };
+  return Promise.all((data.items || data.conversations || []).map(async (conversation) => ({
     id: String(conversation.id),
     title: typeof conversation.title === "string" ? conversation.title : "new chat",
     createdAt: new Date(String(conversation.createdAt || Date.now())).getTime(),
@@ -84,6 +85,7 @@ export async function listConversations(includeArchived = false): Promise<Conver
         ...(images.length ? { images } : {}),
         ...(attachments && typeof attachments === "object" && Array.isArray(attachments.files) ? { files: attachments.files as ChatMessage["files"] } : {}),
         ...(attachments?.pinned === true ? { pinned: true } : {}),
+        ...(item.role === "assistant" && typeof item.model === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/.test(item.model) && !["bob", "coding-agent"].includes(item.model) ? { model: item.model } : {}),
       };
     })),
   })));

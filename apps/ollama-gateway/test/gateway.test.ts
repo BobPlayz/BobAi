@@ -31,6 +31,7 @@ test("config refuses a missing or short token", () => {
   assert.throws(() => loadConfig({}), /GATEWAY_TOKEN/);
   assert.throws(() => loadConfig({ GATEWAY_TOKEN: "short" }), /GATEWAY_TOKEN/);
   assert.equal(loadConfig({ GATEWAY_TOKEN: TOKEN }).maxConcurrent, 1);
+  assert.deepEqual(loadConfig({ GATEWAY_TOKEN: TOKEN }).allowedModels, ["*"]);
 });
 
 test("gateway authenticates, allow-lists endpoints and models, streams, and limits concurrency", async () => {
@@ -47,6 +48,9 @@ test("gateway authenticates, allow-lists endpoints and models, streams, and limi
     assert.equal((await chat("llama3:70b")).status, 403, "model not allowed");
     assert.equal((await fetch(`${base}/api/pull`, { method: "POST", headers: auth, body: JSON.stringify({ model: "qwen3.5:2b" }) })).status, 404, "pull is never forwarded");
     assert.equal((await fetch(`${base}/api/delete`, { method: "DELETE", headers: auth })).status, 404, "delete is never forwarded");
+    const shown = await fetch(`${base}/api/show`, { method: "POST", headers: auth, body: JSON.stringify({ model: "qwen3.5:2b" }) });
+    assert.equal(shown.status, 200, "model metadata is forwarded for routing");
+    await shown.text();
     const tags = await fetch(`${base}/api/tags`, { headers: auth });
     assert.equal(tags.status, 200);
 

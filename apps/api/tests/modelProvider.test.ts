@@ -2,7 +2,7 @@ import { withLocalModelLock } from "../src/services/localModelLock.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BobModelProvider } from "../src/services/modelProvider.js";
-import { ollamaEmbedding, ollamaEmbeddingEnabled, ollamaEmbeddingModel, ollamaModelFor, ollamaStatus, ollamaVision, ollamaVisionModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
+import { ModelUnavailableError, ollamaChat, ollamaEmbedding, ollamaEmbeddingEnabled, ollamaEmbeddingModel, ollamaModelFor, ollamaStatus, ollamaStream, ollamaVision, ollamaVisionModel, preferredModel, unloadOllamaModels } from "../src/services/ollamaProvider.js";
 
 const originalFetch = globalThis.fetch;
 const keys = ["BOBAI_OLLAMA_BASE_URL", "BOBAI_OLLAMA_MODEL", "BOBAI_OLLAMA_CODING_MODEL", "BOBAI_OLLAMA_VISION_MODEL", "BOBAI_OLLAMA_TIMEOUT_MS", "BOBAI_OLLAMA_NUM_CTX", "BOBAI_OLLAMA_NUM_PREDICT", "BOBAI_OLLAMA_THINK", "BOBAI_OLLAMA_EMBEDDING_MODEL"] as const;
@@ -15,12 +15,18 @@ function restore() {
   }
 }
 
-test("BobAI defaults to one shared multimodal Ollama model without API credentials", () => {
+test("there is no built-in default model: the router picks one, settings are only a preference", () => {
   try {
     for (const key of keys) delete process.env[key];
-    assert.equal(ollamaModelFor("bob"), "qwen3.5:2b");
-    assert.equal(ollamaModelFor("coding"), "qwen3.5:2b");
-    assert.equal(ollamaVisionModel(), "qwen3.5:2b");
+    assert.throws(() => ollamaModelFor("bob"), (error: unknown) => error instanceof ModelUnavailableError && error.problem === "no_model");
+    assert.throws(() => ollamaVisionModel(), (error: unknown) => error instanceof ModelUnavailableError && error.problem === "no_model");
+    assert.equal(preferredModel("chat"), undefined);
+    assert.equal(ollamaModelFor("bob", "some-model:7b"), "some-model:7b");
+    process.env.BOBAI_OLLAMA_MODEL = "pref:1b";
+    process.env.BOBAI_OLLAMA_CODING_MODEL = "coder:1b";
+    assert.equal(preferredModel("chat"), "pref:1b");
+    assert.equal(preferredModel("coding"), "coder:1b");
+    assert.equal(preferredModel("vision"), "pref:1b");
     assert.equal(ollamaEmbeddingEnabled(), false);
     assert.equal(ollamaEmbeddingModel(), "qwen3-embedding:0.6b");
     assert.equal(new BobModelProvider().isConfigured(), true);
@@ -42,8 +48,8 @@ test("Ollama chat sends requests only to the configured local runtime", async ()
       assert.equal(body.options.num_ctx, 4096);
       return new Response(JSON.stringify({ message: { content: "  local answer  " }, done: true }), { status: 200 });
     };
-    const result = await new BobModelProvider().chat([{ role: "user", content: "hello" }]);
-    assert.deepEqual(result, { content: "local answer", model: "qwen2.5:3b", provider: "bob" });
+    const result = await ollamaChat([{ role: "user", content: "hello" }], "bob");
+    assert.deepEqual(result, { content: "local answer", model: "qwen2.5:3b" });
   } finally { restore(); }
 });
 
@@ -55,9 +61,8 @@ test("coding requests use the separate local coder model", async () => {
       assert.equal(JSON.parse(String(init?.body)).model, "qwen2.5-coder:3b");
       return new Response(JSON.stringify({ message: { content: "function add(a, b) { return a + b; }" } }), { status: 200 });
     };
-    const result = await new BobModelProvider().chat([{ role: "user", content: "write a function" }], "coding");
+    const result = await ollamaChat([{ role: "user", content: "write a function" }], "coding");
     assert.equal(result.model, "qwen2.5-coder:3b");
-    assert.equal(result.provider, "coding");
   } finally { restore(); }
 });
 
@@ -71,7 +76,7 @@ test("Ollama streaming parses newline-delimited JSON tokens", async () => {
           { status: 200, headers: { "content-type": "application/x-ndjson" } },
         );
     const tokens: string[] = [];
-    const result = await new BobModelProvider().stream([{ role: "user", content: "hello" }], token => tokens.push(token));
+    const result = await ollamaStream([{ role: "user", content: "hello" }], token => tokens.push(token), "bob", "local-model:1b");
     assert.equal(result.content, "Hello world");
     assert.deepEqual(tokens, ["Hello", " world"]);
   } finally { restore(); }
@@ -84,19 +89,17 @@ test("Ollama rejects insecure remote HTTP endpoints", async () => {
   } finally { restore(); }
 });
 
-test("Ollama status does not expose credentials and reports required local models", async () => {
+test("Ollama status checks the provider, never model names, and does not expose credentials", async () => {
   try {
     process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
-    process.env.BOBAI_OLLAMA_MODEL = "qwen2.5:3b";
-    process.env.BOBAI_OLLAMA_CODING_MODEL = "qwen2.5-coder:3b";
-    process.env.BOBAI_OLLAMA_VISION_MODEL = "moondream:1.8b";
-    process.env.BOBAI_OLLAMA_EMBEDDING_MODEL = "disabled";
-    globalThis.fetch = async () => new Response(JSON.stringify({ models: [{ name: "qwen2.5:3b" }] }), { status: 200 });
+    globalThis.fetch = async () => new Response(JSON.stringify({ models: [] }), { status: 200 });
     const status = await ollamaStatus();
-    assert.equal(status.provider, "ollama");
-    assert.equal(status.ready, false);
-    assert.deepEqual(status.missingModels, ["qwen2.5-coder:3b", "moondream:1.8b"]);
-    assert.equal(JSON.stringify(status).includes("secret"), false);
+    assert.deepEqual(status, { ready: true, provider: "ollama", hosted: false });
+    globalThis.fetch = async () => { throw new TypeError("fetch failed"); };
+    const down = await ollamaStatus();
+    assert.equal(down.ready, false);
+    assert.equal(down.problem, "unreachable");
+    assert.equal(JSON.stringify(down).includes("secret"), false);
   } finally { restore(); }
 });
 
@@ -190,7 +193,7 @@ test("switching models unloads other resident tags but keeps the selected tag", 
       if (url.endsWith("/api/generate")) return new Response(JSON.stringify({ response: "", done: true }), { status: 200 });
       return new Response(JSON.stringify({ message: { content: "ready" } }), { status: 200 });
     };
-    const result = await new BobModelProvider().chat([{ role: "user", content: "hello" }]);
+    const result = await ollamaChat([{ role: "user", content: "hello" }], "bob");
     assert.equal(result.model, "qwen3.5:4b");
     assert.equal(calls.length, 2);
     assert.equal(calls[0].url, "http://127.0.0.1:11434/api/generate");

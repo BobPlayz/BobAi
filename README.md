@@ -28,7 +28,7 @@ There is also a **demo mode** at `/demo` that shows the interface with sample da
 
 - **Web app:** Next.js 16, React 19, Tailwind CSS 4, three.js (the 3D orrery), Instrument Serif + Schibsted Grotesk
 - **API:** Node.js 24, Express 5, TypeScript
-- **AI:** Ollama with `qwen3.5:2b` (one model for chat, coding and image understanding)
+- **AI:** Ollama (local, your own PC through the gateway, or Ollama Cloud). Jarvis discovers the available models and picks the best one per request, with automatic fallback
 - **Voice:** Piper (text to speech) and faster-whisper (speech to text), both offline
 - **Database:** PostgreSQL (Neon works great) with Drizzle ORM
 - **Email:** Resend for sign-in codes

@@ -103,7 +103,7 @@ test("an unreachable Ollama gives a clear, user-safe error", async () => {
   process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:9";
   try {
     const { ollamaStream, ModelUnavailableError } = await import("../src/services/ollamaProvider.js");
-    await assert.rejects(ollamaStream([{ role: "user", content: "hi" }], () => undefined), (error: unknown) => {
+    await assert.rejects(ollamaStream([{ role: "user", content: "hi" }], () => undefined, "bob", "any-model:1b"), (error: unknown) => {
       assert.ok(error instanceof ModelUnavailableError);
       assert.equal(error.problem, "unreachable");
       assert.match(error.publicMessage, /can't reach/);

@@ -1,6 +1,6 @@
 import { extractMemory } from "../utils/memoryExtractor.js";
-import { selectModel } from "./modelRouter.js";
 import { bobModelProvider, type ProviderMessage } from "./modelProvider.js";
+import { routingChoice } from "./modelRouter.js";
 import { describeEmotionalContext } from "./emotionalState.js";
 import { ollamaContextTokens, ollamaPredictTokens } from "./ollamaProvider.js";
 export type ChatRole = "system" | "user" | "assistant";
@@ -50,35 +50,13 @@ async function compactLongContext(messages: ChatMessage[], modelId?: string, sig
   return [{ role: "assistant", content: `[conversation context summary, untrusted data]\n${summary}` }, ...recent];
 }
 export async function prepareChat(input: ChatInput) { const messages = normalizeMessages(input.messages); const personality = getPersonality(input.personality); const modelId = getRequestedModelId(input.modelId); const latestUserMessage = getLatestUserMessage(messages); const language = typeof input.language === "string" && input.language.trim() ? input.language.trim() : "english"; const responseStyle = typeof input.responseStyle === "string" && input.responseStyle.trim() ? input.responseStyle.trim() : "natural"; const responseLength = typeof input.responseLength === "string" && input.responseLength.trim() ? input.responseLength.trim() : "balanced"; const tone = typeof input.tone === "string" && input.tone.trim() ? input.tone.trim() : "natural"; const customInstructions = typeof input.customInstructions === "string" ? input.customInstructions : ""; const emotionalContext = describeEmotionalContext(messages); const system = buildSystemPrompt(personality, Array.isArray(input.memoryContext) ? input.memoryContext : [], language, responseStyle, responseLength, tone, customInstructions, Array.isArray(input.knowledgeContext) ? input.knowledgeContext : [], emotionalContext); const compactedMessages = await compactLongContext(messages, modelId, input.signal); const providerMessages = budgetContext(system, compactedMessages) as ProviderMessage[]; return { messages: compactedMessages, originalMessages: messages, personality, modelId, latestUserMessage, validationError: validateChat(messages, personality) ?? null, memoryRequest: Boolean(latestUserMessage && extractMemory(latestUserMessage.content)), providerMessages, title: latestUserMessage?.content?.slice(0, 32) || messages[0]?.content?.slice(0, 32) || "new chat" }; }
-function shouldUseCodingModel(messages: ProviderMessage[], modelId?: string) {
-  if (modelId === "bob-coder") return true;
-  if (modelId && modelId !== "bob") return false;
-  const latestUser = [...messages].reverse().find((message) => message.role === "user")?.content || "";
-  return /\b(code|coding|debug|refactor|typescript|javascript|python|react|next\.js|css|html|sql|api|endpoint|function|component|script|compiler|repository|bugfix)\b|\b(write|build|implement)\b.{0,40}\b(app|website|program|bot|api|script|function|component|tool|game)\b/i.test(latestUser);
-}
 export async function runChat(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal) {
-  const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "bob" });
-  const coding = shouldUseCodingModel(messages, modelId);
-  try {
-    const result = await bobModelProvider.chat(messages, coding ? "coding" : selected.provider, coding ? undefined : selected.model, signal);
-    return { message: { content: result.content }, model: result.model, provider: result.provider };
-  } catch (error) {
-    if (!coding) throw error;
-    if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new DOMException("Chat request cancelled.", "AbortError");
-    const fallback = await bobModelProvider.chat(messages, "bob", undefined, signal);
-    return { message: { content: fallback.content }, model: fallback.model, provider: fallback.provider };
-  }
+  const choice = routingChoice(modelId);
+  const result = await bobModelProvider.chat(messages, choice.task === "coding" ? "coding" : "bob", choice.preferredModel, signal);
+  return { message: { content: result.content }, model: result.model, provider: result.provider, fallbacks: result.fallbacks };
 }
 export async function runStream(messages: ProviderMessage[], onToken: (token: string) => void, modelId?: string, signal?: AbortSignal) {
-  const selected = await selectModel({ modelId, capability: "chat", fallbackModelId: "bob" });
   if (signal?.aborted) throw new DOMException("Chat stream cancelled.", "AbortError");
-  const coding = shouldUseCodingModel(messages, modelId);
-  if (!coding) return bobModelProvider.stream(messages, onToken, selected.provider, selected.model, signal);
-  let emittedToken = false;
-  try {
-    return await bobModelProvider.stream(messages, (token) => { emittedToken = true; onToken(token); }, "coding", undefined, signal);
-  } catch (error) {
-    if (emittedToken || signal?.aborted) throw error;
-    return bobModelProvider.stream(messages, onToken, "bob", undefined, signal);
-  }
+  const choice = routingChoice(modelId);
+  return bobModelProvider.stream(messages, onToken, choice.task === "coding" ? "coding" : "bob", choice.preferredModel, signal);
 }

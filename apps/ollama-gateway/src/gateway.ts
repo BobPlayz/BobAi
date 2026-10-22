@@ -7,9 +7,9 @@ import { timingSafeEqual } from "node:crypto";
  * Runs next to Ollama (for example on your laptop) and is the only thing you expose to the internet, through an
  * HTTPS tunnel. Ollama itself stays bound to 127.0.0.1. The gateway:
  *   - requires `Authorization: Bearer <GATEWAY_TOKEN>` on every model request (constant-time comparison);
- *   - forwards only the endpoints Jarvis uses (chat, generate for unloading, embed, tags, ps) — never pull,
+ *   - forwards only the endpoints Jarvis uses (chat, generate for unloading, embed, show, tags, ps) — never pull,
  *     delete, create, copy or push;
- *   - only allows the models listed in GATEWAY_ALLOWED_MODELS;
+ *   - only allows the models listed in GATEWAY_ALLOWED_MODELS (default "*": whatever is already installed);
  *   - runs at most GATEWAY_MAX_CONCURRENT requests at once (default 1, right for 8 GB RAM) and queues a few more;
  *   - streams responses through, cancels Ollama work when the caller disconnects, and enforces timeouts.
  */
@@ -24,12 +24,15 @@ export type GatewayConfig = {
   rateLimitPerMinute: number;
 };
 
-type Route = { method: "GET" | "POST"; path: string; model: boolean };
+type Route = { method: "GET" | "POST"; path: string; model: boolean; inference?: boolean };
 const ROUTES: Route[] = [
-  { method: "POST", path: "/api/chat", model: true },
-  { method: "POST", path: "/api/generate", model: true },
-  { method: "POST", path: "/api/embed", model: true },
+  { method: "POST", path: "/api/chat", model: true, inference: true },
+  { method: "POST", path: "/api/generate", model: true, inference: true },
+  { method: "POST", path: "/api/embed", model: true, inference: true },
+  // Model metadata (capabilities, context length) for Jarvis's automatic model routing. Read-only.
+  { method: "POST", path: "/api/show", model: true },
   { method: "GET", path: "/api/tags", model: false },
+  { method: "GET", path: "/api/version", model: false },
   { method: "GET", path: "/api/ps", model: false },
 ];
 
@@ -37,7 +40,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
   const token = (env.GATEWAY_TOKEN || "").trim();
   if (token.length < 32) throw new Error("GATEWAY_TOKEN must be set to a random value of at least 32 characters");
   const ollamaUrl = new URL(env.OLLAMA_URL || "http://127.0.0.1:11434").toString().replace(/\/+$/, "");
-  const allowedModels = (env.GATEWAY_ALLOWED_MODELS || "qwen3.5:2b").split(",").map((model) => model.trim()).filter(Boolean);
+  // Default "*": any model already installed in this Ollama. Downloads are never forwarded, so nothing new can appear.
+  const allowedModels = (env.GATEWAY_ALLOWED_MODELS || "*").split(",").map((model) => model.trim()).filter(Boolean);
   const number = (value: string | undefined, fallback: number, min: number, max: number) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.trunc(parsed))) : fallback;
@@ -134,7 +138,7 @@ export function createGateway(config: GatewayConfig): Server {
         body = await readBody(req, config.maxBodyBytes);
         let parsed: { model?: unknown };
         try { parsed = JSON.parse(body.toString("utf8")) as { model?: unknown }; } catch { return send(res, 400, { error: "body must be JSON" }); }
-        if (route.model && (typeof parsed.model !== "string" || !config.allowedModels.includes(parsed.model))) {
+        if (route.model && (typeof parsed.model !== "string" || (!config.allowedModels.includes("*") && !config.allowedModels.includes(parsed.model)))) {
           return send(res, 403, { error: "model is not allowed on this gateway", allowed: config.allowedModels });
         }
       }
@@ -144,8 +148,8 @@ export function createGateway(config: GatewayConfig): Server {
 
     let release: (() => void) | undefined;
     try {
-      // Listing endpoints are cheap and are used for health checks, so they skip the inference queue.
-      if (route.model) release = await limiter.acquire(controller.signal);
+      // Listing and metadata endpoints are cheap and used for routing and health checks, so they skip the inference queue.
+      if (route.inference) release = await limiter.acquire(controller.signal);
       const upstream = await fetch(`${config.ollamaUrl}${route.path}`, {
         method: route.method,
         headers: body ? { "content-type": "application/json" } : undefined,

@@ -100,7 +100,7 @@ These are static code observations, not verified outcomes. The roadmap's test/bu
 - Deep Research and basic web search now propagate client disconnect cancellation into active web requests, retry waits, source fetches, and local Ollama synthesis; cancelled research is not cached or persisted after cancellation.
 - Local image generation propagates client disconnect cancellation to the spawned Diffusers process and avoids persisting images after disconnect.
 - Local image-to-image editing is wired through `AutoPipelineForImage2Image`, with MIME/base64/size checks and a 12 MB endpoint-specific JSON parser.
-- Image understanding now uses the configured local Ollama multimodal model (default `qwen3.5:4b` through `BOBAI_OLLAMA_MODEL`) instead of requiring an unavailable custom trained vision checkpoint. Runtime behavior remains unverified until model assets are installed and exercised.
+- Image understanding is routed to a vision-capable Ollama model discovered at runtime (see MODEL_SELECTION_8GB.md).
 
 
 ## 2026-10-14 backend static audit addendum

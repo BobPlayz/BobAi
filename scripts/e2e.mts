@@ -74,6 +74,10 @@ ok("ordinary 'I love…' message is answered, not saved as memory", turn2.status
 const convo = await (await alice.call(`/conversations/${conversationId}`)).json() as { conversation?: { messages?: unknown[] }; messages?: unknown[] };
 const stored = (convo.conversation?.messages ?? convo.messages ?? []) as Array<{ id: string }>;
 ok("history saved with no duplicates (4 messages)", stored.length === 4 && new Set(stored.map((m) => m.id)).size === 4, `stored ${stored.length}`);
+const roles = (stored as Array<{ role?: string }>).map((m) => m.role).join(",");
+ok("history comes back in order (user, assistant, user, assistant)", roles === "user,assistant,user,assistant", roles);
+const listed = await (await alice.call("/conversations")).json() as { items?: Array<{ id: string; messages?: unknown[] }> };
+ok("conversation list returns saved messages (what the web app loads after a reload)", Boolean(listed.items?.find((item) => item.id === conversationId)?.messages?.length));
 
 // Delete a message server-side.
 const del = await alice.call(`/conversations/${conversationId}/messages/${a2}`, { method: "DELETE" });

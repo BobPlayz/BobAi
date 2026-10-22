@@ -73,7 +73,19 @@ export function otpDeliveryConfigured() {
 
 export function configureOtpDelivery() {
   const provider = otpDeliveryProvider();
-  if (provider === "resend") { setOtpSender(sendResendOtp); return; }
+  if (provider === "resend") {
+    // Without a verified domain Resend only delivers to the account owner. If SMTP is also configured, a refused
+    // Resend send is retried over SMTP instead of failing the login (never logs the code or the address).
+    setOtpSender(async (email, code) => {
+      try { await sendResendOtp(email, code); }
+      catch (error) {
+        if (!smtpConfigured() || process.env.BOBAI_EMAIL_PROVIDER?.trim().toLowerCase() === "resend") throw error;
+        console.warn(JSON.stringify({ event: "otp_resend_failed_trying_smtp", error: error instanceof Error ? error.message.slice(0, 200) : "unknown" }));
+        await sendEmailOtp(email, code);
+      }
+    });
+    return;
+  }
   if (provider === "smtp") { setOtpSender(sendEmailOtp); return; }
   if (provider === "dev-log") {
     setOtpSender(async (email, code) => { console.log(`[OTP development only] ${email}: ${code}`); });
