@@ -238,7 +238,7 @@ function LiveDataBadge({ info }: { info: LiveDataInfo }) {
         <span className={`live-badge-pill ${info.freshness === "web-search" ? "is-search" : info.cached ? "is-cached" : "is-live"}`}>{label}</span>
         <span>{info.provider}</span>
         <span aria-hidden>·</span>
-        <time dateTime={info.fetchedAt} title={new Date(info.fetchedAt).toLocaleString()}>fetched {timeAgo(info.fetchedAt)}</time>
+        <time dateTime={info.fetchedAt} title={new Date(info.fetchedAt).toLocaleString()} suppressHydrationWarning>fetched {timeAgo(info.fetchedAt)}</time>
       </div>
       {info.sources.length > 0 && (
         <ol className="live-badge-sources">
