@@ -55,7 +55,13 @@ jobs:
 
       # Migrate only after the build succeeds, so a broken build never changes the production schema.
       - name: Apply production database migrations
-        run: node --env-file=.vercel/.env.production.local node_modules/tsx/dist/cli.mjs scripts/migrate.ts
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Vercel does not return "Sensitive" variables to `vercel pull`, so a DATABASE_URL repository secret wins when set.
+          if [ -n "$MIGRATION_DATABASE_URL" ]; then export DATABASE_URL="$MIGRATION_DATABASE_URL"; fi
+          node --env-file-if-exists=.vercel/.env.production.local -e "process.exit(process.env.DATABASE_URL ? 0 : 1)" || { echo "::error title=Database migration skipped::DATABASE_URL is empty. Vercel hides Sensitive variables from 'vercel pull'; add DATABASE_URL as a GitHub repository secret."; exit 1; }
+          node --env-file-if-exists=.vercel/.env.production.local node_modules/tsx/dist/cli.mjs scripts/migrate.ts
 
       - name: Deploy production build
         run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"

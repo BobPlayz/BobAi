@@ -57,4 +57,15 @@ async function main() {
     console.log("database migrations complete");
   } finally { try { await sql`SELECT pg_advisory_unlock(hashtextextended(${migrationLock}, 0))`; } finally { await sql.end({ timeout: 5 }); } }
 }
-main().catch((error) => { console.error(error); process.exitCode = 1; });
+function redact(text: string) {
+  return text.replace(/postgres(ql)?:\/\/[^\s"']+/gi, "postgres://[redacted]").replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[email]").split("\n")[0].slice(0, 300);
+}
+
+main().catch((error) => {
+  const code = (error as { code?: unknown })?.code;
+  const reason = redact(`${error instanceof Error ? error.message : String(error)}${typeof code === "string" ? ` (code ${code})` : ""}`);
+  // A GitHub Actions annotation shows the reason on the run summary without exposing the full log.
+  if (process.env.GITHUB_ACTIONS === "true") console.log(`::error title=Database migration failed::${reason}`);
+  console.error(`database migration failed: ${reason}`);
+  process.exitCode = 1;
+});

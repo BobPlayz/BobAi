@@ -5,7 +5,7 @@ The repo deploys as one Vercel project using **Vercel Services** (`vercel.json`)
 ## How a push to `main` deploys
 
 - **Vercel Git integration** builds and deploys the website and API from every push (previews for other branches). It does **not** run database migrations.
-- **GitHub Actions → "Deploy Jarvis to Vercel"** (`.github/workflows/vercel-deploy.yml`) builds, then runs `scripts/migrate.ts` against the production database, then deploys. If migrations fail, that workflow stops before deploying. It needs the `VERCEL_TOKEN` secret.
+- **GitHub Actions → "Deploy Jarvis to Vercel"** (`.github/workflows/vercel-deploy.yml`) builds, then runs `scripts/migrate.ts` against the production database, then deploys. If migrations fail, that workflow stops before deploying and the run summary shows the reason. It needs the `VERCEL_TOKEN` secret, and a `DATABASE_URL` repository secret when the Vercel variable is marked Sensitive (Vercel does not hand Sensitive values to `vercel pull`).
 - Migrations only add tables, columns and indexes (`IF NOT EXISTS`); none drop or rewrite data.
 
 ## Project settings (Vercel dashboard)
@@ -27,7 +27,10 @@ Required for the API to start (otherwise `/api/*` answers `503 misconfigured` an
 | `BOBAI_MFA_ENCRYPTION_KEY` | 64 hex characters (32 random bytes) |
 | `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | Resend key and a sender on a **domain verified in Resend** (see below) |
 
-For hosted chat, also follow [OLLAMA_GATEWAY.md](OLLAMA_GATEWAY.md): `BOBAI_OLLAMA_BASE_URL`, `BOBAI_OLLAMA_API_KEY`, `BOBAI_OLLAMA_MODEL`.
+For hosted chat, pick one way to reach Ollama and set `BOBAI_OLLAMA_BASE_URL`, `BOBAI_OLLAMA_API_KEY` and `BOBAI_OLLAMA_MODEL`:
+
+- **Ollama Cloud (Vercel only, your PC can be off):** make an account and API key on ollama.com, then use the API address and a cloud model name from Ollama's docs. Check ollama.com/pricing first: the free plan has limited credits and models.
+- **Your own PC (free, PC must be on):** follow [OLLAMA_GATEWAY.md](OLLAMA_GATEWAY.md).
 
 Optional: `BOBAI_CRICKET_API_KEY` (live cricket feed), `BOBAI_BRAVE_SEARCH_API_KEY` (better search), `BOBAI_MALWARE_SCANNER_URL` (otherwise set `BOBAI_MALWARE_SCAN_REQUIRED=false` to allow uploads without a scanner).
 
