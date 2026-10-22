@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin, refreshSession } from "@/lib/auth";
+import JarvisMark from "@/components/JarvisMark";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const TERMS_VERSION = process.env.NEXT_PUBLIC_TERMS_VERSION || "2026-10-13";
@@ -92,7 +93,7 @@ export default function LoginPage() {
   return (
     <main className="relative z-[1] grid min-h-screen bg-[var(--bg)] text-[var(--text)] lg:grid-cols-2">
       <aside className="hidden flex-col justify-between border-r border-[var(--hairline)] p-10 lg:flex">
-        <Link href="/" className="atelier-wordmark" aria-label="Jarvis home">Jarvis<em>.</em></Link>
+        <Link href="/" className="atelier-wordmark" aria-label="Jarvis home"><JarvisMark />Jarvis</Link>
         <div>
           <p className="caption">Sign in</p>
           <p className="font-display mt-4 text-6xl leading-[0.95]">An assistant,<br /><em className="text-[var(--accent)]">not an oracle.</em></p>
@@ -103,7 +104,7 @@ export default function LoginPage() {
 
       <section className="flex items-center justify-center px-5 py-12 sm:px-10">
         <div className="w-full max-w-md">
-          <Link href="/" className="atelier-wordmark lg:hidden" aria-label="Jarvis home">Jarvis<em>.</em></Link>
+          <Link href="/" className="atelier-wordmark lg:hidden" aria-label="Jarvis home"><JarvisMark />Jarvis</Link>
           <p className="caption mt-10 lg:mt-0">{step === "details" ? "Step 1 of 2 — your details" : step === "verify" ? "Step 2 of 2 — email code" : "Two-step verification"}</p>
           <h1 className="font-display mt-3 text-5xl leading-none">{heading}</h1>
           <p className="mt-4 leading-7 text-[var(--muted)]">
@@ -146,7 +147,7 @@ export default function LoginPage() {
             </form>
           )}
 
-          {error && <p role="alert" className="mt-5 rounded-2xl border border-[var(--accent)] p-4 text-sm text-[var(--accent)]">{error}</p>}
+          {error && <p role="alert" className="mt-5 rounded-2xl border border-[var(--danger)] p-4 text-sm text-[var(--danger)]">{error}</p>}
           {notice && <p role="status" className="mt-5 rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">{notice}</p>}
         </div>
       </section>

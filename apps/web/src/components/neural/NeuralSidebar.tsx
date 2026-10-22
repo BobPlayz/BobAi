@@ -88,7 +88,7 @@ export default function NeuralSidebar({
             <button type="button" onClick={() => rename(conversation)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
               <Pencil className="h-3.5 w-3.5" aria-hidden /> Rename
             </button>
-            <button type="button" onClick={() => { setDeleteTarget(conversation); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--accent)] hover:bg-[var(--surface-2)]">
+            <button type="button" onClick={() => { setDeleteTarget(conversation); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--surface-2)]">
               <Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete
             </button>
           </div>
