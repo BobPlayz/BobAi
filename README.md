@@ -1,101 +1,130 @@
-# Jarvis 🤖
+# Jarvis
 
-Jarvis is a local-first AI platform built around Ollama. Ollama runs the language models; Jarvis adds the product around them: chat, streaming, tool calling, memory, internet research, coding assistance, local voice, and local image generation.
+**A local-first AI assistant that runs on your own computer.**
+Jarvis chats, writes code, checks the weather, reads your files and talks back with a natural British voice. The AI model runs on your machine through [Ollama](https://ollama.com), so your conversations are not sent to an AI company to be answered.
 
-## Current direction
+> School project by BobPlayz · Class 8 · 2026
 
-- The default setup uses local Ollama for chat, coding, and research synthesis, with no external AI-model API key.
-- Ollama runs downloaded language models locally. Jarvis does not require training a model from scratch.
-- Jarvis's research pipeline searches public webpages, gathers evidence, and uses the local Ollama model to synthesize findings. Live internet research still requires internet access. The chat tool router also has a no-key Open-Meteo tool for live weather and a sourced web-search tool for current cricket scores; these depend on the hosted API having outbound internet access and must not invent results when sources are missing.
-- Image generation uses local Diffusers only. It needs no image API key and sends no prompts to a hosted image provider.
-- Jarvis voice profile: Piper English en_GB-alan-medium and Telugu te_IN-venkatesh-medium, with local speech recognition configured separately.
-- Database and email are infrastructure integrations. Set them up privately and never commit credentials.
+---
 
-Not every feature works out of the box. Local model files and optional runtimes must be installed, and real inference still needs to be verified on the target computer.
+## What it can do
 
-## Hosting and production setup
+| Feature | How it works | Needs internet? |
+| --- | --- | --- |
+| 💬 **Chat & code** | Streaming answers with formatted text, tables and highlighted code you can copy | No |
+| 🧠 **Memory** | Say *"remember that …"* and Jarvis saves it; ordinary messages are never saved by accident | No |
+| 🌦️ **Live weather** | Real data from [Open-Meteo](https://open-meteo.com), labelled **Live** or **Cached** with the time it was fetched | Yes |
+| 🏏 **Cricket scores** | Searches the web and shows the sources; clearly labelled as search results, never invented | Yes |
+| 🔎 **Research** | Searches the web, reads the pages and lists the sources it used | Yes |
+| 📎 **Files** | PDFs, text, code and images, checked on the server before they are read | No |
+| 🗣️ **Voice** | Speak to Jarvis, and hear replies in the *Alan* voice (Piper `en_GB-alan-medium`), generated offline | No |
+| 🎨 **Images** | Local image generation with Stable Diffusion, no image API key (slow on a laptop CPU) | No |
+| ✅ **Safe tools** | Anything that acts for you shows an approval card first: approve once, or decline | — |
+| 🔐 **Accounts** | One-time email code sign-in (no password), sessions stored securely in Postgres | Yes |
 
-Vercel can host the web app and the Express API, but it cannot connect to Ollama at `http://127.0.0.1:11434` on your personal computer. For a hosted demo, set `BOBAI_OLLAMA_BASE_URL` to a reachable, authenticated HTTPS Ollama gateway or host the API alongside Ollama on a machine you control. Never expose Ollama's unauthenticated port directly to the public internet.
+There is also a **demo mode** at `/demo` that shows the interface with sample data and never talks to the server.
 
-Production also requires a reachable PostgreSQL/Neon database, explicit HTTPS values for `CORS_ORIGIN`, `BOBAI_WEB_URL`, and `BOBAI_AUTH_REDIRECT_BASE_URL`, a random `BOBAI_AGENT_KEY` of at least 32 characters, a 32-byte `BOBAI_MFA_ENCRYPTION_KEY` encoded as 64 hex characters or Base64, and a working Resend sender or SMTP configuration for email verification. Keep all secrets in the hosting provider's environment settings, not in Git.
+## Built with
 
-Vercel's free deployment/build limits can temporarily prevent a new deployment. A successful Git push does not by itself prove that production has updated; verify the deployment and test email verification and a real chat before presenting the hosted demo.
+- **Web app:** Next.js 16, React 19, Tailwind CSS 4, three.js (the 3D "orrery" core)
+- **API:** Node.js 24, Express 5, TypeScript
+- **AI:** Ollama with `qwen3.5:2b` (one model for chat, coding and image understanding)
+- **Voice:** Piper (text to speech) and faster-whisper (speech to text), both offline
+- **Database:** PostgreSQL (Neon works great) with Drizzle ORM
+- **Email:** Resend for sign-in codes
 
-## Requirements
+## Project layout
 
-- Node.js 24 or newer and npm
-- Ollama installed locally
-- PostgreSQL or a Neon PostgreSQL connection for database-backed features
-- Python 3.11 recommended for optional local image generation and voice runtime setup
-- Enough disk and RAM for the model files you choose
+```
+apps/
+  web/        Next.js website and chat interface
+  api/        Express API: chat, auth, memory, files, voice, tools
+  bobhs/      Background job scheduler
+packages/
+  db/         Database schema (Drizzle)
+drizzle/      SQL migrations
+scripts/      Setup, migration and helper scripts
+docs/         Guides (setup, security, deployment, models)
+model-training/  Experiments for training a small model (optional)
+```
 
-## Install
+## Run it on your laptop (Windows)
 
-Clone the repository, enter the folder, and run npm ci. Create a private .env file by copying .env.example. On Windows Command Prompt use copy .env.example .env; in PowerShell use Copy-Item .env.example .env; on macOS/Linux use cp .env.example .env.
+Works on an 8 GB RAM laptop. Close heavy apps (games, lots of browser tabs) before starting.
 
-Set DATABASE_URL after creating your database, then configure the local model settings below.
+**1. Install the tools**
+- [Node.js 24](https://nodejs.org) (LTS)
+- [Ollama](https://ollama.com/download)
+- [Git](https://git-scm.com)
 
-## Ollama chat and coding
+**2. Get the code**
+```powershell
+git clone https://github.com/BobPlayz/BobAi.git
+cd BobAi
+npm ci
+```
 
-Start Ollama, then pull the default local model:
+**3. Download the AI model** (about 3 GB, once)
+```powershell
+ollama pull qwen3.5:2b
+```
 
-    ollama pull qwen3.5:4b
+**4. Create your settings file**
+```powershell
+Copy-Item .env.example .env
+```
+Then open `.env` and fill in:
+- `DATABASE_URL`: your Postgres connection string (for example from [Neon](https://neon.tech))
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL`: for sign-in emails. For local testing only, you can set `BOBAI_DEV_LOG_OTP=true` instead and the code is printed in the terminal.
 
-The default environment values are:
+Never commit `.env`. It holds your secrets.
 
-    BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
-    BOBAI_OLLAMA_MODEL=qwen3.5:4b
-    BOBAI_OLLAMA_EMBEDDING_MODEL=disabled
-    BOBAI_OLLAMA_NUM_CTX=3072
-    BOBAI_OLLAMA_NUM_PREDICT=256
+**5. Set up the database**
+```powershell
+npm run db:migrate
+```
 
-The default uses one Ollama model, Qwen3.5 4B, for chat, coding, research synthesis, and image understanding. Semantic embeddings are disabled by default to avoid downloading or loading a second model; memory can use the application's available non-embedding retrieval fallback. Context/output sizes are capped, and image generation unloads Ollama weights before starting Diffusers.
+**6. (Optional) Voice and image generation**
+```powershell
+npm run setup:local-media
+```
+This downloads Piper, the Alan voice, Whisper and Tiny-SD (needs Python 3.11 and a few GB of disk).
 
-The shared Qwen3.5 4B model is the single-model default across chat, coding, research synthesis, and image understanding. If 4B causes paging or out-of-memory errors, set `BOBAI_OLLAMA_MODEL=qwen3.5:2b` to switch all four together. `BOBAI_OLLAMA_CODING_MODEL` and `BOBAI_OLLAMA_VISION_MODEL` are optional overrides, not needed for the default setup. See [the 8 GB model and setup runbook](docs/MODEL_SELECTION_8GB.md).
+**7. Start Jarvis**
+```powershell
+npm run ai
+```
+This runs the tests, then starts the API on <http://localhost:3001> and the website on <http://localhost:3000>.
 
-## Image generation: Local-only mode
+## Useful commands
 
-Jarvis image generation runs locally. No hosted image API or API key is used.
+| Command | What it does |
+| --- | --- |
+| `npm run ai` | Run tests, then start everything |
+| `npm run web` / `npm run api` | Start just the website or just the API |
+| `npm test` | Run all automated tests |
+| `npm run build` | Production build of every app |
+| `npm run lint --workspace=web` | Check the website code style |
+| `npm run db:migrate` | Apply database migrations |
 
-### Local mode (offline and free after setup)
+## How it stays safe
 
-Keep:
+- Secrets live only in `.env` (ignored by Git) and in your hosting provider's settings.
+- Passwords and session tokens are hashed; sessions use secure, HttpOnly cookies.
+- Web pages fetched by Jarvis are checked so it cannot be tricked into reading private network addresses.
+- Tools that act on your behalf need your approval every time.
+- Uploads are validated and, in production, scanned before they are read.
 
-    BOBAI_IMAGE_MODEL_PATH=models/image/dreamshaper-8
+More detail: [docs/SECURITY.md](docs/SECURITY.md).
 
-On Windows, copy `.env.example` to `.env`, install Node dependencies, then run:
+## Hosting on Vercel
 
-    npm run setup:image-generation
-    npm run test:image-generation
+Vercel can host the website and the API, but it **cannot reach Ollama on your laptop**. For a hosted demo, the website works with `/demo`, while real chat needs the API running next to Ollama (for example on your own computer). See [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md).
 
-The setup command creates a dedicated Python 3.11 virtual environment, installs CPU-only PyTorch plus Diffusers dependencies, downloads Tiny-SD by default, and writes the local Python/model paths into your private `.env`. It does not overwrite unrelated environment settings. The first setup needs internet; after the model is downloaded, inference uses local files only. Tiny-SD is the lower-memory default for an 8 GB CPU-only laptop. For the higher-quality DreamShaper 8 profile, run `npm run setup:image-generation -- -Profile quality`, but expect much slower inference and a higher risk of running out of memory. Review the selected model's license before using or redistributing outputs.
+## Status
 
-The smoke test performs actual 512x512 CPU inference and saves `storage/image-generation-smoke.png`. Even Tiny-SD CPU inference can be slow on an 8 GB laptop. DreamShaper can take substantially longer and may fail if other applications consume too much RAM. Close heavy applications before running image generation. Jarvis serializes local image inference with Ollama and unloads Ollama model weights before generation to reduce memory pressure.
+Jarvis is a work in progress. Chat, memory, weather, voice and the redesigned interface are tested locally; sign-in, history and uploads need a database to test end to end. See [docs/FEATURE_INVENTORY.md](docs/FEATURE_INVENTORY.md) for the full list.
 
-### API and history
+## License
 
-The authenticated API endpoint is `POST /images/generate` with JSON such as `{"prompt":"a tiny robot in a cyan glass laboratory","width":512,"height":512,"count":1}`. The response contains generated PNG data URLs and stores the image in the user's image history. Generated images can be restored from history. Real inference still needs to be verified on the target computer; a passing code build does not prove the local model or remote account is configured.
-
-## Jarvis voice
-
-Jarvis's voice service uses local Piper and local Whisper.cpp integration. For the same offline voice profile as Ai-Glasses, configure:
-
-- English Piper model: en_GB-alan-medium.onnx and its matching .onnx.json
-- Telugu Piper model: te_IN-venkatesh-medium.onnx and its matching .onnx.json
-- Piper/espeak data path and Whisper model path for transcription
-
-Set BOBAI_PIPER_EN_MODEL_PATH, BOBAI_PIPER_EN_CONFIG_PATH, BOBAI_PIPER_TE_MODEL_PATH, BOBAI_PIPER_TE_CONFIG_PATH, BOBAI_ESPEAK_DATA_PATH, and BOBAI_WHISPER_MODEL_PATH. The default Windows setup installs Piper CLI and faster-whisper into a separate local Python environment, downloads the model assets, and configures Jarvis to use them without a cloud speech provider. The optional native media addon can still be used when compatible C++ libraries are available.
-
-## Start and verify
-
-For the ordered end-to-end completion checklist, including local voice setup, runtime verification, launch blockers, and definition-of-done criteria, see [the final completion checklist](docs/FINAL_COMPLETION_CHECKLIST.md). On Windows, run `npm run setup:local-media` to prepare Whisper/eSpeak assets, download the free Alan Medium British and Venkatesh Telugu Piper voices, configure local voice paths, and install Tiny-SD for local image generation. This setup may take a while and needs internet for downloads. Local speech synthesis and recognition use the Python/CLI fallback by default; the native addon is optional. Then run `npm run test:image-generation` to verify actual local image inference. The web app and API must run on the same computer as Ollama and local media for these localhost-only services to be reachable.
-
-Run npm ci, npm test, npm run build, npm run smoke, and npm run audit. After those pass, install the local models and media assets, configure the private .env, run the database migration workflow, and launch with npm run ai. A passing test suite is not a substitute for live tests with Ollama, database migrations, local model files, and microphone/audio playback.
-
-## Security
-
-Never commit .env, database URLs, credentials, or private keys. Keep Ollama bound to loopback unless you deliberately configure and secure a network deployment. Before exposing Jarvis to the public internet, review authentication, authorization, CORS, HTTPS, rate limits, data retention, and account isolation.
-
-## Project status
-
-Jarvis is an active work in progress. The feature setup checklist, feature inventory, and roadmap describe what still needs setup and verification.
+All rights reserved © BobPlayz. Ask before reusing.

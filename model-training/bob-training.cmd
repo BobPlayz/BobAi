@@ -1,6 +1,7 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+rem Run from the repository root (this file lives in model-training\).
+cd /d "%~dp0.."
 set ACTION=%~1
 if "%ACTION%"=="" set ACTION=start
 if /I "%ACTION%"=="start" goto start

@@ -44,7 +44,7 @@ export default function CookieConsent() {
       <p className={`text-sm leading-6 ${light ? "text-[#4b5563]" : "text-white/70"}`}>Jarvis uses strictly necessary authentication cookies to keep you signed in. Optional privacy-conscious analytics are separate and are never loaded unless you allow them.</p>
       <div className={`mt-2 text-xs ${light ? "text-[#6b7280]" : "text-white/45"}`}>Read the <a href="/privacy" className="text-sky-600 hover:text-sky-700">Privacy Policy</a> before choosing.</div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button onClick={() => choose("accepted")} className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950">Allow analytics</button>
+        <button onClick={() => choose("accepted")} className="btn-ink !min-h-10 text-sm">Allow analytics</button>
         <button onClick={() => choose("declined")} className={`rounded-xl border px-4 py-2 text-sm ${light ? "border-[#d1d5db] text-[#4b5563] hover:text-[#111827]" : "border-white/10 text-white/70 hover:text-white"}`}>No thanks</button>
       </div>
     </aside>

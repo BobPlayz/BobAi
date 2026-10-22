@@ -13,7 +13,8 @@ type Props = {
   loadingLabel?: string;
   onPinMessage: (id: string) => void;
   onDeleteMessage: (id: string) => void;
-  onRegenerate: () => void;
+  /** Omit to hide the "Try again" button (e.g. in demo mode). */
+  onRegenerate?: () => void;
   onResolveApproval: (messageId: string, approve: boolean) => void;
   /** Speak each new reply automatically with the local Alan Medium voice. */
   voiceReplies?: boolean;
@@ -91,7 +92,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
                           autoPlayId={voiceReplies && !loading && message.id === autoPlayMessageId ? message.id : undefined}
                           onResolveApproval={(approve) => onResolveApproval(message.id, approve)}
                           onPreview={setPreview}
-                          onRegenerate={isLastAssistant ? onRegenerate : undefined}
+                          onRegenerate={isLastAssistant && onRegenerate ? onRegenerate : undefined}
                           loading={loading}
                           {...actions(message)}
                         />

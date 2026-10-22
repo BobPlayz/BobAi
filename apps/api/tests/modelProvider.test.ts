@@ -18,9 +18,9 @@ function restore() {
 test("BobAI defaults to one shared multimodal Ollama model without API credentials", () => {
   try {
     for (const key of keys) delete process.env[key];
-    assert.equal(ollamaModelFor("bob"), "qwen3.5:4b");
-    assert.equal(ollamaModelFor("coding"), "qwen3.5:4b");
-    assert.equal(ollamaVisionModel(), "qwen3.5:4b");
+    assert.equal(ollamaModelFor("bob"), "qwen3.5:2b");
+    assert.equal(ollamaModelFor("coding"), "qwen3.5:2b");
+    assert.equal(ollamaVisionModel(), "qwen3.5:2b");
     assert.equal(ollamaEmbeddingEnabled(), false);
     assert.equal(ollamaEmbeddingModel(), "qwen3-embedding:0.6b");
     assert.equal(new BobModelProvider().isConfigured(), true);

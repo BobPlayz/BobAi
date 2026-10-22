@@ -1,3 +1,5 @@
+import path from "node:path";
+import { tmpdir } from "node:os";
 import { Router, type NextFunction, type Request, type Response } from "express";
 import multer from "multer";
 import { promises as fs } from "node:fs";
@@ -11,7 +13,8 @@ import { indexUpload, searchDocumentChunks } from "../services/documentIndexer.j
 import { ocrUpload } from "../services/ocr.js";
 import { scanUpload } from "../services/malwareScanner.js";
 const router = Router(); const MAX_FILE_SIZE = 10 * 1024 * 1024; const MAX_EXTRACTED_TEXT = 5 * 1024 * 1024; const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const upload = multer({ dest: "uploads/", limits: { fileSize: MAX_FILE_SIZE, fields: 8, fieldSize: 16 * 1024, parts: 10, headerPairs: 100 } });
+// Multer creates its folder when this module loads; the deployment folder is read-only on Vercel, so use the temp dir.
+const upload = multer({ dest: path.join(tmpdir(), "jarvis-uploads"), limits: { fileSize: MAX_FILE_SIZE, fields: 8, fieldSize: 16 * 1024, parts: 10, headerPairs: 100 } });
 function uploadMiddleware(req: Request, res: Response, next: NextFunction) { upload.single("file")(req, res, (error) => { if (!error) return next(); if (error instanceof multer.MulterError) return res.status(error.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({ error: error.code === "LIMIT_FILE_SIZE" ? "file exceeds the 10 MB size limit" : "upload failed" }); return res.status(400).json({ error: "file upload failed" }); }); }
 function isPdf(buffer: Buffer) { return buffer.subarray(0, 5).toString("ascii") === "%PDF-"; } function isPng(buffer: Buffer) { return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])); } function isJpeg(buffer: Buffer) { return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff; } function isWebp(buffer: Buffer) { return buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP"; } function isSupportedTextType(mimetype: string) { return /^(?:text\/(?:plain|markdown|csv|html|css|javascript|xml)|application\/javascript)$/i.test(mimetype); } function safeName(name: string) { return name.replace(/[\u0000-\u001f\u007f\\/:*?"<>|]/g, "_").slice(0, 255); } function likePattern(value: string) { return `%${value.replace(/[\\%_]/g, "\\$&")}%`; }
 async function ownedProject(userId: string, workspaceId: string, projectId: unknown) { if (typeof projectId !== "string" || !UUID.test(projectId)) return null; const [project] = await db.select({ id: projects.id }).from(projects).where(and(eq(projects.id, projectId), eq(projects.workspaceId, workspaceId), eq(projects.ownerId, userId), eq(projects.archived, false), isNull(projects.deletedAt))).limit(1); return project?.id ?? null; }
