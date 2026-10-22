@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Terms of Service | Jarvis",
+  title: "Terms of Service",
   description: "The terms that apply when you use Jarvis.",
 };
 
@@ -19,21 +19,21 @@ const sections = [
 
 export default function TermsPage() {
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-6 py-16 text-white sm:px-8">
-      <article className="rounded-3xl border border-white/10 bg-white/[0.03] p-7 shadow-2xl backdrop-blur-xl sm:p-10">
-        <p className="text-sm text-white/45">Last updated: September 8, 2026</p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight">Terms of Service</h1>
-        <p className="mt-4 max-w-2xl leading-7 text-white/65">These terms describe the basic rules for using Jarvis. They are a product/legal draft and must be reviewed and completed with the operator&apos;s legal identity, contact details, governing law, and any applicable commercial terms before public launch.</p>
+    <main id="main" tabIndex={-1} className="relative z-[1] mx-auto min-h-screen max-w-3xl px-5 pb-20 pt-28 text-[var(--text)] sm:px-8">
+      <article className="">
+        <p className="text-sm text-[var(--muted)]">Last updated: September 8, 2026</p>
+        <h1 className="font-display mt-3 text-6xl leading-none">Terms<em className="text-[var(--accent)]">.</em></h1>
+        <p className="mt-4 max-w-2xl leading-7 text-[var(--muted)]">These terms describe the basic rules for using Jarvis. They are a product/legal draft and must be reviewed and completed with the operator&apos;s legal identity, contact details, governing law, and any applicable commercial terms before public launch.</p>
         <div className="mt-10 space-y-8">
           {sections.map(([title, body]) => (
             <section key={title}>
               <h2 className="text-xl font-semibold">{title}</h2>
-              <p className="mt-2 leading-7 text-white/65">{body}</p>
-              {title === "10. Privacy" && <a href="/privacy" className="mt-3 inline-block text-cyan-300 hover:text-cyan-200">Read the Privacy Policy →</a>}
+              <p className="mt-2 leading-7 text-[var(--muted)]">{body}</p>
+              {title === "10. Privacy" && <a href="/privacy" className="mt-3 inline-block text-[var(--accent)] underline underline-offset-4">Read the Privacy Policy →</a>}
             </section>
           ))}
         </div>
-        <p className="mt-10 border-t border-white/10 pt-6 text-sm leading-6 text-white/45">Nothing on this page is legal advice. The operator should obtain jurisdiction-specific legal review before accepting users in production.</p>
+        <p className="mt-10 border-t border-[var(--hairline)] pt-6 text-sm leading-6 text-[var(--muted)]">Nothing on this page is legal advice. The operator should obtain jurisdiction-specific legal review before accepting users in production.</p>
       </article>
     </main>
   );

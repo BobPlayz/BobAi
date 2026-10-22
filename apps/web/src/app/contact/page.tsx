@@ -5,7 +5,7 @@ export const metadata = { title: "Contact", description: "How to reach the Jarvi
 
 export default function ContactPage() {
   return (
-    <main className="relative z-[1] min-h-screen px-5 pb-20 pt-28 sm:px-8">
+    <main id="main" tabIndex={-1} className="relative z-[1] min-h-screen px-5 pb-20 pt-28 sm:px-8">
       <div className="mx-auto max-w-2xl">
         <Breadcrumbs current="Contact" />
         <h1 className="font-display mt-6 text-6xl leading-none">Say hi<em className="text-[var(--accent)]">.</em></h1>

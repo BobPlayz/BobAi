@@ -15,8 +15,8 @@ html[data-theme="light"] {
   --hairline: rgba(21, 19, 15, 0.14);
   --text: #15130f;
   --muted: #6b6357;
-  --faint: #9a9182;
-  --accent: #d9381e;          /* orange */
+  --faint: #736b5e;
+  --accent: #c8331b;          /* orange, dark enough for 4.5:1 text contrast */
   --accent-ink: #fff7ef;
   --danger: #b4231a;
   --ink: #15130f;             /* primary button / inverted surfaces */
@@ -40,7 +40,7 @@ html[data-theme="dark"] {
   --hairline: rgba(239, 233, 221, 0.14);
   --text: #efe9dd;
   --muted: #a69d8d;
-  --faint: #7a7264;
+  --faint: #928979;
   --accent: #f0592f;
   --accent-ink: #160a05;
   --danger: #ff8a73;
@@ -98,6 +98,8 @@ html, body {
 button, input, textarea, a { transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 300ms var(--ease-out); }
 button, a { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.skip-link { position: fixed; left: 16px; top: -100px; z-index: 100; padding: 10px 16px; border-radius: 999px; background: var(--text); color: var(--bg); font-size: 14px; }
+.skip-link:focus { top: 16px; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }

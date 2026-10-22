@@ -47,6 +47,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning className={`${display.variable} ${sans.variable} ${mono.variable}`}>
       <body>
+        <a href="#main" className="skip-link">Skip to content</a>
         <div id="jarvis-root" className="relative min-h-screen">
           <div className="relative z-10 min-h-screen">
             <ThemeProvider>

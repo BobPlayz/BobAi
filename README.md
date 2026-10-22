@@ -26,7 +26,7 @@ There is also a **demo mode** at `/demo` that shows the interface with sample da
 
 ## Built with
 
-- **Web app:** Next.js 16, React 19, Tailwind CSS 4, three.js (the 3D orrery), Bricolage Grotesque + Plus Jakarta Sans
+- **Web app:** Next.js 16, React 19, Tailwind CSS 4, three.js (the 3D orrery), Instrument Serif + Schibsted Grotesk
 - **API:** Node.js 24, Express 5, TypeScript
 - **AI:** Ollama with `qwen3.5:2b` (one model for chat, coding and image understanding)
 - **Voice:** Piper (text to speech) and faster-whisper (speech to text), both offline

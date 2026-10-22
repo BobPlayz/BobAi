@@ -1,7 +1,7 @@
 import PrivacyPageClient from "./PrivacyPageClient";
 
 export const metadata = {
-  title: "Privacy Policy | Jarvis",
+  title: "Privacy Policy",
   description: "How Jarvis handles personal data and privacy.",
 };
 

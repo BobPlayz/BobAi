@@ -33,7 +33,7 @@ export default function NeuralShell({ sidebar, topbar, children, composer }: Pro
           </button>
           <div className="min-w-0 flex-1">{topbar}</div>
         </header>
-        <main className="relative min-h-0 flex-1 overflow-hidden">{children}</main>
+        <main id="main" tabIndex={-1} className="relative min-h-0 flex-1 overflow-hidden">{children}</main>
         <footer className="atelier-composer-wrap">{composer}</footer>
       </div>
     </div>

@@ -68,7 +68,7 @@ export default function HomePage() {
   const active = STATES.find((item) => item.id === figureState)!;
 
   return (
-    <main className="relative z-[1] min-h-screen text-[var(--text)]">
+    <main id="main" tabIndex={-1} className="relative z-[1] min-h-screen text-[var(--text)]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <ScrollProgress />
 
@@ -226,13 +226,13 @@ export default function HomePage() {
       <footer className="border-t border-[var(--hairline)]">
         <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 px-5 py-8 text-sm text-[var(--muted)] sm:px-8">
           <span>Jarvis — Origin Productions</span>
-          <nav aria-label="Footer" className="flex gap-6">
-            <Link href="/about" className="hover:text-[var(--text)]">About</Link>
-            <Link href="/faq" className="hover:text-[var(--text)]">FAQ</Link>
-            <Link href="/privacy" className="hover:text-[var(--text)]">Privacy</Link>
-            <Link href="/terms" className="hover:text-[var(--text)]">Terms</Link>
+          <nav aria-label="Footer" className="-my-3 flex gap-2">
+            <Link href="/about" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">About</Link>
+            <Link href="/faq" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">FAQ</Link>
+            <Link href="/privacy" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">Privacy</Link>
+            <Link href="/terms" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">Terms</Link>
           </nav>
-          <span className="caption normal-case tracking-normal">Set in Bricolage Grotesque &amp; Plus Jakarta Sans.</span>
+          <span className="caption normal-case tracking-normal">Set in Instrument Serif &amp; Schibsted Grotesk.</span>
         </div>
       </footer>
     </main>

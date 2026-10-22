@@ -26,7 +26,7 @@ export default function AuthGate({ children, requireOnboarding = true }: { child
 
   if (!ready) {
     return (
-      <main className="relative z-[1] flex min-h-screen items-center justify-center bg-[var(--bg)] text-[var(--text)]">
+      <main id="main" tabIndex={-1} className="relative z-[1] flex min-h-screen items-center justify-center bg-[var(--bg)] text-[var(--text)]">
         <p role="status" className="caption">Opening your workspace…</p>
       </main>
     );

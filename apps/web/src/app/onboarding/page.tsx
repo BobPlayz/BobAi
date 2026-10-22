@@ -45,7 +45,7 @@ function Onboarding() {
   }
 
   return (
-    <main className="relative z-[1] min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <main id="main" tabIndex={-1} className="relative z-[1] min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-20">
         <p className="caption">Set up · takes 30 seconds · change it any time in Settings</p>
         <h1 className="font-display mt-4 text-5xl leading-[0.95] sm:text-7xl">Make Jarvis <em className="text-[var(--accent)]">yours.</em></h1>

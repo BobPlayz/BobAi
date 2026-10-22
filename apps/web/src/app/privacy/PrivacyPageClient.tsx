@@ -1,19 +1,13 @@
 "use client";
 
-import { useTheme } from "@/components/neural/ThemeProvider";
-
 export default function PrivacyPageClient() {
-  const { theme } = useTheme();
-  const light = theme === "light";
-  const colors = light
-    ? { page: "bg-[#f7f8fa] text-[#202123]", panel: "border-[#e5e7eb] bg-white shadow-sm", muted: "text-[#5f6672]", divider: "border-[#e5e7eb]" }
-    : { page: "bg-[#08090b] text-white", panel: "border-white/10 bg-white/[0.03] shadow-2xl", muted: "text-white/65", divider: "border-white/10" };
+  const colors = { page: "relative z-[1] text-[var(--text)]", panel: "", muted: "text-[var(--muted)]", divider: "border-[var(--hairline)]" };
   return (
-    <main className={`mx-auto min-h-screen max-w-4xl px-6 py-16 sm:px-8 ${colors.page}`}>
-      <article className={`rounded-3xl border p-7 backdrop-blur-xl sm:p-10 ${colors.panel}`}>
+    <main id="main" tabIndex={-1} className={`mx-auto min-h-screen max-w-3xl px-5 pb-20 pt-28 sm:px-8 ${colors.page}`}>
+      <article className={colors.panel}>
         <p className={`text-sm ${colors.muted}`}>Last updated: October 13, 2026</p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight">Privacy Policy</h1>
-        <p className={`mt-4 leading-7 ${colors.muted}`}>Jarvis is an AI workspace for chat, research, creation, and development. This policy explains what information the service may process and how users can control it.</p>
+        <h1 className="font-display mt-3 text-6xl leading-none">Privacy<em className="text-[var(--accent)]">.</em></h1>
+        <p className={`mt-4 leading-7 ${colors.muted}`}>Jarvis is a personal assistant for chat, research, memory and files. This policy explains what information the service may process and how users can control it.</p>
         <div className="mt-10 space-y-8">
           <section><h2 className="text-xl font-semibold">1. Information we process</h2><p className={`mt-2 leading-7 ${colors.muted}`}>Depending on the features you use, Jarvis may process your email address and username, authentication and security information, conversations and memories you choose to store, files or media you submit, generated results, preferences, and technical information needed to operate and secure the service.</p></section>
           <section><h2 className="text-xl font-semibold">2. Why we process it</h2><p className={`mt-2 leading-7 ${colors.muted}`}>We process information to provide requested AI features, authenticate accounts, save conversations and preferences, maintain security, prevent abuse, troubleshoot failures, and comply with applicable law. Each production data flow must have a documented purpose and an appropriate lawful basis.</p></section>

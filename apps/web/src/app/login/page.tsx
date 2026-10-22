@@ -91,7 +91,7 @@ export default function LoginPage() {
 
   const heading = step === "details" ? "Say hello." : step === "verify" ? "Check your inbox." : "One more code.";
   return (
-    <main className="relative z-[1] grid min-h-screen bg-[var(--bg)] text-[var(--text)] lg:grid-cols-2">
+    <main id="main" tabIndex={-1} className="relative z-[1] grid min-h-screen bg-[var(--bg)] text-[var(--text)] lg:grid-cols-2">
       <aside className="hidden flex-col justify-between border-r border-[var(--hairline)] p-10 lg:flex">
         <Link href="/" className="atelier-wordmark" aria-label="Jarvis home"><JarvisMark />Jarvis</Link>
         <div>

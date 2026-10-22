@@ -57,7 +57,7 @@ export default function DemoPage() {
       sidebar={
         <div className="flex h-full flex-col gap-4 p-5">
           <p className="caption">Demo mode</p>
-          <p className="font-display text-3xl leading-tight">Sample data, <em className="text-[var(--accent)]">nothing real.</em></p>
+          <h1 className="font-display text-3xl leading-tight">Sample data, <em className="text-[var(--accent)]">nothing real.</em></h1>
           <p className="text-sm leading-6 text-[var(--muted)]">This page never contacts the server. Nothing you do here is saved or mixed with real conversations.</p>
           <Link href="/login" className="btn-ink mt-auto justify-center text-sm">Sign in for the real Jarvis</Link>
         </div>

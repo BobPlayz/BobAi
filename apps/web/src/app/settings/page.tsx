@@ -231,7 +231,7 @@ export default function SettingsPage() {
       };
 
   return (
-    <main className={`min-h-screen ${colors.page}`}>
+    <main id="main" tabIndex={-1} className={`min-h-screen ${colors.page}`}>
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col sm:flex-row">
         <aside className={`w-full shrink-0 border-b p-4 sm:w-60 sm:border-b-0 sm:border-r sm:p-5 ${colors.sidebar}`}>
           <Link href="/chat" className="mb-6 flex items-center gap-3" aria-label="Back to Jarvis chat">
