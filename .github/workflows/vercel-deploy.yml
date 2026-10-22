@@ -31,7 +31,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -45,16 +45,17 @@ jobs:
           fi
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+        run: npm install --global vercel@62.5.0
 
       - name: Pull production settings
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
-      - name: Apply production database migrations
-        run: node --env-file=.vercel/.env.production.local node_modules/tsx/dist/cli.mjs scripts/migrate.ts
-
       - name: Build production deployment
         run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      # Migrate only after the build succeeds, so a broken build never changes the production schema.
+      - name: Apply production database migrations
+        run: node --env-file=.vercel/.env.production.local node_modules/tsx/dist/cli.mjs scripts/migrate.ts
 
       - name: Deploy production build
         run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
