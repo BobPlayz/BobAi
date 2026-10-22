@@ -141,7 +141,7 @@ export default function HomePage() {
           {[0, 1].map((copy) => (
             <div key={copy} className="marquee-track font-display text-3xl sm:text-4xl">
               {["Runs on Ollama", "Speaks with Alan", "Keeps your files local", "Cites its sources", "Asks before it acts", "Works on an 8 GB laptop"].map((item) => (
-                <span key={item} className="flex items-center gap-12 whitespace-nowrap">{item}<span className="text-[var(--brass)]">✦</span></span>
+                <span key={item} className="flex items-center gap-12 whitespace-nowrap">{item}<span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--accent)]" aria-hidden /></span>
               ))}
             </div>
           ))}
@@ -184,7 +184,7 @@ export default function HomePage() {
               <Reveal key={title} delay={(index % 3) * 90} className="group border-t border-[var(--text)] py-8">
                 <div className="flex items-baseline justify-between">
                   <span className="caption">{String.fromCharCode(97 + index)}.</span>
-                  <span aria-hidden className="text-[var(--brass)] opacity-0 transition-opacity duration-500 group-hover:opacity-100">✦</span>
+                  <span aria-hidden className="text-[var(--accent)] opacity-0 transition-opacity duration-500 group-hover:opacity-100">→</span>
                 </div>
                 <h3 className="font-display mt-6 text-3xl transition-transform duration-700 group-hover:translate-x-2">{title}</h3>
                 <p className="mt-3 leading-7 text-[var(--muted)]">{body}</p>

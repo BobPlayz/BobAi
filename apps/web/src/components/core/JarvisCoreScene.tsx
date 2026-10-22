@@ -31,8 +31,8 @@ const SETTINGS: Record<CoreQuality, { sphere: number; ringSegments: number; shad
   high: { sphere: 128, ringSegments: 256, shadowMap: 2048, dpr: [1, 1.75], antialias: true, shadows: true },
 };
 
-// The enamel "moon" bead uses the brand brass.
-const ACCENT = { light: new THREE.Color("#e0a92a"), dark: new THREE.Color("#f0c766") };
+// The enamel "moon" bead uses the brand vermilion.
+const ACCENT = { light: new THREE.Color("#d9381e"), dark: new THREE.Color("#f0592f") };
 
 function Environment() {
   const { gl, scene } = useThree();
@@ -58,7 +58,7 @@ function Orrery({ state, quality, theme, reducedMotion }: { state: AssistantVisu
   const live = useRef({ ringSpeed: MOTION.idle.ringSpeed, settle: 0, breathe: 0, wobble: 0, bead: MOTION.idle.bead });
   const time = useRef(0);
 
-  const ceramic = useMemo(() => new THREE.MeshPhysicalMaterial({ color: theme === "dark" ? "#e4e8f0" : "#eef1f6", roughness: 0.42, metalness: 0, clearcoat: 0.65, clearcoatRoughness: 0.28, sheen: 0.4, sheenColor: new THREE.Color("#eef3ff") }), [theme]);
+  const ceramic = useMemo(() => new THREE.MeshPhysicalMaterial({ color: theme === "dark" ? "#e9e2d4" : "#f4efe6", roughness: 0.42, metalness: 0, clearcoat: 0.65, clearcoatRoughness: 0.28, sheen: 0.4, sheenColor: new THREE.Color("#fff3df") }), [theme]);
   const brass = useMemo(() => new THREE.MeshStandardMaterial({ color: "#b48a4c", metalness: 1, roughness: 0.32 }), []);
   const darkMetal = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2a2620", metalness: 0.85, roughness: 0.45 }), []);
   useEffect(() => () => { ceramic.dispose(); brass.dispose(); darkMetal.dispose(); }, [ceramic, brass, darkMetal]);
@@ -164,9 +164,9 @@ export default function JarvisCoreScene({ state, quality, theme, reducedMotion, 
       aria-hidden="true"
     >
       <Environment />
-      <hemisphereLight args={[theme === "dark" ? "#dfe8ff" : "#ffffff", theme === "dark" ? "#0a1226" : "#cfd8e6", 0.55]} />
+      <hemisphereLight args={[theme === "dark" ? "#fff2dc" : "#fffaf0", theme === "dark" ? "#1a1814" : "#d9cfbd", 0.55]} />
       <directionalLight position={[-1.4, 6.5, 2.2]} intensity={2.2} color="#fff4e2" castShadow={settings.shadows} shadow-mapSize-width={settings.shadowMap} shadow-mapSize-height={settings.shadowMap} shadow-camera-near={1} shadow-camera-far={14} shadow-camera-left={-3} shadow-camera-right={3} shadow-camera-top={3} shadow-camera-bottom={-3} shadow-bias={-0.0004} shadow-radius={6} />
-      <directionalLight position={[3.5, 1, -2.5]} intensity={0.7} color="#cfe0ff" />
+      <directionalLight position={[3.5, 1, -2.5]} intensity={0.7} color="#ffd9b0" />
       <Orrery state={state} quality={quality} theme={theme} reducedMotion={reducedMotion} />
       {/* An invisible floor that only shows the object's shadow. */}
       {settings.shadows && (
