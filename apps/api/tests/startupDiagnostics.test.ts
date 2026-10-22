@@ -12,3 +12,16 @@ test("startup diagnostics never reveal credentials, keys or emails", () => {
   for (const secret of ["npg_SuperSecret123", "neondb_owner", "re_AbCdEf123456_XYZ", "abcdefghijklmnopqrstuvwxyz0123456789ABCD", "me@example.com", "stack line"]) assert.ok(!text.includes(secret), `leaked ${secret}`);
   assert.match(described.message, /connect failed/);
 });
+
+test("requests under /api reach the same routes as requests at the root", async () => {
+  const { app } = await import("../src/app.js");
+  const server = app.listen(0);
+  try {
+    const port = (server.address() as { port: number }).port;
+    for (const path of ["/health", "/api/health"]) {
+      const response = await fetch(`http://127.0.0.1:${port}${path}`);
+      assert.equal(response.status, 200, path);
+      assert.equal(((await response.json()) as { status?: string }).status, "ok");
+    }
+  } finally { server.close(); }
+});
