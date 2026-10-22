@@ -23,6 +23,8 @@ healthRouter.get("/ready", async (_req, res) => {
     runtime: { nodeEnv: process.env.NODE_ENV ?? null, vercel: process.env.VERCEL === "1", vercelEnv: process.env.VERCEL_ENV ?? null },
     productionConfigReady: productionConfig.length === 0,
     ...(productionConfig.length ? { productionConfigProblems: productionConfig } : {}),
+    // Production rejects writes from origins missing from CORS_ORIGIN, so the live site's own address must be listed.
+    ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? { corsAllowsProductionSite: (process.env.CORS_ORIGIN || "").split(",").map((origin) => origin.trim().replace(/\/+$/, "")).includes(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) } : {}),
     databaseConfigured,
     databaseReachable: database.reachable,
     databaseSchemaReady: database.schemaReady,

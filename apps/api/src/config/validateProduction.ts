@@ -10,16 +10,18 @@ export function validateProductionConfig() {
  */
 export function productionConfigProblems(): string[] {
   const problems: string[] = [];
-  const required = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL","BOBAI_MFA_ENCRYPTION_KEY"];
-  const missing = required.filter((key) => !process.env[key]?.trim());
+  const missing = REQUIRED.filter((key) => !process.env[key]?.trim());
   if (missing.length) problems.push(`Missing production configuration: ${missing.join(", ")}`);
   else { try { checkProductionConfig(); } catch (error) { problems.push(error instanceof Error ? error.message : "invalid production configuration"); } }
   return problems;
 }
 
+// BOBAI_MFA_ENCRYPTION_KEY is optional: two-factor and social sign-in refuse to run without it (fail closed), and it is
+// validated below whenever it is set.
+const REQUIRED = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL"];
+
 function checkProductionConfig() {
-  const required = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL","BOBAI_MFA_ENCRYPTION_KEY"];
-  const missing = required.filter((key) => !process.env[key]?.trim());
+  const missing = REQUIRED.filter((key) => !process.env[key]?.trim());
   if (missing.length) throw new Error(`Missing production configuration: ${missing.join(", ")}`);
   const hasResend = Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim());
   const hasSmtp = Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim());
@@ -29,9 +31,11 @@ function checkProductionConfig() {
   if (chosenEmail === "smtp" && !hasSmtp) throw new Error("BOBAI_EMAIL_PROVIDER is smtp but BOBAI_SMTP_HOST and BOBAI_SMTP_FROM are not set");
   if (chosenEmail === "resend" && !hasResend) throw new Error("BOBAI_EMAIL_PROVIDER is resend but RESEND_API_KEY and RESEND_FROM_EMAIL are not set");
   if (Boolean(process.env.RESEND_API_KEY?.trim()) !== Boolean(process.env.RESEND_FROM_EMAIL?.trim())) throw new Error("RESEND_API_KEY and RESEND_FROM_EMAIL must be provided together");
-  const mfaKey = process.env.BOBAI_MFA_ENCRYPTION_KEY!.trim();
-  const mfaKeyBytes = /^[0-9a-f]{64}$/i.test(mfaKey) ? Buffer.from(mfaKey, "hex").length : Buffer.from(mfaKey, "base64").length;
-  if (mfaKeyBytes !== 32) throw new Error("BOBAI_MFA_ENCRYPTION_KEY must decode to exactly 32 bytes in production");
+  const mfaKey = process.env.BOBAI_MFA_ENCRYPTION_KEY?.trim();
+  if (mfaKey) {
+    const mfaKeyBytes = /^[0-9a-f]{64}$/i.test(mfaKey) ? Buffer.from(mfaKey, "hex").length : Buffer.from(mfaKey, "base64").length;
+    if (mfaKeyBytes !== 32) throw new Error("BOBAI_MFA_ENCRYPTION_KEY must decode to exactly 32 bytes in production");
+  }
   if (process.env.BOBAI_AGENT_KEY!.length < 32) throw new Error("BOBAI_AGENT_KEY must be at least 32 characters in production");
   for (const [key, value] of [["BOBAI_WEB_URL", process.env.BOBAI_WEB_URL!],["BOBAI_AUTH_REDIRECT_BASE_URL", process.env.BOBAI_AUTH_REDIRECT_BASE_URL!]] as const) {
     try { const url = new URL(value); if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) throw new Error(); }
