@@ -98,14 +98,15 @@ test("cricket uses the real scoring feed when a key is configured", async () => 
   }
 });
 
-test("an unreachable Ollama gives a clear, user-safe offline error", async () => {
+test("an unreachable Ollama gives a clear, user-safe error", async () => {
   const previous = process.env.BOBAI_OLLAMA_BASE_URL;
   process.env.BOBAI_OLLAMA_BASE_URL = "http://127.0.0.1:9";
   try {
-    const { ollamaStream, ModelOfflineError } = await import("../src/services/ollamaProvider.js");
+    const { ollamaStream, ModelUnavailableError } = await import("../src/services/ollamaProvider.js");
     await assert.rejects(ollamaStream([{ role: "user", content: "hi" }], () => undefined), (error: unknown) => {
-      assert.ok(error instanceof ModelOfflineError);
-      assert.match(error.publicMessage, /offline/);
+      assert.ok(error instanceof ModelUnavailableError);
+      assert.equal(error.problem, "unreachable");
+      assert.match(error.publicMessage, /can't reach/);
       return true;
     });
   } finally {

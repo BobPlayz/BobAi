@@ -1,11 +1,33 @@
+/** Throws on the first production-configuration problem when running in production. */
 export function validateProductionConfig() {
   if (process.env.NODE_ENV !== "production") return;
+  checkProductionConfig();
+}
+
+/**
+ * Lists production-configuration problems without throwing, whatever mode the process runs in. Messages name
+ * variables only, never their values, so they are safe for the readiness endpoint.
+ */
+export function productionConfigProblems(): string[] {
+  const problems: string[] = [];
+  const required = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL","BOBAI_MFA_ENCRYPTION_KEY"];
+  const missing = required.filter((key) => !process.env[key]?.trim());
+  if (missing.length) problems.push(`Missing production configuration: ${missing.join(", ")}`);
+  else { try { checkProductionConfig(); } catch (error) { problems.push(error instanceof Error ? error.message : "invalid production configuration"); } }
+  return problems;
+}
+
+function checkProductionConfig() {
   const required = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL","BOBAI_MFA_ENCRYPTION_KEY"];
   const missing = required.filter((key) => !process.env[key]?.trim());
   if (missing.length) throw new Error(`Missing production configuration: ${missing.join(", ")}`);
   const hasResend = Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim());
   const hasSmtp = Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim());
-  if (!hasResend && !hasSmtp) throw new Error("Configure Resend (RESEND_API_KEY and RESEND_FROM_EMAIL) or SMTP before production launch");
+  if (!hasResend && !hasSmtp) throw new Error("Configure SMTP (BOBAI_SMTP_HOST, BOBAI_SMTP_FROM, BOBAI_SMTP_USER, BOBAI_SMTP_PASSWORD) or Resend (RESEND_API_KEY and RESEND_FROM_EMAIL) before production launch");
+  const chosenEmail = process.env.BOBAI_EMAIL_PROVIDER?.trim().toLowerCase();
+  if (chosenEmail && chosenEmail !== "smtp" && chosenEmail !== "resend") throw new Error("BOBAI_EMAIL_PROVIDER must be smtp or resend");
+  if (chosenEmail === "smtp" && !hasSmtp) throw new Error("BOBAI_EMAIL_PROVIDER is smtp but BOBAI_SMTP_HOST and BOBAI_SMTP_FROM are not set");
+  if (chosenEmail === "resend" && !hasResend) throw new Error("BOBAI_EMAIL_PROVIDER is resend but RESEND_API_KEY and RESEND_FROM_EMAIL are not set");
   if (Boolean(process.env.RESEND_API_KEY?.trim()) !== Boolean(process.env.RESEND_FROM_EMAIL?.trim())) throw new Error("RESEND_API_KEY and RESEND_FROM_EMAIL must be provided together");
   const mfaKey = process.env.BOBAI_MFA_ENCRYPTION_KEY!.trim();
   const mfaKeyBytes = /^[0-9a-f]{64}$/i.test(mfaKey) ? Buffer.from(mfaKey, "hex").length : Buffer.from(mfaKey, "base64").length;

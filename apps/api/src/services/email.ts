@@ -1,5 +1,6 @@
 import net from "node:net";
 import tls from "node:tls";
+import { randomUUID } from "node:crypto";
 
 const TIMEOUT_MS = 15_000;
 
@@ -9,6 +10,8 @@ type SmtpConfig = {
   user?: string;
   password?: string;
   from: string;
+  /** Implicit TLS from the first byte (port 465, or BOBAI_SMTP_SECURE=true); otherwise STARTTLS is required. */
+  secure: boolean;
 };
 
 function config(): SmtpConfig {
@@ -19,7 +22,7 @@ function config(): SmtpConfig {
   const password = process.env.BOBAI_SMTP_PASSWORD;
   if (!host || !from || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error("SMTP email delivery is not configured");
   if ((user && !password) || (!user && password)) throw new Error("BOBAI_SMTP_USER and BOBAI_SMTP_PASSWORD must be provided together");
-  return { host, port, user, password, from };
+  return { host, port, user, password, from, secure: port === 465 || process.env.BOBAI_SMTP_SECURE?.trim().toLowerCase() === "true" };
 }
 
 function readResponse(socket: net.Socket | tls.TLSSocket): Promise<string> {
@@ -62,7 +65,7 @@ function command(socket: net.Socket | tls.TLSSocket, value: string, expected: nu
 
 function connect(configValue: SmtpConfig): Promise<net.Socket | tls.TLSSocket> {
   return new Promise((resolve, reject) => {
-    const secure = configValue.port === 465;
+    const secure = configValue.secure;
     const socket = secure
       ? tls.connect({ host: configValue.host, port: configValue.port, servername: configValue.host })
       : net.connect({ host: configValue.host, port: configValue.port });
@@ -93,14 +96,14 @@ async function sendSmtp(to: string, subject: string, text: string) {
   const c = config();
   address(c.from);
   address(to);
-  if (/[\\r\\n\\0]/.test(subject)) throw new Error("invalid email subject");
+  if (/[\r\n\0]/.test(subject)) throw new Error("invalid email subject");
   let socket = await connect(c);
   try {
     let response = await readResponse(socket);
     if (!response.startsWith("220")) throw new Error("SMTP server rejected connection");
     response = await command(socket, "EHLO bobai", [250]);
 
-    if (c.port !== 465 && /(^|\n)250[ -]STARTTLS/i.test(response)) {
+    if (!c.secure && /(^|\n)250[ -]STARTTLS/i.test(response)) {
       await command(socket, "STARTTLS", [220]);
       socket = await new Promise<tls.TLSSocket>((resolve, reject) => {
         const upgraded = tls.connect({ socket, servername: c.host });
@@ -109,7 +112,7 @@ async function sendSmtp(to: string, subject: string, text: string) {
         upgraded.once("error", error => { clearTimeout(timer); reject(error); });
       });
       response = await command(socket, "EHLO bobai", [250]);
-    } else if (c.port !== 465) {
+    } else if (!c.secure) {
       throw new Error("SMTP server did not advertise STARTTLS; refusing to send email without TLS");
     }
 
@@ -127,6 +130,8 @@ async function sendSmtp(to: string, subject: string, text: string) {
       `From: ${c.from}`,
       `To: ${to}`,
       `Subject: ${encodeHeader(subject)}`,
+      `Date: ${new Date().toUTCString()}`,
+      `Message-ID: <${randomUUID()}@${address(c.from).split("@")[1]}>`,
       "MIME-Version: 1.0",
       "Content-Type: text/plain; charset=UTF-8",
       "Content-Transfer-Encoding: 8bit",
@@ -154,5 +159,5 @@ export async function sendPasswordResetEmail(email: string, rawToken: string) {
   let resetUrl: URL;
   try { resetUrl = new URL("/reset-password", origin); } catch { throw new Error("BOBAI_WEB_URL or CORS_ORIGIN is invalid"); }
   resetUrl.searchParams.set("token", rawToken);
-  await sendEmail(email, "Reset your BobAI password", `A password reset was requested for your BobAI account. Open this link within 15 minutes to choose a new password:\n\n${resetUrl.toString()}\n\nIf you did not request this, you can ignore this email.`);
+  await sendEmail(email, "Reset your Jarvis password", `A password reset was requested for your Jarvis account. Open this link within 15 minutes to choose a new password:\n\n${resetUrl.toString()}\n\nIf you did not request this, you can ignore this email.`);
 }

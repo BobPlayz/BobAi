@@ -47,24 +47,37 @@ export async function sendResendOtp(email: string, code: string) {
   }
 }
 
-export function configureOtpDelivery() {
-  const hasResend = Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim());
-  const hasSmtp = Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim());
+export type OtpDeliveryProvider = "resend" | "smtp" | "dev-log" | "none";
 
-  if (hasResend) {
-    setOtpSender(sendResendOtp);
+function resendConfigured() { return Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim()); }
+function smtpConfigured() { return Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim()); }
+
+/**
+ * Which provider sends login codes. BOBAI_EMAIL_PROVIDER ("resend" or "smtp") picks one explicitly; without it Resend
+ * wins when configured, then SMTP, so existing deployments keep their current behaviour.
+ */
+export function otpDeliveryProvider(): OtpDeliveryProvider {
+  const chosen = process.env.BOBAI_EMAIL_PROVIDER?.trim().toLowerCase();
+  if (chosen === "smtp") return smtpConfigured() ? "smtp" : "none";
+  if (chosen === "resend") return resendConfigured() ? "resend" : "none";
+  if (resendConfigured()) return "resend";
+  if (smtpConfigured()) return "smtp";
+  if (!isProduction && process.env.BOBAI_DEV_LOG_OTP === "true") return "dev-log";
+  return "none";
+}
+
+export function otpDeliveryConfigured() {
+  const provider = otpDeliveryProvider();
+  return provider === "resend" || provider === "smtp";
+}
+
+export function configureOtpDelivery() {
+  const provider = otpDeliveryProvider();
+  if (provider === "resend") { setOtpSender(sendResendOtp); return; }
+  if (provider === "smtp") { setOtpSender(sendEmailOtp); return; }
+  if (provider === "dev-log") {
+    setOtpSender(async (email, code) => { console.log(`[OTP development only] ${email}: ${code}`); });
     return;
   }
-  if (hasSmtp) {
-    setOtpSender(sendEmailOtp);
-    return;
-  }
-  if (isProduction) {
-    setOtpSender(async () => { throw new Error("Email delivery is not configured; set Resend or SMTP credentials"); });
-    return;
-  }
-  setOtpSender(async (email, code) => {
-    if (process.env.BOBAI_DEV_LOG_OTP === "true") console.log(`[OTP development only] ${email}: ${code}`);
-    else throw new Error("Email delivery is not configured. Set Resend or SMTP credentials, or explicitly enable BOBAI_DEV_LOG_OTP for local development.");
-  });
+  setOtpSender(async () => { throw new Error("Email delivery is not configured. Set SMTP (BOBAI_SMTP_*) or Resend credentials; for local development only, BOBAI_DEV_LOG_OTP=true."); });
 }
