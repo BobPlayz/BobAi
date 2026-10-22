@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Jarvis",
     short_name: "Jarvis",
-    description: "A local-first AI assistant that runs on your own computer.",
+    description: "A chill AI assistant powered by Ollama.",
     start_url: "/chat",
     display: "standalone",
     background_color: "#F2EDE3",

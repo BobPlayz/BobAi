@@ -3,8 +3,11 @@ import type { NextConfig } from "next";
 const isProduction = process.env.NODE_ENV === "production";
 const scriptSources = isProduction ? "'self' 'unsafe-inline'" : "'self' 'unsafe-inline' 'unsafe-eval'";
 const connectSources = isProduction ? "'self' https: wss:" : "'self' https: http://localhost:3000 http://localhost:3001 ws://localhost:3000 ws://localhost:3001";
+// Local only: lets `next start` serve /api like Vercel does, by proxying to a locally running API. Never set on Vercel.
+const localApiProxy = process.env.BOBAI_LOCAL_API_PROXY?.trim().replace(/\/+$/, "");
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  ...(localApiProxy ? { async rewrites() { return [{ source: "/api/:path*", destination: `${localApiProxy}/:path*` }]; } } : {}),
   async headers() {
     return [{
       source: "/:path*",

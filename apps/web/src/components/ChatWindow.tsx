@@ -27,8 +27,8 @@ type Props = {
 
 const SUGGESTIONS = [
   "What's the weather in Hyderabad right now?",
-  "Explain recursion like I'm new to programming.",
-  "Write a Python function that removes duplicates from a list.",
+  "Explain black holes like I'm 13.",
+  "Help me write a Python program that removes duplicates from a list.",
 ];
 
 export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion }: Props) {
@@ -133,9 +133,9 @@ function EmptyState({ onSuggestion }: { onSuggestion?: (text: string) => void })
     <div className="flex justify-center pb-6">
       <div className="w-full max-w-xl text-center">
         <div className="jarvis-empty-spacer" aria-hidden="true" />
-        <h1 className="font-display text-5xl leading-none sm:text-6xl">What shall we <em className="text-[var(--accent)]">think</em> about?</h1>
-        <p className="mx-auto mt-4 max-w-md text-[var(--muted)]">Ask a question, paste some code, attach a file, or press the microphone and talk.</p>
-        <div className="mt-8 flex flex-col items-stretch gap-2 sm:items-center">
+        <h1 className="font-display text-[2.6rem] leading-none sm:text-6xl">What&apos;s on your <em className="text-[var(--accent)]">mind?</em></h1>
+        <p className="mx-auto mt-3 max-w-md text-[var(--muted)] sm:mt-4">Ask anything, paste some code, drop in a file, or tap the mic and talk.</p>
+        <div className="mt-5 flex flex-col items-stretch gap-1 sm:mt-8 sm:items-center sm:gap-2">
           {SUGGESTIONS.map((suggestion) => (
             <button key={suggestion} type="button" onClick={() => onSuggestion?.(suggestion)} disabled={!onSuggestion} className="group flex items-center justify-between gap-4 border-b border-[var(--hairline)] py-3 text-left text-[15px] hover:border-[var(--text)] disabled:cursor-default sm:min-w-[440px]">
               <span>{suggestion}</span>

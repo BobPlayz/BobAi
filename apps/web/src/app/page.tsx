@@ -16,40 +16,40 @@ const structuredData = {
   publisher: { "@type": "Organization", name: "Origin Productions" },
   applicationCategory: "ProductivityApplication",
   operatingSystem: "Web",
-  description: "A local-first AI assistant that runs on your own computer through Ollama.",
+  description: "A chill AI assistant powered by Ollama that shows its sources and asks before doing stuff.",
   url: process.env.NEXT_PUBLIC_SITE_URL,
 };
 
 const STATES: Array<{ id: AssistantVisualState; label: string; note: string }> = [
-  { id: "idle", label: "At rest", note: "The rings drift, like a desk orrery." },
-  { id: "listening", label: "Listening", note: "The rings turn to face you and settle." },
-  { id: "thinking", label: "Thinking", note: "The gimbals spin like a gyroscope." },
-  { id: "speaking", label: "Speaking", note: "The sphere breathes with the voice." },
+  { id: "idle", label: "At rest", note: "Just vibing. The rings drift around." },
+  { id: "listening", label: "Listening", note: "The rings turn to face you. It's all ears." },
+  { id: "thinking", label: "Thinking", note: "Big brain time. Everything spins." },
+  { id: "speaking", label: "Speaking", note: "The ball pulses while it talks." },
 ];
 
 const PRINCIPLES = [
-  ["Local first", "The model runs on your own computer through Ollama. Your conversations and files are not sent to an AI company to be answered."],
-  ["Honest about the world", "Weather comes from Open-Meteo and says when it was fetched. Scores found by web search are labelled as search results, never passed off as a live feed."],
-  ["Asks before it acts", "Anything that acts on your behalf shows you exactly what it will do and waits for your approval. One click, one run."],
-  ["Remembers when told", "Say “remember that…” and it will. Everything else is just conversation — it won’t quietly file away what you say."],
+  ["Runs on Ollama", "Open AI models through Ollama, either on your own PC or Ollama Cloud. No mystery AI company in the middle."],
+  ["No making stuff up", "Weather comes from a real weather service and says when it was checked. Cricket scores from a web search are labelled as search results, not fake live scores."],
+  ["Asks first", "If Jarvis wants to actually do something for you, it shows you exactly what and waits for you to say yes."],
+  ["Only remembers what you ask", "Say “remember that…” and it will. Everything else is just chat. No secret note-taking."],
 ];
 
 const CAPABILITIES = [
-  ["Conversation & code", "Streaming answers with proper formatting, tables and highlighted code you can copy in one click."],
-  ["Live weather", "Current conditions and today’s range for any city, with the time it was measured."],
-  ["Research with sources", "Searches the web, reads the pages and lists the sources it used."],
-  ["A voice of its own", "Speaks with Alan, a British voice generated on your machine by Piper — no cloud speech service."],
-  ["Reads your files", "PDFs, text, code and images, checked on the server before anything is read."],
-  ["Draws, slowly", "Local image generation with Stable Diffusion. Free and private, and on a laptop CPU it takes its time."],
+  ["Chat & code help", "Answers type out live, with tables and code you can copy in one tap."],
+  ["Live weather", "What it’s like outside anywhere right now, plus today’s high and low."],
+  ["Research with sources", "Searches the web, reads the pages, and shows you where it got everything."],
+  ["A voice of its own", "Talks back as Alan, a British voice. Works when you run Jarvis on your own PC."],
+  ["Reads your files", "Drop in PDFs, notes, code or pics and ask about them. Files get safety-checked first."],
+  ["Draws (slowly lol)", "Makes pictures with Stable Diffusion on your own PC. Free, but a laptop takes its time."],
 ];
 
 const SPEC = [
-  ["Language model", "Qwen 3.5 via Ollama — 2B for 8 GB laptops, 4B if you have room"],
-  ["Context", "4,096 tokens, trimmed to fit instead of silently cut"],
-  ["Voice", "Piper · en_GB-alan-medium · runs offline"],
-  ["Live data", "Open-Meteo weather · Brave or DuckDuckGo search"],
-  ["Accounts", "Email code sign-in via Resend · sessions in Postgres"],
-  ["Built for", "An Intel i7 laptop with 8 GB of RAM — no graphics card needed"],
+  ["AI model", "Ollama: Qwen 3.5 on your own PC, or a cloud model like Gemma 4 on Ollama Cloud"],
+  ["Memory span", "Remembers about 4,000 tokens of the chat, trimmed neatly instead of cut off"],
+  ["Voice", "Piper · Alan (British) · runs offline on your PC"],
+  ["Live stuff", "Open-Meteo weather · Brave or DuckDuckGo search · cricket"],
+  ["Sign in", "6-digit email code, no passwords · chats saved in Postgres"],
+  ["Made on", "A school laptop with 8 GB of RAM. No fancy graphics card needed"],
 ];
 
 export default function HomePage() {
@@ -76,9 +76,9 @@ export default function HomePage() {
         <nav aria-label="Primary navigation" className="mx-auto flex h-16 max-w-[1320px] items-center justify-between px-5 sm:px-8">
           <Link href="/" aria-label="Jarvis home" className="atelier-wordmark"><JarvisMark />Jarvis</Link>
           <div className="hidden items-center gap-8 text-sm text-[var(--muted)] md:flex">
-            <a href="#principles" className="hover:text-[var(--text)]">Principles</a>
-            <a href="#capabilities" className="hover:text-[var(--text)]">Capabilities</a>
-            <a href="#specification" className="hover:text-[var(--text)]">Specification</a>
+            <a href="#principles" className="hover:text-[var(--text)]">The rules</a>
+            <a href="#capabilities" className="hover:text-[var(--text)]">What it does</a>
+            <a href="#specification" className="hover:text-[var(--text)]">Nerdy bits</a>
             <Link href="/demo" className="hover:text-[var(--text)]">Demo</Link>
           </div>
           <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="mx-auto grid max-w-[1320px] gap-10 px-5 pb-16 pt-12 sm:px-8 lg:grid-cols-12 lg:gap-6 lg:pb-24 lg:pt-20">
         <div className="lg:col-span-7 lg:pt-6">
-          <p className="caption reveal is-in">No. 01 — A personal assistant that lives on your computer</p>
+          <p className="caption reveal is-in">No. 01 — Your own AI sidekick</p>
           <h1 className="font-display mt-6 text-[clamp(3.4rem,9.5vw,9.4rem)] leading-[0.9]">
             <SplitWords text="An assistant," start={120} />
             <br />
@@ -101,14 +101,14 @@ export default function HomePage() {
           </h1>
           <Reveal delay={700} className="mt-8 max-w-[34rem]">
             <p className="text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
-              Jarvis is a calm, local-first assistant. It thinks on your own machine, says where its facts come from, and asks before it does anything on your behalf.
+              Jarvis is a chill AI you can actually trust. It shows where its facts come from, doesn’t make up live scores, and always asks before doing stuff for you.
             </p>
           </Reveal>
           <Reveal delay={850} className="mt-10 flex flex-wrap items-center gap-3">
             <Magnetic><Link href="/login" className="btn-ink">Start a conversation <span className="btn-arrow" aria-hidden>→</span></Link></Magnetic>
             <Magnetic><Link href="/demo" className="btn-line">See the demo</Link></Magnetic>
           </Reveal>
-          <Reveal delay={950}><p className="caption mt-6 normal-case tracking-normal">Sign in with a one-time email code. No password.</p></Reveal>
+          <Reveal delay={950}><p className="caption mt-6 normal-case tracking-normal">Sign in with a code sent to your email. No passwords to forget.</p></Reveal>
         </div>
 
         <figure className="lg:col-span-5">
@@ -140,7 +140,7 @@ export default function HomePage() {
         <div className="marquee" aria-hidden="true">
           {[0, 1].map((copy) => (
             <div key={copy} className="marquee-track font-display text-3xl sm:text-4xl">
-              {["Runs on Ollama", "Speaks with Alan", "Keeps your files local", "Cites its sources", "Asks before it acts", "Works on an 8 GB laptop"].map((item) => (
+              {["Runs on Ollama", "Talks like Alan", "Shows its sources", "Asks first", "No made-up facts", "Works on an 8 GB laptop"].map((item) => (
                 <span key={item} className="flex items-center gap-12 whitespace-nowrap">{item}<span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--accent)]" aria-hidden /></span>
               ))}
             </div>
@@ -152,8 +152,8 @@ export default function HomePage() {
       <section id="principles" aria-labelledby="principles-title" className="mx-auto grid max-w-[1320px] gap-10 px-5 py-24 sm:px-8 lg:grid-cols-12 lg:py-36">
         <div className="lg:col-span-4">
           <div className="lg:sticky lg:top-28">
-            <p className="caption">02 — Principles</p>
-            <h2 id="principles-title" className="font-display mt-4 text-5xl leading-[0.95] sm:text-6xl">Four promises,<br /><em>kept in code.</em></h2>
+            <p className="caption">02 — The rules</p>
+            <h2 id="principles-title" className="font-display mt-4 text-5xl leading-[0.95] sm:text-6xl">Four rules<br /><em>it never breaks.</em></h2>
           </div>
         </div>
         <ol className="lg:col-span-8 lg:col-start-6">
@@ -175,9 +175,9 @@ export default function HomePage() {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="caption">03 — What it does</p>
-              <h2 id="capabilities-title" className="font-display mt-4 max-w-3xl text-5xl leading-[0.95] sm:text-7xl">Useful, in plain terms.</h2>
+              <h2 id="capabilities-title" className="font-display mt-4 max-w-3xl text-5xl leading-[0.95] sm:text-7xl">What it can actually do.</h2>
             </div>
-            <p className="max-w-sm text-[var(--muted)]">No sparkles, no superlatives. Here is what Jarvis actually does today, and where it is slow.</p>
+            <p className="max-w-sm text-[var(--muted)]">No hype. Here’s what Jarvis really does right now, and the bits that are slow.</p>
           </div>
           <div className="mt-16 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
             {CAPABILITIES.map(([title, body], index) => (
@@ -197,8 +197,8 @@ export default function HomePage() {
       {/* Specification */}
       <section id="specification" aria-labelledby="spec-title" className="mx-auto grid max-w-[1320px] gap-10 px-5 py-24 sm:px-8 lg:grid-cols-12 lg:py-36">
         <div className="lg:col-span-4">
-          <p className="caption">04 — Specification</p>
-          <h2 id="spec-title" className="font-display mt-4 text-5xl leading-[0.95] sm:text-6xl">The fine print,<br /><em>printed large.</em></h2>
+          <p className="caption">04 — Nerdy bits</p>
+          <h2 id="spec-title" className="font-display mt-4 text-5xl leading-[0.95] sm:text-6xl">The nerdy bits,<br /><em>for the curious.</em></h2>
         </div>
         <dl className="lg:col-span-8 lg:col-start-6">
           {SPEC.map(([term, detail], index) => (
@@ -214,7 +214,7 @@ export default function HomePage() {
       <section className="border-t border-[var(--text)]">
         <div className="mx-auto max-w-[1320px] px-5 py-24 sm:px-8 lg:py-32">
           <Reveal>
-            <h2 className="font-display text-[clamp(4rem,15vw,14rem)] leading-[0.85]">Talk to it<em className="text-[var(--accent)]">.</em></h2>
+            <h2 className="font-display text-[clamp(4rem,15vw,14rem)] leading-[0.85]">Say hi<em className="text-[var(--accent)]">.</em></h2>
           </Reveal>
           <Reveal delay={150} className="mt-10 flex flex-wrap items-center gap-3">
             <Magnetic><Link href="/login" className="btn-ink">Open Jarvis <span className="btn-arrow" aria-hidden>→</span></Link></Magnetic>
@@ -225,7 +225,7 @@ export default function HomePage() {
 
       <footer className="border-t border-[var(--hairline)]">
         <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 px-5 py-8 text-sm text-[var(--muted)] sm:px-8">
-          <span>Jarvis — Origin Productions</span>
+          <span>Jarvis · made by a Class 8 student · Origin Productions</span>
           <nav aria-label="Footer" className="-my-3 flex gap-2">
             <Link href="/about" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">About</Link>
             <Link href="/faq" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">FAQ</Link>

@@ -210,25 +210,16 @@ export default function SettingsPage() {
     }
   }
 
-  const colors = light
-    ? {
-        page: "bg-[#f7f8fa] text-[#202123]",
-        sidebar: "border-[#e5e7eb] bg-white",
-        muted: "text-[#6b7280]",
-        card: "border-[#e5e7eb] bg-white",
-        field: "border-[#d1d5db] bg-white text-[#202123] placeholder:text-[#9ca3af]",
-        button: "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f3f4f6]",
-        active: "border-sky-200 bg-sky-50 text-sky-900",
-      }
-    : {
-        page: "bg-[#08090b] text-[#f5f5f5]",
-        sidebar: "border-white/10 bg-[#0d0e10]",
-        muted: "text-white/50",
-        card: "border-white/10 bg-[#111214]",
-        field: "border-white/10 bg-[#191a1d] text-white placeholder:text-white/30",
-        button: "border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/[0.08]",
-        active: "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-100",
-      };
+  // Theme tokens from globals.css follow light/dark automatically.
+  const colors = {
+    page: "relative z-[1] bg-[var(--bg)] text-[var(--text)]",
+    sidebar: "border-[var(--hairline)] bg-[var(--surface)]",
+    muted: "text-[var(--muted)]",
+    card: "border-[var(--hairline)] bg-[var(--surface)]",
+    field: "border-[var(--border)] bg-[var(--bg)] text-[var(--text)] placeholder:text-[var(--faint)]",
+    button: "border-[var(--border)] bg-transparent text-[var(--text)] hover:bg-[var(--surface-2)]",
+    active: "border-[var(--text)] bg-[var(--text)] text-[var(--bg)]",
+  };
 
   return (
     <main id="main" tabIndex={-1} className={`min-h-screen ${colors.page}`}>
@@ -264,7 +255,7 @@ export default function SettingsPage() {
         <section className="min-w-0 flex-1 p-4 sm:p-8">
           <header className="mb-7 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">{tabs.find((item) => item.id === tab)?.label}</h1>
+              <h1 className="font-display text-5xl leading-none">{tabs.find((item) => item.id === tab)?.label}</h1>
               <p className={`mt-2 text-sm ${colors.muted}`}>Manage the preferences Jarvis currently supports.</p>
             </div>
             <Link href="/chat" className={`rounded-lg border px-3 py-2 text-sm ${colors.button}`}>Back to chat</Link>
@@ -272,7 +263,7 @@ export default function SettingsPage() {
 
           {tab === "personalization" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-              <h2 className="text-base font-semibold">How should Jarvis respond?</h2>
+              <h2 className="font-display text-2xl">How should Jarvis respond?</h2>
               <p className={`mt-1 text-sm ${colors.muted}`}>These instructions are sent with your chat requests. Don’t include passwords or private secrets.</p>
               <textarea aria-label="Personalization instructions for Jarvis"
                 value={settings.personality}
@@ -280,7 +271,7 @@ export default function SettingsPage() {
                 maxLength={12000}
                 rows={8}
                 placeholder="For example: explain things clearly, use short paragraphs, and give examples."
-                className={`mt-4 w-full resize-y rounded-xl border px-4 py-3 text-sm leading-6 outline-none focus:border-sky-400 ${colors.field}`}
+                className={`mt-4 w-full resize-y rounded-xl border px-4 py-3 text-sm leading-6 outline-none focus:border-[var(--text)] ${colors.field}`}
               />
               <p className={`mt-2 text-xs ${colors.muted}`}>{settings.personality.length}/12000 characters</p>
             </section>
@@ -288,7 +279,7 @@ export default function SettingsPage() {
 
           {tab === "privacy" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-              <h2 className="text-base font-semibold">Privacy basics</h2>
+              <h2 className="font-display text-2xl">Privacy basics</h2>
               <ul className={`mt-4 list-disc space-y-3 pl-5 text-sm leading-6 ${colors.muted}`}>
                 <li>Chat requests are sent to the Jarvis API configured for this installation. The model provider depends on that server’s configuration.</li>
                 <li>Your response-style and memory preferences are stored in this browser’s local storage.</li>
@@ -318,20 +309,20 @@ export default function SettingsPage() {
           {tab === "memory" && (
             <div className="space-y-5">
               <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-                <h2 className="text-base font-semibold">Memory preference</h2>
+                <h2 className="font-display text-2xl">Memory preference</h2>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Turn memory off to stop using saved memories in future chats. This switch does not delete memories already stored on the server.</p>
                 <label className={`mt-5 flex items-center justify-between gap-4 rounded-xl border p-4 ${colors.field}`}>
                   <span>
                     <span className="block text-sm font-medium">Use memory in chats</span>
                     <span className={`mt-1 block text-xs ${colors.muted}`}>This preference is saved in this browser.</span>
                   </span>
-                  <input type="checkbox" checked={settings.memory} onChange={(event) => update("memory", event.target.checked)} className="size-4 accent-sky-500" />
+                  <input type="checkbox" checked={settings.memory} onChange={(event) => update("memory", event.target.checked)} className="size-4 accent-[var(--accent)]" />
                 </label>
               </section>
               <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-base font-semibold">Saved memories</h2>
+                    <h2 className="font-display text-2xl">Saved memories</h2>
                     <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Review or delete information stored in your account. Deleting memory does not delete chat history.</p>
                   </div>
                   <button type="button" onClick={removeAllMemories} disabled={memoryLoading || memories.length === 0 || memoryBusyId !== null} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-600 disabled:opacity-40">
@@ -389,7 +380,7 @@ export default function SettingsPage() {
 
           {tab === "research" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-              <h2 className="text-base font-semibold">Default research sources</h2>
+              <h2 className="font-display text-2xl">Default research sources</h2>
               <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Choose the default source types for Deep Research. You can change these for an individual request in the research panel. If you clear every option, Jarvis searches broadly.</p>
               <div className="mt-4 space-y-3">
                 {([["official", "Official and government sources", "Government and official institutional sites"], ["academic", "Academic and research sources", "Universities, research archives, and selected journals"], ["news", "Reputable news sources", "Selected news publishers"], ["general", "All web sources", "Do not restrict search to a source category"]] as const).map(([value, label, description]) => (
@@ -398,7 +389,7 @@ export default function SettingsPage() {
                       type="checkbox"
                       checked={settings.sourceTypes.includes(value)}
                       onChange={(event) => { if (event.target.checked) update("sourceTypes", value === "general" ? ["general"] : [...new Set([...settings.sourceTypes.filter((item) => item !== "general"), value])]); else if (settings.sourceTypes.length > 1) update("sourceTypes", settings.sourceTypes.filter((item) => item !== value)); }}
-                      className="mt-1 size-4 accent-sky-500"
+                      className="mt-1 size-4 accent-[var(--accent)]"
                     />
                     <span>
                       <span className="block text-sm font-medium">{label}</span>
@@ -412,7 +403,7 @@ export default function SettingsPage() {
 
           {tab === "about" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
-              <h2 className="text-base font-semibold">About Jarvis</h2>
+              <h2 className="font-display text-2xl">About Jarvis</h2>
               <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>Jarvis is a work-in-progress AI chat workspace. Available features depend on the API and provider configured by the person running this installation.</p>
               <div className={`mt-5 rounded-xl border p-4 text-sm ${colors.field}`}>
                 <div className="font-medium">Current appearance</div>

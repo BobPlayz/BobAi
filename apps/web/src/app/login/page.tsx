@@ -119,9 +119,9 @@ export default function LoginPage() {
               <label className="block text-sm font-medium">Email address
                 <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" type="email" required placeholder="you@example.com" className="mt-2 h-12 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-base text-[var(--text)] outline-none transition placeholder:text-[var(--faint)] focus:border-[var(--text)]" />
               </label>
-              <label className="flex items-start gap-3 text-sm leading-6 text-[var(--muted)]">
-                <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} className="mt-1.5 h-4 w-4 accent-[var(--accent)]" />
-                <span>I agree to the <Link href="/terms" target="_blank" className="md-link">Terms</Link> and <Link href="/privacy" target="_blank" className="md-link">Privacy Policy</Link>.</span>
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 py-1 text-sm leading-6 text-[var(--muted)]">
+                <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} aria-labelledby="terms-label" className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]" />
+                <span id="terms-label">I agree to the <Link href="/terms" target="_blank" className="md-link">Terms</Link> and <Link href="/privacy" target="_blank" className="md-link">Privacy Policy</Link>.</span>
               </label>
               <button disabled={loading} className="btn-ink w-full justify-center disabled:opacity-50">
                 {loading ? "Sending code…" : <>Send my code <span className="btn-arrow" aria-hidden>→</span></>}

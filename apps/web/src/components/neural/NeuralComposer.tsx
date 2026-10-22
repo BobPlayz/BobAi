@@ -83,7 +83,7 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
           )}
         </div>
       </div>
-      <p className="caption mt-2 text-center normal-case tracking-normal">Enter to send · Shift + Enter for a new line · Jarvis can be wrong; check important facts.</p>
+      <p className="caption mt-2 text-center normal-case tracking-normal"><span className="hidden sm:inline">Enter to send · Shift + Enter for a new line · </span>Jarvis can be wrong, so double-check important stuff.</p>
     </div>
   );
 }

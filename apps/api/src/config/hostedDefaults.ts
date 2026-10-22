@@ -23,6 +23,8 @@ export function applyHostedDefaults(env: NodeJS.ProcessEnv = process.env): strin
   const own = [site, ...[env.VERCEL_URL, env.VERCEL_BRANCH_URL].filter((host): host is string => Boolean(host?.trim())).map((host) => `https://${host.trim()}`)];
   const origins = [...new Set([...configured, ...own])];
   if (origins.join(",") !== (env.CORS_ORIGIN || "")) { env.CORS_ORIGIN = origins.join(","); changed.push("CORS_ORIGIN"); }
+  // A coding-agent bridge on this machine's loopback can never be reached from a serverless function.
+  if (env.BOBAI_CODING_AGENT_URL?.trim() && LOCAL_URL.test(env.BOBAI_CODING_AGENT_URL.trim())) { delete env.BOBAI_CODING_AGENT_URL; changed.push("BOBAI_CODING_AGENT_URL"); }
   if (env.NODE_ENV !== "production" && productionConfigProblems().length === 0) { env.NODE_ENV = "production"; changed.push("NODE_ENV"); }
   return changed;
 }

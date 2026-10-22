@@ -18,7 +18,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 export const metadata: Metadata = {
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
   title: { default: "Jarvis", template: "%s | Jarvis" },
-  description: "Jarvis is a local-first AI assistant: chat, code, live weather, research with sources, files and an offline voice — running on your own computer.",
+  description: "Jarvis is a chill AI assistant powered by Ollama: chat, code help, live weather, research with sources and files. It asks before doing stuff.",
   applicationName: "Jarvis",
   creator: "Origin Productions",
   publisher: "Origin Productions",

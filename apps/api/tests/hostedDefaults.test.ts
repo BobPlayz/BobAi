@@ -24,6 +24,13 @@ test("values copied from .env.example are replaced on Vercel and production mode
   assert.deepEqual(changed.sort(), ["BOBAI_AUTH_REDIRECT_BASE_URL", "BOBAI_WEB_URL", "CORS_ORIGIN", "NODE_ENV"]);
 });
 
+test("a loopback coding-agent bridge is dropped on Vercel instead of blocking production mode", () => {
+  const { env, changed } = run({ ...base, BOBAI_CODING_AGENT_URL: "http://127.0.0.1:8787" });
+  assert.equal(env.BOBAI_CODING_AGENT_URL, undefined);
+  assert.ok(changed.includes("BOBAI_CODING_AGENT_URL"));
+  assert.equal(env.NODE_ENV, "production");
+});
+
 test("real settings are kept, with the deployment's own origins added", () => {
   const { env } = run({ ...base, CORS_ORIGIN: "https://my.custom.site", BOBAI_WEB_URL: "https://my.custom.site", BOBAI_AUTH_REDIRECT_BASE_URL: "https://my.custom.site/api" });
   assert.equal(env.BOBAI_WEB_URL, "https://my.custom.site");
