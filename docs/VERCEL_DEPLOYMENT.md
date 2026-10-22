@@ -15,37 +15,38 @@ The repo deploys as one Vercel project using **Vercel Services** (`vercel.json`)
 
 ## Environment variables (Production)
 
-Required for the API to start (otherwise `/api/*` answers `503 misconfigured` and the deployment logs say which variable is missing):
+Set these in Vercel → Project → Settings → Environment Variables (Production), then redeploy.
 
 | Name | Value |
 | --- | --- |
-| `DATABASE_URL` | Neon connection string. Use the **direct** (non-`-pooler`) host for migrations. |
-| `CORS_ORIGIN` | Your site's exact HTTPS origin, e.g. `https://jarvis-x-ai-two.vercel.app` |
-| `BOBAI_WEB_URL` | Same origin |
-| `BOBAI_AUTH_REDIRECT_BASE_URL` | Same origin, no trailing slash |
+| `DATABASE_URL` | Neon connection string |
 | `BOBAI_AGENT_KEY` | Random secret, 32+ characters |
-| `BOBAI_MFA_ENCRYPTION_KEY` | 64 hex characters (32 random bytes) |
-| `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | Resend key and a sender on a **domain verified in Resend** (see below) |
+| `BOBAI_OLLAMA_BASE_URL` | `https://ollama.com` (Ollama Cloud) or your gateway tunnel address |
+| `BOBAI_OLLAMA_API_KEY` | Your Ollama Cloud API key (or the gateway token) |
+| `BOBAI_OLLAMA_MODEL` | A model name from `https://ollama.com/api/tags`, e.g. `gemma4:31b` |
+| `BOBAI_EMAIL_PROVIDER` | `smtp` (or `resend`) |
+| `BOBAI_SMTP_HOST` / `BOBAI_SMTP_PORT` | `smtp.gmail.com` / `465` |
+| `BOBAI_SMTP_USER` / `BOBAI_SMTP_PASSWORD` | Your Gmail address / a Gmail **app password** |
+| `BOBAI_SMTP_FROM` | `Jarvis <the same Gmail address>` |
 
-For hosted chat, pick one way to reach Ollama and set `BOBAI_OLLAMA_BASE_URL`, `BOBAI_OLLAMA_API_KEY` and `BOBAI_OLLAMA_MODEL`:
+Do **not** copy `.env.example` into Vercel. On Vercel the API ignores localhost values: it uses the deployment's own address for `BOBAI_WEB_URL`, `BOBAI_AUTH_REDIRECT_BASE_URL` and `CORS_ORIGIN`, and switches to production mode once the settings above are valid. Delete `NODE_ENV` if it is set to `development`.
 
-- **Ollama Cloud (Vercel only, your PC can be off):** make an account and API key on ollama.com, then use the API address and a cloud model name from Ollama's docs. Check ollama.com/pricing first: the free plan has limited credits and models.
-- **Your own PC (free, PC must be on):** follow [OLLAMA_GATEWAY.md](OLLAMA_GATEWAY.md).
+Optional: `BOBAI_MFA_ENCRYPTION_KEY` (64 hex characters; enables two-factor sign-in), `BOBAI_CRICKET_API_KEY` (live cricket feed), `BOBAI_BRAVE_SEARCH_API_KEY` (better search), `BOBAI_MALWARE_SCANNER_URL` (file uploads stay off in production until a scanner is set up).
 
-Optional: `BOBAI_CRICKET_API_KEY` (live cricket feed), `BOBAI_BRAVE_SEARCH_API_KEY` (better search), `BOBAI_MALWARE_SCANNER_URL` (otherwise set `BOBAI_MALWARE_SCAN_REQUIRED=false` to allow uploads without a scanner).
+## Login codes by email without owning a domain
 
-**Environment changes only apply to new deployments.** After editing variables: Deployments → latest → ⋯ → Redeploy.
+Resend and most email APIs only deliver to other people from a domain you own, and they reject free public domains. Gmail's SMTP server sends from your Gmail address to anyone, for free (about 500 emails a day):
 
-## Email sign-in (Resend)
+1. Turn on 2-Step Verification for the Gmail account.
+2. Create an app password (Google Account → Security → App passwords). It is 16 letters; use it only as `BOBAI_SMTP_PASSWORD`.
+3. Set the SMTP variables above and `BOBAI_EMAIL_PROVIDER=smtp`. Resend stays the default if `BOBAI_EMAIL_PROVIDER` is not set.
 
-- Without a verified domain, Resend only delivers to the email address that owns the Resend account. Verify a domain (Resend → Domains) and use an address on it for `RESEND_FROM_EMAIL`, e.g. `Jarvis <login@yourdomain.com>`.
-- Codes are 6 digits, expire after 10 minutes, are single use, allow 5 attempts, and are stored hashed.
-- If sending fails, the API returns "could not send a verification code" and logs Resend's reason (never the code or the full email address).
+Codes are 6 digits, expire after 10 minutes, are single use, allow 5 attempts, are stored hashed, and are never logged. One email per address per minute, 10 requests per address per 15 minutes.
 
 ## Checking a deployment
 
 - `GET /api/health` → `{"status":"ok"}` when the API is running.
-- `GET /api/ready` → yes/no checks: `databaseReachable`, `databaseSchemaReady`, `emailConfigured`, `modelReachable`. No secrets or hostnames are shown.
+- `GET /api/ready` → yes/no checks for the database, email (`emailProvider`), the model (`modelReachable`, plus `modelProblem`: `not_configured`, `auth`, `model_missing`, `unreachable`, ...), production mode, and the *names* of missing settings. No secrets or hostnames are shown.
 - If the API cannot start at all, `/api/*` answers `503` with `status: "startup_failed"` and a redacted one-line reason; full details are in Vercel → Deployments → Functions logs.
 
 ## What does not run on Vercel

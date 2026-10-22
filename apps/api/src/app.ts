@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import { applyHostedDefaults } from "./config/hostedDefaults.js";
 
 /**
  * Entry point (Vercel always uses src/app.ts for Express). Loads the real app (application.ts) lazily so that a crash while loading (a bad environment value, a module
@@ -23,6 +24,12 @@ export function describeStartupError(error: unknown) {
 // A rejected background promise (for example a startup database query against an incomplete schema) must not take
 // down every request in a serverless function; log it instead.
 process.on("unhandledRejection", (reason) => { console.error("Jarvis API unhandled rejection", reason); });
+
+// Must run before the application loads: several modules read NODE_ENV and the site URLs at import time.
+try {
+  const changed = applyHostedDefaults();
+  if (changed.length) console.warn(`Jarvis API: replaced local-development or missing settings for this deployment: ${changed.join(", ")}`);
+} catch (error) { console.error("Jarvis API: could not apply hosted defaults", error); }
 
 const loaded: Promise<Express | { startupError: unknown }> = import("./application.js")
   .then((module) => module.default)
