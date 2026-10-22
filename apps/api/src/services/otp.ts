@@ -23,8 +23,15 @@ export const requestEmailOtp = async (email: string, purpose: OtpPurpose = "veri
   if (recent) return;
   if (!sender) throw new Error("OTP delivery is not configured");
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  await sender(email, code);
-  await db.insert(emailOtps).values({ userId: user.id, purpose, codeHash: hash(code), expiresAt: new Date(Date.now() + TTL_MS) });
+  // Store the code before emailing it, so a database failure can never leave the user holding a code that cannot
+  // work; if the email cannot be sent, remove the stored code again.
+  const [stored] = await db.insert(emailOtps).values({ userId: user.id, purpose, codeHash: hash(code), expiresAt: new Date(Date.now() + TTL_MS) }).returning({ id: emailOtps.id });
+  try {
+    await sender(email, code);
+  } catch (error) {
+    if (stored) await db.delete(emailOtps).where(eq(emailOtps.id, stored.id)).catch(() => undefined);
+    throw error;
+  }
 };
 
 export const verifyEmailOtp = async (email: string, code: string, purpose: OtpPurpose = "verification") => {
