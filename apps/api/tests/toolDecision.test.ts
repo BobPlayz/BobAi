@@ -8,9 +8,21 @@ test("tool decisions fail closed on malformed model output", () => {
 });
 
 test("tool decisions reject malformed arguments", () => {
-  const decision = validateToolDecision({ action: "use_tools", calls: [{ tool: "browser", arguments: {} }] });
+  process.env.BOBAI_BROWSER_PROVIDER_URL = "https://browser.example.test";
+  try {
+    const decision = validateToolDecision({ action: "use_tools", calls: [{ tool: "browser", arguments: {} }] });
+    assert.equal(decision.action, "respond");
+    assert.match(decision.reason || "", /missing required argument/);
+  } finally { delete process.env.BOBAI_BROWSER_PROVIDER_URL; }
+});
+
+test("tools without a configured provider are hidden from the router and rejected", () => {
+  delete process.env.BOBAI_COMPUTER_PROVIDER_URL;
+  const decision = validateToolDecision({ action: "use_tools", calls: [{ tool: "paint", arguments: { prompt: "a cat" } }] });
   assert.equal(decision.action, "respond");
-  assert.match(decision.reason || "", /missing required argument/);
+  assert.match(decision.reason || "", /unknown or disabled tool/);
+  const messages = buildToolDecisionMessages([{ role: "user", content: "draw a cat in paint" }]);
+  assert.doesNotMatch(messages[0].content, /\npaint:/);
 });
 
 test("router prompt exposes registered tools without granting permissions", () => {

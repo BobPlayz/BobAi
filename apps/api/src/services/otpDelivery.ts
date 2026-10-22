@@ -34,7 +34,7 @@ export async function sendResendOtp(email: string, code: string) {
           const candidate = typeof record.message === "string" ? record.message
             : typeof record.error === "string" ? record.error
             : typeof record.name === "string" ? record.name : "";
-          detail = candidate.replace(/[\\r\\n\\t]+/g, " ").slice(0, 300);
+          detail = candidate.replace(/[\r\n\t]+/g, " ").slice(0, 300);
         }
       } catch {
         await response.body?.cancel().catch(() => undefined);

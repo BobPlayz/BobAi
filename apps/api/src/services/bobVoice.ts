@@ -3,7 +3,7 @@ import { statSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { unloadOllamaModels } from "./ollamaProvider.js";
+import { unloadOllamaModelsIfMemoryLow } from "./ollamaProvider.js";
 import { withLocalModelLock } from "./localModelLock.js";
 import { nativeMedia } from "./nativeMedia.js";
 import { validatePcm16Wav } from "./wavSafety.js";
@@ -30,7 +30,8 @@ async function synthesizeWithPiperCli(model: string, config: string, text: strin
     await new Promise<void>((resolve, reject) => {
       const args = ["--model", path.resolve(model), "--output_file", output, "--length_scale", String(lengthScale)];
       if (config) args.push("--config", path.resolve(config));
-      const child = spawn(PIPER_COMMAND, args, { windowsHide: true, stdio: ["pipe", "ignore", "pipe"] });
+      // Piper (both the legacy C++ CLI and the piper-tts package) reads phoneme data from ESPEAK_DATA_PATH.
+      const child = spawn(PIPER_COMMAND, args, { windowsHide: true, stdio: ["pipe", "ignore", "pipe"], env: ESPEAK_DATA ? { ...process.env, ESPEAK_DATA_PATH: path.resolve(ESPEAK_DATA) } : process.env });
       let stderr = "";
       const timer = setTimeout(() => { child.kill(); reject(new Error("Piper speech synthesis timed out")); }, 120_000);
       child.stderr.on("data", (chunk: Buffer) => { stderr = (stderr + chunk.toString("utf8")).slice(-4000); });
@@ -58,7 +59,8 @@ export async function synthesizeLocal(text: string, options?: Record<string, unk
     const safeOptions = asOptions(options);
     const rawScale = typeof safeOptions.lengthScale === "number" && Number.isFinite(safeOptions.lengthScale) ? safeOptions.lengthScale : 0.88;
     const lengthScale = Math.min(Math.max(rawScale, 0.5), 2);
-    await unloadOllamaModels();
+    // Piper and Whisper are small; evicting the ~2-3 GB chat model here forced a full reload on every voice turn.
+    await unloadOllamaModelsIfMemoryLow();
     let audio: Buffer;
     if (nativeMedia.status().ready && ESPEAK_DATA && existsDirectory(ESPEAK_DATA)) {
       audio = nativeMedia.require().synthesize(path.resolve(model), config ? path.resolve(config) : "", path.resolve(ESPEAK_DATA), text.trim(), lengthScale);

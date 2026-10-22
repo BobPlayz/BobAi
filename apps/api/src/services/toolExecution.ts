@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { db, toolApprovals, workspaceMembers } from "@bobai/db";
 import { getTool, validateToolInput, type BobTool, type ToolPermission } from "./toolRegistry.js";
 import { recordAudit } from "./audit.js";
+import { toolProviderConfigured as providerConfigured } from "./toolProviders.js";
 
 export type ToolExecutionContext = { userId: string; workspaceId: string; approvalToken?: string; permission?: ToolPermission; arguments?: unknown };
 export type ToolExecutionResult = { status: "ready"; tool: BobTool } | { status: "approval_required"; tool: BobTool } | { status: "unauthorized"; tool: BobTool } | { status: "invalid_arguments"; tool: BobTool; reason: string } | { status: "unavailable"; tool: BobTool; reason: string };
@@ -70,4 +71,4 @@ export async function fetchWeatherData(cityInput: string, signal?: AbortSignal) 
     sourceUrl: "https://open-meteo.com/",
   };
 }
-function providerConfigured(toolId: string): boolean { switch (toolId) { case "weather": case "cricket": case "research": return true; case "browser": case "website-test": return Boolean(process.env.BOBAI_BROWSER_PROVIDER_URL); case "computer": case "paint": case "blender": return Boolean(process.env.BOBAI_COMPUTER_PROVIDER_URL); case "coding": return Boolean(process.env.BOBAI_CODING_AGENT_KEY && process.env.BOBAI_CODING_AGENT_URL && (process.env.NODE_ENV !== "production" || process.env.BOBAI_CODING_AGENT_SANDBOX_ATTESTED === "true")); case "voice": return Boolean(process.env.BOBAI_VOICE_PROVIDER_URL); case "image": return Boolean(process.env.BOBAI_IMAGE_MODEL_PATH?.trim() || process.env.BOBAI_IMAGE_EDIT_PROVIDER_URL || process.env.BOBAI_IMAGE_PROVIDER_URL); case "video": return Boolean(process.env.BOBAI_VIDEO_PROVIDER_URL); case "music": return Boolean(process.env.BOBAI_MUSIC_PROVIDER_URL); case "documents": return Boolean(process.env.BOBAI_DOCUMENTS_PROVIDER_URL); case "knowledge": return Boolean(process.env.BOBAI_KNOWLEDGE_PROVIDER_URL); case "data-analysis": return Boolean(process.env.BOBAI_DATA_ANALYSIS_PROVIDER_URL); case "automation": return process.env.BOBAI_AUTOMATION_ENABLED === "true"; case "diagrams": case "sketch-to-ui": return true; default: return false; } }
+

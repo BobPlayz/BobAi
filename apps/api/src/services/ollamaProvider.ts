@@ -1,3 +1,4 @@
+import { freemem } from "node:os";
 import { withLocalModelLock } from "./localModelLock.js";
 import type { NativeMessage } from "./nativeModel.js";
 
@@ -14,6 +15,15 @@ function configuredBaseUrl() {
   const localHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
   if (url.protocol === "http:" && !localHosts.has(url.hostname.toLowerCase())) throw new Error("Remote Ollama endpoints must use HTTPS");
   return url.toString().replace(/\/+$/, "");
+}
+
+/**
+ * Optional bearer token for an authenticated Ollama gateway (for example the Jarvis companion bridge or a
+ * reverse proxy in front of a remote Ollama). Plain local Ollama on loopback needs no key.
+ */
+function ollamaHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const key = process.env.BOBAI_OLLAMA_API_KEY?.trim();
+  return key ? { ...extra, authorization: `Bearer ${key}` } : extra;
 }
 
 export function ollamaModelFor(provider: "bob" | "coding", override?: string) {
@@ -40,12 +50,18 @@ function thinkingEnabled() {
   return ["1", "true", "yes", "on"].includes(raw);
 }
 
-function inferenceOptions(defaultPredict = 256) {
-  const rawContext = Number(process.env.BOBAI_OLLAMA_NUM_CTX || 3072);
-  const rawPredict = Number(process.env.BOBAI_OLLAMA_NUM_PREDICT || defaultPredict);
-  const num_ctx = Math.min(8192, Math.max(1024, Number.isFinite(rawContext) ? Math.trunc(rawContext) : 4096));
-  const num_predict = Math.min(2048, Math.max(64, Number.isFinite(rawPredict) ? Math.trunc(rawPredict) : defaultPredict));
-  return { num_ctx, num_predict };
+export function ollamaContextTokens() {
+  const raw = Number(process.env.BOBAI_OLLAMA_NUM_CTX || 4096);
+  return Math.min(32768, Math.max(1024, Number.isFinite(raw) ? Math.trunc(raw) : 4096));
+}
+
+export function ollamaPredictTokens(defaultPredict = 1024) {
+  const raw = Number(process.env.BOBAI_OLLAMA_NUM_PREDICT || defaultPredict);
+  return Math.min(4096, Math.max(64, Number.isFinite(raw) ? Math.trunc(raw) : defaultPredict));
+}
+
+function inferenceOptions(defaultPredict = 1024) {
+  return { num_ctx: ollamaContextTokens(), num_predict: ollamaPredictTokens(defaultPredict) };
 }
 
 function timeoutMs() {
@@ -59,7 +75,7 @@ async function request(messages: ReturnType<typeof normalizeMessages>, model: st
   await unloadOllamaModelsExcept(model);
   const response = await fetch(`${configuredBaseUrl()}/api/chat`, {
     method: "POST",
-    headers: { "content-type": "application/json", accept: stream ? "application/x-ndjson" : "application/json" },
+    headers: ollamaHeaders({ "content-type": "application/json", accept: stream ? "application/x-ndjson" : "application/json" }),
     body,
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs())]) : AbortSignal.timeout(timeoutMs()),
@@ -124,7 +140,7 @@ async function ollamaEmbeddingUnlocked(text: string): Promise<number[] | null> {
   await unloadOllamaModels();
   const response = await fetch(`${configuredBaseUrl()}/api/embed`, {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
+    headers: ollamaHeaders({ "content-type": "application/json", accept: "application/json" }),
     body: JSON.stringify({ model, input, truncate: true, keep_alive: 0 }),
     signal: AbortSignal.timeout(timeoutMs()),
     redirect: "error",
@@ -167,7 +183,7 @@ async function ollamaVisionUnlocked(imageBase64: string, prompt: string, signal?
   await unloadOllamaModelsExcept(model);
   const response = await fetch(`${configuredBaseUrl()}/api/chat`, {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
+    headers: ollamaHeaders({ "content-type": "application/json", accept: "application/json" }),
     body,
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs())]) : AbortSignal.timeout(timeoutMs()),
@@ -240,7 +256,7 @@ async function ollamaStreamUnlocked(input: NativeMessage[], onToken: (token: str
 export async function ollamaStatus(): Promise<{ ready: boolean; provider: "ollama"; modelId?: string; model?: string; error?: string; models?: string[]; requiredModels?: string[]; missingModels?: string[] }> {
   try {
     const base = configuredBaseUrl();
-    const response = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(3_000), redirect: "error" });
+    const response = await fetch(`${base}/api/tags`, { headers: ollamaHeaders(), signal: AbortSignal.timeout(3_000), redirect: "error" });
     if (!response.ok) return { ready: false, provider: "ollama", error: `Ollama returned HTTP ${response.status}` };
     const data = await response.json() as { models?: Array<{ name?: string }> };
     const models = Array.isArray(data.models) ? data.models.map((item) => item.name).filter((name): name is string => typeof name === "string") : [];
@@ -259,7 +275,7 @@ export async function unloadOllamaModelsExcept(keepModel?: string): Promise<stri
   const base = configuredBaseUrl();
   let response: Response;
   try {
-    response = await fetch(`${base}/api/ps`, { signal: AbortSignal.timeout(3_000), redirect: "error" });
+    response = await fetch(`${base}/api/ps`, { headers: ollamaHeaders(), signal: AbortSignal.timeout(3_000), redirect: "error" });
   } catch {
     return [];
   }
@@ -274,7 +290,7 @@ export async function unloadOllamaModelsExcept(keepModel?: string): Promise<stri
   for (const model of models) {
     const response = await fetch(`${base}/api/generate`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: ollamaHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({ model, prompt: "", stream: false, keep_alive: 0 }),
       signal: AbortSignal.timeout(20_000),
       redirect: "error",
@@ -303,3 +319,11 @@ export function ollamaStream(input: NativeMessage[], onToken: (token: string) =>
 }
 
 export function unloadOllamaModels(): Promise<string[]> { return unloadOllamaModelsExcept(); }
+
+/** Unload chat weights only when free RAM is below BOBAI_MEDIA_MIN_FREE_MB (default 1200 MB). */
+export async function unloadOllamaModelsIfMemoryLow(): Promise<string[]> {
+  const thresholdMb = Number(process.env.BOBAI_MEDIA_MIN_FREE_MB || 1200);
+  const freeMb = freemem() / (1024 * 1024);
+  if (Number.isFinite(thresholdMb) && freeMb >= thresholdMb) return [];
+  return unloadOllamaModelsExcept();
+}

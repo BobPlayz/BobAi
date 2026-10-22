@@ -5,7 +5,8 @@ import { assertPublicTargetUrl, boundedText, providerUrl, safeError } from "./ht
 
 export type ToolLoopMessage = { role: "system" | "user" | "assistant"; content: string };
 export type ToolLoopContext = ToolExecutionContext & { modelId?: string; mode?: string; maxRounds?: number; signal?: AbortSignal };
-export type ToolLoopResult = { status: "completed" | "approval_required" | "failed" | "limit_reached" | "cancelled"; message: string; toolCalls: number; usedTools: string[]; backgroundJobIds: string[] };
+export type PendingToolCall = { tool: string; name: string; risk: string; arguments: Record<string, unknown> };
+export type ToolLoopResult = { status: "completed" | "approval_required" | "failed" | "limit_reached" | "cancelled"; message: string; toolCalls: number; usedTools: string[]; backgroundJobIds: string[]; pendingCall?: PendingToolCall };
 type Executor = (args: Record<string, unknown>, context: ToolLoopContext) => Promise<unknown>;
 const MAX_ROUNDS = 6, MAX_TOOL_CALLS = 6, MAX_TOOL_RESULT_CHARS = 20_000;
 
@@ -145,7 +146,7 @@ export async function runToolLoop(initialMessages: ToolLoopMessage[], context: T
     for (const call of decision.calls) {
       throwIfAborted();
       const tool = getTool(call.tool); if (!tool) return { status: "failed", message: "selected tool is unavailable", toolCalls, usedTools, backgroundJobIds };
-      if (tool.requiresUserApproval && !context.approvalToken) return { status: "approval_required", message: `${tool.name} requires user approval before BobAI can execute it.`, toolCalls, usedTools: [...usedTools, tool.id], backgroundJobIds };
+      if (tool.requiresUserApproval && !context.approvalToken) return { status: "approval_required", message: `Jarvis wants to use ${tool.name}. Approve it below to run it once, or decline.`, toolCalls, usedTools: [...usedTools, tool.id], backgroundJobIds, pendingCall: { tool: tool.id, name: tool.name, risk: tool.risk, arguments: call.arguments } };
       try {
         const result = await execute(tool.id, call.arguments, context); throwIfAborted();
         if (result && typeof result === "object" && "status" in result && (result as { status?: string }).status === "approval_required") return { status: "approval_required", message: `${tool.name} requires user approval before BobAI can execute it.`, toolCalls, usedTools: [...usedTools, tool.id], backgroundJobIds };
