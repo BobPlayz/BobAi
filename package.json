@@ -36,6 +36,7 @@
     "smoke": "tsx scripts/smoke.ts",
     "repo:preflight": "node scripts/repo-preflight.mjs",
     "setup:image-generation": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-image-generation.ps1",
+    "setup:local-media": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local-media.ps1",
     "test:image-generation": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-image-generation.ps1",
     "check:image-worker": "python -c \"import ast, pathlib; ast.parse(pathlib.Path('scripts/local_image_generation.py').read_text())\""
   },
