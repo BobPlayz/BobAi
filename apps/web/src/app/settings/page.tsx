@@ -9,6 +9,7 @@ import { clearMemories, confirmAccountDeletion, deleteMemory, exportAccountData,
 import { logout } from "@/lib/auth";
 
 import { PREFERENCES_KEY as SETTINGS_KEY } from "@/lib/preferences";
+import JarvisMark from "@/components/JarvisMark";
 
 type SettingsState = { personality: string; memory: boolean; sourceTypes: string[] };
 type Tab = "personalization" | "privacy" | "memory" | "research" | "about";
@@ -234,7 +235,8 @@ export default function SettingsPage() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col sm:flex-row">
         <aside className={`w-full shrink-0 border-b p-4 sm:w-60 sm:border-b-0 sm:border-r sm:p-5 ${colors.sidebar}`}>
           <Link href="/chat" className="mb-6 flex items-center gap-3" aria-label="Back to Jarvis chat">
-            <span className="atelier-wordmark">J<em>.</em></span>
+            <span className="atelier-wordmark">
+<JarvisMark /></span>
             <span>
               <span className="block text-base font-semibold">Jarvis</span>
               <span className={`block text-xs ${colors.muted}`}>Settings</span>

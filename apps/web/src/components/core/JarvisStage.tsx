@@ -5,6 +5,7 @@ import { Component, useCallback, useEffect, useRef, useState, type ReactNode } f
 import { useAssistantState, type AssistantVisualState } from "@/lib/assistantState";
 import type { CoreQuality } from "./JarvisCoreScene";
 import { useTheme } from "@/components/neural/ThemeProvider";
+import JarvisMark from "@/components/JarvisMark";
 
 // three.js and the scene only load in the browser, after first paint, so they never block the chat UI.
 const JarvisCoreScene = dynamic(() => import("./JarvisCoreScene"), { ssr: false, loading: () => <ReactorFallback /> });
@@ -95,6 +96,15 @@ export default function JarvisStage({ compact = false, hero = false, stateOverri
   }, []);
 
   if (compact && narrow) return null;
+  // Docked inside a conversation: a lightweight logo + state label instead of a second WebGL canvas.
+  if (compact) {
+    return (
+      <div className="jarvis-dock" data-state={state} role="status" aria-live="polite">
+        <JarvisMark className="jarvis-dock-mark" />
+        <span className="jarvis-dock-label"><span className="jarvis-stage-dot" aria-hidden />{STATE_LABEL[state]}</span>
+      </div>
+    );
+  }
 
   return (
     <div

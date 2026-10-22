@@ -6,6 +6,7 @@ import type { ChatMessage, LiveDataInfo, ToolApproval } from "@/types/chat";
 import VoiceButton from "@/components/VoiceButton";
 import Markdown from "@/components/Markdown";
 import JarvisStage from "@/components/core/JarvisStage";
+import JarvisMark from "@/components/JarvisMark";
 
 type Props = {
   messages: ChatMessage[];
@@ -105,7 +106,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
 
             {loading && (
               <div className="mt-10 flex items-center gap-3" role="status" aria-live="polite">
-                <span className="msg-sigil">J</span>
+                <JarvisMark className="msg-sigil" />
                 <span className="caption">{loadingLabel}</span>
                 <span className="flex gap-1" aria-hidden>
                   {[0, 1, 2].map((dot) => <span key={dot} className="h-1 w-1 animate-pulse rounded-full bg-[var(--accent)]" style={{ animationDelay: `${dot * 160}ms` }} />)}
@@ -165,7 +166,7 @@ function AssistantMessage({ message, autoPlayId, onResolveApproval, onPreview, o
   return (
     <div className="relative">
       <div className="msg-meta">
-        <span className="msg-sigil" aria-hidden>J</span>
+        <JarvisMark className="msg-sigil" />
         <span className="caption">Jarvis{message.pinned ? " · pinned" : ""}</span>
         <div className="ml-auto flex items-center gap-1">
           {message.content.trim() && <VoiceButton onTranscript={() => undefined} readAloudText={message.content} autoPlayId={autoPlayId} />}
@@ -213,7 +214,7 @@ function MessageMenu({ open, toggle, pin, copy, remove, pinned, align }: ActionP
         <div className={`absolute top-9 z-30 w-40 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)] ${align === "left" ? "right-0" : "right-0"}`}>
           <button type="button" onClick={pin} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Pin className="h-3.5 w-3.5" aria-hidden /> {pinned ? "Unpin" : "Pin"}</button>
           <button type="button" onClick={() => void copy()} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</button>
-          <button type="button" onClick={remove} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--accent)] hover:bg-[var(--surface-2)]"><Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete</button>
+          <button type="button" onClick={remove} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--surface-2)]"><Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete</button>
         </div>
       )}
     </div>

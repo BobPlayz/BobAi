@@ -7,6 +7,7 @@ import JarvisStage from "@/components/core/JarvisStage";
 import { Magnetic, Reveal, ScrollProgress, SplitWords } from "@/components/editorial/Motion";
 import { useTheme } from "@/components/neural/ThemeProvider";
 import type { AssistantVisualState } from "@/lib/assistantState";
+import JarvisMark from "@/components/JarvisMark";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -73,7 +74,7 @@ export default function HomePage() {
 
       <header className="sticky top-0 z-50 border-b border-[var(--hairline)] bg-[var(--bg)]/85 backdrop-blur-md">
         <nav aria-label="Primary navigation" className="mx-auto flex h-16 max-w-[1320px] items-center justify-between px-5 sm:px-8">
-          <Link href="/" aria-label="Jarvis home" className="atelier-wordmark">Jarvis<em>.</em></Link>
+          <Link href="/" aria-label="Jarvis home" className="atelier-wordmark"><JarvisMark />Jarvis</Link>
           <div className="hidden items-center gap-8 text-sm text-[var(--muted)] md:flex">
             <a href="#principles" className="hover:text-[var(--text)]">Principles</a>
             <a href="#capabilities" className="hover:text-[var(--text)]">Capabilities</a>
@@ -81,7 +82,7 @@ export default function HomePage() {
             <Link href="/demo" className="hover:text-[var(--text)]">Demo</Link>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={toggleTheme} className="atelier-iconbtn" aria-label={theme === "light" ? "Switch to ink (dark) theme" : "Switch to paper (light) theme"}>
+            <button type="button" onClick={toggleTheme} className="atelier-iconbtn" aria-label={theme === "light" ? "Switch to night theme" : "Switch to day theme"}>
               {theme === "light" ? <Moon className="h-4 w-4" aria-hidden /> : <Sun className="h-4 w-4" aria-hidden />}
             </button>
             <Link href="/login" className="btn-ink !min-h-10 !px-4 text-sm">Open Jarvis <span className="btn-arrow" aria-hidden>→</span></Link>
@@ -138,9 +139,9 @@ export default function HomePage() {
       <div className="border-y border-[var(--text)] bg-[var(--text)] py-4 text-[var(--bg)]">
         <div className="marquee" aria-hidden="true">
           {[0, 1].map((copy) => (
-            <div key={copy} className="marquee-track font-display text-3xl italic sm:text-4xl">
+            <div key={copy} className="marquee-track font-display text-3xl sm:text-4xl">
               {["Runs on Ollama", "Speaks with Alan", "Keeps your files local", "Cites its sources", "Asks before it acts", "Works on an 8 GB laptop"].map((item) => (
-                <span key={item} className="flex items-center gap-12 whitespace-nowrap">{item}<span className="not-italic text-[var(--accent)]">✳</span></span>
+                <span key={item} className="flex items-center gap-12 whitespace-nowrap">{item}<span className="text-[var(--brass)]">✦</span></span>
               ))}
             </div>
           ))}
@@ -183,7 +184,7 @@ export default function HomePage() {
               <Reveal key={title} delay={(index % 3) * 90} className="group border-t border-[var(--text)] py-8">
                 <div className="flex items-baseline justify-between">
                   <span className="caption">{String.fromCharCode(97 + index)}.</span>
-                  <span aria-hidden className="text-[var(--accent)] opacity-0 transition-opacity duration-500 group-hover:opacity-100">✳</span>
+                  <span aria-hidden className="text-[var(--brass)] opacity-0 transition-opacity duration-500 group-hover:opacity-100">✦</span>
                 </div>
                 <h3 className="font-display mt-6 text-3xl transition-transform duration-700 group-hover:translate-x-2">{title}</h3>
                 <p className="mt-3 leading-7 text-[var(--muted)]">{body}</p>
@@ -231,7 +232,7 @@ export default function HomePage() {
             <Link href="/privacy" className="hover:text-[var(--text)]">Privacy</Link>
             <Link href="/terms" className="hover:text-[var(--text)]">Terms</Link>
           </nav>
-          <span className="caption normal-case tracking-normal">Set in Instrument Serif &amp; Schibsted Grotesk.</span>
+          <span className="caption normal-case tracking-normal">Set in Bricolage Grotesque &amp; Plus Jakarta Sans.</span>
         </div>
       </footer>
     </main>

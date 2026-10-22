@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 type Props = { sidebar: ReactNode; topbar: ReactNode; children: ReactNode; composer: ReactNode };
 
-/** Workspace frame: paper sidebar, hairline top bar, conversation, composer. Phones get the sidebar as a drawer. */
+/** Workspace frame: sidebar, hairline top bar, conversation, composer. Phones get the sidebar as a drawer. */
 export default function NeuralShell({ sidebar, topbar, children, composer }: Props) {
   const [drawer, setDrawer] = useState(false);
 
