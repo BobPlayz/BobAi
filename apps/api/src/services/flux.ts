@@ -3,6 +3,7 @@ import { unloadOllamaModels } from "./ollamaProvider.js";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { repoFile } from "./repoPaths.js";
 
 const MAX_STDOUT_BYTES = 32 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
@@ -13,7 +14,7 @@ async function fluxGenerateUnlocked(prompt: string, count: number, inputImages: 
   const modelPath = process.env.BOBAI_IMAGE_MODEL_PATH?.trim();
   if (!modelPath) throw new Error("local image generation needs BOBAI_IMAGE_MODEL_PATH pointing to a downloaded Diffusers model directory");
   const python = (process.env.BOBAI_PYTHON || "python").trim();
-  const scriptPath = path.resolve("scripts/local_image_generation.py");
+  const scriptPath = repoFile("scripts/local_image_generation.py");
   const width = options.width ?? 512;
   const height = options.height ?? 512;
   const requestBody = JSON.stringify({ prompt, count, width, height, inputImages, steps: options.steps ?? 24, guidanceScale: options.guidanceScale ?? 7, negativePrompt: options.negativePrompt ?? "", ...(options.seed === undefined ? {} : { seed: options.seed }) });

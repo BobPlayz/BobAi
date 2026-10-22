@@ -6,13 +6,12 @@ import { ollamaContextTokens, ollamaPredictTokens } from "./ollamaProvider.js";
 export type ChatRole = "system" | "user" | "assistant";
 export type ChatMessage = { role: ChatRole; content: string };
 export type ChatInput = { messages: unknown; personality?: unknown; modelId?: unknown; memoryContext?: string[]; knowledgeContext?: string[]; language?: unknown; responseStyle?: unknown; responseLength?: unknown; tone?: unknown; customInstructions?: unknown; signal?: AbortSignal };
-const MAX_MESSAGES = 100, MAX_MESSAGE_LENGTH = 100_000, MAX_PERSONALITY_LENGTH = 10_000, MAX_MEMORIES = 20, MAX_MEMORY_LENGTH = 2_000, HOSTED_CONTEXT_CHARACTERS = 120_000, MAX_CUSTOM_INSTRUCTIONS = 12_000;
+const MAX_MESSAGES = 100, MAX_MESSAGE_LENGTH = 100_000, MAX_PERSONALITY_LENGTH = 10_000, MAX_MEMORIES = 20, MAX_MEMORY_LENGTH = 2_000, MAX_CUSTOM_INSTRUCTIONS = 12_000;
 const KEEP_RECENT_MESSAGES = 20, MAX_SUMMARY_INPUT = 50_000, MAX_SUMMARY_LENGTH = 8_000;
 // Character budget for the prompt. Local Ollama models have a small token window (num_ctx), and sending more
 // than fits makes Ollama silently drop the start of the prompt. Reserve room for the reply (num_predict) and
 // assume ~3 characters per token, which is conservative for English and code.
 export function contextCharacterBudget() {
-  if ((process.env.BOBAI_MODEL_PROVIDER || "ollama").trim().toLowerCase() === "openrouter") return HOSTED_CONTEXT_CHARACTERS;
   return Math.max(4_000, (ollamaContextTokens() - ollamaPredictTokens() - 64) * 3);
 }
 export function normalizeMessages(input: unknown): ChatMessage[] { if (!Array.isArray(input)) return []; return input.map((message: unknown) => { const value = message as { role?: unknown; content?: unknown } | null; return { role: value?.role === "assistant" ? "assistant" : "user", content: typeof value?.content === "string" ? value.content : String(value?.content ?? "") }; }); }
@@ -32,7 +31,8 @@ function budgetContext(system: ChatMessage, messages: ChatMessage[]) { let remai
 async function compactLongContext(messages: ChatMessage[], modelId?: string, signal?: AbortSignal): Promise<ChatMessage[]> {
   const total = messages.reduce((sum, message) => sum + message.content.length, 0);
   // On a CPU-bound local model a summarization call before every answer doubles latency; budgetContext trims instead.
-  if ((process.env.BOBAI_MODEL_PROVIDER || "ollama").trim().toLowerCase() !== "openrouter") return messages;
+  // Compaction only runs when explicitly enabled (for a larger model on stronger hardware).
+  if (process.env.BOBAI_CONTEXT_COMPACTION !== "true") return messages;
   if (total <= contextCharacterBudget() * 0.75 || messages.length <= KEEP_RECENT_MESSAGES) return messages;
   const split = Math.max(1, messages.length - KEEP_RECENT_MESSAGES);
   const older = messages.slice(0, split);

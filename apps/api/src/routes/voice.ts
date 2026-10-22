@@ -148,7 +148,7 @@ router.post("/turn", limit, async (req, res) => {
 
 router.post("/transcribe", limit, async (req, res) => {
   try { return res.json(await transcribe(decode(req.body?.audio, 25 * 1024 * 1024), req.body?.options)); }
-  catch (error) { const message = error instanceof Error ? error.message : "voice transcription unavailable"; return res.status(message === "invalid audio" ? 400 : 503).json({ error: message === "invalid audio" ? message : "local voice transcription unavailable" }); }
+  catch (error) { console.error(JSON.stringify({ event: "voice_transcription_failed", error: error instanceof Error ? error.message.slice(0, 300) : "unknown" })); const message = error instanceof Error ? error.message : "voice transcription unavailable"; return res.status(message === "invalid audio" ? 400 : 503).json({ error: message === "invalid audio" ? message : "local voice transcription unavailable" }); }
 });
 router.post("/synthesize", limit, async (req, res) => {
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";

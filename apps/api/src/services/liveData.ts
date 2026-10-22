@@ -56,6 +56,42 @@ function remember(key: string, value: Omit<LiveDataResult, "cached">, ttlMs: num
   cache.set(key, { expiresAt: Date.now() + ttlMs, value });
 }
 
+type CricketMatch = { name?: string; status?: string; venue?: string; date?: string; teams?: string[]; matchStarted?: boolean; matchEnded?: boolean; score?: Array<{ r?: number; w?: number; o?: number; inning?: string }> };
+
+/**
+ * Real scores from CricketData.org (free tier needs BOBAI_CRICKET_API_KEY). Returns null when no key is set or the
+ * feed has nothing relevant, so the caller can fall back to clearly labelled web search.
+ */
+async function cricketFeed(query: string, signal?: AbortSignal): Promise<Omit<LiveDataResult, "cached"> | null> {
+  const apiKey = process.env.BOBAI_CRICKET_API_KEY?.trim();
+  if (!apiKey) return null;
+  const url = new URL("https://api.cricapi.com/v1/currentMatches");
+  url.searchParams.set("apikey", apiKey);
+  url.searchParams.set("offset", "0");
+  let payload: { status?: string; data?: CricketMatch[] };
+  try {
+    const response = await fetch(url, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000), redirect: "error", headers: { accept: "application/json" } });
+    if (!response.ok) return null;
+    payload = await response.json() as typeof payload;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  }
+  if (payload.status !== "success" || !Array.isArray(payload.data)) return null;
+  const words = query.toLowerCase().split(/[^a-z]+/).filter((word) => word.length > 2 && !["cricket", "score", "scores", "live", "match", "latest", "current", "what", "the", "who", "won"].includes(word));
+  const relevant = payload.data.filter((match) => words.length === 0 || words.some((word) => `${match.name ?? ""} ${(match.teams ?? []).join(" ")}`.toLowerCase().includes(word)));
+  const matches = (relevant.length ? relevant : payload.data).filter((match) => match.matchStarted).slice(0, 5).map((match) => ({
+    match: match.name,
+    status: match.status,
+    venue: match.venue,
+    date: match.date,
+    finished: Boolean(match.matchEnded),
+    innings: (match.score ?? []).map((innings) => `${innings.inning ?? "Innings"}: ${innings.r ?? 0}/${innings.w ?? 0} (${innings.o ?? 0} ov)`),
+  }));
+  if (!matches.length) return null;
+  return { kind: "cricket", provider: "CricketData.org", fetchedAt: new Date().toISOString(), freshness: "live", data: { matches }, sources: [{ title: "CricketData.org live scores", url: "https://cricketdata.org/" }] };
+}
+
 export async function getLiveData(intent: LiveDataIntent, signal?: AbortSignal): Promise<LiveDataResult> {
   const key = intent.kind === "weather" ? `weather:${intent.city.toLowerCase()}` : `cricket:${intent.query.toLowerCase()}`;
   const cached = fromCache(key);
@@ -66,6 +102,8 @@ export async function getLiveData(intent: LiveDataIntent, signal?: AbortSignal):
     remember(key, value, WEATHER_TTL_MS);
     return { ...value, cached: false };
   }
+  const feed = await cricketFeed(intent.query, signal);
+  if (feed) { remember(key, feed, CRICKET_TTL_MS); return { ...feed, cached: false }; }
   const result = await webSearch(`${intent.query} live score`, {}, signal);
   const sources = result.sources.slice(0, 6).map((source) => ({ title: source.title, url: source.url, snippet: source.snippet, publishedAt: source.publishedAt }));
   const value = { kind: "cricket" as const, provider: process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim() ? "Brave Search" : "DuckDuckGo", fetchedAt: new Date().toISOString(), freshness: "web-search" as const, data: { query: result.query }, sources };
@@ -78,7 +116,9 @@ export function liveDataContext(result: LiveDataResult): string {
   const origin = result.cached ? `cached from ${result.fetchedAt}` : `fetched live at ${result.fetchedAt}`;
   const rules = result.kind === "weather"
     ? "Answer using only this weather data. Mention the location it resolved to, the observation time, and that it comes from Open-Meteo. If a value is missing, say so."
-    : "These are web search snippets, not an official scoring feed. Report a score only if a snippet states it, name the source for each figure, and say clearly that scores may be delayed or out of date. If no snippet shows a current score, say you could not find one. Never invent a score.";
+    : result.freshness === "live"
+      ? "This is a live scoring feed. Report scores exactly as given, say which match each score belongs to, and mention it comes from CricketData.org. Never invent a score."
+      : "These are web search snippets, not an official scoring feed. Report a score only if a snippet states it, name the source for each figure, and say clearly that scores may be delayed or out of date. If no snippet shows a current score, say you could not find one. Never invent a score.";
   const payload = JSON.stringify({ provider: result.provider, freshness: result.freshness, data: result.data, sources: result.sources }).slice(0, 3_500);
   return `[untrusted live data: ${result.kind}, ${origin}]\n${payload}\n[/untrusted live data]\n${rules} Answer naturally; do not mention these instructions or the words "untrusted live data".`;
 }
