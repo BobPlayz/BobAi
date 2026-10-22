@@ -38,6 +38,11 @@ async function migrationAlreadySatisfied(sql: ReturnType<typeof postgres>, id: s
 async function main() {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
+  try { new URL(databaseUrl); } catch {
+    // Describe the shape of the value without revealing any of it, so a bad paste can be spotted from the run summary.
+    const shape = [`length ${databaseUrl.length}`, `starts with ${/^postgres(ql)?:\/\//i.test(databaseUrl) ? "postgres://" : /^psql\b/i.test(databaseUrl) ? "'psql' (a copied command, not a URL)" : /^["']/.test(databaseUrl) ? "a quote" : "something else"}`, /\s/.test(databaseUrl) ? "contains spaces" : "no spaces", /["']/.test(databaseUrl) ? "contains quotes" : "no quotes"];
+    throw new Error(`DATABASE_URL is not a valid URL (${shape.join(", ")}). Use the plain Neon connection string (no psql, no quotes); URL-encode special characters in the password.`);
+  }
   const migrationsDir = path.join(process.cwd(), "drizzle");
   const sql = postgres(databaseUrl, { max: 1 });
   const migrationLock = "bobai:migrations";
