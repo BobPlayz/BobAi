@@ -59,5 +59,5 @@ Set-LocalEnvValue "BOBAI_WHISPER_PYTHON_MODEL_PATH" $whisperModel
 Invoke-Setup "Install local image runtime and download Tiny-SD" "scripts/setup-image-generation.ps1"
 
 Write-Host ""
-Write-Host "Local model assets are prepared. This does not claim native voice is operational until compatible Piper/Whisper C++ libraries are installed and the native addon exists." -ForegroundColor Yellow
-Write-Host "Next: run npm run test:image-generation, then npm run native:media:build if the native dependencies are configured, then npm run ai."
+Write-Host "Local Piper CLI and faster-whisper are configured for offline voice; the native C++ addon is optional." -ForegroundColor Green
+Write-Host "Next: run npm run test:image-generation to verify image inference, then npm run ai."
