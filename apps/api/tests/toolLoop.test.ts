@@ -78,12 +78,15 @@ test("tool routing fails closed when tools are globally disabled", () => {
 });
 
 test("tool routing does not bundle multiple approval-required actions", () => {
-  const decision = validateToolDecision({ action: "use_tools", calls: [
-    { tool: "browser", arguments: { url: "https://example.com" } },
-    { tool: "website-test", arguments: { url: "https://example.com" } },
-  ] });
-  assert.equal(decision.action, "respond");
-  assert.match(decision.reason || "", /multiple approval-required/);
+  process.env.BOBAI_BROWSER_PROVIDER_URL = "https://browser.example.test";
+  try {
+    const decision = validateToolDecision({ action: "use_tools", calls: [
+      { tool: "browser", arguments: { url: "https://example.com" } },
+      { tool: "website-test", arguments: { url: "https://example.com" } },
+    ] });
+    assert.equal(decision.action, "respond");
+    assert.match(decision.reason || "", /multiple approval-required/);
+  } finally { delete process.env.BOBAI_BROWSER_PROVIDER_URL; }
 });
 
 test("tool loop forwards the request abort signal to the model-based router", async () => {

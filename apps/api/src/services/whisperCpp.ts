@@ -3,7 +3,7 @@ import { statSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { unloadOllamaModels } from "./ollamaProvider.js";
+import { unloadOllamaModelsIfMemoryLow } from "./ollamaProvider.js";
 import { withLocalModelLock } from "./localModelLock.js";
 import { nativeMedia } from "./nativeMedia.js";
 import { validatePcm16Wav } from "./wavSafety.js";
@@ -55,7 +55,8 @@ export async function transcribeLocal(input: Buffer, options?: Record<string, un
     validatePcm16Wav(input, 25 * 1024 * 1024);
     const safeOptions = asOptions(options);
     const threads = typeof safeOptions.threads === "number" && Number.isFinite(safeOptions.threads) ? Math.min(Math.max(Math.trunc(safeOptions.threads), 1), 8) : 4;
-    await unloadOllamaModels();
+    // Piper and Whisper are small; evicting the ~2-3 GB chat model here forced a full reload on every voice turn.
+    await unloadOllamaModelsIfMemoryLow();
     if (nativeMedia.status().ready && existsFile(WHISPER_MODEL)) {
       const result = nativeMedia.require().transcribe(path.resolve(WHISPER_MODEL), input, threads);
       return { text: result.trim(), engine: "BobWhisper/native-whisper.cpp", model: path.basename(WHISPER_MODEL) };

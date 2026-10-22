@@ -1,8 +1,12 @@
 import { promises as fs } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 const MAX_OBJECT_BYTES = 10 * 1024 * 1024;
-const ROOT = path.resolve(process.env.BOBAI_FILE_STORAGE_DIR?.trim() || path.join(process.cwd(), "storage", "objects"));
+// Vercel functions have a read-only deployment directory; only the temp dir is writable (and not persistent).
+// Extracted text and chunks live in Postgres, so document understanding survives; raw bytes may not.
+const DEFAULT_ROOT = process.env.VERCEL === "1" ? path.join(tmpdir(), "jarvis-objects") : path.join(process.cwd(), "storage", "objects");
+const ROOT = path.resolve(process.env.BOBAI_FILE_STORAGE_DIR?.trim() || DEFAULT_ROOT);
 
 function safeKey(key: string) {
   const normalized = key.replace(/\\/g, "/").replace(/^\/+/, "");
