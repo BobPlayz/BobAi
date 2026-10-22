@@ -17,6 +17,8 @@ type Props = {
   onResolveApproval: (messageId: string, approve: boolean) => void;
   /** Speak each new reply automatically with the local Alan Medium voice. */
   voiceReplies?: boolean;
+  /** Only this reply (the one just produced) may be auto-played; switching chats never replays old replies. */
+  autoPlayMessageId?: string | null;
   /** Suggestions shown on an empty conversation; clicking one fills the composer. */
   onSuggestion?: (text: string) => void;
 };
@@ -27,7 +29,7 @@ const SUGGESTIONS = [
   "Write a Python function that removes duplicates from a list.",
 ];
 
-export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, onSuggestion }: Props) {
+export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -86,7 +88,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
                       ) : (
                         <AssistantMessage
                           message={message}
-                          autoPlayId={voiceReplies && isLastAssistant && !loading ? message.id : undefined}
+                          autoPlayId={voiceReplies && !loading && message.id === autoPlayMessageId ? message.id : undefined}
                           onResolveApproval={(approve) => onResolveApproval(message.id, approve)}
                           onPreview={setPreview}
                           onRegenerate={isLastAssistant ? onRegenerate : undefined}

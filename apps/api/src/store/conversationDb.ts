@@ -65,6 +65,15 @@ export async function dbUpdateMessageStatus(input: { conversationId: string; mes
   return Boolean(result[0]);
 }
 
+/** Deletes one message, only if its conversation belongs to this user and workspace. */
+export async function dbDeleteMessage(conversationId: string, messageId: string, userId: string, workspaceId: string) {
+  const database = await getDb(); if (!database) return false;
+  const [owner] = await database.db.select({ id: database.conversations.id }).from(database.conversations).where(and(eq(database.conversations.id, conversationId), eq(database.conversations.userId, userId), eq(database.conversations.workspaceId, workspaceId))).limit(1);
+  if (!owner) return false;
+  const result = await database.db.delete(database.messages).where(and(eq(database.messages.id, messageId), eq(database.messages.conversationId, conversationId))).returning({ id: database.messages.id });
+  return Boolean(result[0]);
+}
+
 export async function dbDeleteConversation(id: string, userId: string, workspaceId: string) {
   const database = await getDb(); if (!database) return false; const result = await database.db.delete(database.conversations).where(and(eq(database.conversations.id, id), eq(database.conversations.userId, userId), eq(database.conversations.workspaceId, workspaceId))).returning({ id: database.conversations.id }); return Boolean(result[0]);
 }

@@ -63,6 +63,7 @@ export default function ChatPage() {
         onResolveApproval={chat.resolveApproval}
         onSuggestion={chat.setInput}
         voiceReplies={voiceReplies}
+        autoPlayMessageId={chat.lastReplyId}
       />
     </NeuralShell>
   );

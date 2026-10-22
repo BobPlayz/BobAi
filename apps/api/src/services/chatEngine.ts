@@ -31,6 +31,8 @@ export function buildSystemPrompt(personality: string, memoryContext: string[] =
 function budgetContext(system: ChatMessage, messages: ChatMessage[]) { let remaining = contextCharacterBudget() - system.content.length; const selected: ChatMessage[] = []; for (let index = messages.length - 1; index >= 0 && remaining > 0; index -= 1) { const message = messages[index]; if (!message.content) continue; const content = message.content.length <= remaining ? message.content : message.content.slice(0, remaining); selected.push({ ...message, content }); remaining -= content.length; } return [system, ...selected.reverse()]; }
 async function compactLongContext(messages: ChatMessage[], modelId?: string, signal?: AbortSignal): Promise<ChatMessage[]> {
   const total = messages.reduce((sum, message) => sum + message.content.length, 0);
+  // On a CPU-bound local model a summarization call before every answer doubles latency; budgetContext trims instead.
+  if ((process.env.BOBAI_MODEL_PROVIDER || "ollama").trim().toLowerCase() !== "openrouter") return messages;
   if (total <= contextCharacterBudget() * 0.75 || messages.length <= KEEP_RECENT_MESSAGES) return messages;
   const split = Math.max(1, messages.length - KEEP_RECENT_MESSAGES);
   const older = messages.slice(0, split);

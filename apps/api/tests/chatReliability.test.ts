@@ -28,6 +28,10 @@ test("weather and cricket questions are routed deterministically", () => {
   assert.equal(detectLiveDataIntent("what's the weather like"), null);
   assert.equal(detectLiveDataIntent("India vs Australia live cricket score")?.kind, "cricket");
   assert.equal(detectLiveDataIntent("explain how rain forms"), null);
+  assert.equal(detectLiveDataIntent("Explain how rain forms in clouds"), null);
+  assert.deepEqual(detectLiveDataIntent("Will it rain in Mumbai tomorrow?"), { kind: "weather", city: "Mumbai" });
+  assert.equal(detectLiveDataIntent("Explain the LBW rule in cricket"), null);
+  assert.equal(detectLiveDataIntent("Who won the IPL final?")?.kind, "cricket");
   assert.equal(detectLiveDataIntent("write a python function"), null);
 });
 
