@@ -42,6 +42,7 @@ async function main() {
     "docs/FINAL_COMPLETION_CHECKLIST.md",
     "docs/HANDOFF.md",
     "docs/VERCEL_DEPLOYMENT.md",
+    "docs/OLLAMA_GATEWAY.md",
   ]);
   const disallowedMarkdown = markdown.filter((path) => !allowedMarkdown.has(path));
   if (disallowedMarkdown.length) throw new Error(`Public repository contains unapproved Markdown files: ${disallowedMarkdown.join(", ")}`);

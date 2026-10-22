@@ -1,0 +1,12 @@
+{
+  "name": "@bobai/ollama-gateway",
+  "private": true,
+  "type": "module",
+  "description": "Authenticated HTTPS-ready gateway that lets the hosted Jarvis API use Ollama on your own computer.",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "engines": { "node": ">=22" }
+}
