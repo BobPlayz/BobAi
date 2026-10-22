@@ -69,6 +69,11 @@ function timeoutMs() {
   return Math.min(Math.max(Number.isFinite(value) ? value : 120_000, 1_000), 300_000);
 }
 
+/** An error whose message is safe to show to the user even in production. */
+export class ModelOfflineError extends Error {
+  readonly publicMessage = "Jarvis's AI model is offline right now. The Ollama computer or its gateway isn't connected, so try again later.";
+}
+
 async function request(messages: ReturnType<typeof normalizeMessages>, model: string, stream: boolean, signal?: AbortSignal) {
   const body = JSON.stringify({ model, messages, stream, think: thinkingEnabled(), keep_alive: "10m", options: inferenceOptions() });
   if (Buffer.byteLength(body) > MAX_REQUEST_BYTES) throw new Error("Ollama request is too large");
@@ -79,11 +84,15 @@ async function request(messages: ReturnType<typeof normalizeMessages>, model: st
     body,
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs())]) : AbortSignal.timeout(timeoutMs()),
+  }).catch((error: unknown) => {
+    if (signal?.aborted || (error as Error)?.name === "TimeoutError") throw error;
+    throw new ModelOfflineError(`Ollama is not reachable: ${(error as Error)?.message ?? "unknown error"}`);
   });
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
     if (response.status === 404) throw new Error(`Ollama model '${model}' is not installed. Run: ollama pull ${model}`);
     if (response.status === 503) throw new Error("Ollama is busy or out of memory. Try a smaller local model.");
+    if ([401, 403, 502, 504, 530].includes(response.status)) throw new ModelOfflineError(`Ollama gateway answered HTTP ${response.status}`);
     throw new Error(`Ollama request failed with HTTP ${response.status}`);
   }
   if (!response.body) throw new Error("Ollama returned an empty response body");
@@ -187,6 +196,9 @@ async function ollamaVisionUnlocked(imageBase64: string, prompt: string, signal?
     body,
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs())]) : AbortSignal.timeout(timeoutMs()),
+  }).catch((error: unknown) => {
+    if (signal?.aborted || (error as Error)?.name === "TimeoutError") throw error;
+    throw new ModelOfflineError(`Ollama is not reachable: ${(error as Error)?.message ?? "unknown error"}`);
   });
   if (!response.ok) {
     await response.body?.cancel().catch(() => undefined);
