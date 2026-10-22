@@ -1,4 +1,3 @@
-import { createWorker } from "tesseract.js";
 import { and, eq, isNull } from "drizzle-orm";
 import { db, uploads } from "@bobai/db";
 import { indexUpload } from "./documentIndexer.js";
@@ -10,7 +9,7 @@ export async function ocrUpload(uploadId: string, workspaceId: string, image: Bu
   if (image.length > MAX_OCR_BYTES) throw new Error("image is too large for OCR");
   const [upload] = await db.select({ projectId: uploads.projectId, metadata: uploads.metadata }).from(uploads).where(and(eq(uploads.id, uploadId), eq(uploads.workspaceId, workspaceId), isNull(uploads.deletedAt))).limit(1);
   if (!upload) throw new Error("upload not found");
-  const worker = await createWorker("eng");
+  const worker = await (await import("tesseract.js")).createWorker("eng");
   try {
     const result = await worker.recognize(image);
     const text = result.data.text.trim().slice(0, MAX_OCR_TEXT);
