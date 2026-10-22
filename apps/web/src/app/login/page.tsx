@@ -3,7 +3,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import BobLogo from "@/components/BobLogo";
 import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin, refreshSession } from "@/lib/auth";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
@@ -89,57 +88,67 @@ export default function LoginPage() {
     router.replace("/chat");
   }
 
+  const heading = step === "details" ? "Say hello." : step === "verify" ? "Check your inbox." : "One more code.";
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#080a0d] px-4 py-8 text-white">
-      <section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.035] p-6 shadow-2xl shadow-black/30 sm:p-8">
-        <Link href="/" className="mb-8 flex items-center gap-3">
-          <BobLogo />
-          <span className="text-lg font-semibold">Jarvis</span>
-        </Link>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Email verification</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">{step === "details" ? "Get started" : step === "verify" ? "Check your inbox" : "Verify authenticator"}</h1>
-        <p className="mt-2 text-sm leading-6 text-white/55">
-          {step === "details" ? "Enter your name and email. No password or social sign-in is needed." : step === "verify" ? `Enter the 6-digit code sent to ${email || "your email"}. You will stay signed in on this device until your session expires or you sign out.` : "Enter the 6-digit code from your authenticator app to finish signing in."}
-        </p>
+    <main className="relative z-[1] grid min-h-screen bg-[var(--bg)] text-[var(--text)] lg:grid-cols-2">
+      <aside className="hidden flex-col justify-between border-r border-[var(--hairline)] p-10 lg:flex">
+        <Link href="/" className="atelier-wordmark" aria-label="Jarvis home">Jarvis<em>.</em></Link>
+        <div>
+          <p className="caption">Sign in</p>
+          <p className="font-display mt-4 text-6xl leading-[0.95]">An assistant,<br /><em className="text-[var(--accent)]">not an oracle.</em></p>
+          <p className="mt-6 max-w-sm text-[var(--muted)]">No password to remember. We email you a 6-digit code each time you sign in.</p>
+        </div>
+        <Link href="/demo" className="caption hover:text-[var(--text)]">Just looking? Try the demo →</Link>
+      </aside>
 
-        {step === "details" ? (
-          <form onSubmit={submitDetails} className="mt-6 space-y-4">
-            <label className="block text-sm text-white/75">Your name
-              <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={80} required placeholder="Name you want Jarvis to use" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm outline-none transition focus:border-cyan-300/60" />
-            </label>
-            <label className="block text-sm text-white/75">Email address
-              <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" type="email" required placeholder="you@example.com" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-sm outline-none transition focus:border-cyan-300/60" />
-            </label>
-            <label className="flex items-start gap-3 text-xs leading-5 text-white/55">
-              <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} className="mt-1" />
-              <span>I agree to the <Link href="/terms" target="_blank" className="text-cyan-300 underline">Terms</Link> and <Link href="/privacy" target="_blank" className="text-cyan-300 underline">Privacy Policy</Link>.</span>
-            </label>
-            <button disabled={loading} className="h-12 w-full rounded-xl bg-cyan-300 font-semibold text-black transition hover:bg-cyan-200 disabled:opacity-50">
-              {loading ? "Sending code…" : "Send email code"}
-            </button>
-          </form>
-        ) : step === "verify" ? (
-          <form onSubmit={submitCode} className="mt-6 space-y-4">
-            <label className="block text-sm text-white/75">6-digit email code
-              <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
-            </label>
-            <button disabled={loading || code.length !== 6} className="h-12 w-full rounded-xl bg-cyan-300 font-semibold text-black transition hover:bg-cyan-200 disabled:opacity-50">
-              {loading ? "Verifying…" : "Verify and continue"}
-            </button>
-            <button type="button" onClick={() => { setStep("details"); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-white/55 hover:text-white">Use a different email</button>
-          </form>
-        ) : (
-          <form onSubmit={submitMfa} className="mt-6 space-y-4">
-            <label className="block text-sm text-white/75">6-digit authenticator code
-              <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-center font-mono text-xl tracking-[0.35em] outline-none transition focus:border-cyan-300/60" />
-            </label>
-            <button disabled={loading || mfaCode.length !== 6} className="h-12 w-full rounded-xl bg-cyan-300 font-semibold text-black transition hover:bg-cyan-200 disabled:opacity-50">{loading ? "Verifying…" : "Verify authenticator"}</button>
-            <button type="button" onClick={() => { setStep("details"); setChallengeToken(""); setMfaCode(""); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-white/55 hover:text-white">Start over</button>
-          </form>
-        )}
+      <section className="flex items-center justify-center px-5 py-12 sm:px-10">
+        <div className="w-full max-w-md">
+          <Link href="/" className="atelier-wordmark lg:hidden" aria-label="Jarvis home">Jarvis<em>.</em></Link>
+          <p className="caption mt-10 lg:mt-0">{step === "details" ? "Step 1 of 2 — your details" : step === "verify" ? "Step 2 of 2 — email code" : "Two-step verification"}</p>
+          <h1 className="font-display mt-3 text-5xl leading-none">{heading}</h1>
+          <p className="mt-4 leading-7 text-[var(--muted)]">
+            {step === "details" ? "Tell Jarvis your name and email. We’ll send you a code — no password needed." : step === "verify" ? `Enter the 6-digit code we sent to ${email || "your email"}. You’ll stay signed in on this device.` : "Enter the 6-digit code from your authenticator app to finish signing in."}
+          </p>
 
-        {error && <p role="alert" className="mt-4 rounded-xl border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">{error}</p>}
-        {notice && <p role="status" className="mt-4 rounded-xl border border-cyan-300/15 bg-cyan-300/5 p-3 text-sm text-cyan-100/80">{notice}</p>}
+          {step === "details" ? (
+            <form onSubmit={submitDetails} className="mt-8 space-y-5">
+              <label className="block text-sm font-medium">Your name
+                <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={80} required placeholder="What should Jarvis call you?" className="mt-2 h-12 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-base text-[var(--text)] outline-none transition placeholder:text-[var(--faint)] focus:border-[var(--text)]" />
+              </label>
+              <label className="block text-sm font-medium">Email address
+                <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" type="email" required placeholder="you@example.com" className="mt-2 h-12 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-base text-[var(--text)] outline-none transition placeholder:text-[var(--faint)] focus:border-[var(--text)]" />
+              </label>
+              <label className="flex items-start gap-3 text-sm leading-6 text-[var(--muted)]">
+                <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} className="mt-1.5 h-4 w-4 accent-[var(--accent)]" />
+                <span>I agree to the <Link href="/terms" target="_blank" className="md-link">Terms</Link> and <Link href="/privacy" target="_blank" className="md-link">Privacy Policy</Link>.</span>
+              </label>
+              <button disabled={loading} className="btn-ink w-full justify-center disabled:opacity-50">
+                {loading ? "Sending code…" : <>Send my code <span className="btn-arrow" aria-hidden>→</span></>}
+              </button>
+            </form>
+          ) : step === "verify" ? (
+            <form onSubmit={submitCode} className="mt-8 space-y-5">
+              <label className="block text-sm font-medium">6-digit email code
+                <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-14 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-center font-mono text-2xl tracking-[0.4em] text-[var(--text)] outline-none transition focus:border-[var(--text)]" />
+              </label>
+              <button disabled={loading || code.length !== 6} className="btn-ink w-full justify-center disabled:opacity-50">
+                {loading ? "Checking…" : <>Verify and continue <span className="btn-arrow" aria-hidden>→</span></>}
+              </button>
+              <button type="button" onClick={() => { setStep("details"); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-[var(--muted)] hover:text-[var(--text)]">Use a different email</button>
+            </form>
+          ) : (
+            <form onSubmit={submitMfa} className="mt-8 space-y-5">
+              <label className="block text-sm font-medium">6-digit authenticator code
+                <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-14 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-center font-mono text-2xl tracking-[0.4em] text-[var(--text)] outline-none transition focus:border-[var(--text)]" />
+              </label>
+              <button disabled={loading || mfaCode.length !== 6} className="btn-ink w-full justify-center disabled:opacity-50">{loading ? "Checking…" : "Verify authenticator"}</button>
+              <button type="button" onClick={() => { setStep("details"); setChallengeToken(""); setMfaCode(""); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-[var(--muted)] hover:text-[var(--text)]">Start over</button>
+            </form>
+          )}
+
+          {error && <p role="alert" className="mt-5 rounded-2xl border border-[var(--accent)] p-4 text-sm text-[var(--accent)]">{error}</p>}
+          {notice && <p role="status" className="mt-5 rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">{notice}</p>}
+        </div>
       </section>
     </main>
   );

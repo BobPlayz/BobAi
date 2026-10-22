@@ -1,0 +1,24 @@
+# Jarvis
+
+Jarvis is a local-first AI assistant: chat, coding help, live weather, web research with sources, file reading, offline voice and local image generation. The language model runs on the user's own computer through Ollama.
+
+## Public pages
+
+- `/` What Jarvis is and how it works.
+- `/demo` The interface with clearly labelled sample data (no account needed).
+- `/about` About the project.
+- `/faq` Frequently asked questions.
+- `/contact` How to reach the developer (GitHub issues).
+- `/privacy` Privacy policy.
+- `/terms` Terms of service.
+
+## Principles
+
+- Local first: answers are generated on the user's machine.
+- Honest about live data: sources and fetch times are shown; scores are never invented.
+- Asks before it acts: tools that act for the user need explicit approval.
+- Remembers only when told: memory is saved only on an explicit "remember that…".
+
+## Accuracy
+
+Generated content can be wrong. Check important answers.

@@ -1,4 +1,6 @@
-CREATE TABLE "agent_runs" (
+-- vector(1536) columns below need pgvector; it used to be enabled only in 0013.
+CREATE EXTENSION IF NOT EXISTS vector;--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "agent_runs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"agent_id" uuid NOT NULL,
 	"workspace_id" uuid NOT NULL,
@@ -19,7 +21,7 @@ CREATE TABLE "agent_runs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "agents" (
+CREATE TABLE IF NOT EXISTS "agents" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"created_by" uuid,
@@ -41,7 +43,7 @@ CREATE TABLE "agents" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "api_keys" (
+CREATE TABLE IF NOT EXISTS "api_keys" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"created_by" uuid NOT NULL,
@@ -58,7 +60,7 @@ CREATE TABLE "api_keys" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "audit_logs" (
+CREATE TABLE IF NOT EXISTS "audit_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid,
 	"user_id" uuid,
@@ -74,7 +76,7 @@ CREATE TABLE "audit_logs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "billing_plans" (
+CREATE TABLE IF NOT EXISTS "billing_plans" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
@@ -91,7 +93,7 @@ CREATE TABLE "billing_plans" (
 	CONSTRAINT "billing_plans_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "conversations" (
+CREATE TABLE IF NOT EXISTS "conversations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -102,7 +104,7 @@ CREATE TABLE "conversations" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "email_otps" (
+CREATE TABLE IF NOT EXISTS "email_otps" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"code_hash" text NOT NULL,
@@ -112,7 +114,7 @@ CREATE TABLE "email_otps" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "images" (
+CREATE TABLE IF NOT EXISTS "images" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"upload_id" uuid,
@@ -132,7 +134,7 @@ CREATE TABLE "images" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" text NOT NULL,
 	"username" text NOT NULL,
@@ -147,7 +149,7 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_username_unique" UNIQUE("username")
 );
 --> statement-breakpoint
-CREATE TABLE "workspaces" (
+CREATE TABLE IF NOT EXISTS "workspaces" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"owner_id" uuid NOT NULL,
 	"name" text NOT NULL,
@@ -155,7 +157,7 @@ CREATE TABLE "workspaces" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "workspace_members" (
+CREATE TABLE IF NOT EXISTS "workspace_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -168,7 +170,7 @@ CREATE TABLE "workspace_members" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "organizations" (
+CREATE TABLE IF NOT EXISTS "organizations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"owner_id" uuid NOT NULL,
 	"name" text NOT NULL,
@@ -186,7 +188,7 @@ CREATE TABLE "organizations" (
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "organization_members" (
+CREATE TABLE IF NOT EXISTS "organization_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -202,7 +204,7 @@ CREATE TABLE "organization_members" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "messages" (
+CREATE TABLE IF NOT EXISTS "messages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"conversation_id" uuid NOT NULL,
 	"parent_message_id" uuid,
@@ -223,7 +225,7 @@ CREATE TABLE "messages" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "memories" (
+CREATE TABLE IF NOT EXISTS "memories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"user_id" uuid,
@@ -246,14 +248,14 @@ CREATE TABLE "memories" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "memory_embeddings" (
+CREATE TABLE IF NOT EXISTS "memory_embeddings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"memory_id" uuid NOT NULL,
 	"embedding" vector(1536) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "projects" (
+CREATE TABLE IF NOT EXISTS "projects" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"owner_id" uuid NOT NULL,
@@ -271,7 +273,7 @@ CREATE TABLE "projects" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "project_files" (
+CREATE TABLE IF NOT EXISTS "project_files" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
 	"uploaded_by" uuid,
@@ -287,7 +289,7 @@ CREATE TABLE "project_files" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "uploads" (
+CREATE TABLE IF NOT EXISTS "uploads" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"uploaded_by" uuid,
@@ -305,7 +307,7 @@ CREATE TABLE "uploads" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "voices" (
+CREATE TABLE IF NOT EXISTS "voices" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"name" text NOT NULL,
@@ -322,7 +324,7 @@ CREATE TABLE "voices" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "personalities" (
+CREATE TABLE IF NOT EXISTS "personalities" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid,
 	"user_id" uuid,
@@ -342,7 +344,7 @@ CREATE TABLE "personalities" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "settings" (
+CREATE TABLE IF NOT EXISTS "settings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid,
 	"user_id" uuid,
@@ -354,7 +356,7 @@ CREATE TABLE "settings" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "sessions" (
+CREATE TABLE IF NOT EXISTS "sessions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"access_token_hash" text NOT NULL,
@@ -377,7 +379,7 @@ CREATE TABLE "sessions" (
 	CONSTRAINT "sessions_refresh_token_hash_unique" UNIQUE("refresh_token_hash")
 );
 --> statement-breakpoint
-CREATE TABLE "tasks" (
+CREATE TABLE IF NOT EXISTS "tasks" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"project_id" uuid,
@@ -400,7 +402,7 @@ CREATE TABLE "tasks" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "reminders" (
+CREATE TABLE IF NOT EXISTS "reminders" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -420,7 +422,7 @@ CREATE TABLE "reminders" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "tools" (
+CREATE TABLE IF NOT EXISTS "tools" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid,
 	"created_by" uuid,
@@ -438,7 +440,7 @@ CREATE TABLE "tools" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "tool_logs" (
+CREATE TABLE IF NOT EXISTS "tool_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tool_id" uuid,
 	"workspace_id" uuid,
@@ -457,7 +459,7 @@ CREATE TABLE "tool_logs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "usage_records" (
+CREATE TABLE IF NOT EXISTS "usage_records" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid,
 	"organization_id" uuid,
@@ -478,7 +480,7 @@ CREATE TABLE "usage_records" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid,
 	"user_id" uuid NOT NULL,
@@ -496,7 +498,7 @@ CREATE TABLE "notifications" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "integrations" (
+CREATE TABLE IF NOT EXISTS "integrations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"created_by" uuid,
@@ -514,7 +516,7 @@ CREATE TABLE "integrations" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "model_providers" (
+CREATE TABLE IF NOT EXISTS "model_providers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid,
 	"created_by" uuid,
@@ -531,7 +533,7 @@ CREATE TABLE "model_providers" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "workflows" (
+CREATE TABLE IF NOT EXISTS "workflows" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"created_by" uuid,
@@ -549,7 +551,7 @@ CREATE TABLE "workflows" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "search_index" (
+CREATE TABLE IF NOT EXISTS "search_index" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"resource_type" text NOT NULL,
@@ -562,7 +564,7 @@ CREATE TABLE "search_index" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "webhooks" (
+CREATE TABLE IF NOT EXISTS "webhooks" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"created_by" uuid,
@@ -579,7 +581,7 @@ CREATE TABLE "webhooks" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "subscriptions" (
+CREATE TABLE IF NOT EXISTS "subscriptions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid,
 	"workspace_id" uuid,
@@ -599,7 +601,7 @@ CREATE TABLE "subscriptions" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "password_resets" (
+CREATE TABLE IF NOT EXISTS "password_resets" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"token_hash" text NOT NULL,
@@ -610,7 +612,7 @@ CREATE TABLE "password_resets" (
 	CONSTRAINT "password_resets_token_hash_unique" UNIQUE("token_hash")
 );
 --> statement-breakpoint
-ALTER TABLE "conversations" ADD CONSTRAINT "conversations_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "conversations" ADD CONSTRAINT "conversations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "email_otps" ADD CONSTRAINT "email_otps_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "workspaces" ADD CONSTRAINT "workspaces_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "conversations" ADD CONSTRAINT "conversations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "email_otps" ADD CONSTRAINT "email_otps_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "workspaces" ADD CONSTRAINT "workspaces_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;

@@ -28,8 +28,8 @@ function ollamaHeaders(extra: Record<string, string> = {}): Record<string, strin
 
 export function ollamaModelFor(provider: "bob" | "coding", override?: string) {
   const configured = (provider === "coding"
-    ? process.env.BOBAI_OLLAMA_CODING_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:4b"
-    : process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:4b").trim();
+    ? process.env.BOBAI_OLLAMA_CODING_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:2b"
+    : process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:2b").trim();
   const model = (override || configured).trim();
   if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama model name");
   return model;
@@ -169,7 +169,7 @@ export function ollamaEmbedding(text: string) {
 }
 
 export function ollamaVisionModel() {
-  const model = (process.env.BOBAI_OLLAMA_VISION_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:4b").trim();
+  const model = (process.env.BOBAI_OLLAMA_VISION_MODEL || process.env.BOBAI_OLLAMA_MODEL || "qwen3.5:2b").trim();
   if (!model || model.length > 160 || /[\r\n]/.test(model) || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$/.test(model)) throw new Error("Invalid Ollama vision model name");
   return model;
 }

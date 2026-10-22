@@ -8,7 +8,7 @@ import { useTheme } from "@/components/neural/ThemeProvider";
 import { clearMemories, confirmAccountDeletion, deleteMemory, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
 import { logout } from "@/lib/auth";
 
-const SETTINGS_KEY = "jarvis.settings.v1";
+import { PREFERENCES_KEY as SETTINGS_KEY } from "@/lib/preferences";
 
 type SettingsState = { personality: string; memory: boolean; sourceTypes: string[] };
 type Tab = "personalization" | "privacy" | "memory" | "research" | "about";
@@ -17,7 +17,6 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "personalization", label: "Personalization" },
   { id: "privacy", label: "Privacy" },
   { id: "memory", label: "Memory" },
-  { id: "research", label: "Research sources" },
   { id: "about", label: "About" },
 ];
 
@@ -235,7 +234,7 @@ export default function SettingsPage() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col sm:flex-row">
         <aside className={`w-full shrink-0 border-b p-4 sm:w-60 sm:border-b-0 sm:border-r sm:p-5 ${colors.sidebar}`}>
           <Link href="/chat" className="mb-6 flex items-center gap-3" aria-label="Back to Jarvis chat">
-            <span className="grid size-9 place-items-center rounded-xl border border-sky-400/25 bg-sky-400/10 font-semibold text-sky-500">B</span>
+            <span className="atelier-wordmark">J<em>.</em></span>
             <span>
               <span className="block text-base font-semibold">Jarvis</span>
               <span className={`block text-xs ${colors.muted}`}>Settings</span>
@@ -273,7 +272,7 @@ export default function SettingsPage() {
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
               <h2 className="text-base font-semibold">How should Jarvis respond?</h2>
               <p className={`mt-1 text-sm ${colors.muted}`}>These instructions are sent with your chat requests. Don’t include passwords or private secrets.</p>
-              <textarea
+              <textarea aria-label="Personalization instructions for Jarvis"
                 value={settings.personality}
                 onChange={(event) => update("personality", event.target.value.slice(0, 12000))}
                 maxLength={12000}
@@ -297,7 +296,7 @@ export default function SettingsPage() {
               <div className={`mt-5 rounded-xl border p-4 ${colors.field}`}>
                 <h3 className="text-sm font-medium">Your account data</h3>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Download the account data currently available through the authenticated API. The export may contain private conversations and account information, so keep the file secure.</p>
-                <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
+                <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-[var(--ink)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
                 {exportMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{exportMessage}</p>}
               </div>
               <div className={`mt-4 rounded-xl border border-red-500/25 p-4 ${colors.field}`}>
@@ -434,7 +433,7 @@ export default function SettingsPage() {
           <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
             {saved && <p role="status" className="text-sm text-emerald-600">Preferences saved.</p>}
             {!saved && !dirty && <p className={`text-xs ${colors.muted}`}>No unsaved changes</p>}
-            <button type="button" onClick={save} disabled={!dirty} className="rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40">Save preferences</button>
+            <button type="button" onClick={save} disabled={!dirty} className="rounded-lg bg-[var(--ink)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40">Save preferences</button>
           </div>
         </section>
       </div>

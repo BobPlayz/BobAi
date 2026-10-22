@@ -1,16 +1,16 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { setAssistantActivity } from "@/lib/assistantState";
+import { loadPreferences } from "@/lib/preferences";
 import { approveAndRunTool, deleteRemoteMessage, deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, updateConversation as updateRemoteConversation, uploadFile } from "@/lib/api";
 import type { Conversation, ChatMessage, ChatImage, ChatFile, LiveDataInfo, ToolApproval } from "@/types/chat";
 const STORAGE_KEY = "bobai.conversation-ui.v3";
 const LEGACY_STORAGE_KEY = "bobai.conversations.v2";
-const SETTINGS_KEY = "bobai.settings.v1";
 type GeneratedImage = { id?: string; url: string; prompt?: string }; type ImageResponse = { images: GeneratedImage[] };
 type ChatSettings = { personality: string; memory?: boolean };
 function readImageDataUrl(file: File): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("The image could not be read.")); reader.onerror = () => reject(new Error("The image could not be read.")); reader.readAsDataURL(file); }); }
 function createConversation(): Conversation { return { id: crypto.randomUUID(), title: "new chat", createdAt: Date.now(), pinned: false, messages: [] }; }
-function loadSettings(): ChatSettings { if (typeof window === "undefined") return { personality: "" }; try { const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); return { personality: typeof parsed?.personality === "string" ? parsed.personality : "", memory: parsed?.memory !== false }; } catch { return { personality: "" }; } }
+function loadSettings(): ChatSettings { const { personality, memory } = loadPreferences(); return { personality, memory }; }
 function loadLocalConversationUi(): Conversation[] {
   if (typeof window === "undefined") return [];
   try {
@@ -63,7 +63,6 @@ export function useChat() {
     // Persist only non-sensitive UI metadata. Conversation/message content stays server-backed.
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.map(({ id, title, createdAt, pinned }) => ({ id, title, createdAt, pinned }))));
   }, [conversations]);
-  useEffect(() => { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }, [settings]);
   // Sync only the open conversation. Re-posting every conversation on every keystroke-level change was wasteful.
   useEffect(() => { if (!serverReady) return; const current = conversations.find((conversation) => conversation.id === activeId); if (!current || !current.messages.length) return; const timer = window.setTimeout(() => { void saveConversation(current).catch(() => undefined); }, 800); return () => window.clearTimeout(timer); }, [conversations, activeId, serverReady]);
   const activeConversation = conversations.find((c) => c.id === activeId); const visibleConversations = useMemo(() => conversations.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())).sort((a, b) => a.pinned !== b.pinned ? (a.pinned ? -1 : 1) : b.createdAt - a.createdAt), [conversations, search]);

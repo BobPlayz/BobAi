@@ -6,7 +6,6 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
 
 const links = [
-  ["Home", "/"],
   ["About", "/about"],
   ["FAQ", "/faq"],
   ["Contact", "/contact"],
@@ -14,34 +13,32 @@ const links = [
   ["Terms", "/terms"],
 ] as const;
 
+/** Header for the information pages. The home, chat and demo pages have their own headers. */
 export default function SiteNav() {
   const pathname = usePathname();
-  const publicNavigationRoutes = ["/about", "/faq", "/contact", "/waitlist", "/privacy", "/terms", "/thank-you"];
-  const showNavigation = publicNavigationRoutes.includes(pathname);
   const { theme, toggleTheme } = useTheme();
+  if (!links.some(([, href]) => href === pathname)) return null;
   const light = theme === "light";
-  if (!showNavigation) return null;
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6">
-      <nav className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl border px-4 py-3 shadow-lg backdrop-blur-xl ${light ? "border-[#e5e7eb] bg-white/90" : "border-white/10 bg-black/30"}`} aria-label="Primary navigation">
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight" aria-label="Jarvis home">
-          <span className={`grid size-8 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-sm ${light ? "text-sky-700" : "text-cyan-200"}`} aria-hidden="true">J</span>
-          <span>Jarvis</span>
-        </Link>
-        <div className="hidden items-center gap-1 sm:flex">
-          {links.slice(1).map(([label, href]) => (
-            <Link key={href} href={href} className={`rounded-xl px-3 py-2 text-sm ${light ? "text-[#4b5563] hover:bg-black/5 hover:text-[#111827]" : "text-white/65 hover:bg-white/8 hover:text-white"}`}>{label}</Link>
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-[var(--hairline)] bg-[var(--bg)]/90 backdrop-blur-md">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 sm:px-8" aria-label="Primary navigation">
+        <Link href="/" className="atelier-wordmark" aria-label="Jarvis home">Jarvis<em>.</em></Link>
+        <div className="hidden items-center gap-6 text-sm sm:flex">
+          {links.map(([label, href]) => (
+            <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} className={pathname === href ? "text-[var(--text)] underline decoration-[var(--accent)] underline-offset-4" : "text-[var(--muted)] hover:text-[var(--text)]"}>{label}</Link>
           ))}
         </div>
         <div className="flex items-center gap-2">
           <details className="relative sm:hidden">
-            <summary className={`cursor-pointer list-none rounded-xl border px-3 py-2 text-sm ${light ? "border-[#d1d5db] text-[#374151]" : "border-white/10 text-white/70"}`}>Menu</summary>
-            <div className={`absolute right-0 mt-2 w-44 rounded-2xl border p-2 shadow-2xl backdrop-blur-xl ${light ? "border-[#e5e7eb] bg-white/95" : "border-white/10 bg-slate-950/95"}`}>
-              {links.slice(1).map(([label, href]) => <Link key={href} href={href} className={`block rounded-xl px-3 py-2 text-sm ${light ? "text-[#4b5563] hover:bg-black/5 hover:text-[#111827]" : "text-white/70 hover:bg-white/5 hover:text-white"}`}>{label}</Link>)}
+            <summary className="atelier-chip cursor-pointer list-none">Menu</summary>
+            <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
+              {links.map(([label, href]) => <Link key={href} href={href} className="block rounded-xl px-3 py-2 text-sm hover:bg-[var(--surface-2)]">{label}</Link>)}
             </div>
           </details>
-          <button type="button" onClick={toggleTheme} aria-label={light ? "Switch to dark theme" : "Switch to light theme"} title={light ? "Switch to dark theme" : "Switch to light theme"} className={`grid size-9 place-items-center rounded-xl border ${light ? "border-[#d1d5db] text-[#374151] hover:bg-black/5" : "border-white/10 text-white/75 hover:bg-white/5"}`}>{light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}</button>
-          <Link href="/chat" className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_0_24px_rgba(34,211,238,.2)] hover:-translate-y-0.5">Try Jarvis</Link>
+          <button type="button" onClick={toggleTheme} className="atelier-iconbtn" aria-label={light ? "Switch to ink (dark) theme" : "Switch to paper (light) theme"}>
+            {light ? <Moon className="h-4 w-4" aria-hidden /> : <Sun className="h-4 w-4" aria-hidden />}
+          </button>
+          <Link href="/chat" className="btn-ink !min-h-10 !px-4 text-sm">Open Jarvis</Link>
         </div>
       </nav>
     </header>

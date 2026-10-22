@@ -81,7 +81,6 @@ export default function DemoPage() {
         loading={false}
         onPinMessage={(id) => setMessages((list) => list.map((message) => message.id === id ? { ...message, pinned: !message.pinned } : message))}
         onDeleteMessage={(id) => setMessages((list) => list.filter((message) => message.id !== id))}
-        onRegenerate={() => undefined}
         onResolveApproval={(id, approve) => setMessages((list) => list.map((message) => message.id === id && message.approval ? { ...message, approval: { ...message.approval, state: approve ? "completed" : "declined" } } : message))}
       />
     </NeuralShell>
