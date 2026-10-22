@@ -33,7 +33,7 @@ export async function dbGetConversation(id: string, userId: string, workspaceId:
   const rows = await database.db.select().from(conversations).where(and(eq(conversations.id, id), eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId))).limit(1); const conversation = rows[0]; if (!conversation) return null;
   const safeLimit = Math.min(500, Math.max(1, Math.floor(messageLimit)));
   const parsedBefore = before ? new Date(before) : null;
-  const where = parsedBefore && !Number.isNaN(parsedBefore.getTime()) ? and(eq(messages.conversationId, conversation.id), sql`${messages.createdAt} < ${parsedBefore}`) : eq(messages.conversationId, conversation.id);
+  const where = parsedBefore && !Number.isNaN(parsedBefore.getTime()) ? and(eq(messages.conversationId, conversation.id), sql`${messages.createdAt} < ${parsedBefore.toISOString()}`) : eq(messages.conversationId, conversation.id);
   const conversationMessages = await database.db.select({ id: messages.id, role: messages.role, content: messages.content, model: messages.model, status: messages.status, attachments: messages.attachments, createdAt: messages.createdAt }).from(messages).where(where).orderBy(desc(messages.createdAt)).limit(safeLimit);
   conversationMessages.reverse();
   return { ...conversation, messages: conversationMessages } satisfies DbConversation;

@@ -42,15 +42,13 @@ test("live data context tells the model the data source and forbids invented sco
   assert.match(text, /untrusted live data/);
 });
 
-test("context budget fits the local model window instead of a fixed 120k characters", () => {
+test("context budget fits the local model window", () => {
   const saved = { ctx: process.env.BOBAI_OLLAMA_NUM_CTX, predict: process.env.BOBAI_OLLAMA_NUM_PREDICT, provider: process.env.BOBAI_MODEL_PROVIDER };
   try {
     delete process.env.BOBAI_MODEL_PROVIDER;
     process.env.BOBAI_OLLAMA_NUM_CTX = "4096";
     process.env.BOBAI_OLLAMA_NUM_PREDICT = "1024";
     assert.equal(contextCharacterBudget(), (4096 - 1024 - 64) * 3);
-    process.env.BOBAI_MODEL_PROVIDER = "openrouter";
-    assert.equal(contextCharacterBudget(), 120_000);
   } finally {
     for (const [key, value] of [["BOBAI_OLLAMA_NUM_CTX", saved.ctx], ["BOBAI_OLLAMA_NUM_PREDICT", saved.predict], ["BOBAI_MODEL_PROVIDER", saved.provider]] as const) {
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
@@ -70,5 +68,32 @@ test("long histories are trimmed to the budget, keeping the newest message", asy
   } finally {
     delete process.env.BOBAI_OLLAMA_NUM_CTX;
     delete process.env.BOBAI_OLLAMA_NUM_PREDICT;
+  }
+});
+
+test("cricket uses the real scoring feed when a key is configured", async () => {
+  const { getLiveData } = await import("../src/services/liveData.js");
+  const originalFetch = globalThis.fetch;
+  process.env.BOBAI_CRICKET_API_KEY = "test-key";
+  let requested = "";
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requested = String(input);
+    return new Response(JSON.stringify({ status: "success", data: [
+      { name: "India vs Australia, 2nd ODI", status: "India need 42 runs in 36 balls", teams: ["India", "Australia"], matchStarted: true, matchEnded: false, score: [{ r: 289, w: 7, o: 50, inning: "Australia Inning 1" }, { r: 248, w: 5, o: 44, inning: "India Inning 1" }] },
+      { name: "England vs Pakistan, 1st Test", status: "Stumps", teams: ["England", "Pakistan"], matchStarted: true, matchEnded: false, score: [] },
+    ] }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const result = await getLiveData({ kind: "cricket", query: "India vs Australia score feedtest" });
+    assert.equal(result.provider, "CricketData.org");
+    assert.equal(result.freshness, "live");
+    assert.match(requested, /api\.cricapi\.com\/v1\/currentMatches/);
+    const text = JSON.stringify(result.data);
+    assert.match(text, /India need 42 runs/);
+    assert.match(text, /248\/5 \(44 ov\)/);
+    assert.doesNotMatch(text, /England vs Pakistan/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete process.env.BOBAI_CRICKET_API_KEY;
   }
 });

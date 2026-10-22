@@ -62,7 +62,7 @@ export async function recoverAgentTasks() {
     if (!acquired) return [];
     const now = new Date();
     const staleWorkerCutoff = new Date(now.getTime() - 90_000);
-    await tx.update(tasks).set({ status: "queued", updatedAt: now, metadata: { error: "agent worker lease expired; task returned to durable queue" } }).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "running"), sql`${tasks.updatedAt} < ${staleWorkerCutoff}`));
+    await tx.update(tasks).set({ status: "queued", updatedAt: now, metadata: { error: "agent worker lease expired; task returned to durable queue" } }).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "running"), sql`${tasks.updatedAt} < ${staleWorkerCutoff.toISOString()}`));
     return tx.select({ id: tasks.id, workspaceId: tasks.workspaceId, createdBy: tasks.createdBy, title: tasks.title, description: tasks.description, type: tasks.type, status: tasks.status, payload: tasks.payload, createdAt: tasks.createdAt }).from(tasks).where(and(inArray(tasks.type, ["coding", "automation", "project", "media", "database"]), eq(tasks.status, "queued")));
   });
 }

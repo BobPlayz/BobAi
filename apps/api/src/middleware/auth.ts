@@ -29,8 +29,10 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     if (!user) return res.status(401).json({ error: "invalid or expired session" });
     req.user = user;
     return next();
-  } catch {
-    return res.status(401).json({ error: "invalid or expired session" });
+  } catch (error) {
+    // A database problem is not a sign-out: answering 401 here made the website drop the session on any blip.
+    console.error(JSON.stringify({ event: "auth_check_failed", error: error instanceof Error ? error.message.slice(0, 200) : "unknown" }));
+    return res.status(503).json({ error: "sign-in check is temporarily unavailable; try again" });
   }
 }
 

@@ -7,6 +7,7 @@ import { unloadOllamaModelsIfMemoryLow } from "./ollamaProvider.js";
 import { withLocalModelLock } from "./localModelLock.js";
 import { nativeMedia } from "./nativeMedia.js";
 import { validatePcm16Wav } from "./wavSafety.js";
+import { repoFile } from "./repoPaths.js";
 
 const WHISPER_MODEL = process.env.BOBAI_WHISPER_MODEL_PATH || "";
 const PYTHON = process.env.BOBAI_VOICE_PYTHON || "";
@@ -21,7 +22,7 @@ async function transcribeWithPython(input: Buffer, threads: number) {
   if (!PYTHON_MODEL || !existsDirectory(PYTHON_MODEL)) throw new Error("The local faster-whisper model is missing. Run npm run setup:local-media.");
   const directory = await mkdtemp(path.join(tmpdir(), "jarvis-whisper-"));
   const audioPath = path.join(directory, "input.wav");
-  const workerPath = path.resolve("scripts/local_whisper_transcribe.py");
+  const workerPath = repoFile("scripts/local_whisper_transcribe.py");
   try {
     await writeFile(audioPath, input);
     const result = await new Promise<{ text?: string; language?: string; error?: string }>((resolve, reject) => {

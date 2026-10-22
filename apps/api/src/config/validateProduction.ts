@@ -1,6 +1,5 @@
 export function validateProductionConfig() {
   if (process.env.NODE_ENV !== "production") return;
-  if ((process.env.BOBAI_MODEL_PROVIDER || "ollama").trim().toLowerCase() === "openrouter" && !process.env.OPENROUTER_API_KEY?.trim()) throw new Error("OPENROUTER_API_KEY is required when BOBAI_MODEL_PROVIDER=openrouter");
   const required = ["DATABASE_URL","CORS_ORIGIN","BOBAI_AGENT_KEY","BOBAI_WEB_URL","BOBAI_AUTH_REDIRECT_BASE_URL","BOBAI_MFA_ENCRYPTION_KEY"];
   const missing = required.filter((key) => !process.env[key]?.trim());
   if (missing.length) throw new Error(`Missing production configuration: ${missing.join(", ")}`);
