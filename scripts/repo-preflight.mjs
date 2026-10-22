@@ -41,6 +41,7 @@ async function main() {
     "docs/MODEL_SELECTION_8GB.md",
     "docs/FINAL_COMPLETION_CHECKLIST.md",
     "docs/HANDOFF.md",
+    "docs/VERCEL_DEPLOYMENT.md",
   ]);
   const disallowedMarkdown = markdown.filter((path) => !allowedMarkdown.has(path));
   if (disallowedMarkdown.length) throw new Error(`Public repository contains unapproved Markdown files: ${disallowedMarkdown.join(", ")}`);
@@ -54,13 +55,15 @@ async function main() {
     if (forbiddenSecret.test(content)) throw new Error(`${path} contains a secret-shaped value`);
   }
 
+  // git grep exits 0 when it finds a match and 1 when it finds none; execFile only rejects on a non-zero exit.
+  let secretMatches = "";
   try {
-    await execFileAsync("git", ["grep", "-I", "-n", "-E", "-e", "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}", "--", "."]);
+    const { stdout } = await execFileAsync("git", ["grep", "-I", "-l", "-E", "-e", "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AIza[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|re_[A-Za-z0-9]{8,}_[A-Za-z0-9]{16,}|npg_[A-Za-z0-9]{12,}", "--", ".", ":!package-lock.json"]);
+    secretMatches = stdout.trim();
   } catch (error) {
-    const code = error?.code;
-    if (code === 0) throw new Error("tracked files contain a known secret-shaped value");
-    if (code !== 1) throw error;
+    if (error?.code !== 1) throw error;
   }
+  if (secretMatches) throw new Error(`tracked files contain a known secret-shaped value: ${secretMatches.split("\n").join(", ")}`);
 
   if (missing.length || missingScripts.length) {
     console.error(JSON.stringify({ ok: false, missing, missingScripts }));
