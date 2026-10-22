@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm, statSync } from "node:fs";
+import { statSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { unloadOllamaModels } from "./ollamaProvider.js";
