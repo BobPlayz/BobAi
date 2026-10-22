@@ -34,6 +34,9 @@ const loaded: Promise<Express | { startupError: unknown }> = import("./applicati
 const entry = express();
 entry.disable("x-powered-by");
 entry.use(async (req, res, next) => {
+  // On Vercel the website rewrites /api/* to this service but the original path can arrive unchanged; the routes
+  // are mounted at the root, so strip the prefix (locally the API is called without it).
+  if (req.url === "/api" || req.url.startsWith("/api/") || req.url.startsWith("/api?")) req.url = req.url.slice(4) || "/";
   const app = await loaded;
   if ("startupError" in app) {
     res.setHeader("Cache-Control", "no-store");
