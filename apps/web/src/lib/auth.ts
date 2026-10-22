@@ -2,7 +2,7 @@ const ONBOARDING_KEY = "bobai_onboarding";
 const PENDING_EMAIL_KEY = "bobai_pending_verification_email";
 const PENDING_NAME_KEY = "bobai_pending_verification_name";
 const LEGACY_SESSION_KEY = "bobai_session";
-const API = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:3001");
+export const API = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:3001");
 type ApiError = { error?: string };
 export type Session = { accessToken: ""; expiresIn: number; email?: string; role?: string; username?: string };
 export type LoginResult = { ok: true; mfaRequired?: false } | { ok: true; mfaRequired: true; challengeToken: string; expiresInSeconds: number } | { ok: false; error: string };
@@ -45,7 +45,12 @@ export function logout() { session = null; localStorage.removeItem(LEGACY_SESSIO
 export function getSession(): Session | null { if (typeof window !== "undefined") localStorage.removeItem(LEGACY_SESSION_KEY); return session; }
 export function setSession(next: Session) { session = next; }
 export function clearSession() { session = null; }
-export async function refreshSession(): Promise<Session | null> { try { const res = await fetch(`${API}/auth/refresh`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } }); if (!res.ok) { clearSession(); return null; } const next = await readJson<{ expiresIn?: number }>(res); if (typeof next.expiresIn !== "number") { clearSession(); return null; } session = { accessToken: "", expiresIn: next.expiresIn }; return session; } catch { return null; } }
+// Refresh tokens rotate on every use and the server revokes the whole session family when a rotated token is
+// replayed. Concurrent refreshes (parallel 401s, StrictMode double effects) would replay the same cookie, so all
+// callers share one in-flight refresh.
+let refreshInFlight: Promise<Session | null> | null = null;
+export function refreshSession(): Promise<Session | null> { refreshInFlight ??= performRefresh().finally(() => { refreshInFlight = null; }); return refreshInFlight; }
+async function performRefresh(): Promise<Session | null> { try { const res = await fetch(`${API}/auth/refresh`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } }); if (!res.ok) { clearSession(); return null; } const next = await readJson<{ expiresIn?: number }>(res); if (typeof next.expiresIn !== "number") { clearSession(); return null; } session = { accessToken: "", expiresIn: next.expiresIn }; return session; } catch { return null; } }
 export function isLoggedIn() { return session !== null; }
 export function hasCompletedOnboarding() { if (typeof window === "undefined") return false; return localStorage.getItem(ONBOARDING_KEY) === "complete"; }
 export function saveOnboarding(_answers: unknown) { localStorage.setItem(ONBOARDING_KEY, "complete"); }

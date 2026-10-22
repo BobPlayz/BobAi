@@ -37,7 +37,8 @@ export default function ChatLayout({
 
     void restoreSession();
     return () => { cancelled = true; };
-  }, [pathname, router]);
+    // Restore once per page load. Re-running on every pathname change rotated the refresh token needlessly.
+  }, []);
 
   if (!sessionChecked) {
     return (

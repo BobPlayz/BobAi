@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Conversation } from "@/types/chat";
 import {
-  MessageSquare,
   MoreHorizontal,
   PenSquare,
   Pin,
@@ -14,7 +13,6 @@ import {
   Pencil,
   X,
 } from "lucide-react";
-import { useTheme } from "./ThemeProvider";
 
 type Props = {
   conversations: Conversation[];
@@ -39,8 +37,6 @@ export default function NeuralSidebar({
   onRename,
   onDelete,
 }: Props) {
-  const { theme } = useTheme();
-  const light = theme === "light";
   const [menuId, setMenuId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
 
@@ -65,40 +61,35 @@ export default function NeuralSidebar({
       <div key={conversation.id} className="group relative">
         <button
           type="button"
+          data-close-drawer
           onClick={() => { onSelect(conversation.id); setMenuId(null); }}
           title={conversation.title}
-          className={[
-            "flex min-h-10 w-full items-center gap-2 rounded-lg px-3 py-2 pr-9 text-left text-[13px] transition",
-            active ? (light ? "bg-white text-[#111827] shadow-sm" : "bg-white/[0.09] text-white") : (light ? "text-[#4b5563] hover:bg-black/[0.04] hover:text-[#111827]" : "text-white/65 hover:bg-white/[0.055] hover:text-white"),
-          ].join(" ")}
+          aria-current={active ? "true" : undefined}
+          className="convo-item pr-9"
         >
-          <MessageSquare className={"h-4 w-4 shrink-0 " + (light ? "text-[#9ca3af]" : "text-white/40")} />
           <span className="min-w-0 flex-1 truncate">{conversation.title || "New conversation"}</span>
-          {conversation.pinned && <Pin className={"h-3 w-3 shrink-0 " + (light ? "text-sky-600" : "text-cyan-200/70")} />}
+          {conversation.pinned && <Pin className="h-3 w-3 shrink-0" aria-label="Pinned" />}
         </button>
         <button
           type="button"
           aria-label={`More actions for ${conversation.title || "conversation"}`}
           title="Conversation actions"
+          aria-expanded={menuId === conversation.id}
           onClick={() => setMenuId(menuId === conversation.id ? null : conversation.id)}
-          className={[
-            "absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md",
-            light ? "text-[#6b7280] hover:bg-black/5 hover:text-[#111827]" : "text-white/55 hover:bg-white/10 hover:text-white",
-            menuId === conversation.id ? "visible" : "invisible group-hover:visible focus:visible",
-          ].join(" ")}
+          className={`absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full ${active ? "text-[var(--bg)]" : "text-[var(--muted)] hover:text-[var(--text)]"} ${menuId === conversation.id ? "visible" : "invisible group-hover:visible focus:visible"}`}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="h-4 w-4" aria-hidden />
         </button>
         {menuId === conversation.id && (
-          <div className={"absolute right-1 top-9 z-30 w-44 rounded-xl border p-1 shadow-xl " + (light ? "border-[#e5e7eb] bg-white" : "border-white/10 bg-[#17191d]")}>
-            <button type="button" onClick={() => { onPin(conversation.id); setMenuId(null); }} className={"flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs " + (light ? "text-[#374151] hover:bg-black/5" : "text-white/80 hover:bg-white/10")}>
-              <Pin className="h-3.5 w-3.5" /> {conversation.pinned ? "Unpin chat" : "Pin chat"}
+          <div className="absolute right-1 top-10 z-30 w-44 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
+            <button type="button" onClick={() => { onPin(conversation.id); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
+              <Pin className="h-3.5 w-3.5" aria-hidden /> {conversation.pinned ? "Unpin" : "Pin"}
             </button>
-            <button type="button" onClick={() => rename(conversation)} className={"flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs " + (light ? "text-[#374151] hover:bg-black/5" : "text-white/80 hover:bg-white/10")}>
-              <Pencil className="h-3.5 w-3.5" /> Rename
+            <button type="button" onClick={() => rename(conversation)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
+              <Pencil className="h-3.5 w-3.5" aria-hidden /> Rename
             </button>
-            <button type="button" onClick={() => { setDeleteTarget(conversation); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-red-500 hover:bg-red-400/10">
-              <Trash2 className="h-3.5 w-3.5" /> Delete
+            <button type="button" onClick={() => { setDeleteTarget(conversation); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--accent)] hover:bg-[var(--surface-2)]">
+              <Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete
             </button>
           </div>
         )}
@@ -107,28 +98,24 @@ export default function NeuralSidebar({
   }
 
   return (
-    <aside className={["flex h-full w-full flex-col", light ? "bg-[#f1f2f4] text-[#202123]" : "bg-[#090a0c] text-white"].join(" ")}>
-      <div className="flex items-center justify-between px-4 pb-3 pt-5">
-        <Link href="/chat" className={["text-[17px] font-semibold tracking-tight", light ? "text-[#202123]" : "text-white"].join(" ")} aria-label="Jarvis home">J.A.R.V.I.S.</Link>
+    <div className="flex h-full w-full flex-col bg-[var(--surface)] text-[var(--text)]">
+      <div className="flex items-baseline justify-between px-5 pb-4 pt-5">
+        <span className="caption">Conversations</span>
+        <span className="caption">{conversations.length}</span>
       </div>
 
       <div className="px-3 pb-3">
-        <button
-          type="button"
-          onClick={onNewChat}
-          className={["flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-sm transition", light ? "border-[#d1d5db] bg-white text-[#374151] hover:bg-[#f9fafb]" : "border-white/[0.09] bg-white/[0.035] text-white/85 hover:bg-white/[0.075]"].join(" ")}
-        >
-          <PenSquare className={"h-4 w-4 " + (light ? "text-[#6b7280]" : "text-white/60")} />
-          New chat
+        <button type="button" data-close-drawer onClick={onNewChat} className="btn-ink !min-h-11 w-full justify-center text-sm">
+          <PenSquare className="h-4 w-4" aria-hidden /> New conversation
         </button>
-        <div className="relative mt-2">
-          <Search className={"pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 " + (light ? "text-[#9ca3af]" : "text-white/35")} />
+        <div className="relative mt-3">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--faint)]" aria-hidden />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search chats"
+            placeholder="Search"
             aria-label="Search conversations"
-            className={["h-9 w-full rounded-lg border pl-9 pr-3 text-xs outline-none focus:border-cyan-300/50", light ? "border-[#e5e7eb] bg-white text-[#202123] placeholder:text-[#9ca3af]" : "border-white/[0.07] bg-white/[0.025] text-white placeholder:text-white/35"].join(" ")}
+            className="h-10 w-full rounded-full border border-[var(--hairline)] bg-transparent pl-9 pr-3 text-sm outline-none placeholder:text-[var(--faint)] focus:border-[var(--text)]"
           />
         </div>
       </div>
@@ -136,44 +123,44 @@ export default function NeuralSidebar({
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {pinned.length > 0 && (
           <section className="mb-4">
-            <h2 className={"px-3 py-2 text-[11px] font-medium " + (light ? "text-[#6b7280]" : "text-white/35")}>Pinned</h2>
+            <h2 className="caption px-3 py-2">Pinned</h2>
             <div className="space-y-0.5">{pinned.map(renderConversation)}</div>
           </section>
         )}
         <section>
-          <h2 className={"px-3 py-2 text-[11px] font-medium " + (light ? "text-[#6b7280]" : "text-white/35")}>Recent</h2>
+          <h2 className="caption px-3 py-2">Recent</h2>
           {recent.length ? (
             <div className="space-y-0.5">{recent.map(renderConversation)}</div>
           ) : pinned.length === 0 ? (
-            <p className={"px-3 py-2 text-xs leading-5 " + (light ? "text-[#6b7280]" : "text-white/35")}>{search ? "No matching conversations." : "Your conversations will appear here."}</p>
+            <p className="px-3 py-2 text-sm leading-6 text-[var(--muted)]">{search ? "No matching conversations." : "Your conversations will appear here."}</p>
           ) : null}
         </section>
       </div>
 
-      <div className={["border-t p-3", light ? "border-[#e5e7eb]" : "border-white/[0.07]"].join(" ")}>
-        <Link href="/settings" className={["flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition", light ? "text-[#4b5563] hover:bg-black/[0.04] hover:text-[#111827]" : "text-white/65 hover:bg-white/[0.06] hover:text-white"].join(" ")}>
-          <Settings className="h-4 w-4 text-white/45" />
+      <div className="border-t border-[var(--hairline)] p-3">
+        <Link href="/settings" className="convo-item">
+          <Settings className="h-4 w-4" aria-hidden />
           Settings
         </Link>
       </div>
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="delete-chat-title" className={"w-full max-w-sm rounded-2xl border p-5 shadow-2xl " + (light ? "border-[#e5e7eb] bg-white text-[#202123]" : "border-white/10 bg-[#17191d]")}>
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(21,19,15,0.45)] p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-chat-title" className="w-full max-w-sm rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 id="delete-chat-title" className={"text-base font-semibold " + (light ? "text-[#202123]" : "text-white")}>Delete conversation?</h2>
-                <p className={"mt-2 text-sm leading-5 " + (light ? "text-[#6b7280]" : "text-white/55")}>This will remove “{deleteTarget.title || "New conversation"}” from your history.</p>
+                <h2 id="delete-chat-title" className="font-display text-3xl">Delete this conversation?</h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">“{deleteTarget.title || "New conversation"}” will be removed from your history.</p>
               </div>
-              <button type="button" onClick={() => setDeleteTarget(null)} aria-label="Close dialog" className={"rounded-md p-1 " + (light ? "text-[#6b7280] hover:bg-black/5 hover:text-[#111827]" : "text-white/50 hover:bg-white/10 hover:text-white")}><X className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setDeleteTarget(null)} aria-label="Close dialog" className="atelier-iconbtn"><X className="h-4 w-4" aria-hidden /></button>
             </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setDeleteTarget(null)} className={"rounded-lg border px-3 py-2 text-sm " + (light ? "border-[#d1d5db] text-[#374151] hover:bg-[#f3f4f6]" : "border-white/10 text-white/75 hover:bg-white/[0.06]")}>Cancel</button>
-              <button type="button" onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }} className="rounded-lg bg-red-500/90 px-3 py-2 text-sm font-medium text-white hover:bg-red-500">Delete</button>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setDeleteTarget(null)} className="btn-line !min-h-10 text-sm">Cancel</button>
+              <button type="button" onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }} className="btn-ink !min-h-10 text-sm">Delete</button>
             </div>
           </section>
         </div>
       )}
-    </aside>
+    </div>
   );
 }

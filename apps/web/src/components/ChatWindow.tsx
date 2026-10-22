@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage } from "@/types/chat";
-import { useTheme } from "@/components/neural/ThemeProvider";
+import { Copy, MoreHorizontal, Pin, RotateCcw, Trash2, X } from "lucide-react";
+import type { ChatMessage, LiveDataInfo, ToolApproval } from "@/types/chat";
 import VoiceButton from "@/components/VoiceButton";
+import Markdown from "@/components/Markdown";
+import JarvisStage from "@/components/core/JarvisStage";
 
 type Props = {
   messages: ChatMessage[];
@@ -12,301 +14,129 @@ type Props = {
   onPinMessage: (id: string) => void;
   onDeleteMessage: (id: string) => void;
   onRegenerate: () => void;
+  onResolveApproval: (messageId: string, approve: boolean) => void;
+  /** Speak each new reply automatically with the local Alan Medium voice. */
+  voiceReplies?: boolean;
+  /** Suggestions shown on an empty conversation; clicking one fills the composer. */
+  onSuggestion?: (text: string) => void;
 };
 
-export default function ChatWindow({
-  messages,
-  loading,
-  loadingLabel = "working on it",
-  onPinMessage,
-  onDeleteMessage,
-  onRegenerate,
-}: Props) {
+const SUGGESTIONS = [
+  "What's the weather in Hyderabad right now?",
+  "Explain recursion like I'm new to programming.",
+  "Write a Python function that removes duplicates from a list.",
+];
+
+export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, onSuggestion }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [loadedImages, setLoadedImages] = useState<
-    Record<string, boolean>
-  >({});
-
   const endRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
 
+  // Follow new messages, but leave an empty chat at the top so its heading is not scrolled under the core.
   useEffect(() => {
-    endRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
+    if (messages.length || loading) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    else if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
   }, [messages, loading]);
-
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setPreview(null);
-        setMenuId(null);
-      }
-    }
-
+    function onKeyDown(event: KeyboardEvent) { if (event.key === "Escape") { setPreview(null); setMenuId(null); } }
     window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   const pinnedMessages = messages.filter((message) => message.pinned);
-
-  const lastAssistantId = [...messages]
-    .reverse()
-    .find((message) => message.role === "assistant")?.id;
+  const lastAssistantId = [...messages].reverse().find((message) => message.role === "assistant")?.id;
+  const actions = (message: ChatMessage) => ({
+    open: menuId === message.id,
+    toggle: () => setMenuId(menuId === message.id ? null : message.id),
+    pin: () => { onPinMessage(message.id); setMenuId(null); },
+    copy: async () => { try { await navigator.clipboard.writeText(message.content); } catch { /* clipboard unavailable */ } setMenuId(null); },
+    remove: () => { onDeleteMessage(message.id); setMenuId(null); },
+  });
 
   return (
     <>
-      <section className="relative min-h-0 flex-1 overflow-hidden">
-        {/* ambient workspace glow */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-        >
-          <div className="absolute left-[12%] top-[8%] h-72 w-72 rounded-full bg-cyan-400/[0.025] blur-[120px]" />
-          <div className="absolute bottom-[4%] right-[12%] h-96 w-96 rounded-full bg-sky-500/[0.02] blur-[140px]" />
-        </div>
+      <section className="relative h-full min-h-0 overflow-hidden" aria-label="Conversation">
+        {/* One persistent 3D core: large and centred on an empty chat, docked small once a chat starts. */}
+        <div className="jarvis-stage-layer"><JarvisStage compact={messages.length > 0} /></div>
 
-        <div className="relative h-full overflow-y-auto">
-          <div className="mx-auto w-full max-w-4xl px-4 pb-32 pt-8 sm:px-6 lg:px-8">
-            {/* pinned messages */}
+        <div ref={scrollerRef} className="relative h-full overflow-y-auto">
+          <div className="mx-auto w-full max-w-[780px] px-4 pb-16 pt-8 sm:px-8">
             {pinnedMessages.length > 0 && (
-              <div className="neural-panel motion-panel mb-8 overflow-hidden rounded-2xl">
-                <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-300/[0.06]">
-                    <span className="text-xs text-cyan-300">⌖</span>
-                  </div>
-
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/80">
-                      Memory
-                    </p>
-                    <p className="text-xs text-white/35">
-                      Pinned conversation context
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-1 p-2">
+              <nav aria-label="Pinned messages" className="mb-10 border-y border-[var(--hairline)] py-3">
+                <p className="caption mb-2">Pinned</p>
+                <ul className="space-y-1">
                   {pinnedMessages.map((message) => (
-                    <a
-                      key={message.id}
-                      href={`#msg-${message.id}`}
-                      className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/65 hover:bg-white/[0.035] hover:text-white"
-                    >
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(77,235,255,0.8)]" />
-
-                      <span className="min-w-0 truncate">
-                        {message.content.slice(0, 100)}
-                      </span>
-
-                      <span className="ml-auto text-xs text-white/20 opacity-0 transition group-hover:opacity-100">
-                        jump
-                      </span>
-                    </a>
+                    <li key={message.id}><a href={`#msg-${message.id}`} className="block truncate text-sm text-[var(--muted)] hover:text-[var(--text)]">{message.content.slice(0, 120) || "Image"}</a></li>
                   ))}
-                </div>
-              </div>
+                </ul>
+              </nav>
             )}
 
-            {/* empty state */}
             {messages.length === 0 ? (
-              <EmptyState />
+              <EmptyState onSuggestion={onSuggestion} />
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-10">
                 {messages.map((message) => {
-                  const isUser = message.role === "user";
-                  const isLastAssistant =
-                    message.role === "assistant" &&
-                    message.id === lastAssistantId;
-
+                  const isLastAssistant = message.role === "assistant" && message.id === lastAssistantId;
                   return (
-                    <article
-                      id={`msg-${message.id}`}
-                      key={message.id}
-                      className={`chat-enter flex ${
-                        isUser ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`group relative ${
-                          isUser
-                            ? "w-fit max-w-[86%] sm:max-w-[72%]"
-                            : "w-full max-w-[820px]"
-                        }`}
-                      >
-                        {isUser ? (
-                          <UserMessage
-                            message={message}
-                            menuOpen={menuId === message.id}
-                            onMenu={() =>
-                              setMenuId(
-                                menuId === message.id ? null : message.id
-                              )
-                            }
-                            onPin={() => {
-                              onPinMessage(message.id);
-                              setMenuId(null);
-                            }}
-                            onCopy={async () => {
-                              await navigator.clipboard.writeText(
-                                message.content
-                              );
-                              setMenuId(null);
-                            }}
-                            onDelete={() => {
-                              onDeleteMessage(message.id);
-                              setMenuId(null);
-                            }}
-                          />
-                        ) : (
-                          <AssistantMessage
-                            message={message}
-                            menuOpen={menuId === message.id}
-                            loadedImages={loadedImages}
-                            onImageLoaded={(imageId) =>
-                              setLoadedImages((previous) => ({
-                                ...previous,
-                                [imageId]: true,
-                              }))
-                            }
-                            onPreview={setPreview}
-                            onMenu={() =>
-                              setMenuId(
-                                menuId === message.id ? null : message.id
-                              )
-                            }
-                            onPin={() => {
-                              onPinMessage(message.id);
-                              setMenuId(null);
-                            }}
-                            onCopy={async () => {
-                              await navigator.clipboard.writeText(
-                                message.content
-                              );
-                              setMenuId(null);
-                            }}
-                            onDelete={() => {
-                              onDeleteMessage(message.id);
-                              setMenuId(null);
-                            }}
-                          />
-                        )}
-
-                        {message.pinned && (
-                          <div
-                            className={`mt-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-cyan-300/70 ${
-                              isUser ? "justify-end" : "justify-start"
-                            }`}
-                          >
-                            <span className="h-1 w-1 rounded-full bg-cyan-300" />
-                            pinned
-                          </div>
-                        )}
-
-                        {isLastAssistant && (
-                          <button
-                            type="button"
-                            onClick={onRegenerate}
-                            disabled={loading}
-                            className="mt-3 inline-flex h-8 items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 text-xs text-white/40 hover:border-cyan-300/20 hover:bg-cyan-300/[0.04] hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-30"
-                            aria-label="Regenerate response"
-                          >
-                            <span className="text-sm">↻</span>
-                            regenerate
-                          </button>
-                        )}
-                      </div>
+                    <article id={`msg-${message.id}`} key={message.id} className="chat-enter group relative">
+                      {message.role === "user" ? (
+                        <UserMessage message={message} {...actions(message)} />
+                      ) : (
+                        <AssistantMessage
+                          message={message}
+                          autoPlayId={voiceReplies && isLastAssistant && !loading ? message.id : undefined}
+                          onResolveApproval={(approve) => onResolveApproval(message.id, approve)}
+                          onPreview={setPreview}
+                          onRegenerate={isLastAssistant ? onRegenerate : undefined}
+                          loading={loading}
+                          {...actions(message)}
+                        />
+                      )}
                     </article>
                   );
                 })}
               </div>
             )}
 
-            {/* thinking state */}
             {loading && (
-              <div className="mt-8 flex justify-start">
-                <div className="neural-panel flex items-center gap-3 rounded-2xl px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
-                    <span
-                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300"
-                      style={{ animationDelay: "120ms" }}
-                    />
-                    <span
-                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300"
-                      style={{ animationDelay: "240ms" }}
-                    />
-                  </div>
-
-                  <span className="text-xs font-medium tracking-wide text-white/45">
-                    {loadingLabel}
-                  </span>
-                </div>
+              <div className="mt-10 flex items-center gap-3" role="status" aria-live="polite">
+                <span className="msg-sigil">J</span>
+                <span className="caption">{loadingLabel}</span>
+                <span className="flex gap-1" aria-hidden>
+                  {[0, 1, 2].map((dot) => <span key={dot} className="h-1 w-1 animate-pulse rounded-full bg-[var(--accent)]" style={{ animationDelay: `${dot * 160}ms` }} />)}
+                </span>
               </div>
             )}
-
-            <div ref={endRef} className="h-4" />
+            <div ref={endRef} className="h-2" />
           </div>
         </div>
       </section>
 
-      {/* image preview */}
       {preview && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image preview"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5 backdrop-blur-xl"
-          onClick={() => setPreview(null)}
-        >
-          <button
-            type="button"
-            aria-label="Close preview"
-            onClick={() => setPreview(null)}
-            className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white/60 hover:bg-white/[0.1] hover:text-white"
-          >
-            ×
-          </button>
-
-          <img
-            src={preview}
-            alt="Generated image preview"
-            className="max-h-[90vh] max-w-[92vw] rounded-2xl border border-cyan-300/10 object-contain shadow-[0_0_80px_rgba(0,217,255,0.08)]"
-            onClick={(event) => event.stopPropagation()}
-          />
+        <div role="dialog" aria-modal="true" aria-label="Image preview" className="fixed inset-0 z-[90] flex items-center justify-center bg-[rgba(21,19,15,0.86)] p-5" onClick={() => setPreview(null)}>
+          <button type="button" aria-label="Close preview" onClick={() => setPreview(null)} className="atelier-iconbtn absolute right-5 top-5 !text-[#f2ede3]"><X className="h-5 w-5" aria-hidden /></button>
+          <img src={preview} alt="Generated image, enlarged" className="max-h-[90vh] max-w-[92vw] rounded-2xl object-contain" onClick={(event) => event.stopPropagation()} />
         </div>
       )}
     </>
   );
 }
 
-function EmptyState() {
-  const { theme } = useTheme();
-  const light = theme === "light";
+function EmptyState({ onSuggestion }: { onSuggestion?: (text: string) => void }) {
   return (
-    <div className="flex min-h-[calc(100vh-290px)] items-center justify-center px-4">
+    <div className="flex justify-center pb-6">
       <div className="w-full max-w-xl text-center">
-        <div className="jarvis-reactor mx-auto mb-7" aria-label="JARVIS core ready" role="img">
-          <i className="jarvis-reactor-ring jarvis-reactor-ring-one" />
-          <i className="jarvis-reactor-ring jarvis-reactor-ring-two" />
-          <i className="jarvis-reactor-ring jarvis-reactor-ring-three" />
-          <i className="jarvis-reactor-orbit" />
-          <i className="jarvis-reactor-core" />
-        </div>
-        <div className={"mb-3 text-[10px] font-semibold uppercase tracking-[0.32em] " + (light ? "text-[#007f91]" : "text-[#27eaff]/75")}>J.A.R.V.I.S. / CORE ONLINE</div>
-        <h1 className={"text-2xl font-normal tracking-[0.12em] sm:text-3xl " + (light ? "text-[#14313b]" : "text-[#c9e4ed]")}>READY WHEN YOU ARE</h1>
-        <p className={"mx-auto mt-3 max-w-md text-xs leading-6 tracking-wide " + (light ? "text-[#52717d]" : "text-[#638092]")}>
-          Ask a question, build something, analyze a file, or start a voice conversation.
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-2">
-          {["Ask a question", "Analyze a file", "Build something"].map((suggestion) => (
-            <span key={suggestion} className={"border px-3 py-2 text-[10px] uppercase tracking-wider " + (light ? "border-[#82bac5] bg-white/70 text-[#155765]" : "border-[#087f91]/70 bg-[#06121b]/80 text-[#70a5b4]")}>
-              {suggestion}
-            </span>
+        <div className="jarvis-empty-spacer" aria-hidden="true" />
+        <h1 className="font-display text-5xl leading-none sm:text-6xl">What shall we <em className="text-[var(--accent)]">think</em> about?</h1>
+        <p className="mx-auto mt-4 max-w-md text-[var(--muted)]">Ask a question, paste some code, attach a file, or press the microphone and talk.</p>
+        <div className="mt-8 flex flex-col items-stretch gap-2 sm:items-center">
+          {SUGGESTIONS.map((suggestion) => (
+            <button key={suggestion} type="button" onClick={() => onSuggestion?.(suggestion)} disabled={!onSuggestion} className="group flex items-center justify-between gap-4 border-b border-[var(--hairline)] py-3 text-left text-[15px] hover:border-[var(--text)] disabled:cursor-default sm:min-w-[440px]">
+              <span>{suggestion}</span>
+              <span aria-hidden className="text-[var(--accent)] transition-transform duration-500 group-hover:translate-x-1">→</span>
+            </button>
           ))}
         </div>
       </div>
@@ -314,228 +144,131 @@ function EmptyState() {
   );
 }
 
-function UserMessage({
-  message,
-  menuOpen,
-  onMenu,
-  onPin,
-  onCopy,
-  onDelete,
-}: {
-  message: ChatMessage;
-  menuOpen: boolean;
-  onMenu: () => void;
-  onPin: () => void;
-  onCopy: () => Promise<void>;
-  onDelete: () => void;
-}) {
-  const { theme } = useTheme();
-  const light = theme === "light";
+type ActionProps = { open: boolean; toggle: () => void; pin: () => void; copy: () => Promise<void>; remove: () => void };
+
+function UserMessage({ message, ...menu }: { message: ChatMessage } & ActionProps) {
   return (
-    <div className={"relative rounded-2xl border px-4 py-3 shadow-sm " + (light ? "border-sky-200 bg-sky-50" : "border-cyan-300/[0.08] bg-cyan-300/[0.045]")}>
-      <div className={"pr-7 whitespace-pre-wrap text-[15px] leading-7 " + (light ? "text-[#202123]" : "text-white/85")}>
-        {message.content}
+    <div className="flex flex-col items-end">
+      <div className="relative flex items-start gap-1">
+        <MessageMenu {...menu} pinned={message.pinned} align="left" />
+        <div className="msg-user">{message.content || (message.files?.length ? `Attached ${message.files.map((file) => file.name).join(", ")}` : "")}</div>
+      </div>
+      {message.pinned && <span className="caption mt-2">Pinned</span>}
+    </div>
+  );
+}
+
+function AssistantMessage({ message, autoPlayId, onResolveApproval, onPreview, onRegenerate, loading, ...menu }: { message: ChatMessage; autoPlayId?: string; onResolveApproval: (approve: boolean) => void; onPreview: (url: string) => void; onRegenerate?: () => void; loading: boolean } & ActionProps) {
+  return (
+    <div className="relative">
+      <div className="msg-meta">
+        <span className="msg-sigil" aria-hidden>J</span>
+        <span className="caption">Jarvis{message.pinned ? " · pinned" : ""}</span>
+        <div className="ml-auto flex items-center gap-1">
+          {message.content.trim() && <VoiceButton onTranscript={() => undefined} readAloudText={message.content} autoPlayId={autoPlayId} />}
+          <MessageMenu {...menu} pinned={message.pinned} align="right" />
+        </div>
       </div>
 
-      <MessageMenuButton open={menuOpen} onClick={onMenu} />
+      {message.content && <div className="msg-assistant"><Markdown text={message.content} /></div>}
 
-      {menuOpen && (
-        <MessageMenu
-          pinned={message.pinned}
-          onPin={onPin}
-          onCopy={onCopy}
-          onDelete={onDelete}
-        />
+      {message.images && message.images.length > 0 && (
+        <div className={`grid gap-3 ${message.images.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"} ${message.content ? "mt-5" : ""}`}>
+          {message.images.map((image) => (
+            <figure key={image.id} className="overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)]">
+              <button type="button" onClick={() => onPreview(image.url)} className="block w-full" aria-label="Enlarge image">
+                      <img src={image.url} alt={image.prompt || "Generated image"} className="max-h-[520px] min-h-48 w-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+              </button>
+              <figcaption className="flex items-center justify-between gap-3 border-t border-[var(--hairline)] px-3 py-2">
+                <span className="caption min-w-0 truncate normal-case tracking-normal">{image.prompt}</span>
+                <a href={image.url} download className="caption shrink-0 hover:text-[var(--text)]">Download</a>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+
+      {message.liveData && <LiveDataBadge info={message.liveData} />}
+      {message.approval && <ApprovalCard approval={message.approval} onResolve={onResolveApproval} />}
+
+      {onRegenerate && (
+        <button type="button" onClick={onRegenerate} disabled={loading} className="atelier-chip mt-5 disabled:opacity-40" aria-label="Regenerate response">
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Try again
+        </button>
       )}
     </div>
   );
 }
 
-function AssistantMessage({
-  message,
-  menuOpen,
-  loadedImages,
-  onImageLoaded,
-  onPreview,
-  onMenu,
-  onPin,
-  onCopy,
-  onDelete,
-}: {
-  message: ChatMessage;
-  menuOpen: boolean;
-  loadedImages: Record<string, boolean>;
-  onImageLoaded: (id: string) => void;
-  onPreview: (url: string) => void;
-  onMenu: () => void;
-  onPin: () => void;
-  onCopy: () => Promise<void>;
-  onDelete: () => void;
-}) {
-  const { theme } = useTheme();
-  const light = theme === "light";
+function MessageMenu({ open, toggle, pin, copy, remove, pinned, align }: ActionProps & { pinned?: boolean; align: "left" | "right" }) {
   return (
     <div className="relative">
-      <div className="mb-3 flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-cyan-300/15 bg-cyan-300/[0.05]">
-          <span className="text-[10px] font-bold text-cyan-300">J</span>
+      <button type="button" onClick={toggle} aria-label="Message actions" aria-expanded={open} className={`atelier-iconbtn !h-8 !w-8 ${open ? "" : "opacity-0 focus:opacity-100 group-hover:opacity-100"} max-sm:opacity-100`}>
+        <MoreHorizontal className="h-4 w-4" aria-hidden />
+      </button>
+      {open && (
+        <div className={`absolute top-9 z-30 w-40 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)] ${align === "left" ? "right-0" : "right-0"}`}>
+          <button type="button" onClick={pin} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Pin className="h-3.5 w-3.5" aria-hidden /> {pinned ? "Unpin" : "Pin"}</button>
+          <button type="button" onClick={() => void copy()} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</button>
+          <button type="button" onClick={remove} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--accent)] hover:bg-[var(--surface-2)]"><Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete</button>
         </div>
-
-        <span className={"text-[11px] font-semibold uppercase tracking-[0.18em] " + (light ? "text-[#6b7280]" : "text-white/30")}>
-          bob
-        </span>
-
-        <span className="h-1 w-1 rounded-full bg-cyan-300/50" />
-        <span className={"text-[10px] " + (light ? "text-[#9ca3af]" : "text-white/20")}>core</span>
-        {message.content.trim() && <div className="ml-auto"><VoiceButton onTranscript={() => undefined} readAloudText={message.content} /></div>}
-      </div>
-
-      <div className={"relative rounded-2xl border px-4 py-4 shadow-sm sm:px-5 " + (light ? "border-[#e5e7eb] bg-white" : "border-white/[0.06] bg-white/[0.018]")}>
-        {message.content && (
-          <div className={"pr-7 whitespace-pre-wrap text-[15px] leading-7 " + (light ? "text-[#202123]" : "text-white/78")}>
-            {message.content}
-          </div>
-        )}
-
-        {message.images && message.images.length > 0 && (
-          <div
-            className={`grid gap-3 ${
-              message.images.length === 1
-                ? "grid-cols-1"
-                : "grid-cols-1 sm:grid-cols-2"
-            } ${message.content ? "mt-4" : ""}`}
-          >
-            {message.images.map((image) => (
-              <div
-                key={image.id}
-                className="group/image overflow-hidden rounded-2xl border border-white/[0.07] bg-black/20"
-              >
-                <button
-                  type="button"
-                  onClick={() => onPreview(image.url)}
-                  className="relative block w-full overflow-hidden"
-                >
-                  {!loadedImages[image.id] && (
-                    <div className="absolute inset-0 animate-pulse bg-white/[0.035]" />
-                  )}
-
-                  <img
-                    src={image.url}
-                    alt={image.prompt}
-                    className="max-h-[520px] min-h-48 w-full object-cover transition duration-500 group-hover/image:scale-[1.015]"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    onLoad={() => onImageLoaded(image.id)}
-                    onError={(event) => {
-                      event.currentTarget.alt = "Image could not be loaded";
-                      onImageLoaded(image.id);
-                    }}
-                  />
-
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition group-hover/image:opacity-100" />
-                </button>
-
-                <div className="flex items-center justify-between border-t border-white/[0.06] px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigator.clipboard.writeText(image.prompt)
-                    }
-                    className="rounded-lg px-2.5 py-1.5 text-[11px] text-white/30 hover:bg-white/[0.04] hover:text-white/70"
-                  >
-                    copy prompt
-                  </button>
-
-                  <a
-                    href={image.url}
-                    download
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-lg px-2.5 py-1.5 text-[11px] text-white/30 hover:bg-white/[0.04] hover:text-cyan-200"
-                  >
-                    download
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <MessageMenuButton open={menuOpen} onClick={onMenu} />
-
-        {menuOpen && (
-          <MessageMenu
-            pinned={message.pinned}
-            onPin={onPin}
-            onCopy={onCopy}
-            onDelete={onDelete}
-          />
-        )}
-      </div>
+      )}
     </div>
   );
 }
 
-function MessageMenuButton({
-  open,
-  onClick,
-}: {
-  open: boolean;
-  onClick: () => void;
-}) {
+function timeAgo(iso: string) {
+  const seconds = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+  if (!Number.isFinite(seconds)) return "";
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min ago`;
+  return new Date(iso).toLocaleString();
+}
+
+/** Shows where live data came from and whether it is live, cached, or only web-search snippets. */
+function LiveDataBadge({ info }: { info: LiveDataInfo }) {
+  const label = info.freshness === "web-search" ? "Web search — may be delayed" : info.cached ? "Cached" : "Live";
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="Message actions"
-      aria-expanded={open}
-      className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg text-sm text-white/25 ${
-        open
-          ? "bg-white/[0.06] text-white/70"
-          : "opacity-0 group-hover:opacity-100"
-      } hover:bg-white/[0.06] hover:text-white/80`}
-    >
-      ···
-    </button>
+    <div className="live-badge mt-4" data-freshness={info.freshness} data-cached={info.cached}>
+      <div className="live-badge-head">
+        <span className={`live-badge-pill ${info.freshness === "web-search" ? "is-search" : info.cached ? "is-cached" : "is-live"}`}>{label}</span>
+        <span>{info.provider}</span>
+        <span aria-hidden>·</span>
+        <time dateTime={info.fetchedAt} title={new Date(info.fetchedAt).toLocaleString()}>fetched {timeAgo(info.fetchedAt)}</time>
+      </div>
+      {info.sources.length > 0 && (
+        <ol className="live-badge-sources">
+          {info.sources.slice(0, 6).map((source, index) => (
+            <li key={`${source.url}-${index}`}>
+              <a href={source.url} target="_blank" rel="noopener noreferrer nofollow">
+                <span className="live-badge-index">{index + 1}</span>
+                <span className="truncate">{source.title || new URL(source.url).hostname}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 
-function MessageMenu({
-  pinned,
-  onPin,
-  onCopy,
-  onDelete,
-}: {
-  pinned?: boolean;
-  onPin: () => void;
-  onCopy: () => Promise<void>;
-  onDelete: () => void;
-}) {
+/** Consent gate for tools that act on the user's behalf. Nothing runs until Approve is pressed. */
+function ApprovalCard({ approval, onResolve }: { approval: ToolApproval; onResolve: (approve: boolean) => void }) {
+  const args = JSON.stringify(approval.arguments, null, 2);
   return (
-    <div className="absolute right-2 top-10 z-30 w-44 overflow-hidden rounded-xl border border-white/[0.08] bg-[#0b1118]/95 p-1.5 shadow-2xl backdrop-blur-2xl">
-      <button
-        type="button"
-        onClick={onPin}
-        className="w-full rounded-lg px-3 py-2 text-left text-xs text-white/65 hover:bg-white/[0.05] hover:text-white"
-      >
-        {pinned ? "unpin" : "pin"}
-      </button>
-
-      <button
-        type="button"
-        onClick={onCopy}
-        className="w-full rounded-lg px-3 py-2 text-left text-xs text-white/65 hover:bg-white/[0.05] hover:text-white"
-      >
-        copy
-      </button>
-
-      <button
-        type="button"
-        onClick={onDelete}
-        className="w-full rounded-lg px-3 py-2 text-left text-xs text-red-300/70 hover:bg-red-400/[0.06] hover:text-red-300"
-      >
-        delete
-      </button>
+    <div className="approval-card mt-4" role="group" aria-label={`Approval needed for ${approval.name}`}>
+      <p className="approval-title">Approval needed: <strong>{approval.name}</strong> <span className="approval-risk">{approval.risk}</span></p>
+      <pre className="approval-args">{args.length > 1200 ? `${args.slice(0, 1200)}…` : args}</pre>
+      {approval.state === "pending" && (
+        <div className="approval-actions">
+          <button type="button" className="approval-approve" onClick={() => onResolve(true)}>Approve and run once</button>
+          <button type="button" className="approval-decline" onClick={() => onResolve(false)}>Decline</button>
+        </div>
+      )}
+      {approval.state === "running" && <p className="approval-status" role="status">Running…</p>}
+      {approval.state === "completed" && <p className="approval-status" role="status">Completed. The result is below.</p>}
+      {approval.state === "declined" && <p className="approval-status" role="status">Declined. Nothing was run.</p>}
+      {approval.state === "failed" && <p className="approval-status approval-error" role="alert">Failed: {approval.error}</p>}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, updateConversation as updateRemoteConversation, uploadFile } from "@/lib/api";
-import type { Conversation, ChatMessage, ChatImage, ChatFile } from "@/types/chat";
+import { setAssistantActivity } from "@/lib/assistantState";
+import { approveAndRunTool, deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, updateConversation as updateRemoteConversation, uploadFile } from "@/lib/api";
+import type { Conversation, ChatMessage, ChatImage, ChatFile, LiveDataInfo, ToolApproval } from "@/types/chat";
 const STORAGE_KEY = "bobai.conversation-ui.v3";
 const LEGACY_STORAGE_KEY = "bobai.conversations.v2";
 const SETTINGS_KEY = "bobai.settings.v1";
@@ -23,6 +24,14 @@ function loadLocalConversationUi(): Conversation[] {
       return [{ id: value.id, title: typeof value.title === "string" ? value.title.slice(0, 200) : "new chat", createdAt: typeof value.createdAt === "number" ? value.createdAt : Date.now(), pinned: value.pinned === true, messages: [] }];
     });
   } catch { return []; }
+}
+function liveAndApproval(result: Record<string, unknown>): Pick<ChatMessage, "liveData" | "approval"> {
+  const live = result.liveData as LiveDataInfo | undefined;
+  const approval = result.approval as Omit<ToolApproval, "state"> | undefined;
+  return {
+    ...(live && typeof live.provider === "string" ? { liveData: { ...live, sources: Array.isArray(live.sources) ? live.sources.filter((source) => typeof source?.url === "string" && /^https?:\/\//.test(source.url)) : [] } } : {}),
+    ...(approval && typeof approval.tool === "string" && typeof approval.workspaceId === "string" ? { approval: { ...approval, arguments: approval.arguments && typeof approval.arguments === "object" ? approval.arguments : {}, state: "pending" as const } } : {}),
+  };
 }
 export function useChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]); const [activeId, setActiveId] = useState(""); const [input, setInput] = useState(""); const [search, setSearch] = useState(""); const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null); const [settings, setSettings] = useState<ChatSettings>(loadSettings); const [uploadingFiles, setUploadingFiles] = useState<string[]>([]); const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}); const [serverReady, setServerReady] = useState(false); const [streaming, setStreaming] = useState(false); const [generatingImage, setGeneratingImage] = useState(false); const activeStream = useRef<AbortController | null>(null); const uploadControllers = useRef(new Map<string, AbortController>());
@@ -55,14 +64,16 @@ export function useChat() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.map(({ id, title, createdAt, pinned }) => ({ id, title, createdAt, pinned }))));
   }, [conversations]);
   useEffect(() => { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }, [settings]);
-  useEffect(() => { if (!serverReady || !conversations.length) return; const timer = window.setTimeout(() => { for (const conversation of conversations) void saveConversation(conversation).catch(() => undefined); }, 500); return () => window.clearTimeout(timer); }, [conversations, serverReady]);
+  // Sync only the open conversation. Re-posting every conversation on every keystroke-level change was wasteful.
+  useEffect(() => { if (!serverReady) return; const current = conversations.find((conversation) => conversation.id === activeId); if (!current || !current.messages.length) return; const timer = window.setTimeout(() => { void saveConversation(current).catch(() => undefined); }, 800); return () => window.clearTimeout(timer); }, [conversations, activeId, serverReady]);
   const activeConversation = conversations.find((c) => c.id === activeId); const visibleConversations = useMemo(() => conversations.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())).sort((a, b) => a.pinned !== b.pinned ? (a.pinned ? -1 : 1) : b.createdAt - a.createdAt), [conversations, search]);
   function updateConversation(id: string, updater: (c: Conversation) => Conversation) { setConversations((prev) => prev.map((c) => c.id === id ? updater(c) : c)); }
   function imageMessage(images: GeneratedImage[]): ChatMessage { return { id: crypto.randomUUID(), role: "assistant", content: "", images: images.filter((img): img is GeneratedImage & { url: string } => typeof img.url === "string").map((img): ChatImage => ({ id: img.id || crypto.randomUUID(), ...(img.id ? { serverImageId: img.id } : {}), url: img.url, prompt: img.prompt ?? "" })) }; }
-  async function send() { const text = input.trim(); if (!text || !activeConversation || loadingConversationId) return; const conversationId = activeId; const controller = new AbortController(); activeStream.current = controller; setStreaming(true); setInput(""); setLoadingConversationId(conversationId); const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text }; const nextMessages = [...activeConversation.messages, userMessage]; const assistantMessageId = crypto.randomUUID(); updateConversation(conversationId, (c) => ({ ...c, messages: nextMessages })); try { const result = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, conversationId, (token) => updateConversation(conversationId, (conversation) => { const exists = conversation.messages.some((message) => message.id === assistantMessageId); const messages = exists ? conversation.messages.map((message) => message.id === assistantMessageId ? { ...message, content: message.content + token } : message) : [...conversation.messages, { id: assistantMessageId, role: "assistant" as const, content: token }]; return { ...conversation, messages }; }), controller.signal);  let aiMessage: ChatMessage; if (result.imagePrompt) { setGeneratingImage(true); try { const generated = await generateImage(result.imagePrompt, [], controller.signal); aiMessage = imageMessage(generated.images); } finally { setGeneratingImage(false); } } else { aiMessage = { id: assistantMessageId, role: "assistant", content: typeof result.reply === "string" ? result.reply : "" }; } updateConversation(conversationId, (c) => ({ ...c, title: result.title || c.title, messages: [...nextMessages, aiMessage] })); } catch (error) { if (!(error instanceof Error && error.name === "AbortError")) updateConversation(conversationId, (c) => ({ ...c, messages: [...c.messages.filter((message) => message.id !== assistantMessageId), { id: crypto.randomUUID(), role: "assistant", content: error instanceof Error ? error.message : "The AI request failed. Please try again." }] })); } finally { if (activeStream.current === controller) activeStream.current = null; setStreaming(false); setLoadingConversationId(null); } } function stop() { activeStream.current?.abort(); }
+  async function send() { const text = input.trim(); if (!text || !activeConversation || loadingConversationId) return; const conversationId = activeId; const controller = new AbortController(); activeStream.current = controller; setStreaming(true); setAssistantActivity("request", true); setInput(""); setLoadingConversationId(conversationId); const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text }; const nextMessages = [...activeConversation.messages, userMessage]; const assistantMessageId = crypto.randomUUID(); updateConversation(conversationId, (c) => ({ ...c, messages: nextMessages })); try { const result = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, conversationId, (token) => { setAssistantActivity("stream", true); updateConversation(conversationId, (conversation) => { const exists = conversation.messages.some((message) => message.id === assistantMessageId); const messages = exists ? conversation.messages.map((message) => message.id === assistantMessageId ? { ...message, content: message.content + token } : message) : [...conversation.messages, { id: assistantMessageId, role: "assistant" as const, content: token }]; return { ...conversation, messages }; }); }, controller.signal, assistantMessageId);  let aiMessage: ChatMessage; if (result.imagePrompt) { setGeneratingImage(true); try { const generated = await generateImage(result.imagePrompt, [], controller.signal); aiMessage = imageMessage(generated.images); } finally { setGeneratingImage(false); } } else { aiMessage = { id: assistantMessageId, role: "assistant", content: typeof result.reply === "string" ? result.reply : "", ...liveAndApproval(result) }; } updateConversation(conversationId, (c) => ({ ...c, title: result.title || c.title, messages: [...nextMessages, aiMessage] })); } catch (error) { if (!(error instanceof Error && error.name === "AbortError")) updateConversation(conversationId, (c) => ({ ...c, messages: [...c.messages.filter((message) => message.id !== assistantMessageId), { id: crypto.randomUUID(), role: "assistant", content: error instanceof Error ? error.message : "The AI request failed. Please try again." }] })); } finally { if (activeStream.current === controller) activeStream.current = null; setStreaming(false); setAssistantActivity("request", false); setAssistantActivity("stream", false); setLoadingConversationId(null); } } function stop() { activeStream.current?.abort(); }
   async function handleFiles(files: File[]) {
     if (!activeConversation || !files.length) return;
     setLoadingConversationId(activeId);
+    setAssistantActivity("request", true);
     let workingMessages = activeConversation.messages;
     try {
       for (const file of files) {
@@ -107,7 +118,7 @@ export function useChat() {
           setUploadProgress((prev) => { const next = { ...prev }; delete next[uploadKey]; return next; });
         }
       }
-    } finally { setLoadingConversationId(null); }
+    } finally { setAssistantActivity("request", false); setLoadingConversationId(null); }
   }
   async function regenerateLastAssistant() {
     if (!activeConversation || loadingConversationId) return;
@@ -118,10 +129,12 @@ export function useChat() {
     const controller = new AbortController();
     activeStream.current = controller;
     setStreaming(true);
+    setAssistantActivity("request", true);
     setLoadingConversationId(activeId);
     updateConversation(activeId, (conversation) => ({ ...conversation, messages: withoutAssistant }));
     try {
-      const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory, activeId, undefined, controller.signal);
+      const regeneratedId = crypto.randomUUID();
+      const result = await sendMessage(withoutAssistant, settings.personality, undefined, settings.memory, activeId, undefined, controller.signal, regeneratedId);
       let aiMessage: ChatMessage;
       if (result.imagePrompt) {
         setGeneratingImage(true);
@@ -132,7 +145,7 @@ export function useChat() {
           setGeneratingImage(false);
         }
       } else {
-        aiMessage = { id: crypto.randomUUID(), role: "assistant", content: result.reply ?? "" };
+        aiMessage = { id: regeneratedId, role: "assistant", content: result.reply ?? "", ...liveAndApproval(result) };
       }
       updateConversation(activeId, (conversation) => ({ ...conversation, title: result.title || conversation.title, messages: [...withoutAssistant, aiMessage] }));
     } catch (error) {
@@ -143,11 +156,31 @@ export function useChat() {
     } finally {
       if (activeStream.current === controller) activeStream.current = null;
       setStreaming(false);
+      setAssistantActivity("request", false);
       setGeneratingImage(false);
       setLoadingConversationId(null);
     }
   }
   function newChat() { const convo = createConversation(); setConversations((prev) => [convo, ...prev]); setActiveId(convo.id); setInput(""); } function togglePin(id: string) { const current = conversations.find((conversation) => conversation.id === id); if (!current) return; const pinned = !current.pinned; updateConversation(id, (c) => ({ ...c, pinned })); void updateRemoteConversation(id, { isPinned: pinned }).catch(() => undefined); } function togglePinMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) })); } function deleteMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.filter((m) => m.id !== messageId) })); } function renameConversation(id: string, title: string) { const next = title.trim().slice(0, 200); if (next) { updateConversation(id, (c) => ({ ...c, title: next })); void updateRemoteConversation(id, { title: next }).catch(() => undefined); } } function deleteConversation(id: string) { const target = conversations.find((conversation) => conversation.id === id); void deleteRemoteConversation(id).then(() => { setConversations((prev) => { const next = prev.filter((conversation) => conversation.id !== id); if (id === activeId) setActiveId(next[0]?.id || ""); return next; }); }).catch(() => { if (target) updateConversation(id, (conversation) => ({ ...conversation, messages: [...conversation.messages, { id: crypto.randomUUID(), role: "assistant", content: "This conversation could not be deleted from the server. Please try again." }] })); }); }
   function cancelUpload(uploadKey: string) { uploadControllers.current.get(uploadKey)?.abort(); }
-  return { conversations, visibleConversations, activeConversation, activeId, setActiveId, input, setInput, search, setSearch, loading: Boolean(loadingConversationId), streaming, generatingImage, stop, uploadingFiles, uploadProgress, cancelUpload, settings, setSettings, send, handleFiles, regenerateLastAssistant, newChat, togglePin, togglePinMessage, deleteMessage, renameConversation, deleteConversation };
+  function setApproval(conversationId: string, messageId: string, patch: Partial<ToolApproval>) {
+    updateConversation(conversationId, (conversation) => ({ ...conversation, messages: conversation.messages.map((message) => message.id === messageId && message.approval ? { ...message, approval: { ...message.approval, ...patch } } : message) }));
+  }
+  /** Runs (or declines) a tool call only after the user clicks Approve; the server issues a one-time token. */
+  async function resolveApproval(messageId: string, approve: boolean) {
+    const conversationId = activeId;
+    const message = activeConversation?.messages.find((item) => item.id === messageId);
+    const approval = message?.approval;
+    if (!approval || approval.state !== "pending") return;
+    if (!approve) { setApproval(conversationId, messageId, { state: "declined" }); return; }
+    setApproval(conversationId, messageId, { state: "running" });
+    try {
+      const output = await approveAndRunTool(approval.tool, approval.workspaceId, approval.arguments);
+      setApproval(conversationId, messageId, { state: "completed" });
+      updateConversation(conversationId, (conversation) => ({ ...conversation, messages: [...conversation.messages, { id: crypto.randomUUID(), role: "assistant", content: `**${approval.name}** finished.\n\n\`\`\`json\n${output.slice(0, 8_000) || "{}"}\n\`\`\`` }] }));
+    } catch (error) {
+      setApproval(conversationId, messageId, { state: "failed", error: error instanceof Error ? error.message : "The tool failed." });
+    }
+  }
+  return { resolveApproval, conversations, visibleConversations, activeConversation, activeId, setActiveId, input, setInput, search, setSearch, loading: Boolean(loadingConversationId), streaming, generatingImage, stop, uploadingFiles, uploadProgress, cancelUpload, settings, setSettings, send, handleFiles, regenerateLastAssistant, newChat, togglePin, togglePinMessage, deleteMessage, renameConversation, deleteConversation };
 }
