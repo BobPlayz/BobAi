@@ -45,6 +45,8 @@ export type ChatMessage = {
   pinned?: boolean;
   liveData?: LiveDataInfo;
   approval?: ToolApproval;
+  /** Sent to the model for this turn only (e.g. extracted file text); never stored as a chat message. */
+  ephemeral?: boolean;
 };
 
 export type Conversation = {
