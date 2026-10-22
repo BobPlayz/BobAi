@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
+import JarvisStage from "@/components/core/JarvisStage";
+import { Magnetic, Reveal, ScrollProgress, SplitWords } from "@/components/editorial/Motion";
 import { useTheme } from "@/components/neural/ThemeProvider";
-
-const features = [
-  ["01", "Chat", "Think, write, code, plan and explore in one focused workspace."],
-  ["02", "Memory", "Keep useful context across conversations, ready when you need it."],
-  ["03", "Tools", "Bring files, research and creative work into the same flow."],
-];
+import type { AssistantVisualState } from "@/lib/assistantState";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -16,61 +15,225 @@ const structuredData = {
   publisher: { "@type": "Organization", name: "Origin Productions" },
   applicationCategory: "ProductivityApplication",
   operatingSystem: "Web",
-  description: "A focused AI workspace for conversations, memory, files, research and tools.",
+  description: "A local-first AI assistant that runs on your own computer through Ollama.",
   url: process.env.NEXT_PUBLIC_SITE_URL,
 };
 
+const STATES: Array<{ id: AssistantVisualState; label: string; note: string }> = [
+  { id: "idle", label: "At rest", note: "The rings drift, like a desk orrery." },
+  { id: "listening", label: "Listening", note: "The rings turn to face you and settle." },
+  { id: "thinking", label: "Thinking", note: "The gimbals spin like a gyroscope." },
+  { id: "speaking", label: "Speaking", note: "The sphere breathes with the voice." },
+];
+
+const PRINCIPLES = [
+  ["Local first", "The model runs on your own computer through Ollama. Your conversations and files are not sent to an AI company to be answered."],
+  ["Honest about the world", "Weather comes from Open-Meteo and says when it was fetched. Scores found by web search are labelled as search results, never passed off as a live feed."],
+  ["Asks before it acts", "Anything that acts on your behalf shows you exactly what it will do and waits for your approval. One click, one run."],
+  ["Remembers when told", "Say “remember that…” and it will. Everything else is just conversation — it won’t quietly file away what you say."],
+];
+
+const CAPABILITIES = [
+  ["Conversation & code", "Streaming answers with proper formatting, tables and highlighted code you can copy in one click."],
+  ["Live weather", "Current conditions and today’s range for any city, with the time it was measured."],
+  ["Research with sources", "Searches the web, reads the pages and lists the sources it used."],
+  ["A voice of its own", "Speaks with Alan, a British voice generated on your machine by Piper — no cloud speech service."],
+  ["Reads your files", "PDFs, text, code and images, checked on the server before anything is read."],
+  ["Draws, slowly", "Local image generation with Stable Diffusion. Free and private, and on a laptop CPU it takes its time."],
+];
+
+const SPEC = [
+  ["Language model", "Qwen 3.5 via Ollama — 2B for 8 GB laptops, 4B if you have room"],
+  ["Context", "4,096 tokens, trimmed to fit instead of silently cut"],
+  ["Voice", "Piper · en_GB-alan-medium · runs offline"],
+  ["Live data", "Open-Meteo weather · Brave or DuckDuckGo search"],
+  ["Accounts", "Email code sign-in via Resend · sessions in Postgres"],
+  ["Built for", "An Intel i7 laptop with 8 GB of RAM — no graphics card needed"],
+];
+
 export default function HomePage() {
-  const { theme } = useTheme();
-  const light = theme === "light";
+  const { theme, toggleTheme } = useTheme();
+  const [figureState, setFigureState] = useState<AssistantVisualState>("idle");
+  const [pinned, setPinned] = useState(false);
+
+  // Cycle through the four states so the figure demonstrates itself, until the visitor picks one.
+  useEffect(() => {
+    if (pinned || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const order: AssistantVisualState[] = ["idle", "listening", "thinking", "speaking"];
+    const timer = window.setInterval(() => setFigureState((current) => order[(order.indexOf(current) + 1) % order.length]), 3600);
+    return () => window.clearInterval(timer);
+  }, [pinned]);
+
+  const active = STATES.find((item) => item.id === figureState)!;
+
   return (
-    <main className={`relative min-h-screen overflow-hidden ${light ? "bg-[#f7f8fa] text-[#202123]" : "bg-[#07090c] text-white"}`}>
+    <main className="relative z-[1] min-h-screen text-[var(--text)]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      {!light && <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(61,220,255,0.12),transparent_42%),radial-gradient(circle_at_90%_70%,rgba(45,110,255,0.07),transparent_32%)]" />}
-      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 sm:px-10">
-        <header className={`flex items-center justify-between border-b py-5 ${light ? "border-[#e5e7eb]" : "border-white/10"}`}>
-          <Link href="/" aria-label="Jarvis home" className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 font-black text-cyan-500">J</span>
-            <span className="font-semibold tracking-tight">Jarvis</span>
-          </Link>
-          <nav aria-label="Primary navigation" className={`hidden items-center gap-7 text-sm md:flex ${light ? "text-[#6b7280]" : "text-white/55"}`}>
-            <a href="#features" className="transition hover:text-cyan-400">Features</a>
-            <Link href="/terms" className="transition hover:text-cyan-400">Terms</Link>
-            <Link href="/privacy" className="transition hover:text-cyan-400">Privacy</Link>
-          </nav>
-          <Link href="/login" className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${light ? "border-[#d1d5db] bg-white hover:bg-[#f3f4f6]" : "border-white/15 bg-white/[0.04] hover:border-cyan-300/40 hover:bg-white/[0.08]"}`}>Get started</Link>
-        </header>
+      <ScrollProgress />
 
-        <section className="flex flex-1 items-center py-20 sm:py-28">
-          <div className="max-w-3xl">
-            <div className={`mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${light ? "border-cyan-700/20 bg-cyan-700/5 text-cyan-800" : "border-cyan-300/25 bg-cyan-300/[0.08] text-cyan-200"}`}>
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" /> Your AI workspace
-            </div>
-            <h1 className="text-5xl font-black leading-[1.05] tracking-[-0.045em] sm:text-7xl">A little more room for <span className="text-cyan-400">big ideas.</span></h1>
-            <p className={`mt-6 max-w-2xl text-base leading-7 sm:text-lg ${light ? "text-[#5f6672]" : "text-white/55"}`}>Chat, research, create and pick up where you left off. Jarvis brings your AI work together in one calm, focused space.</p>
-            <div className="mt-9 flex flex-wrap items-center gap-3">
-              <Link href="/login" className="rounded-2xl bg-cyan-300 px-6 py-3.5 font-bold text-[#071015] transition hover:bg-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300">Continue with email <span aria-hidden="true">↗</span></Link>
-              <a href="#features" className={`rounded-2xl border px-6 py-3.5 text-sm font-semibold transition ${light ? "border-[#d1d5db] hover:bg-white" : "border-white/10 hover:border-white/20 hover:bg-white/[0.04]"}`}>Explore features</a>
-            </div>
-            <p className={`mt-5 text-xs ${light ? "text-[#7b818b]" : "text-white/35"}`}>No password to remember. Just your email.</p>
+      <header className="sticky top-0 z-50 border-b border-[var(--hairline)] bg-[var(--bg)]/85 backdrop-blur-md">
+        <nav aria-label="Primary navigation" className="mx-auto flex h-16 max-w-[1320px] items-center justify-between px-5 sm:px-8">
+          <Link href="/" aria-label="Jarvis home" className="atelier-wordmark">Jarvis<em>.</em></Link>
+          <div className="hidden items-center gap-8 text-sm text-[var(--muted)] md:flex">
+            <a href="#principles" className="hover:text-[var(--text)]">Principles</a>
+            <a href="#capabilities" className="hover:text-[var(--text)]">Capabilities</a>
+            <a href="#specification" className="hover:text-[var(--text)]">Specification</a>
+            <Link href="/demo" className="hover:text-[var(--text)]">Demo</Link>
           </div>
-        </section>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={toggleTheme} className="atelier-iconbtn" aria-label={theme === "light" ? "Switch to ink (dark) theme" : "Switch to paper (light) theme"}>
+              {theme === "light" ? <Moon className="h-4 w-4" aria-hidden /> : <Sun className="h-4 w-4" aria-hidden />}
+            </button>
+            <Link href="/login" className="btn-ink !min-h-10 !px-4 text-sm">Open Jarvis <span className="btn-arrow" aria-hidden>→</span></Link>
+          </div>
+        </nav>
+      </header>
 
-        <section id="features" aria-labelledby="features-heading" className={`grid gap-3 border-t py-8 md:grid-cols-3 ${light ? "border-[#e5e7eb]" : "border-white/10"}`}>
-          <h2 id="features-heading" className="sr-only">Jarvis features</h2>
-          {features.map(([number, title, description]) => (
-            <article key={number} className={`rounded-2xl border p-5 transition-colors ${light ? "border-[#e5e7eb] bg-white hover:border-cyan-700/25" : "border-white/10 bg-white/[0.025] hover:border-cyan-300/20"}`}>
-              <span className="text-xs font-medium tracking-[0.16em] text-cyan-500">{number}</span>
-              <h3 className="mt-5 text-lg font-semibold">{title}</h3>
-              <p className={`mt-2 text-sm leading-6 ${light ? "text-[#6b7280]" : "text-white/45"}`}>{description}</p>
-            </article>
+      {/* Hero */}
+      <section className="mx-auto grid max-w-[1320px] gap-10 px-5 pb-16 pt-12 sm:px-8 lg:grid-cols-12 lg:gap-6 lg:pb-24 lg:pt-20">
+        <div className="lg:col-span-7 lg:pt-6">
+          <p className="caption reveal is-in">No. 01 — A personal assistant that lives on your computer</p>
+          <h1 className="font-display mt-6 text-[clamp(3.4rem,9.5vw,9.4rem)] leading-[0.9]">
+            <SplitWords text="An assistant," start={120} />
+            <br />
+            <em className="text-[var(--accent)]"><SplitWords text="not an oracle." start={360} /></em>
+          </h1>
+          <Reveal delay={700} className="mt-8 max-w-[34rem]">
+            <p className="text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
+              Jarvis is a calm, local-first assistant. It thinks on your own machine, says where its facts come from, and asks before it does anything on your behalf.
+            </p>
+          </Reveal>
+          <Reveal delay={850} className="mt-10 flex flex-wrap items-center gap-3">
+            <Magnetic><Link href="/login" className="btn-ink">Start a conversation <span className="btn-arrow" aria-hidden>→</span></Link></Magnetic>
+            <Magnetic><Link href="/demo" className="btn-line">See the demo</Link></Magnetic>
+          </Reveal>
+          <Reveal delay={950}><p className="caption mt-6 normal-case tracking-normal">Sign in with a one-time email code. No password.</p></Reveal>
+        </div>
+
+        <figure className="lg:col-span-5">
+          <div
+            className="relative mx-auto w-full max-w-[520px]"
+            onPointerEnter={() => { if (!pinned) setFigureState("listening"); }}
+          >
+            <JarvisStage hero stateOverride={figureState} label={active.label} />
+          </div>
+          <figcaption className="mx-auto mt-4 max-w-[520px] border-t border-[var(--hairline)] pt-4">
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="caption">Fig. 1 — The Jarvis core</span>
+              <span className="caption" aria-live="polite">{active.label}</span>
+            </div>
+            <p className="mt-2 text-sm text-[var(--muted)]">{active.note}</p>
+            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Show a state">
+              {STATES.map((item) => (
+                <button key={item.id} type="button" aria-pressed={figureState === item.id} className="atelier-chip" onClick={() => { setPinned(true); setFigureState(item.id); }}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </figcaption>
+        </figure>
+      </section>
+
+      {/* Marquee */}
+      <div className="border-y border-[var(--text)] bg-[var(--text)] py-4 text-[var(--bg)]">
+        <div className="marquee" aria-hidden="true">
+          {[0, 1].map((copy) => (
+            <div key={copy} className="marquee-track font-display text-3xl italic sm:text-4xl">
+              {["Runs on Ollama", "Speaks with Alan", "Keeps your files local", "Cites its sources", "Asks before it acts", "Works on an 8 GB laptop"].map((item) => (
+                <span key={item} className="flex items-center gap-12 whitespace-nowrap">{item}<span className="not-italic text-[var(--accent)]">✳</span></span>
+              ))}
+            </div>
           ))}
-        </section>
-        <footer className={`flex flex-wrap items-center justify-between gap-3 border-t py-5 text-xs ${light ? "border-[#e5e7eb] text-[#7b818b]" : "border-white/10 text-white/35"}`}>
-          <span>Jarvis · Origin Productions</span>
-          <span>Built to keep your work in flow.</span>
-        </footer>
+        </div>
       </div>
+
+      {/* Principles */}
+      <section id="principles" aria-labelledby="principles-title" className="mx-auto grid max-w-[1320px] gap-10 px-5 py-24 sm:px-8 lg:grid-cols-12 lg:py-36">
+        <div className="lg:col-span-4">
+          <div className="lg:sticky lg:top-28">
+            <p className="caption">02 — Principles</p>
+            <h2 id="principles-title" className="font-display mt-4 text-5xl leading-[0.95] sm:text-6xl">Four promises,<br /><em>kept in code.</em></h2>
+          </div>
+        </div>
+        <ol className="lg:col-span-8 lg:col-start-6">
+          {PRINCIPLES.map(([title, body], index) => (
+            <Reveal key={title} as="li" delay={index * 60} className="grid grid-cols-[3.5rem_1fr] gap-4 border-t border-[var(--hairline)] py-9 sm:grid-cols-[5rem_1fr]">
+              <span className="font-display text-4xl text-[var(--accent)] sm:text-5xl">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3 className="font-display text-3xl sm:text-4xl">{title}</h3>
+                <p className="mt-3 max-w-[38rem] text-base leading-7 text-[var(--muted)] sm:text-lg sm:leading-8">{body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </ol>
+      </section>
+
+      {/* Capabilities */}
+      <section id="capabilities" aria-labelledby="capabilities-title" className="border-t border-[var(--hairline)] bg-[var(--surface)]">
+        <div className="mx-auto max-w-[1320px] px-5 py-24 sm:px-8 lg:py-32">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <p className="caption">03 — What it does</p>
+              <h2 id="capabilities-title" className="font-display mt-4 max-w-3xl text-5xl leading-[0.95] sm:text-7xl">Useful, in plain terms.</h2>
+            </div>
+            <p className="max-w-sm text-[var(--muted)]">No sparkles, no superlatives. Here is what Jarvis actually does today, and where it is slow.</p>
+          </div>
+          <div className="mt-16 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
+            {CAPABILITIES.map(([title, body], index) => (
+              <Reveal key={title} delay={(index % 3) * 90} className="group border-t border-[var(--text)] py-8">
+                <div className="flex items-baseline justify-between">
+                  <span className="caption">{String.fromCharCode(97 + index)}.</span>
+                  <span aria-hidden className="text-[var(--accent)] opacity-0 transition-opacity duration-500 group-hover:opacity-100">✳</span>
+                </div>
+                <h3 className="font-display mt-6 text-3xl transition-transform duration-700 group-hover:translate-x-2">{title}</h3>
+                <p className="mt-3 leading-7 text-[var(--muted)]">{body}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Specification */}
+      <section id="specification" aria-labelledby="spec-title" className="mx-auto grid max-w-[1320px] gap-10 px-5 py-24 sm:px-8 lg:grid-cols-12 lg:py-36">
+        <div className="lg:col-span-4">
+          <p className="caption">04 — Specification</p>
+          <h2 id="spec-title" className="font-display mt-4 text-5xl leading-[0.95] sm:text-6xl">The fine print,<br /><em>printed large.</em></h2>
+        </div>
+        <dl className="lg:col-span-8 lg:col-start-6">
+          {SPEC.map(([term, detail], index) => (
+            <Reveal key={term} delay={index * 50} className="grid gap-1 border-t border-[var(--hairline)] py-5 sm:grid-cols-[14rem_1fr] sm:gap-6">
+              <dt className="caption pt-1">{term}</dt>
+              <dd className="text-lg">{detail}</dd>
+            </Reveal>
+          ))}
+        </dl>
+      </section>
+
+      {/* Closing */}
+      <section className="border-t border-[var(--text)]">
+        <div className="mx-auto max-w-[1320px] px-5 py-24 sm:px-8 lg:py-32">
+          <Reveal>
+            <h2 className="font-display text-[clamp(4rem,15vw,14rem)] leading-[0.85]">Talk to it<em className="text-[var(--accent)]">.</em></h2>
+          </Reveal>
+          <Reveal delay={150} className="mt-10 flex flex-wrap items-center gap-3">
+            <Magnetic><Link href="/login" className="btn-ink">Open Jarvis <span className="btn-arrow" aria-hidden>→</span></Link></Magnetic>
+            <Magnetic><Link href="/demo" className="btn-line">Try the demo first</Link></Magnetic>
+          </Reveal>
+        </div>
+      </section>
+
+      <footer className="border-t border-[var(--hairline)]">
+        <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 px-5 py-8 text-sm text-[var(--muted)] sm:px-8">
+          <span>Jarvis — Origin Productions</span>
+          <nav aria-label="Footer" className="flex gap-6">
+            <Link href="/about" className="hover:text-[var(--text)]">About</Link>
+            <Link href="/faq" className="hover:text-[var(--text)]">FAQ</Link>
+            <Link href="/privacy" className="hover:text-[var(--text)]">Privacy</Link>
+            <Link href="/terms" className="hover:text-[var(--text)]">Terms</Link>
+          </nav>
+          <span className="caption normal-case tracking-normal">Set in Instrument Serif &amp; Schibsted Grotesk.</span>
+        </div>
+      </footer>
     </main>
   );
 }

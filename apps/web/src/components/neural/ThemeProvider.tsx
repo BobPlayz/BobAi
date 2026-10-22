@@ -14,11 +14,12 @@ type ThemeContextType = {
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
-const THEME_KEY = "bobai.theme";
+// New key: preferences saved for the old neon theme should not carry over to the editorial redesign.
+const THEME_KEY = "jarvis.theme";
 const FIXED_ACCENT = "#38bdf8";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<BobTheme>("dark");
+  const [theme, setThemeState] = useState<BobTheme>("light");
 
   useEffect(() => {
     try {

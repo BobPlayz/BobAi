@@ -5,10 +5,18 @@ import NeuralSidebar from "@/components/neural/NeuralSidebar";
 import NeuralTopbar from "@/components/neural/NeuralTopbar";
 import NeuralComposer from "@/components/neural/NeuralComposer";
 import ChatWindow from "@/components/ChatWindow";
+import { useEffect, useState } from "react";
 import { useChat } from "@/hooks/useChat";
+
+const VOICE_REPLIES_KEY = "jarvis.voiceReplies";
 
 export default function ChatPage() {
   const chat = useChat();
+  const [voiceReplies, setVoiceReplies] = useState(false);
+  useEffect(() => { try { setVoiceReplies(localStorage.getItem(VOICE_REPLIES_KEY) === "on"); } catch { /* storage unavailable */ } }, []);
+  function toggleVoiceReplies() {
+    setVoiceReplies((current) => { const next = !current; try { localStorage.setItem(VOICE_REPLIES_KEY, next ? "on" : "off"); } catch { /* storage unavailable */ } return next; });
+  }
 
   return (
     <NeuralShell
@@ -40,6 +48,8 @@ export default function ChatPage() {
           uploadingFiles={chat.uploadingFiles}
           uploadProgress={chat.uploadProgress}
           onCancelUpload={chat.cancelUpload}
+          voiceReplies={voiceReplies}
+          onToggleVoiceReplies={toggleVoiceReplies}
         />
       }
     >
@@ -50,6 +60,9 @@ export default function ChatPage() {
         onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
         onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
         onRegenerate={chat.regenerateLastAssistant}
+        onResolveApproval={chat.resolveApproval}
+        onSuggestion={chat.setInput}
+        voiceReplies={voiceReplies}
       />
     </NeuralShell>
   );

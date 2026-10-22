@@ -13,6 +13,29 @@ export type ChatFile = {
   text: string;
 };
 
+export type LiveDataSource = { title: string; url: string; snippet?: string; publishedAt?: string };
+
+/** Where a live answer's data came from, shown as a badge so users can tell live, cached and search data apart. */
+export type LiveDataInfo = {
+  kind: "weather" | "cricket";
+  provider: string;
+  fetchedAt: string;
+  cached: boolean;
+  freshness: "live" | "web-search";
+  sources: LiveDataSource[];
+};
+
+/** A tool call the model asked for that needs the user's explicit consent before it runs. */
+export type ToolApproval = {
+  tool: string;
+  name: string;
+  risk: string;
+  arguments: Record<string, unknown>;
+  workspaceId: string;
+  state: "pending" | "running" | "completed" | "declined" | "failed";
+  error?: string;
+};
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -20,6 +43,8 @@ export type ChatMessage = {
   images?: ChatImage[];
   files?: ChatFile[];
   pinned?: boolean;
+  liveData?: LiveDataInfo;
+  approval?: ToolApproval;
 };
 
 export type Conversation = {
