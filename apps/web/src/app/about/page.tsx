@@ -19,7 +19,7 @@ export default function AboutPage() {
         <Breadcrumbs current="About" />
         <h1 className="font-display mt-6 text-6xl leading-none">About <em className="text-[var(--accent)]">Jarvis.</em></h1>
         <p className="mt-6 text-lg leading-8 text-[var(--muted)]">
-          Jarvis is a calm personal assistant for chat, research, memory and files. It is a school project by a Class 8 student, built and published by Origin Productions.
+          Jarvis is a chill personal assistant for chat, research, voice, pictures, coding and files, in your language. It is a school project by a Class 8 student, built and published by Origin Productions.
         </p>
         <div className="mt-12 grid gap-8 border-t border-[var(--hairline)] pt-8 sm:grid-cols-3">
           {parts.map(([title, text]) => (

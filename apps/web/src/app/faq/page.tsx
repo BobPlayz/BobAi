@@ -4,12 +4,16 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 export const metadata = { title: "FAQ", description: "Frequently asked questions about Jarvis." };
 
 const faqs = [
-  ["What is Jarvis?", "A personal assistant for chatting, research with sources, live weather and cricket, memory you control, and reading files you upload."],
-  ["Which AI does it use?", "Only Ollama. The model runs on your own computer or on Ollama Cloud, never on a hidden third-party AI service."],
+  ["What is Jarvis?", "A free AI assistant for chatting, homework and coding help, research with sources, live weather and cricket, pictures, voice chat, and memory you control."],
+  ["Which AI does it use?", "Chat answers come only from Ollama models (on Ollama Cloud or the owner's computer). Pictures come from Pollinations, and the natural voice (when it's on) from ElevenLabs."],
   ["How do I sign in?", "Type your email and Jarvis sends a 6-digit code. There are no passwords. Codes expire after 10 minutes and work once."],
-  ["Does it remember things?", "Only when you ask, for example \"remember that my cat is called Max\". You can see and delete memories in Settings."],
+  ["How do I log out?", "Tap Log out at the bottom of the chat sidebar, or go to Settings → Privacy, where you can also log out on all your devices."],
+  ["Can I talk to it?", "Yes. Tap Talk in the chat for a hands-free voice conversation: just speak, Jarvis answers out loud when you pause. It works best in Chrome, Edge or Safari."],
+  ["Can it reply in my language?", "Yes. Pick a reply language when you set up, or any time in Settings. Jarvis sticks to it unless you ask for a translation."],
+  ["Can it build websites?", "Ask for something like \"a simple calculator website\" and press Preview to try it right in the chat, or Download to keep it. On a computer running Jarvis locally, ask for it \"on localhost\" and it hosts it for you."],
+  ["Does it remember things?", "Only when you ask, for example \"remember that my cat is called Max\". You can see and delete everything it knows about you in Settings → What I know."],
+  ["Is there a limit?", "Yes, a daily number of messages, pictures and voice per person, so the free services behind Jarvis keep working for everyone. You can see your messages left in Settings."],
   ["Can other people see my chats?", "No. Every conversation, memory and file belongs to your account, and the server checks that on every request."],
-  ["Does voice work on the website?", "Alan's voice and voice typing run on your own computer with the local setup. The hosted website sticks to text."],
 ] as const;
 
 const structuredData = {

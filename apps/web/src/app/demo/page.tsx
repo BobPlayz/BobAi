@@ -81,7 +81,15 @@ export default function DemoPage() {
         loading={false}
         onPinMessage={(id) => setMessages((list) => list.map((message) => message.id === id ? { ...message, pinned: !message.pinned } : message))}
         onDeleteMessage={(id) => setMessages((list) => list.filter((message) => message.id !== id))}
-        onResolveApproval={(id, approve) => setMessages((list) => list.map((message) => message.id === id && message.approval ? { ...message, approval: { ...message.approval, state: approve ? "completed" : "declined" } } : message))}
+        onResolveApproval={(id, approve) => setMessages((list) => {
+          const updated = list.map((message) => message.id === id && message.approval ? { ...message, approval: { ...message.approval, state: approve ? "completed" as const : "declined" as const } } : message);
+          if (!approve) return updated;
+          // Sample result so "the result is below" is true in the demo too.
+          const at = updated.findIndex((message) => message.id === id);
+          const result = { id: `${id}-result`, role: "assistant" as const, content: "Opened **example.com** (demo result): the page loaded fine and its title is *Example Domain*." };
+          return updated.some((message) => message.id === result.id) ? updated : [...updated.slice(0, at + 1), result, ...updated.slice(at + 1)];
+        })}
+        browserVoice
       />
     </NeuralShell>
   );

@@ -110,7 +110,7 @@ router.post("/turn", limit, async (req, res) => {
       { id: randomUUID(), role: "user", content: spokenText, model: null, status: "completed" },
       { id: randomUUID(), role: "assistant", content: replyText, model: selectedModelId, status: "completed" },
     ];
-    const persisted = await dbSaveConversation({
+    const persisted = await dbSaveConversation({ keepTitle: true,
       id: conversationId, userId: req.user!.id, workspaceId: workspace.id,
       title: prepared.title, messages: conversationMessages,
     }).catch(() => false);

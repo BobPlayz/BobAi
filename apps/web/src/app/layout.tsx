@@ -4,6 +4,7 @@ import { Instrument_Serif, JetBrains_Mono, Schibsted_Grotesk } from "next/font/g
 import { ThemeProvider } from "@/components/neural/ThemeProvider";
 import SiteNav from "@/components/SiteNav";
 import CookieConsent from "@/components/CookieConsent";
+import { siteUrl } from "@/lib/siteUrl";
 
 // Type system: a characterful grotesque for headlines, a calm sans for reading, a mono for labels.
 // next/font self-hosts these at build time, so no request goes to Google from the visitor's browser.
@@ -13,10 +14,10 @@ const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variab
 
 export const viewport: Viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F2EDE3" }, { media: "(prefers-color-scheme: dark)", color: "#12110E" }] };
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+const site = siteUrl();
 
 export const metadata: Metadata = {
-  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  metadataBase: new URL(site),
   title: { default: "Jarvis", template: "%s | Jarvis" },
   description: "Jarvis is a chill AI assistant powered by Ollama: chat, code help, live weather, research with sources and files. It asks before doing stuff.",
   applicationName: "Jarvis",
@@ -25,19 +26,18 @@ export const metadata: Metadata = {
   generator: "Next.js",
   keywords: ["AI workspace", "AI assistant", "AI chat", "AI tools", "research", "coding"],
   manifest: "/manifest.webmanifest",
-  ...(siteUrl ? { alternates: { canonical: siteUrl } } : {}),
   openGraph: {
     title: "Jarvis",
-    description: "An AI workspace for chat, research, creation, and development.",
+    description: "A chill AI assistant that shows its sources, never makes up live scores, and asks before doing stuff.",
     type: "website",
-    ...(siteUrl ? { url: siteUrl } : {}),
+    url: site,
     siteName: "Jarvis",
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Jarvis workspace" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Jarvis",
-    description: "An AI workspace for chat, research, creation, and development.",
+    description: "A chill AI assistant that shows its sources, never makes up live scores, and asks before doing stuff.",
     images: ["/opengraph-image"],
   },
   robots: { index: true, follow: true },

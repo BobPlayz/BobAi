@@ -29,7 +29,8 @@ export async function elevenLabsSynthesize(text: string, signal?: AbortSignal): 
   const voice = elevenLabsVoice();
   const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_flash_v2_5";
   const url = new URL(API + voice);
-  url.searchParams.set("output_format", "mp3_44100_128");
+  // 64 kbps is clear for speech and keeps even a long reply well under the response size limit.
+  url.searchParams.set("output_format", "mp3_44100_64");
   const response = await fetch(url, {
     method: "POST",
     headers: { "xi-api-key": key, "content-type": "application/json", accept: "audio/mpeg" },

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
-import { getPendingVerificationName, getSession, hasCompletedOnboarding, saveOnboarding } from "@/lib/auth";
+import { hasCompletedOnboarding, saveOnboarding, takeSignupName } from "@/lib/auth";
 import { savePreferences } from "@/lib/preferences";
 import { generationForYear, type GenerationId } from "@/lib/generation";
 import { LANGUAGES, isLanguageId, languageLabel, type LanguageId } from "@/lib/language";
@@ -68,8 +68,8 @@ function Onboarding() {
   useEffect(() => { if (hasCompletedOnboarding()) router.replace("/chat"); }, [router]);
   useEffect(() => {
     // Start from what we already know: the name typed at sign-in and the browser's language.
-    const known = getPendingVerificationName() || getSession()?.username || "";
-    setAnswers((current) => ({ ...current, language: browserLanguage(), name: current.name || (known.includes("@") ? "" : known.slice(0, 60)) }));
+    const known = takeSignupName();
+    setAnswers((current) => ({ ...current, language: browserLanguage(), name: current.name || known }));
   }, []);
   // Each new question takes focus: its text box if it has one, otherwise its heading (for screen readers).
   useEffect(() => {
@@ -188,6 +188,8 @@ function Onboarding() {
       <form
         className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-8 pt-8 sm:px-8 sm:pt-16"
         onSubmit={(event) => { event.preventDefault(); if (step === "done") finish(); else if (canContinue) next(); }}
+        // Enter moves on from any step, not just from text boxes (buttons keep their own Enter behaviour).
+        onKeyDown={(event) => { if (event.key === "Enter" && !(event.target instanceof HTMLButtonElement) && !(event.target instanceof HTMLInputElement)) { event.preventDefault(); event.currentTarget.requestSubmit(); } }}
       >
         <section key={step} className="flex-1 animate-[chatEnter_380ms_ease-out_both] motion-reduce:animate-none">
           <h1 ref={heading} tabIndex={-1} className="font-display text-4xl leading-[1.02] !outline-none sm:text-6xl">{title}</h1>

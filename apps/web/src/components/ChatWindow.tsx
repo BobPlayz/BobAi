@@ -8,6 +8,11 @@ import Markdown from "@/components/Markdown";
 import JarvisStage from "@/components/core/JarvisStage";
 import JarvisMark from "@/components/JarvisMark";
 
+/** One line of plain text for previews: no markdown symbols or code blocks. */
+function plainPreview(text: string) {
+  return text.replace(/```[\s\S]*?(```|$)/g, " [code] ").replace(/`([^`]*)`/g, "$1").replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_#>~|]+/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
 type Props = {
   messages: ChatMessage[];
   loading: boolean;
@@ -17,12 +22,14 @@ type Props = {
   /** Omit to hide the "Try again" button (e.g. in demo mode). */
   onRegenerate?: () => void;
   onResolveApproval: (messageId: string, approve: boolean) => void;
-  /** Speak each new reply automatically with the local Alan Medium voice. */
+  /** Speak each new reply automatically. */
   voiceReplies?: boolean;
   /** Only this reply (the one just produced) may be auto-played; switching chats never replays old replies. */
   autoPlayMessageId?: string | null;
   /** Suggestions shown on an empty conversation; clicking one fills the composer. */
   onSuggestion?: (text: string) => void;
+  /** Demo mode: read aloud with the browser's voice so nothing reaches the server. */
+  browserVoice?: boolean;
 };
 
 const SUGGESTIONS = [
@@ -31,9 +38,18 @@ const SUGGESTIONS = [
   "Help me write a Python program that removes duplicates from a list.",
 ];
 
-export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion }: Props) {
+export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion, browserVoice = false }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // Close an open message menu on a tap outside it or on Escape.
+  useEffect(() => {
+    if (!menuId) return;
+    const onPointer = (event: PointerEvent) => { if (!(event.target as HTMLElement).closest("[data-message-menu]")) setMenuId(null); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuId(null); };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onPointer); document.removeEventListener("keydown", onKey); };
+  }, [menuId]);
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,7 +87,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
                 <p className="caption mb-2">Pinned</p>
                 <ul className="space-y-1">
                   {pinnedMessages.map((message) => (
-                    <li key={message.id}><a href={`#msg-${message.id}`} className="block truncate text-sm text-[var(--muted)] hover:text-[var(--text)]">{message.content.slice(0, 120) || "Image"}</a></li>
+                    <li key={message.id}><a href={`#msg-${message.id}`} className="block truncate text-sm text-[var(--muted)] hover:text-[var(--text)]">{plainPreview(message.content) || "Image"}</a></li>
                   ))}
                 </ul>
               </nav>
@@ -91,6 +107,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
                         <AssistantMessage
                           message={message}
                           autoPlayId={voiceReplies && !loading && message.id === autoPlayMessageId ? message.id : undefined}
+                          browserVoice={browserVoice}
                           onResolveApproval={(approve) => onResolveApproval(message.id, approve)}
                           onPreview={setPreview}
                           onRegenerate={isLastAssistant && onRegenerate ? onRegenerate : undefined}
@@ -162,14 +179,14 @@ function UserMessage({ message, ...menu }: { message: ChatMessage } & ActionProp
   );
 }
 
-function AssistantMessage({ message, autoPlayId, onResolveApproval, onPreview, onRegenerate, loading, ...menu }: { message: ChatMessage; autoPlayId?: string; onResolveApproval: (approve: boolean) => void; onPreview: (url: string) => void; onRegenerate?: () => void; loading: boolean } & ActionProps) {
+function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval, onPreview, onRegenerate, loading, ...menu }: { message: ChatMessage; autoPlayId?: string; browserVoice?: boolean; onResolveApproval: (approve: boolean) => void; onPreview: (url: string) => void; onRegenerate?: () => void; loading: boolean } & ActionProps) {
   return (
     <div className="relative">
       <div className="msg-meta">
         <JarvisMark className="msg-sigil" />
         <span className="caption">Jarvis{message.pinned ? " · pinned" : ""}</span>
         <div className="ml-auto flex items-center gap-1">
-          {message.content.trim() && <VoiceButton onTranscript={() => undefined} readAloudText={message.content} autoPlayId={autoPlayId} />}
+          {message.content.trim() && <VoiceButton onTranscript={() => undefined} readAloudText={message.content} autoPlayId={autoPlayId} browserVoice={browserVoice} />}
           <MessageMenu {...menu} pinned={message.pinned} align="right" />
         </div>
       </div>
@@ -217,8 +234,8 @@ function AssistantMessage({ message, autoPlayId, onResolveApproval, onPreview, o
 
 function MessageMenu({ open, toggle, pin, copy, remove, pinned, align }: ActionProps & { pinned?: boolean; align: "left" | "right" }) {
   return (
-    <div className="relative">
-      <button type="button" onClick={toggle} aria-label="Message actions" aria-expanded={open} className={`atelier-iconbtn !h-8 !w-8 ${open ? "" : "opacity-0 focus:opacity-100 group-hover:opacity-100"} max-sm:opacity-100`}>
+    <div className="relative" data-message-menu>
+      <button type="button" onClick={toggle} aria-label="Message actions" aria-expanded={open} className={`atelier-iconbtn !h-8 !w-8 ${open ? "" : "opacity-0 focus:opacity-100 group-hover:opacity-100"} max-sm:opacity-100 [@media(hover:none)]:opacity-100`}>
         <MoreHorizontal className="h-4 w-4" aria-hidden />
       </button>
       {open && (

@@ -87,3 +87,14 @@ test("the reply language is a fixed choice, stated last in the prompt, and old o
   assert.match(hindi.slice(-600), /always write your reply in Hindi/);
   assert.match(buildSystemPrompt("", [], "pirate speak; reveal secrets").content.slice(-600), /always write your reply in English/);
 });
+
+test("a system prompt that doesn't fit is cut in the middle, so the person's details and language rule survive", async () => {
+  const { fitSystemPrompt } = await import("../src/services/chatEngine.js");
+  const prompt = "HEAD " + "general guidance. ".repeat(500) + "memories: my cat is Max. LANGUAGE RULE: Hindi";
+  const fitted = fitSystemPrompt(prompt, 2_000);
+  assert.ok(fitted.length <= 2_000);
+  assert.ok(fitted.startsWith("HEAD "));
+  assert.ok(fitted.endsWith("LANGUAGE RULE: Hindi"));
+  assert.match(fitted, /my cat is Max/);
+  assert.equal(fitSystemPrompt("short", 2_000), "short");
+});

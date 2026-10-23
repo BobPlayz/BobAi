@@ -39,13 +39,15 @@ export async function dbGetConversation(id: string, userId: string, workspaceId:
   return { ...conversation, messages: conversationMessages } satisfies DbConversation;
 }
 
-export async function dbSaveConversation(input: { id: string; userId: string; workspaceId: string; title: string; messages: Array<{ id?: string; role: string; content: string; model?: string | null; status?: string; attachments?: unknown }> }) {
+/** Titles a chat has before it gets a real one; these may still be replaced by a chat reply. */
+const PLACEHOLDER_TITLE = /^\s*(new chat|new conversation)?\s*$/i;
+export async function dbSaveConversation(input: { id: string; userId: string; workspaceId: string; title: string; /** Chat replies only name new conversations; they never overwrite an auto or renamed title. */ keepTitle?: boolean; messages: Array<{ id?: string; role: string; content: string; model?: string | null; status?: string; attachments?: unknown }> }) {
   const database = await getDb(); if (!database) return false; const { conversations, messages } = database;
   await database.db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${input.id}))`);
-    const existing = await tx.select({ userId: conversations.userId, workspaceId: conversations.workspaceId }).from(conversations).where(eq(conversations.id, input.id)).limit(1);
+    const existing = await tx.select({ userId: conversations.userId, workspaceId: conversations.workspaceId, title: conversations.title }).from(conversations).where(eq(conversations.id, input.id)).limit(1);
     if (existing[0] && (existing[0].userId !== input.userId || existing[0].workspaceId !== input.workspaceId)) throw new Error("conversation ownership mismatch");
-    if (existing[0]) await tx.update(conversations).set({ title: input.title, updatedAt: new Date() }).where(eq(conversations.id, input.id));
+    if (existing[0]) await tx.update(conversations).set({ ...(input.keepTitle && !PLACEHOLDER_TITLE.test(existing[0].title ?? "") ? {} : { title: input.title }), updatedAt: new Date() }).where(eq(conversations.id, input.id));
     else await tx.insert(conversations).values({ id: input.id, userId: input.userId, workspaceId: input.workspaceId, title: input.title });
     // now() is the same for every row in a transaction, so give each new message its own increasing timestamp;
     // otherwise a user message and its reply saved together come back in random order.

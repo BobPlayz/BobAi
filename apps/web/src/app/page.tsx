@@ -8,6 +8,7 @@ import { Magnetic, Reveal, ScrollProgress, SplitWords } from "@/components/edito
 import { useTheme } from "@/components/neural/ThemeProvider";
 import type { AssistantVisualState } from "@/lib/assistantState";
 import JarvisMark from "@/components/JarvisMark";
+import { siteUrl } from "@/lib/siteUrl";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -17,7 +18,7 @@ const structuredData = {
   applicationCategory: "ProductivityApplication",
   operatingSystem: "Web",
   description: "A chill AI assistant powered by Ollama that shows its sources and asks before doing stuff.",
-  url: process.env.NEXT_PUBLIC_SITE_URL,
+  url: siteUrl(),
 };
 
 const STATES: Array<{ id: AssistantVisualState; label: string; note: string }> = [
@@ -35,18 +36,18 @@ const PRINCIPLES = [
 ];
 
 const CAPABILITIES = [
-  ["Chat & code help", "Answers type out live, with tables and code you can copy in one tap."],
-  ["Live weather", "What it’s like outside anywhere right now, plus today’s high and low."],
+  ["Chat, code & websites", "Answers type out live. Ask for a calculator or a game and press Preview to play with it right in the chat."],
+  ["Live scores & weather", "Real cricket scores and weather, with where they came from. Never made up."],
   ["Research with sources", "Searches the web, reads the pages, and shows you where it got everything."],
-  ["A voice of its own", "Talks back as Alan, a British voice. Works when you run Jarvis on your own PC."],
+  ["Talk mode", "Just talk. Jarvis listens, answers out loud and keeps the convo going, hands-free."],
   ["Reads your files", "Drop in PDFs, notes, code or pics and ask about them. Files get safety-checked first."],
-  ["Draws (slowly lol)", "Makes pictures with Stable Diffusion on your own PC. Free, but a laptop takes its time."],
+  ["Draws pictures", "Describe it and Jarvis draws it, for free. In 24 languages, texting the way your generation does."],
 ];
 
 const SPEC = [
-  ["AI model", "Ollama: Qwen 3.5 on your own PC, or a cloud model like Gemma 4 on Ollama Cloud"],
-  ["Memory span", "Remembers about 4,000 tokens of the chat, trimmed neatly instead of cut off"],
-  ["Voice", "Piper · Alan (British) · runs offline on your PC"],
+  ["AI model", "Ollama Cloud: picks the best model for each task and switches if one is down"],
+  ["Memory span", "Long chats get summarized, so the important bits stick around"],
+  ["Voice", "ElevenLabs when it’s on, your browser’s voice when it’s not · Piper offline on a PC"],
   ["Live stuff", "Open-Meteo weather · Brave or DuckDuckGo search · cricket"],
   ["Sign in", "6-digit email code, no passwords · chats saved in Postgres"],
   ["Made on", "A school laptop with 8 GB of RAM. No fancy graphics card needed"],
@@ -231,6 +232,7 @@ export default function HomePage() {
             <Link href="/faq" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">FAQ</Link>
             <Link href="/privacy" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">Privacy</Link>
             <Link href="/terms" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">Terms</Link>
+            <Link href="/contact" className="inline-flex min-h-11 items-center px-2 hover:text-[var(--text)]">Contact</Link>
           </nav>
           <span className="caption normal-case tracking-normal">Set in Instrument Serif &amp; Schibsted Grotesk.</span>
         </div>

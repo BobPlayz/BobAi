@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/auth";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Conversation } from "@/types/chat";
 import {
   MoreHorizontal,
@@ -41,6 +41,7 @@ export default function NeuralSidebar({
   onDelete,
 }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const router = useRouter();
@@ -54,16 +55,45 @@ export default function NeuralSidebar({
   const pinned = filtered.filter((conversation) => conversation.pinned);
   const recent = filtered.filter((conversation) => !conversation.pinned);
 
-  function rename(conversation: Conversation) {
-    const nextTitle = window.prompt("Rename conversation", conversation.title)?.trim();
-    if (nextTitle && nextTitle !== conversation.title) onRename(conversation.id, nextTitle);
-    setMenuId(null);
+  // Inline rename (no window.prompt: in-app browsers and app wrappers often block it).
+  function startRename(conversation: Conversation) { setRenaming({ id: conversation.id, title: conversation.title }); setMenuId(null); }
+  function finishRename(save: boolean) {
+    if (!renaming) return;
+    const conversation = conversations.find((item) => item.id === renaming.id);
+    const nextTitle = renaming.title.trim().slice(0, 80);
+    if (save && conversation && nextTitle && nextTitle !== conversation.title) onRename(conversation.id, nextTitle);
+    setRenaming(null);
   }
+
+  // Close an open menu on a tap outside it or on Escape.
+  useEffect(() => {
+    if (!menuId) return;
+    const onPointer = (event: PointerEvent) => { if (!(event.target as HTMLElement).closest("[data-convo-menu]")) setMenuId(null); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuId(null); };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onPointer); document.removeEventListener("keydown", onKey); };
+  }, [menuId]);
 
   function renderConversation(conversation: Conversation) {
     const active = conversation.id === activeId;
+    if (renaming?.id === conversation.id) return (
+      <div key={conversation.id} className="px-1 py-0.5">
+        <input
+          autoFocus
+          onFocus={(event) => event.currentTarget.select()}
+          value={renaming.title}
+          onChange={(event) => setRenaming({ id: conversation.id, title: event.target.value })}
+          onKeyDown={(event) => { if (event.key === "Enter") finishRename(true); else if (event.key === "Escape") finishRename(false); }}
+          onBlur={() => finishRename(true)}
+          maxLength={80}
+          aria-label="New name for this chat"
+          className="h-10 w-full rounded-xl border border-[var(--text)] bg-[var(--bg)] px-3 text-sm outline-none"
+        />
+      </div>
+    );
     return (
-      <div key={conversation.id} className="group relative">
+      <div key={conversation.id} className="group relative" data-convo-menu={menuId === conversation.id ? "" : undefined}>
         <button
           type="button"
           data-close-drawer
@@ -81,7 +111,7 @@ export default function NeuralSidebar({
           title="Conversation actions"
           aria-expanded={menuId === conversation.id}
           onClick={() => setMenuId(menuId === conversation.id ? null : conversation.id)}
-          className={`absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full ${active ? "text-[var(--bg)]" : "text-[var(--muted)] hover:text-[var(--text)]"} ${menuId === conversation.id ? "visible" : "invisible group-hover:visible focus:visible"}`}
+          className={`absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full ${active ? "text-[var(--bg)]" : "text-[var(--muted)] hover:text-[var(--text)]"} ${menuId === conversation.id ? "visible" : "invisible group-hover:visible focus:visible max-md:visible [@media(hover:none)]:visible"}`}
         >
           <MoreHorizontal className="h-4 w-4" aria-hidden />
         </button>
@@ -90,7 +120,7 @@ export default function NeuralSidebar({
             <button type="button" onClick={() => { onPin(conversation.id); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
               <Pin className="h-3.5 w-3.5" aria-hidden /> {conversation.pinned ? "Unpin" : "Pin"}
             </button>
-            <button type="button" onClick={() => rename(conversation)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
+            <button type="button" onClick={() => startRename(conversation)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
               <Pencil className="h-3.5 w-3.5" aria-hidden /> Rename
             </button>
             <button type="button" onClick={() => { setDeleteTarget(conversation); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--surface-2)]">

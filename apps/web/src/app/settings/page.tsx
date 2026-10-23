@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
 import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, getTypingProfile, getUsage, type TypingProfile, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
@@ -65,6 +65,10 @@ export default function SettingsPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  // Two-tap confirmation for destructive buttons (in-app browsers often block window.confirm).
+  const [armed, setArmed] = useState<"account" | "memories" | null>(null);
+  const armTimer = useRef<number | undefined>(undefined);
+  function arm(action: "account" | "memories") { setArmed(action); window.clearTimeout(armTimer.current); armTimer.current = window.setTimeout(() => setArmed(null), 6_000); }
 
   useEffect(() => setSettings(readSettings()), []);
 
@@ -113,7 +117,8 @@ export default function SettingsPage() {
       setDeleteMessage("Enter the 6-digit code sent to your email.");
       return;
     }
-    if (!window.confirm("Schedule deletion of this Jarvis account? Your account will be disabled now and permanent deletion is scheduled after 30 days.")) return;
+    if (armed !== "account") { arm("account"); return; }
+    setArmed(null);
     setDeleteBusy(true);
     setDeleteMessage("");
     try {
@@ -187,7 +192,8 @@ export default function SettingsPage() {
   }
 
   async function removeAllMemories() {
-    if (!window.confirm("Delete all saved Jarvis memories? This cannot be undone.")) return;
+    if (armed !== "memories") { arm("memories"); return; }
+    setArmed(null);
     setMemoryBusyId("__all__");
     setMemoryError("");
     setMemoryNotice("");
@@ -359,7 +365,7 @@ export default function SettingsPage() {
                 <button type="button" onClick={() => void sendDeletionCode()} disabled={deleteBusy} className="mt-3 rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-600 disabled:opacity-40">{deleteBusy ? "Please wait…" : "Email me a deletion code"}</button>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <input value={deleteCode} onChange={(event) => setDeleteCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" aria-label="Account deletion email code" className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${colors.field}`} />
-                  <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">Confirm deletion</button>
+                  <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{armed === "account" ? "Tap again: disable my account now" : "Confirm deletion"}</button>
                 </div>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
@@ -418,7 +424,7 @@ export default function SettingsPage() {
                     <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Review or delete information stored in your account. Deleting memory does not delete chat history.</p>
                   </div>
                   <button type="button" onClick={removeAllMemories} disabled={memoryLoading || memories.length === 0 || memoryBusyId !== null} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-600 disabled:opacity-40">
-                    <Trash2 className="h-4 w-4" /> Delete all
+                    <Trash2 className="h-4 w-4" aria-hidden /> {armed === "memories" ? "Tap again to delete all" : "Delete all"}
                   </button>
                 </div>
                 {memoryError && <p role="alert" className="mt-4 text-sm text-red-500">{memoryError}</p>}
