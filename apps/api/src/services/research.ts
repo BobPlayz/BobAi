@@ -47,7 +47,7 @@ export function sourceSearchQuery(query: string, types: ResearchSourceType[]) {
   return domains.size ? `${query} (${[...domains].map((domain) => `site:${domain}`).join(" OR ")})` : query;
 }
 function cacheKey(query: string, options: Record<string, unknown>) {
-  const normalizedOptions = { sourceTypes: sourceTypesFrom(options).sort() };
+  const normalizedOptions = { sourceTypes: sourceTypesFrom(options).sort(), recency: recencyFrom(options) ?? null };
   return JSON.stringify([query, normalizedOptions]);
 }
 function cloneResult(result: ResearchResult): ResearchResult { return { query: result.query, sources: result.sources.map((source) => ({ ...source })) }; }
@@ -77,9 +77,15 @@ export function parseBraveResults(payload: unknown, query: string): ResearchSour
   }
   return rankSources(query, sources);
 }
-async function searchBrave(query: string, apiKey: string, signal?: AbortSignal): Promise<ResearchSource[]> {
+export type Recency = "day" | "week" | "month";
+/** Optional "only recent pages" filter: DuckDuckGo's df parameter and Brave's freshness parameter. */
+function recencyFrom(options: Record<string, unknown>): Recency | undefined {
+  return options.recency === "day" || options.recency === "week" || options.recency === "month" ? options.recency : undefined;
+}
+async function searchBrave(query: string, apiKey: string, signal?: AbortSignal, recency?: Recency): Promise<ResearchSource[]> {
   const url = new URL("https://api.search.brave.com/res/v1/web/search");
   url.searchParams.set("q", query);
+  if (recency) url.searchParams.set("freshness", { day: "pd", week: "pw", month: "pm" }[recency]);
   url.searchParams.set("count", "20");
   url.searchParams.set("safesearch", "moderate");
   const response = await fetch(url, {
@@ -94,7 +100,32 @@ async function searchBrave(query: string, apiKey: string, signal?: AbortSignal):
   const body = await boundedText(response, 2 * 1024 * 1024);
   return parseBraveResults(JSON.parse(body), query);
 }
+const RIGHT_NOW = /\b(today|tonight|yesterday|live|score|scores|breaking|right now|this week)\b/i;
+const RECENT = /\b(latest|newest|current|currently|recent|news|now|this (?:month|year)|upcoming|schedule|fixtures?|standings|table|price|prices|rate|rates|release|released|update|updates|who won|winner)\b/i;
+
+/** How recent the results of a time-sensitive question must be, or undefined for timeless questions. */
+export function inferRecency(query: string): Recency | undefined {
+  if (RIGHT_NOW.test(query)) return "week";
+  if (RECENT.test(query)) return "month";
+  return undefined;
+}
+
+/**
+ * Web search. Time-sensitive questions search recent pages first (so a three-year-old article cannot win) and only
+ * fall back to an unrestricted search when nothing recent is found.
+ */
 export async function webSearch(query: string, options: Record<string, unknown> = {}, signal?: AbortSignal): Promise<ResearchResult> {
+  if (!recencyFrom(options) && options.recency !== "any") {
+    const recency = inferRecency(query);
+    if (recency) {
+      const recent = await searchOnce(query, { ...options, recency }, signal);
+      if (recent.sources.length) return recent;
+    }
+  }
+  return searchOnce(query, options, signal);
+}
+
+async function searchOnce(query: string, options: Record<string, unknown>, signal?: AbortSignal): Promise<ResearchResult> {
   const normalized = query.trim();
   if (!normalized) throw new Error("search query is required");
   if (normalized.length > MAX_QUERY_LENGTH) throw new Error("search query is too long");
@@ -106,7 +137,7 @@ export async function webSearch(query: string, options: Record<string, unknown> 
   const braveKey = process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim();
   if (braveKey) {
     try {
-      const sources = (await searchBrave(sourceSearchQuery(normalized, selectedTypes), braveKey, signal))
+      const sources = (await searchBrave(sourceSearchQuery(normalized, selectedTypes), braveKey, signal, recencyFrom(options)))
         .filter((source) => matchesSourceTypes(source, selectedTypes));
       if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("web search cancelled");
       if (sources.length) {
@@ -127,7 +158,8 @@ export async function webSearch(query: string, options: Record<string, unknown> 
     const timer = setTimeout(() => controller.abort(new Error("web search timed out")), getTimeoutMs());
     try {
       const searchQuery = sourceSearchQuery(normalized, selectedTypes);
-      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}`;
+      const recency = recencyFrom(options);
+      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(searchQuery)}${recency ? `&df=${recency[0]}` : ""}`;
       const response = await fetch(url, { headers: { accept: "text/html", "user-agent": "Jarvis/1.0 local-research" }, signal: controller.signal, redirect: "error" });
       const text = await boundedText(response, MAX_RESPONSE_BYTES);
       if (!response.ok) {

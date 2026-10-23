@@ -22,7 +22,7 @@ export default function ChatPage() {
     <NeuralShell
       sidebar={
         <NeuralSidebar
-          conversations={chat.conversations}
+          conversations={chat.conversations.filter((conversation) => conversation.messages.length > 0)}
           activeId={chat.activeId}
           onSelect={chat.setActiveId}
           onNewChat={chat.newChat}
@@ -33,7 +33,7 @@ export default function ChatPage() {
           onDelete={chat.deleteConversation}
         />
       }
-      topbar={<NeuralTopbar />}
+      topbar={<NeuralTopbar caption={chat.activeConversation?.messages.length ? chat.activeConversation.title : "New chat"} />}
       composer={
         <NeuralComposer
           input={chat.input}

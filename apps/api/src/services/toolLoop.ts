@@ -44,7 +44,7 @@ const EXECUTORS: Record<string, Executor> = {
   cricket: async (args, context) => {
     const query = String(args.query || "").trim();
     if (!query || query.length > 300) throw new Error("cricket search requires a short match or score query");
-    const result = await (await import("./research.js")).webSearch(`latest cricket match score ${query}`, {}, context.signal);
+    const result = await (await import("./research.js")).webSearch(`latest cricket match score ${query} ${new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" })}`, { recency: "week" }, context.signal);
     return {
       query: result.query,
       checkedAt: new Date().toISOString(),

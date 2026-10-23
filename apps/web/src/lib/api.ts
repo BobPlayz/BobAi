@@ -124,3 +124,5 @@ export async function deleteRemoteMessage(conversationId: string, messageId: str
   if (!res.ok && res.status !== 404) throw new Error("The message could not be deleted on the server.");
 }
 export async function deleteSetting(key: string) { const res = await request(`/settings/${encodeURIComponent(key)}`, { method: "DELETE" }); if (!res.ok) throw new Error("Could not reset that setting"); }
+/** Asks the server to write a short AI title for a chat after its first reply. */
+export async function autoTitleConversation(conversationId: string) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}/auto-title`, { method: "POST", body: "{}" }); if (!res.ok) return ""; const data = await res.json() as { title?: unknown }; return typeof data.title === "string" ? data.title : ""; }
