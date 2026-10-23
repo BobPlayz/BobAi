@@ -31,6 +31,8 @@ healthRouter.get("/ready", async (_req, res) => {
     emailConfigured,
     emailProvider: otpDeliveryProvider(),
     emailProvidersConfigured: { smtp: Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim()), resend: Boolean(process.env.RESEND_API_KEY?.trim() && process.env.RESEND_FROM_EMAIL?.trim()) },
+    // Which optional services have a key set: yes/no only, never the values.
+    optionalServices: { elevenLabsVoice: Boolean(process.env.ELEVENLABS_API_KEY?.trim()), pollinationsKey: Boolean(process.env.POLLINATIONS_API_KEY?.trim()), cricketData: Boolean(process.env.BOBAI_CRICKET_API_KEY?.trim()), braveSearch: Boolean(process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim()), guestAccess: process.env.BOBAI_GUEST_ACCESS?.trim().toLowerCase() !== "false" },
     modelConfigured: Boolean(process.env.BOBAI_OLLAMA_BASE_URL?.trim()) || process.env.VERCEL !== "1",
     modelHosted: model.hosted,
     modelReachable: model.ready,
