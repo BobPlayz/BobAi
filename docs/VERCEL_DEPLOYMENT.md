@@ -28,7 +28,7 @@ Set these in Vercel → Project → Settings → Environment Variables (Producti
 | `BOBAI_SMTP_USER` / `BOBAI_SMTP_PASSWORD` | Your Gmail address / a Gmail **app password** |
 | `BOBAI_SMTP_FROM` | `Jarvis <the same Gmail address>` |
 
-No model name is needed: Jarvis discovers the models your Ollama endpoint offers and picks one per request (see [MODEL_SELECTION_8GB.md](MODEL_SELECTION_8GB.md)). `BOBAI_OLLAMA_MODEL` is an optional preference.
+No model name is needed: Jarvis discovers the models your Ollama endpoint offers and picks one per request (see [MODEL_ROUTING.md](MODEL_ROUTING.md)). `BOBAI_OLLAMA_MODEL` is an optional preference.
 
 Do **not** copy `.env.example` into Vercel. On Vercel the API ignores localhost values: it uses the deployment's own address for `BOBAI_WEB_URL`, `BOBAI_AUTH_REDIRECT_BASE_URL` and `CORS_ORIGIN`, and switches to production mode once the settings above are valid. Delete `NODE_ENV` if it is set to `development`.
 

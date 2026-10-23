@@ -38,7 +38,7 @@ Standards for writing consistent, readable, and maintainable Jarvis code.
 - Cover normal behavior, invalid input, boundaries, and failure paths.
 - Run the relevant workspace tests and build before opening a pull request.
 
-## Pull requests
+## Commits
 
 - Explain the behavior change and why it is needed.
 - List tests actually run and any that could not be run.
@@ -46,6 +46,11 @@ Standards for writing consistent, readable, and maintainable Jarvis code.
 - Do not claim a build or test passed unless it was run successfully.
 
 
-## Handoff verification rule
+## Before you push
 
-The current project has a deferred verification pass by explicit project instruction. Do not run builds/tests until implementation work is considered complete. Do not mark a feature complete solely because a handler, button, route, or test file exists. Keep implementation status distinct from runtime verification, and record exact commands/results plus unresolved failures in `roadmap.md` after the final pass.
+Run the checks for what you changed, then push straight to `main` (no force-push):
+
+- `npm test` (all suites), `npm run build`, `npm run lint --workspace=apps/web` (keep it at 0 warnings), `npm run repo:preflight`.
+- `npm run e2e` against a running local API when you touch sign-in, chat, history, memory, uploads or voice.
+
+Do not mark a feature complete just because a handler, button, route or test file exists. Keep "tested with mocks" and "verified for real" separate in docs and commit messages.

@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const required = ["README.md", "package.json", "package-lock.json", ".env.example", "apps/api", "apps/web", "apps/bobhs", "packages/db", "model-training"];
+const required = ["README.md", "package.json", "package-lock.json", ".env.example", "apps/api", "apps/web", "packages/db", "apps/ollama-gateway"];
 const forbiddenSecret = /(?:sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
 const allowedEnv = new Set([".env.example", "apps/api/.env.example"]);
 
@@ -28,18 +28,15 @@ async function main() {
   const markdown = files.filter((path) => path.toLowerCase().endsWith(".md"));
   const allowedMarkdown = new Set([
     "README.md",
-    "roadmap.md",
     "docs/API.md",
     "docs/DATABASE.md",
     "docs/CODE_STYLE.md",
     "docs/SECURITY.md",
     "docs/LOCAL_AI.md",
-    "docs/HOSTED_AI.md",
     "docs/QUICK_START_AUTH.md",
     "docs/FEATURE_INVENTORY.md",
     "docs/FEATURE_SETUP_GUIDE.md",
-    "docs/MODEL_SELECTION_8GB.md",
-    "docs/FINAL_COMPLETION_CHECKLIST.md",
+    "docs/MODEL_ROUTING.md",
     "docs/HANDOFF.md",
     "docs/VERCEL_DEPLOYMENT.md",
     "docs/OLLAMA_GATEWAY.md",

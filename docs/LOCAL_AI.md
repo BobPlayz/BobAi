@@ -1,57 +1,37 @@
-# Local AI architecture
+# Running the AI on your own computer
 
-Jarvis is local-first and uses Ollama as its language-model runtime. It does not train a model from scratch and does not call a hosted AI API for chat, coding generation, or research synthesis.
+Jarvis uses Ollama for all AI. On your own computer everything except web research, weather, cricket, the database and email works without internet.
 
-## Local chat and coding
+## Chat, coding and image understanding
 
-- Install Ollama on the computer running Jarvis.
-- Pull the configured chat, coding, and vision models (`ollama pull qwen2.5:3b`, `ollama pull qwen2.5-coder:3b`, and `ollama pull moondream:1.8b` by default).
-- Configure BOBAI_OLLAMA_BASE_URL (and BOBAI_OLLAMA_API_KEY for a gateway or Ollama Cloud) in the private .env file. Models are discovered automatically; BOBAI_OLLAMA_MODEL is an optional preference.
-- Jarvis routes recognized coding requests to the configured local coder model.
-- The default model names are starter defaults, not a promise of speed or quality. Select models that fit available RAM/VRAM.
+1. Install [Ollama](https://ollama.com/download).
+2. Pull at least one model, e.g. `ollama pull qwen3.5:2b` (chat, code and pictures in one, fits 8 GB RAM). Add more if you have room; Jarvis uses them all.
+3. In `.env`: `BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434`. No model name is needed.
 
-## Local image generation
+Jarvis lists the installed models, reads what each can do, and picks one per request: a vision model for images, a stronger thinking model for hard questions, a fast one for quick chats. Other local models are unloaded before switching so only one sits in memory. Details and optional settings: [MODEL_ROUTING.md](MODEL_ROUTING.md).
 
-Jarvis calls a local Python Diffusers pipeline directly. ComfyUI is not required, and no hosted image API is used.
+To use your PC's Ollama from the hosted website, see [OLLAMA_GATEWAY.md](OLLAMA_GATEWAY.md). Never expose Ollama itself to the internet.
 
-- Install optional packages from requirements-image.txt in the Python environment selected by BOBAI_PYTHON.
-- Download a Diffusers-compatible model to disk and check its license.
-- Set BOBAI_IMAGE_MODEL_PATH to the model folder.
-- The runtime uses local_files_only=True and does not download model files at request time.
-- The initial pipeline generates 512x512 PNG images and attempts CUDA when available, otherwise CPU. CPU generation may be slow or memory-intensive.
-- Reference-image editing uses `AutoPipelineForImage2Image` with a compatible local Diffusers model; it has not been runtime-verified.
-- Local video generation is intentionally disabled until a local video model/runtime and its lifecycle are implemented.
+## Image generation
 
-## Local image understanding
+Jarvis calls a local Python Diffusers pipeline directly (no ComfyUI, no image API).
 
-- Image understanding uses Ollama’s local multimodal chat endpoint and `BOBAI_OLLAMA_VISION_MODEL` (default `moondream:1.8b`).
-- Pull the vision model with Ollama before using image attachments. This is separate from the chat/coding models and may increase RAM use.
-- The API validates image data URL/base64 syntax, format signatures, and size before sending image bytes to the local Ollama runtime. No hosted vision API is used.
+- `npm run setup:local-media` downloads Tiny-SD and the Python packages, or set `BOBAI_IMAGE_MODEL_PATH` to any Diffusers model folder and `BOBAI_PYTHON` to your Python.
+- Models are never downloaded at request time. 512×512 images on a laptop CPU take about a minute and a half.
+- Reference-image editing uses `AutoPipelineForImage2Image` when the model supports it. Video generation is not available.
 
-## Local Jarvis voice
+## Voice
 
-- Piper English voice: en_GB-alan-medium.
-- Piper Telugu voice: te_IN-venkatesh-medium.
-- Whisper.cpp handles local speech transcription.
-- Set the Piper model/config, espeak data, and Whisper model paths in .env.
-- Build the native media module and test on the actual device.
-- Microphone access must remain user-initiated. No background always-listening behavior is implied.
+- Speaking: Piper with the English *Alan* voice (`en_GB-alan-medium`); a Telugu voice can be added with `BOBAI_PIPER_TE_MODEL_PATH`.
+- Listening: faster-whisper (`BOBAI_WHISPER_PYTHON_MODEL_PATH`) or whisper.cpp (`BOBAI_WHISPER_MODEL_PATH`).
+- `npm run setup:local-media` downloads Piper, the Alan voice and Whisper. The microphone only listens when you press the button.
 
-## Internet research
+## Web research
 
-Research is Jarvis's own pipeline: query construction, search retrieval/parsing, source ranking, evidence fetching, prompt-injection defenses, and synthesis through local Ollama. It needs internet access for live pages, but it does not require a hosted AI model API. Search results and web pages can be incomplete or adversarial, so citations must be checked against fetched evidence.
-
-## Database and email infrastructure
-
-Neon is used through the existing PostgreSQL/Drizzle connection. Set DATABASE_URL to the Neon connection string and run the project's migration workflow after reviewing the target database.
-
-Resend is the preferred email OTP delivery method. Set RESEND_API_KEY and RESEND_FROM_EMAIL in .env. A verified sender/domain is required at Resend. SMTP remains a fallback. No credentials belong in Git.
+Jarvis builds search queries, fetches results (Brave Search with `BOBAI_BRAVE_SEARCH_API_KEY`, otherwise DuckDuckGo), reads the pages, ranks sources and has the model write an answer that cites them. Web pages are treated as untrusted data and cannot steer Jarvis.
 
 ## Security
 
-- Never expose Ollama's local endpoint or local coding execution bridge directly to the public internet.
-- Keep secrets in the server environment only.
-- Treat web pages, uploads, model output, and tool results as untrusted input.
-- Keep coding execution sandboxed and require confirmation for consequential actions.
-- Do not advertise the app as fully offline: live internet research and remote Neon/Resend services require connectivity.
-- Do not claim a feature is verified until it has been exercised with real local models and infrastructure.
+- Keep secrets in `.env` only. Never expose Ollama or the coding-agent bridge directly to the internet.
+- Treat web pages, uploads, model output and tool results as untrusted.
+- Tools that act for you always ask first.

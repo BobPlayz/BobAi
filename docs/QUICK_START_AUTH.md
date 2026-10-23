@@ -1,29 +1,31 @@
-# Jarvis email OTP quick-start
+# Sign-in with an email code
 
-The browser entry flow asks for a display name, email address, and agreement to the current Terms and Privacy Policy. It sends a one-time code to that email; successful verification establishes a server-managed session cookie and sends the user directly to chat. No password is required in this visible flow.
+The login page asks for a name, an email address and agreement to the Terms and Privacy Policy. Jarvis emails a 6-digit code; entering it starts a session and opens the chat. There is no password in this flow.
 
-## Required production configuration
+## Settings
 
-- `DATABASE_URL`: a working Postgres database with the current Jarvis schema/migrations applied.
-- Preferred: `RESEND_API_KEY` and `RESEND_FROM_EMAIL`, with a sender/domain verified in Resend. Alternatively configure `BOBAI_SMTP_HOST`, `BOBAI_SMTP_PORT`, and `BOBAI_SMTP_FROM`; if authentication is required, also set `BOBAI_SMTP_USER` and `BOBAI_SMTP_PASSWORD`.
-- `BOBAI_WEB_URL` and `CORS_ORIGIN`: the actual deployed web origin(s).
-- `BOBAI_TERMS_VERSION`: optional server-side accepted terms version. If set, it must match `NEXT_PUBLIC_TERMS_VERSION` in the web build.
-- `NEXT_PUBLIC_TERMS_VERSION`: the version/date displayed as accepted by the frontend. Default is `2026-10-13`; change it whenever the legal terms version changes, and keep it synchronized with the API configuration.
+- `DATABASE_URL`: Postgres with the current migrations applied.
+- An email sender, one of:
+  - **Gmail SMTP (free, no domain needed):** `BOBAI_EMAIL_PROVIDER=smtp`, `BOBAI_SMTP_HOST=smtp.gmail.com`, `BOBAI_SMTP_PORT=465`, `BOBAI_SMTP_USER` (your Gmail address), `BOBAI_SMTP_PASSWORD` (a Gmail app password), `BOBAI_SMTP_FROM=Jarvis <your Gmail address>`.
+  - **Resend:** `RESEND_API_KEY` and `RESEND_FROM_EMAIL`. Without a domain verified in Resend it only delivers to the Resend account owner. If SMTP is also set up, a refused Resend send is retried over SMTP.
+- `BOBAI_TERMS_VERSION` (API) and `NEXT_PUBLIC_TERMS_VERSION` (website): optional, default `2026-10-13`; they must match.
+- Local development only: `BOBAI_DEV_LOG_OTP=true` prints codes in the terminal instead of emailing them. It never works in production.
 
-In development, OTPs are not logged by default. Only set `BOBAI_DEV_LOG_OTP=true` for local-only development if you explicitly want terminal codes. Production refuses to start unless complete Resend or SMTP delivery settings are provided.
+`GET /api/ready` shows `emailConfigured`, `emailProvider` and which providers are set up.
 
-## Security and account notes
+## How codes are protected
 
-- Codes are six digits, expire after ten minutes, and have bounded attempts and request throttling.
-- Session cookies are HttpOnly and Secure in production; the API refreshes the session through the existing refresh-token rotation logic.
-- Existing password, OAuth, and OTP endpoints remain in the API for compatibility, but the visible login page now uses the quick-start flow.
-- Account deletion can be requested from Settings → Privacy after email-OTP reauthentication. The account is disabled immediately; permanent cleanup runs after a 30-day grace period. Users who still own shared workspaces are skipped by the cleanup worker until that ownership is resolved.
-- Accounts with an additional authenticator-based MFA requirement must complete the dedicated MFA challenge; the API refuses to bypass MFA. Verify the flow end to end before launch.
-- Email verification proves control of an inbox, not a person's legal identity.
-- Before public launch, review the privacy/terms text and age-appropriate requirements with a responsible adult/legal adviser. Do not collect more personal information than necessary.
-- Do not commit real SMTP credentials, database URLs, or AI provider keys.
+- 6 digits, valid for 10 minutes, single use, at most 5 wrong tries; stored hashed, never logged.
+- One email per address per minute; at most 10 requests per address per 15 minutes. Requests always answer the same way, so nobody can test which emails have accounts.
+- If sending fails, the code is deleted and the user sees "could not send a verification code"; the server log says why (never the code).
+- Sessions use HttpOnly, Secure, SameSite=strict cookies with refresh-token rotation and reuse detection. In production, requests from other sites are rejected.
 
+## Other account notes
 
-## Handoff status
+- Two-factor (authenticator app) and social sign-in exist in the API and need `BOBAI_MFA_ENCRYPTION_KEY`; without it they refuse to run. An account that requires MFA must complete it; it is never bypassed.
+- Account deletion: Settings → Privacy, confirmed with an email code. The account is disabled at once and removed after 30 days.
+- An email code proves someone controls an inbox, not who they are. Collect as little personal information as possible.
 
-The quick-start flow and the broader account/session behavior are implemented in source but still require the final build/test and end-to-end verification pass. In particular verify existing users, expired/used codes, throttling, Resend/SMTP delivery, refresh/sign-out, secure cookies, terms-version mismatch, MFA-required accounts, and account deletion reauthentication. Do not bypass MFA to simplify the onboarding path.
+## Tested
+
+On a laptop with a real Postgres database: code request, wrong code rejected, correct code signs in, reused code rejected, session, refresh, logout, rate limits, two testers receiving codes over authenticated TLS SMTP, and a refused Resend send falling back to SMTP. Real Gmail delivery has to be checked with your Gmail account.

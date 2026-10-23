@@ -1,124 +1,55 @@
-# BobAI feature setup checklist
+# Jarvis feature setup
 
-This guide describes the current local-first direction. Chat, coding responses, research synthesis, and voice should use local software/models. Neon and Resend account setup can be completed separately; never commit their credentials.
+How to turn on each feature. Never commit `.env` or paste credentials into chat.
 
-## 1. Install and start the project
+## 1. Install and start
 
-1. Install Node.js 24 or newer and Git.
-2. Pull the latest main branch and run npm ci.
-3. Copy .env.example to .env using the command for your terminal.
-4. Configure DATABASE_URL with your Neon PostgreSQL connection string when you are ready to enable database-backed features.
-5. Install Ollama and pull the default models:
-   - ollama pull qwen3.5:4b
-   - ollama pull qwen2.5-coder:3b
-   - ollama pull qwen3-embedding:0.6b
-6. Confirm Ollama is running at http://127.0.0.1:11434.
-7. Run npm test, then npm run build. After failures are fixed, use npm run ai to start the API and web app.
+1. Install Node.js 24+, Git and [Ollama](https://ollama.com/download).
+2. `git clone https://github.com/BobPlayz/BobAi.git`, then `npm ci`.
+3. Copy `.env.example` to `.env` and set `DATABASE_URL` (Neon) and an email sender (section 6).
+4. Pull at least one model, e.g. `ollama pull qwen3.5:2b`. Jarvis discovers installed models by itself.
+5. `npm run db:migrate`, then `npm run ai` (runs the tests, then starts the API on :3001 and the website on :3000).
 
-Do not treat a successful start as proof that every feature works. The database must be reachable and migrated, and local models/assets must be installed.
+## 2. Chat, coding and image understanding
 
-## 2. Local chat and coding
+`BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434` for local Ollama, or `https://ollama.com` plus `BOBAI_OLLAMA_API_KEY` for Ollama Cloud. No model name is needed: each request goes to the best available model for the task, with fallback ([MODEL_ROUTING.md](MODEL_ROUTING.md)). Optional: `BOBAI_OLLAMA_MODEL` (a preference), `BOBAI_OLLAMA_NUM_CTX` (default 4096), `BOBAI_OLLAMA_NUM_PREDICT` (default 1024). Semantic memory search is off by default; set `BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b` and pull it to turn it on.
 
-The API uses Ollama's local chat endpoint. Default settings:
+Check: `GET /api/ready` shows `modelReachable: true` and `modelPicks`.
 
-- BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
-- BOBAI_OLLAMA_MODEL= (optional preference; models are picked automatically)
-- BOBAI_OLLAMA_CODING_MODEL=qwen2.5-coder:3b
-- BOBAI_OLLAMA_VISION_MODEL= (optional)
-- BOBAI_OLLAMA_EMBEDDING_MODEL=qwen3-embedding:0.6b
-- BOBAI_OLLAMA_NUM_CTX=4096
-- BOBAI_OLLAMA_NUM_PREDICT=512
+## 3. Live weather, cricket and research
 
-Jarvis discovers installed models and routes each request to the best fit (see MODEL_SELECTION_8GB.md).
+- Weather: Open-Meteo, no key.
+- Cricket: optional `BOBAI_CRICKET_API_KEY` (CricketData.org free key) for a live feed; otherwise web search results, labelled as such.
+- Research: DuckDuckGo by default, or `BOBAI_BRAVE_SEARCH_API_KEY` for Brave Search. Answers list the sources they used.
 
-No OpenAI key or hosted AI API is required for the local chat path.
+## 4. Image generation (PC only)
 
-## 3. Internet research
+`npm run setup:image-generation` (Tiny-SD) or `npm run setup:image-generation -- -Profile quality` (DreamShaper 8, slower and bigger). Then `npm run test:image-generation` saves a test PNG. Uses a local Diffusers pipeline (no ComfyUI, no image API); a 512×512 image takes about a minute and a half on a laptop CPU. Other Ollama models are unloaded first to free memory.
 
-BobAI's research service runs its own query, result parsing, source ranking, caching, source filtering, evidence fetching, and local-model synthesis. It does not need a hosted AI API. Live web research still requires an internet connection and depends on the public search website being reachable. Verify every citation against the page text; search results and scraped pages can be incomplete or misleading.
+## 5. Voice (PC only)
 
-Test:
-- Empty, oversized, and malformed queries.
-- Empty search results and temporary search failures.
-- Broken or redirected pages.
-- Whether the evidence excerpts support the final synthesis.
-- Source preferences, caching, timeouts, and per-user quota behavior.
+`npm run setup:local-media` downloads Piper with the *Alan* voice and faster-whisper. Optional Telugu voice: `BOBAI_PIPER_TE_MODEL_PATH` / `BOBAI_PIPER_TE_CONFIG_PATH`. `npm run setup:glasses-voice` restores the Alan/Venkatesh voice files. Check `GET /voice/status`.
 
-## 4. Local image generation, no ComfyUI
+## 6. Email codes
 
-BobAI now has a direct Python Diffusers runner. It does not call a hosted image-generation API and does not use ComfyUI.
+- **Gmail SMTP (free, no domain):** turn on 2-Step Verification, create an app password, then set `BOBAI_EMAIL_PROVIDER=smtp`, `BOBAI_SMTP_HOST=smtp.gmail.com`, `BOBAI_SMTP_PORT=465`, `BOBAI_SMTP_USER`, `BOBAI_SMTP_PASSWORD`, `BOBAI_SMTP_FROM=Jarvis <you@gmail.com>`.
+- **Resend:** `RESEND_API_KEY`, `RESEND_FROM_EMAIL` with a domain you verified in Resend.
+- Local only: `BOBAI_DEV_LOG_OTP=true` prints codes in the terminal.
 
-1. Install Python 3.11 or another version supported by the selected PyTorch/Diffusers packages.
-2. Install the optional dependencies with: python -m pip install -r requirements-image.txt
-3. Download a compatible Diffusers image model to a local folder. Downloading is a one-time setup step; check the model license and usage restrictions first.
-4. Set BOBAI_IMAGE_MODEL_PATH in .env to the local model folder.
-5. Set BOBAI_PYTHON if the API should use a specific Python executable.
-6. Restart the API and test one 512x512 image.
+Details: [QUICK_START_AUTH.md](QUICK_START_AUTH.md).
 
-Generation uses local_files_only mode, so the model must already exist on disk. The runner attempts to use CUDA if available and otherwise uses CPU. Image generation is serialized with Ollama and asks it to unload resident models before starting Diffusers. CPU generation can still be very slow and may exhaust 8 GB of RAM. Test a single 512×512 image before trying larger dimensions or multiple outputs.
+## 7. File uploads
 
-## 5. Jarvis voice from Ai-Glasses
+Work locally without extra setup. In production they need a malware scanner at `BOBAI_MALWARE_SCANNER_URL`; without one, uploads are refused with a clear message.
 
-The selected offline voice profile is the same one established in Ai-Glasses:
+## 8. Checks
 
-- English: Piper en_GB-alan-medium
-- Telugu: Piper te_IN-venkatesh-medium
-- Speech recognition: local Whisper.cpp model
-- No cloud voice provider
+```
+npm test
+npm run e2e        (against a running local API; prints PASS/FAIL per feature)
+npm run build
+npm run audit
+npm run repo:preflight
+```
 
-Configure these environment variables in the private .env:
-- BOBAI_PIPER_EN_MODEL_PATH
-- BOBAI_PIPER_EN_CONFIG_PATH
-- BOBAI_PIPER_TE_MODEL_PATH
-- BOBAI_PIPER_TE_CONFIG_PATH
-- BOBAI_ESPEAK_DATA_PATH
-- BOBAI_WHISPER_MODEL_PATH
-
-The .onnx model and matching .onnx.json config files must exist locally. Set the paths to the assets you downloaded for Ai-Glasses or install matching copies into BobAI's local model directory. The Whisper model must also exist locally. The voice API currently uses BobAI's native media integration, so build it with npm run native:media:build after installing the required C++ build tools and compatible native dependencies. Run the voice status endpoint and test English, Telugu, empty audio, invalid WAV files, and missing model paths. Reuse the exact voice assets and licenses; do not assume the model files are already present in the BobAI repository.
-
-The online Microsoft voice mode used in one Ai-Glasses setting is intentionally not used here because BobAI's voice must stay local/offline.
-
-## 6. Database and email
-
-Neon is compatible with the PostgreSQL connection used by the existing database package. Add the Neon connection string as DATABASE_URL in .env and run the documented database migration workflow after checking the target database. Do not paste database credentials into chat or commit them.
-
-Resend is wired as the preferred OTP delivery method, with SMTP as a fallback. Set RESEND_API_KEY and RESEND_FROM_EMAIL in the private .env file and use a sender/domain verified by Resend. Production startup refuses to proceed without a complete Resend or SMTP configuration. Test real delivery, invalid keys, provider failures, OTP expiry/attempt limits, MFA, and account-deletion reauthentication. Test sending and verifying OTPs, expired codes, resend limits, account recovery, and deletion with disposable accounts.
-
-## 7. Existing backend capabilities
-
-| Feature | Current implementation direction | Still needs verification |
-|---|---|---|
-| Chat and streaming | Local Ollama adapter | Real local model response, cancellation, model-not-installed errors |
-| Coding generation | Shared local Qwen3.5 2B profile by default | Prompt routing and quality on chosen model; optional dedicated coder requires extra memory |
-| Internet research | BobAI search/evidence pipeline plus Ollama synthesis | Search reliability, source-to-claim grounding, stale/broken sources |
-| Image generation | Local Diffusers pipeline, no ComfyUI | Python packages, local model folder, actual output and memory use |
-| Voice | Local Piper + Whisper.cpp integration | Native media build, English/Telugu model paths, playback and transcription |
-| Memory and conversations | PostgreSQL/Drizzle with semantic Qwen3 embeddings and lexical fallback | Neon connection, migrations, persistence, retrieval quality, cross-account isolation |
-| Email OTP | Existing delivery abstraction | Resend adapter, secret configuration, real delivery and failure handling |
-| Image understanding | Shared Qwen3.5 2B Ollama vision model by default | Real image inputs and descriptions on the target computer |
-| Coding workspace agent | Separate sandbox bridge when configured | Requires a local bridge with strong authentication and sandbox verification |
-
-## 8. Verification commands
-
-Run these separately:
-
-    npm test
-    npm run build
-    npm run smoke
-    npm run audit
-
-Review failures and audit findings instead of forcing upgrades blindly. The configured test suite does not prove live Neon/Resend behavior, local model inference, image generation, or voice playback. Verify those paths directly after setup.
-
-## 9. Before public deployment
-
-- Configure HTTPS, secure cookies, CORS, rate limits, backups, monitoring, and rollback.
-- Confirm Ollama is not exposed to the public internet without an authenticated, secured gateway.
-- Review each API route for authorization, validation, and cross-account isolation.
-- Publish accurate privacy/terms, retention, operator, and support information.
-- Test a fresh database migration and a database upgrade using disposable data.
-- Do not claim a feature works until the real local model or infrastructure path has been exercised.
-
-
-## 9. 8 GB RAM model profile and next steps
-
-Use the [8 GB model selection and setup runbook](MODEL_SELECTION_8GB.md) for the exact model downloads, environment settings, sequential memory strategy, verification sequence, and the distinction between completed code and live environment validation.
+The automated tests do not prove Gmail delivery or a specific model's quality; try those directly after setup.

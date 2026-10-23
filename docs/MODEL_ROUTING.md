@@ -1,4 +1,4 @@
-# Model selection (automatic routing)
+# Model routing
 
 Jarvis does not depend on one model. For every request it picks from the models the configured Ollama endpoint actually offers, and falls back to another one if that fails.
 

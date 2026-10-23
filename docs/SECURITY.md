@@ -57,9 +57,11 @@ Security practices for Jarvis development and deployment.
 5. Verify recovery and document follow-up actions.
 
 
-## Current review notes (2026-10-13)
+## Current state (October 2026)
 
-- Agent task instructions now explicitly treat repository/web/file/tool output as untrusted and require authorization for consequential side effects.
-- Stream cancellation is propagated to provider adapters; distributed rate limiting is configured to fail closed when its backing limiter is unavailable.
-- Upload format/size validation, research SSRF/prompt-injection controls, and account export/deletion are present in source but need the final adversarial and multi-user test pass.
-- No full penetration test, dependency audit, production configuration review, or deployed smoke test is certified yet. Keep paid AI disabled until provider-side cost limits and a budget owner are configured.
+- Production mode is on for the live site: CSRF origin checks, Secure/HttpOnly/SameSite=strict cookies, redacted errors, explicit CORS origins (the deployment's own address is added automatically; localhost values copied from `.env.example` are ignored on Vercel).
+- Login codes and tokens are hashed, codes are single use with attempt and rate limits, and codes are never logged.
+- Model credentials stay on the server; the Ollama gateway needs a bearer token, never forwards model downloads or deletes, and keeps Ollama on 127.0.0.1. Routing logs record model names and timings only.
+- Uploads are validated and must pass a malware scanner in production (fail closed). Fetched web pages are blocked from private addresses and treated as untrusted.
+- `npm audit` reports 0 vulnerabilities (Next.js 16.4.2 patches a critical image-optimizer advisory). CodeQL and a secret scan run in CI.
+- Not done: a professional penetration test and a backup restore drill.

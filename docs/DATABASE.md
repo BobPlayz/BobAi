@@ -10,7 +10,7 @@ The database stores application records such as users, workspaces, conversations
 
 - PostgreSQL is the primary database.
 - Drizzle ORM defines and queries application data.
-- The `@jarvis/db` workspace exports the database client and schema.
+- The `@bobai/db` workspace exports the database client and schema.
 - Neon can be used as a hosted PostgreSQL provider; deployment configuration is supplied through environment variables.
 
 ## Setup
@@ -19,7 +19,7 @@ The database stores application records such as users, workspaces, conversations
 2. Set `DATABASE_URL` in the local environment or deployment secret store.
 3. Install dependencies with `npm ci`.
 4. Generate migrations when schema changes are made: `npm run db:generate`.
-5. Apply migrations using the repository's migration workflow: `npm run db:migrate`.
+5. Apply migrations with `npm run db:migrate` (`scripts/migrate.ts`).
 6. Verify the application against the migrated database before deployment.
 
 Do not commit local environment files or real database credentials.
@@ -57,6 +57,12 @@ The database client reads `DATABASE_URL` and supports bounded pool controls thro
 Use the repository's database backup and verification scripts. Test restoration in a non-production environment and document the recovery point and recovery time expectations for each deployment.
 
 
-## Handoff verification notes
+## How migrations run
 
-The database/schema inventory is documented in [`FEATURE_INVENTORY.md`](FEATURE_INVENTORY.md). Recent work touches user-scoped conversations, memory, OTP sessions, account export/deletion, agent quotas, and research/usage records. No fresh-database migration run, production upgrade run, restore drill, or multi-user isolation test is certified by this document. These remain explicit final verification tasks; never run destructive migrations against production during testing.
+- `scripts/migrate.ts` applies the SQL files in `drizzle/` in order inside a lock, records each one with a checksum in `bobai_migrations`, and refuses to continue if an applied migration was changed (a difference in line endings only, from a Windows checkout, is accepted).
+- Early migrations are idempotent (`IF NOT EXISTS`), so a fresh database and an existing one both migrate cleanly. Nothing drops or rewrites data.
+- On push to `main`, the "Deploy Jarvis to Vercel" GitHub workflow runs migrations against production (using the `DATABASE_URL` repository secret) before deploying. A failure shows its reason on the run page without exposing the connection string.
+
+## Verified
+
+A fresh database migrates from zero and re-runs cleanly; the production database migrates through the workflow (October 2026). Chat history, memory, sessions and per-user isolation are covered by `npm run e2e`. A backup restore drill has not been done.

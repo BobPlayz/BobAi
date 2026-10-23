@@ -18,13 +18,6 @@ graphify-out/
 storage/
 
 # Local Bob model training artifacts
-model-training/.venv/
-model-training/__pycache__/
-model-training/output/
-model-training/data/manifest.json
-model-training/data/train.jsonl
-model-training/data/validation.jsonl
-model-training/data/test.jsonl
 *.safetensors
 *.bin
 # Local-only internal Markdown and agent instructions

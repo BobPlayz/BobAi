@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, documentChunks, projects, uploads } from "@bobai/db";
-import { generateEmbedding, rerankText } from "./embeddings.js";
+import { generateEmbedding } from "./embeddings.js";
 
 const CHUNK_SIZE=4000,CHUNK_OVERLAP=400,MAX_CHUNKS=2000;
 function stableUuid(uploadId:string,index:number){const chars=createHash("sha256").update(`${uploadId}:${index}`).digest("hex").slice(0,32).split("");chars[12]="5";chars[16]=((parseInt(chars[16],16)&3)|8).toString(16);return `${chars.slice(0,8).join("")}-${chars.slice(8,12).join("")}-${chars.slice(12,16).join("")}-${chars.slice(16,20).join("")}-${chars.slice(20).join("")}`;}
@@ -58,8 +58,6 @@ export async function indexUpload(uploadId:string,workspaceId:string,projectId?:
 }
 
 export async function searchDocumentChunks(workspaceId:string,userId:string,query:string,projectId?:string,limit=12){const safeLimit=Math.min(50,Math.max(1,Math.floor(limit)));const vector=await generateEmbedding(query);if(vector){const candidateLimit=Math.min(50,Math.max(safeLimit,safeLimit*3));const projectFilter=projectId?sql`and c.project_id = ${projectId}`:sql``;const rows=await db.execute(sql`select c.id,c.upload_id as "uploadId",c.project_id as "projectId",c.chunk_index as "chunkIndex",c.content,c.metadata,1-(c.embedding <=> ${JSON.stringify(vector)}::vector) as similarity from document_chunks c inner join uploads u on u.id=c.upload_id where c.workspace_id=${workspaceId} and u.uploaded_by=${userId} and u.deleted_at is null and u.metadata->>'processing' = 'indexed' ${projectFilter} order by c.embedding <=> ${JSON.stringify(vector)}::vector limit ${candidateLimit}`) as unknown as Array<Record<string,unknown>>;
-    const rerankCount=Math.min(rows.length,20); let reranked=false; const rescored=[] as Array<Record<string,unknown>>;
-    for(let index=0;index<rows.length;index++){const row=rows[index];if(index<rerankCount&&typeof row.content==="string"){const score=await rerankText(query,row.content);if(typeof score==="number"){const similarity=typeof row.similarity==="number"?row.similarity:Number(row.similarity||0); rescored.push({...row,similarity:similarity*.65+score*.35,rerankScore:score});reranked=true;continue;}}rescored.push(row);}
-    rescored.sort((a,b)=>Number(b.similarity||0)-Number(a.similarity||0)); return rescored.slice(0,safeLimit).map(row=>reranked?{...row,metadata:{...(row.metadata&&typeof row.metadata==="object"&&!Array.isArray(row.metadata)?row.metadata:{}),retrieval:"vector+reranker"}}:row);
+    return rows.slice(0,safeLimit);
   }
   const pattern=`%${query.replace(/[\\%_]/g,"\\$&")}%`;const projectFilter=projectId?sql`and c.project_id = ${projectId}`:sql``;const rows=await db.execute(sql`select c.id,c.upload_id as "uploadId",c.project_id as "projectId",c.chunk_index as "chunkIndex",c.content,c.metadata from document_chunks c inner join uploads u on u.id=c.upload_id where c.workspace_id=${workspaceId} and u.uploaded_by=${userId} and u.deleted_at is null and u.metadata->>'processing' = 'indexed' ${projectFilter} and c.content ilike ${pattern} escape '\\' order by c.chunk_index asc limit ${safeLimit}`);return rows as unknown as Array<Record<string,unknown>>;}

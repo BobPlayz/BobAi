@@ -5,7 +5,7 @@ This document describes the API conventions and the current high-level route str
 ## Base configuration
 
 - Local development API: `http://localhost:3001` (unless `PORT` is changed).
-- Business API routes are mounted at the root (for example `/stream`, `/chat`, `/images/generate`, and `/vision/analyze`). Health endpoints are available at `/health` and `/v1/health`.
+- Business API routes are mounted at the root (for example `/stream`, `/chat`, `/images/generate`, and `/vision/analyze`). On Vercel the website forwards `/api/*` to the API and the prefix is stripped. Health: `/health` (process is up) and `/ready` (database, email, model discovery and the model each task would use; names of missing settings, never values).
 - Requests and responses use JSON unless an endpoint explicitly handles another content type.
 - Configure the frontend's API base URL for the environment rather than hard-coding deployment URLs.
 
@@ -41,7 +41,7 @@ The authenticated API currently groups functionality under paths such as:
 | `/automation` | Automation management |
 | `/projects` | Project management |
 | `/tools` | Tool discovery and execution |
-
+| `/model/status` | Model routing status (discovery, picks per task) |
 | `/vision/analyze` | Local Ollama multimodal image understanding |
 | `/ffmpeg` | Local native WAV validation/probing |
 
@@ -74,27 +74,15 @@ A minimal authenticated chat request has this general shape:
 The exact response fields can vary by route state (for example, a tool approval response versus a completed response). Use the route implementation as the source of truth.
 
 
-## Cancellation and failure handling
+## Streaming chat (`POST /stream`)
 
-The current main-branch architecture is local-first. Chat and research synthesis use local Ollama; image generation/editing uses local Diffusers; voice uses local Whisper.cpp and Piper. The stream and voice-turn routes propagate client-disconnect signals between supported stages. Native media calls are synchronous, so a disconnect cannot guarantee immediate interruption of an in-progress native transcription or synthesis call. The web stream parser accepts LF and CRLF event separators. End-to-end cancellation, partial-response persistence, timeout behavior, and native runtime performance still require runtime verification.
+Server-sent events: `token` events with text, then one `done` event (`reply`, `title`, `model` that wrote it, `fallbacks`, `conversationId`, optional `liveData` and `approval`) or one `error` event with a message that is safe to show. The user's message and the reply are saved with the client's message IDs, so retries never duplicate history. If the model fails after text was sent, the partial text is kept and an error follows; another model's answer is never added to it. Client disconnects cancel the model request.
 
-Rate limiting is configured through API middleware. If distributed limiting is explicitly enabled and its backing service fails, requests are denied rather than falling back to uncoordinated per-process limits.
+## Models
 
-## Local-first provider notes
+All AI runs through Ollama (local, the Jarvis gateway, or Ollama Cloud). The model for each request is chosen automatically from the models the endpoint offers, with fallback; see [MODEL_ROUTING.md](MODEL_ROUTING.md). `modelId` in a request may be `bob` (automatic), `bob-coder` (route as coding) or an exact model name (explicit choice). No hosted AI-provider keys are used.
 
-- Chat/coding/research synthesis: Ollama at the server-configured local endpoint. Pull the configured models before use.
-- Image understanding: local Ollama multimodal model via `BOBAI_OLLAMA_VISION_MODEL`.
-- Image generation/editing: local Diffusers model at `BOBAI_IMAGE_MODEL_PATH`.
-- Speech recognition/synthesis: local Whisper.cpp/Piper assets and the compiled native media addon.
-- Neon/PostgreSQL and Resend/SMTP are infrastructure services, not hosted AI-model inference.
-- Do not configure hosted AI-model API keys for the local-first runtime. Do not claim a model is ready until local readiness and actual inference have been tested.
-
-## Public-beta provider notes
-
-- Hosted chat requires `BOBAI_PROVIDER=openai` and a server-side `OPENAI_API_KEY` in production.
-- Hosted image generation/editing uses the Images API and `BOBAI_OPENAI_IMAGE_MODEL`; the current UI defaults to one low-quality image per request and accepts one reference image under 1 MB.
-- Production startup fails closed until the operator confirms a hard provider-side monthly spend limit and sets `BOBAI_PROVIDER_SIDE_BUDGET_CONFIGURED=true`. That variable is an attestation, not an automatic billing integration.
-- Do not expose provider keys to browser code. Provider/model access, spending limits, privacy terms, and live responses must be verified before public release.
+Rate limiting is configured through API middleware. If distributed limiting is enabled and its backing store fails, requests are denied rather than falling back to per-process limits.
 
 ### File processing recovery
 

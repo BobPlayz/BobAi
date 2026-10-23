@@ -1,111 +1,47 @@
-# Jarvis implementation inventory
+# Jarvis feature inventory
 
-**Review date:** 2026-10-13  
-**Review type:** Static repository review only. No route, browser, database, provider, or deployment behavior is certified by this document. Run the deferred verification suite after implementation is complete.
+**Updated:** 2026-10-23. "Verified" means exercised for real (laptop end-to-end run or live site), not just present in the code.
 
-## Web route inventory
+## Website pages
 
-| Route | Purpose | Static status | Notes |
-|---|---|---|---|
-| `/` | Landing / entry | Partial | Public marketing content; theme and responsive review still needed. |
-| `/chat` | Main conversation workspace | Implemented, unverified | Uses `useChat`, sidebar, topbar, composer, and chat window. |
-| `/login` | Name + email OTP quick-start | Implemented, unverified | MFA challenge exists for accounts that require it. SMTP and session flows need live checks. |
-| `/signup` | Legacy/signup entry | Partial | Confirm redirects and eliminate confusing duplicate auth entry points. |
-| `/verify-otp` | OTP verification | Partial | Legacy compatibility route; confirm whether still linked and safe to retain. |
-| `/onboarding` | Personalization onboarding | Partial | Quick-start intentionally routes directly to chat. |
-| `/settings` | Preferences, memory, provider status, export, deletion | Implemented, unverified | Includes local preferences and authenticated account controls. |
-| `/privacy` | Privacy notice draft | Draft | Operator identity, contact, provider list, retention schedule, and legal review remain required. |
-| `/terms` | Terms draft | Draft | Review terms against actual product behavior and intended age range. |
-| `/about` | Product information | Partial | Check theme and remove any claims not backed by shipped features. |
-| `/contact` | Contact information | Draft | Confirm a real support/grievance contact before launch. |
-| `/faq` | Frequently asked questions | Partial | Check all answers against actual availability and cost. |
-| `/thank-you` | Post-action page | Partial | Confirm actual navigation target. |
-| `/waitlist` | Waitlist | Partial | Confirm whether the waitlist is real, or remove the route and entry points. |
+| Route | Purpose | Status |
+| --- | --- | --- |
+| `/` | Landing page with the 3D orrery | Verified on desktop and phone |
+| `/login` | Name + email, then 6-digit code | Verified locally; live needs a real inbox |
+| `/signup`, `/verify-otp` | Old links; redirect to `/login` | Verified |
+| `/onboarding` | Name, use, tone, interests | Verified on phone |
+| `/chat` | Chat, history sidebar (drawer on phones) | Verified locally |
+| `/settings` | Personalization, privacy, memory, about | Verified on phone |
+| `/demo` | Sample conversation, no server | Verified |
+| `/about`, `/faq`, `/contact`, `/privacy`, `/terms`, 404 | Info pages | Verified; legal text still needs adult review |
 
-## API route inventory
+## Features
 
-The API route directory contains: `account`, `admin`, `agentOffice`, `agents`, `apiKeys`, `auth`, `automation`, `capabilities`, `chat`, `collaboration`, `conversations`, `deepResearch`, `ffmpeg`, `files`, `health`, `images`, `mcp`, `memory`, `messages`, `model`, `modelAgents`, `music`, `notifications`, `oauth`, `projects`, `prompts`, `reminders`, `research`, `researchBriefs`, `runtimeAdmin`, `search`, `settings`, `skills`, `stream`, `study`, `tools`, `vision`, `voice`, `webhooks`.
+| Feature | Main code | Status |
+| --- | --- | --- |
+| Model routing and fallback | `services/modelInventory.ts`, `modelHealth.ts`, `modelRouter.ts`, `ollamaProvider.ts` | Verified locally (real Ollama) and with tests; live discovery verified; live chat pending |
+| Streaming chat and history | `routes/stream.ts`, `store/conversationDb.ts`, `web/hooks/useChat.ts` | Verified locally: no duplicates, correct order, loads after reload, partial text kept on failure |
+| Email-code sign-in | `routes/auth.ts`, `services/otp.ts`, `otpDelivery.ts`, `email.ts` | Verified locally incl. SMTP and Resend→SMTP fallback; real Gmail pending |
+| Memory | `routes/memory.ts`, `store/memoryDb.ts` | Verified locally: explicit "remember that" only, per-user, saved in history |
+| Live weather | `services/liveData.ts` (Open-Meteo) | Verified locally |
+| Cricket | `services/liveData.ts` (CricketData.org key or labelled web search) | Web-search path verified locally |
+| Web research | `services/research.ts`, `deepResearch.ts` | Verified locally (sources returned) |
+| Image understanding | `services/vision.ts` → `routeVision` | Verified locally |
+| File uploads | `routes/files.ts`, `documentIndexer.ts`, `malwareScanner.ts` | Verified locally; live needs a malware scanner |
+| Tools with approval | `toolRegistry.ts`, `toolLoop.ts`, `toolDecision.ts` | Tested; approval card shown in the demo |
+| Voice (Alan, Whisper) | `routes/voice.ts`, `bobVoice.ts`, `whisperCpp.ts` | Verified on a PC; not available on Vercel |
+| Image generation | `flux.ts`, `scripts/local_image_generation.py` | Verified on a PC (Tiny-SD); not available on Vercel |
+| Account export/deletion | `routes/account.ts`, `accountPurge.ts` | Present; not exercised end to end |
+| Ollama gateway | `apps/ollama-gateway` | Verified with real Ollama and tests |
 
-Static status across these routes is **implemented or partial, not runtime-certified**. Public launch requires a route-by-route authorization, input-validation, rate-limit, CORS/CSRF, error-handling, and data-isolation review. Health routes expose liveness/readiness; production readiness depends on environment and database configuration.
+## API without screens yet
 
-## Core implementation map
+These have API routes but no page in the website yet: reminders, projects, saved prompts, deep research, study packs, global search, conversation branching, the coding-agent bridge. They are reachable through the API only.
 
-| Capability | Main implementation | Static status | Remaining verification |
-|---|---|---|---|
-| Local AI | `apps/api/src/services/ollamaProvider.ts`, `modelProvider.ts`, `chatEngine.ts`, `modelRegistry.ts` | Implemented in source, runtime unverified | Pull the configured Ollama chat/coding models, verify local streaming and cancellation, and ensure no hosted AI path is called. |
-| Streaming | `apps/api/src/routes/stream.ts`, `apps/web/src/lib/api.ts` | Implemented | Confirm LF/CRLF frames, abort/disconnect handling, partial response persistence, retries, and rate limits. |
-| Accounts / OTP | `apps/api/src/routes/auth.ts`, `apps/web/src/app/login/page.tsx` | Implemented | SMTP, existing account, MFA, terms version, refresh, sign-out, expiry, and cookies. |
-| Conversations | `apps/api/src/routes/conversations.ts`, `apps/api/src/store/conversationDb.ts`, `apps/web/src/hooks/useChat.ts` | Implemented | Refresh/reopen behavior, ownership isolation, duplicate turns, deletion/rename/pin persistence. |
-| Memory | `apps/api/src/routes/memory.ts`, `apps/api/src/store/memoryDb.ts`, Settings | Implemented | Per-user isolation, consent semantics, clear-all, disabled-memory behavior, and sensitive-content checks. |
-| Uploads | `apps/api/src/routes/files.ts`, `documentIndexer.ts`, `ocr.ts`, `malwareScanner.ts` | Implemented | Supported-type consistency, limits, corrupt files, page/pixel limits, cancellation, retention, and outage behavior. |
-| Vision | `apps/api/src/services/vision.ts`, `visionChat.ts`, `ollamaProvider.ts` | Local Ollama multimodal inference implemented, runtime unverified | Uses `BOBAI_OLLAMA_VISION_MODEL` (defaulting to `BOBAI_OLLAMA_MODEL`, currently `qwen3.5:4b`) and sends image bytes only to the configured Ollama endpoint; requires the configured model to be pulled and support image input. |
-| Image generation/editing | `apps/api/src/services/mediaGeneration.ts`, `flux.ts`, `scripts/local_image_generation.py`, `/images/generate` | Local generation and image-to-image editing implemented in source, runtime unverified | Uses a local Diffusers model from `BOBAI_IMAGE_MODEL_PATH`; no ComfyUI or hosted AI API. Install Python dependencies and local model weights. Image-to-image editing uses `AutoPipelineForImage2Image` and requires a compatible local Diffusers model; actual output remains unverified. Verify real output, timeouts, memory use, and session-only output handling. |
-| Web search / research | `apps/api/src/services/research.ts`, `deepResearch.ts`, `apps/api/src/routes/research.ts`, AssistantHub | Implemented in source, unverified | Jarvis runs query construction, search-result parsing, ranking, caching, evidence fetching, and local Ollama synthesis. Internet access is still required. Verify citation-to-evidence matching, stale/conflicting sources, dead links, empty results, and source preference behavior. |\n| Live weather | `apps/api/src/services/toolExecution.ts`, `toolLoop.ts`, `toolRegistry.ts` | Implemented in source, runtime unverified | Uses Open-Meteo geocoding and current/forecast endpoints without a weather API key. Requires outbound internet and a successful tool-routing decision. Verify current conditions, units, ambiguous city names, provider errors, and chat presentation. |\n| Live cricket scores | `apps/api/src/services/toolLoop.ts`, `toolDecision.ts`, `toolRegistry.ts`, `research.ts` | Implemented as sourced web search, runtime unverified | Routes latest-score questions to live web search and returns source links/snippets for synthesis. It is not a guaranteed structured score feed; verify that returned evidence actually contains the match score and status, otherwise Jarvis must say it could not confirm them. |
-| Tools / agents | `toolRegistry.ts`, `toolExecution.ts`, `toolLoop.ts`, `agents.ts`, `agentTasks.ts` | Implemented, partial | Quotas/cost limits, end-to-end approval coverage, cancel/timeout/loop and cross-user tests. |
-| Voice | `apps/api/src/routes/voice.ts`, `services/voice.ts`, `services/bobVoice.ts`, `services/whisperCpp.ts` | Local transcription, synthesis, and one-shot voice-turn orchestration implemented, runtime unverified | Piper English Alan and Telugu Venkatesh assets are selected by language; Whisper.cpp handles transcription. Configure local assets and build native media. Verify playback/transcription and that no online voice adapter is used. |
-| Account deletion/export | `apps/api/src/routes/account.ts`, `accountPurge.ts`, `retention.ts` | Implemented, unverified | Confirm export contents, reauthentication, grace period, workspace ownership and final deletion. |
-| Theme | `ThemeProvider.tsx`, neural shell/composer/sidebar | Partial | Public pages, message menus, markdown/code, upload panels, dialog states, contrast, keyboard, reduced motion. |
+## API route groups
 
-## Main UI control-to-handler map
+`account`, `admin`, `agentOffice`, `agents`, `apiKeys`, `auth`, `automation`, `capabilities`, `chat`, `collaboration`, `conversations`, `deepResearch`, `ffmpeg`, `files`, `health`, `images`, `mcp`, `memory`, `messages`, `model`, `modelAgents`, `music`, `notifications`, `oauth`, `projects`, `prompts`, `reminders`, `research`, `researchBriefs`, `search`, `settings`, `skills`, `stream`, `study`, `tools`, `vision`, `voice`, `webhooks`. Everything except `auth`, `account` and health requires a session.
 
-| Control | Handler / endpoint | Known gap |
-|---|---|---|
-| Send chat message | `useChat.send` → `sendMessage` → `POST /stream` | Verify authenticated end-to-end stream and persistence. |
-| Stop response | `useChat.stop` → `AbortController` | Verify server generation actually stops and partial text remains. |
-| Attach file | `NeuralComposer` → `useChat.handleFiles` → `POST /files/upload` | Cancellation is wired; test transfer and downstream processing behavior. |
-| Voice dictation | `VoiceButton` → `transcribeAudio` → composer text | Confirm transcript can be edited before sending, plus mobile/noisy-input behavior. |
-| Read answer aloud | `VoiceButton` → `synthesizeSpeech` | Verify stop/cleanup and provider fallback. |
-| New chat / switch | `useChat.newChat`, `setActiveId` | Verify reload, server-generated IDs, and no duplicates. |
-| Rename / pin / delete conversation | `useChat` → conversation API | Pin/rename failures currently need visible feedback review; test server persistence. |
-| Research | `AssistantHub.run` → `deepResearch` → `POST /deep-research` | Confirm citations correspond to fetched evidence and preferences actually filter sources. |
-| Run coding agent | `AssistantHub.run` → `runCodingAgent` → `POST /agents/user/run` | Stop/cancel control added; verify ownership and cancellation end-to-end. |
-| Memory controls | Settings → memory API | Test isolation and deletion behavior with separate test users. |
-| Export account | Settings → account export API | Confirm archive/download UX and sensitive data scope. |
-| Delete account | Settings → OTP reauthentication → scheduled deletion | Confirm production mail delivery and workspace-owner resolution. |
-| Theme toggle | `ThemeProvider.toggleTheme` | Verify all routes and persist/reopen behavior. |
+## Database
 
-## Database schema inventory
-
-The schema directory includes users, sessions, email OTPs, password resets, conversations, messages, settings, memories and memory embeddings/history, workspaces and memberships, projects and project files, uploads and document chunks, tool approvals/logs, agent runs/tasks/artifacts, research sessions/claims/briefs/quotas, usage records, model providers, API keys, OAuth/MFA state, notifications, reminders, integrations, organizations/members, subscriptions/billing plans, workflow runs/workflows, webhooks/deliveries, and supporting idempotency/search/file-share tables.
-
-This is a directory-level inventory, not a migration/schema compatibility audit. Verify migrations against a fresh database and an upgrade of the intended production database during final verification.
-
-## Explicit external launch blockers
-
-These cannot safely be completed by code changes alone:
-
-1. Install and configure Ollama with the intended local chat and coding models on the machine running the API.
-2. Wire and verify the Resend adapter for OTP delivery; a Resend API key alone is not sufficient yet.
-3. Configure Neon/PostgreSQL, allowed origins, secrets, and session settings.
-4. Choose hosting and a domain only after comparing full first-year and renewal prices.
-5. Publish the operator identity, support/privacy contact, grievance channel, data-retention policy, and accurate privacy/terms pages.
-6. Obtain qualified legal/adult guidance on the intended age range and any required child-data consent or age-assurance mechanism.
-7. Supply deployment credentials and approve DNS changes; configure HTTPS, backups, monitoring, and rollback.
-8. Run the final CI/build/test/audit/smoke-test pass after the implementation pass is complete.
-9. Capture real desktop/mobile screenshots in both themes and review accessibility on actual target browsers/devices.
-10. Install and verify the local Diffusers model and Piper/Whisper assets on the actual target hardware.
-
-## Latest implementation notes (2026-10-13)
-
-- The public SiteNav and landing page now consume the shared theme provider; the cookie-consent UI is placed inside that provider and follows the selected theme.
-- Leaving the chat aborts the active stream and in-progress upload controllers.
-- Chat and coding responses now route through the local Ollama adapter. Confirm cancellation behavior with the actual local runtime, partial message persistence, and abort timing.
-- When research pages yield no readable evidence, search-result links are retained for transparency rather than returning an empty source list.
-- If distributed rate limiting is configured, failure of the shared limiter now fails closed. Confirm this matches the deployed backend and expected availability policy.
-
-These are static code observations, not verified outcomes. The roadmap's test/build/security pass is still pending.
-
-## Latest backend changes (2026-10-14)
-
-- Deep Research and basic web search now propagate client disconnect cancellation into active web requests, retry waits, source fetches, and local Ollama synthesis; cancelled research is not cached or persisted after cancellation.
-- Local image generation propagates client disconnect cancellation to the spawned Diffusers process and avoids persisting images after disconnect.
-- Local image-to-image editing is wired through `AutoPipelineForImage2Image`, with MIME/base64/size checks and a 12 MB endpoint-specific JSON parser.
-- Image understanding is routed to a vision-capable Ollama model discovered at runtime (see MODEL_SELECTION_8GB.md).
-
-
-## 2026-10-14 backend static audit addendum
-
-- Fixed the production retention-days validator to accept integer values from 0 through 3650.
-- Production startup now requires PostgreSQL-backed distributed rate limiting, and readiness reports degraded if its required `rate_limit_buckets` table is absent.
-- Agent queue execution now waits for initial persistence to settle, and awaits state writes for running, retry, completed, waiting, and failed transitions to reduce stale durable state.
-- **Still not certified:** this is a static review and code correction, not a full security certification. Multi-instance worker leasing, per-user data isolation, approval coverage, provider failure recovery, citation correctness, and native voice/image/model behavior remain unverified. No tests, builds, migrations, or runtime checks were run.
+Users, sessions, email codes, conversations, messages, settings, memories (+ history, optional embeddings), workspaces, projects, uploads and document chunks, tool approvals/logs, agent tasks/artifacts, research sessions/briefs, usage, API keys, OAuth/MFA state, notifications, reminders, workflows, webhooks, rate-limit buckets. Schema: `packages/db/src/schema/`; migrations: `drizzle/`.
