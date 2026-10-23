@@ -136,7 +136,7 @@ export default function LoginPage() {
                 <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} aria-labelledby="terms-label" className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]" />
                 <span id="terms-label">I agree to the <Link href="/terms" target="_blank" className="md-link">Terms</Link> and <Link href="/privacy" target="_blank" className="md-link">Privacy Policy</Link>.</span>
               </label>
-              <button disabled={loading} className="btn-ink w-full justify-center disabled:opacity-50">
+              <button type="submit" disabled={loading} className="btn-ink w-full justify-center disabled:opacity-50">
                 {loading ? "One sec…" : <>Send my code <span className="btn-arrow" aria-hidden>→</span></>}
               </button>
               <div className="flex items-center gap-3 pt-2 text-xs uppercase tracking-widest text-[var(--muted)]" aria-hidden><span className="h-px flex-1 bg-[var(--hairline)]" />or<span className="h-px flex-1 bg-[var(--hairline)]" /></div>
@@ -148,7 +148,7 @@ export default function LoginPage() {
               <label className="block text-sm font-medium">6-digit email code
                 <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-14 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-center font-mono text-2xl tracking-[0.4em] text-[var(--text)] outline-none transition focus:border-[var(--text)]" />
               </label>
-              <button disabled={loading || code.length !== 6} className="btn-ink w-full justify-center disabled:opacity-50">
+              <button type="submit" disabled={loading || code.length !== 6} className="btn-ink w-full justify-center disabled:opacity-50">
                 {loading ? "Checking…" : <>Verify and continue <span className="btn-arrow" aria-hidden>→</span></>}
               </button>
               <button type="button" onClick={() => { setStep("details"); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-[var(--muted)] hover:text-[var(--text)]">Use a different email</button>
@@ -158,7 +158,7 @@ export default function LoginPage() {
               <label className="block text-sm font-medium">6-digit authenticator code
                 <input value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="000000" className="mt-2 h-14 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-center font-mono text-2xl tracking-[0.4em] text-[var(--text)] outline-none transition focus:border-[var(--text)]" />
               </label>
-              <button disabled={loading || mfaCode.length !== 6} className="btn-ink w-full justify-center disabled:opacity-50">{loading ? "Checking…" : "Verify authenticator"}</button>
+              <button type="submit" disabled={loading || mfaCode.length !== 6} className="btn-ink w-full justify-center disabled:opacity-50">{loading ? "Checking…" : "Verify authenticator"}</button>
               <button type="button" onClick={() => { setStep("details"); setChallengeToken(""); setMfaCode(""); setCode(""); setError(""); setNotice(""); }} className="w-full py-2 text-sm text-[var(--muted)] hover:text-[var(--text)]">Start over</button>
             </form>
           )}

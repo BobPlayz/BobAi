@@ -358,7 +358,7 @@ export default function SettingsPage() {
               <div className={`mt-5 rounded-xl border p-4 ${colors.field}`}>
                 <h3 className="text-sm font-medium">Your account data</h3>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Download the account data currently available through the authenticated API. The export may contain private conversations and account information, so keep the file secure.</p>
-                <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-[var(--ink)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
+                <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-[var(--ink)] px-3 py-2 text-sm font-semibold text-[var(--bg)] disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
                 {exportMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{exportMessage}</p>}
               </div>
               {guest ? (
@@ -369,7 +369,7 @@ export default function SettingsPage() {
                   if (armed !== "guest") { arm("guest"); return; }
                   setArmed(null); setDeleteBusy(true);
                   try { await deleteGuestAccount(); await logout(); router.replace("/"); } catch (error) { setDeleteMessage(error instanceof Error ? error.message : "Could not delete the guest account."); } finally { setDeleteBusy(false); }
-                }} className="mt-3 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{armed === "guest" ? "Tap again to delete everything" : "Delete guest account"}</button>
+                }} className="mt-3 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-[#fff] disabled:opacity-40">{armed === "guest" ? "Tap again to delete everything" : "Delete guest account"}</button>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
               ) : (
@@ -379,7 +379,7 @@ export default function SettingsPage() {
                 <button type="button" onClick={() => void sendDeletionCode()} disabled={deleteBusy} className="mt-3 rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-600 disabled:opacity-40">{deleteBusy ? "Please wait…" : "Email me a deletion code"}</button>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <input value={deleteCode} onChange={(event) => setDeleteCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" aria-label="Account deletion email code" className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${colors.field}`} />
-                  <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{armed === "account" ? "Tap again: disable my account now" : "Confirm deletion"}</button>
+                  <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-[#fff] disabled:opacity-40">{armed === "account" ? "Tap again: disable my account now" : "Confirm deletion"}</button>
                 </div>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
@@ -474,11 +474,11 @@ export default function SettingsPage() {
                               <button type="button" onClick={() => void saveMemoryEdit(id)} disabled={memoryBusyId !== null || !memoryEditContent.trim()} aria-label={`Save memory: ${body.slice(0, 40)}`} className="rounded-lg p-2 text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-40">
                                 {memoryBusyId === id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                               </button>
-                              <button type="button" onClick={() => { setMemoryEditId(null); setMemoryEditContent(""); }} disabled={memoryBusyId !== null} aria-label="Cancel memory edit" className={`rounded-lg p-2 ${colors.muted} hover:bg-black/5 disabled:opacity-40`}><X className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => { setMemoryEditId(null); setMemoryEditContent(""); }} disabled={memoryBusyId !== null} aria-label="Cancel memory edit" className={`rounded-lg p-2 ${colors.muted} hover:bg-[var(--surface-2)] disabled:opacity-40`}><X className="h-4 w-4" /></button>
                             </div>
                           ) : (
                             <div className="flex shrink-0 gap-1">
-                              <button type="button" onClick={() => { setMemoryEditId(id); setMemoryEditContent(body); setMemoryError(""); setMemoryNotice(""); }} disabled={!id || memoryBusyId !== null} aria-label={`Edit memory: ${body.slice(0, 40)}`} className={`rounded-lg p-2 ${colors.muted} hover:bg-black/5 disabled:opacity-40`}><Pencil className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => { setMemoryEditId(id); setMemoryEditContent(body); setMemoryError(""); setMemoryNotice(""); }} disabled={!id || memoryBusyId !== null} aria-label={`Edit memory: ${body.slice(0, 40)}`} className={`rounded-lg p-2 ${colors.muted} hover:bg-[var(--surface-2)] disabled:opacity-40`}><Pencil className="h-4 w-4" /></button>
                               <button type="button" onClick={() => id && void removeMemory(id)} disabled={!id || memoryBusyId !== null} aria-label={`Delete memory: ${body.slice(0, 40)}`} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40">
                                 {memoryBusyId === id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                               </button>
@@ -538,11 +538,11 @@ export default function SettingsPage() {
             </section>
           )}
 
-          <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+          {(tab === "personalization" || tab === "memory") && <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
             {saved && <p role="status" className="text-sm text-emerald-600">Preferences saved.</p>}
             {!saved && !dirty && <p className={`text-xs ${colors.muted}`}>No unsaved changes</p>}
-            <button type="button" onClick={save} disabled={!dirty} className="rounded-lg bg-[var(--ink)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40">Save preferences</button>
-          </div>
+            <button type="button" onClick={save} disabled={!dirty} className="rounded-lg bg-[var(--ink)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] transition hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-40">Save preferences</button>
+          </div>}
         </section>
       </div>
     </main>

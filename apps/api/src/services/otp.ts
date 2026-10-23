@@ -46,7 +46,12 @@ export const verifyEmailOtp = async (email: string, code: string, purpose: OtpPu
   const consumed = await db.transaction(async tx => {
     const [claimed] = await tx.update(emailOtps).set({ consumedAt: new Date() }).where(and(eq(emailOtps.id, otp.id), isNull(emailOtps.consumedAt), gt(emailOtps.expiresAt, new Date()), lt(emailOtps.attempts, MAX_ATTEMPTS))).returning({ id: emailOtps.id });
     if (!claimed) return false;
-    if (purpose === "verification") await tx.update(users).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, user.id));
+    if (purpose === "verification") {
+      // First verification: drop any password set before the email was proven (blocks pre-account takeover, where
+      // someone registers another person's email with their own password and waits for it to be verified).
+      await tx.update(users).set({ passwordHash: null, updatedAt: new Date() }).where(and(eq(users.id, user.id), isNull(users.emailVerifiedAt)));
+      await tx.update(users).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, user.id));
+    }
     return true;
   });
   return consumed;

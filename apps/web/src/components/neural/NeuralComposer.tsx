@@ -59,7 +59,7 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
               <span className="sr-only">Attach a file</span>
               <input type="file" multiple accept=".pdf,.txt,.md,.csv,.html,.css,.js,.xml,.png,.jpg,.jpeg,.webp" className="sr-only" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
             </label>
-            <VoiceButton onTranscript={(text) => setInput(text)} disabled={disabled} />
+            <VoiceButton onTranscript={(text) => setInput(text)} disabled={disabled} currentText={input} />
             {onTalk && (
               <button type="button" onClick={onTalk} disabled={disabled} aria-label="Talk to Jarvis (hands-free voice chat)" title="Talk mode" className="atelier-chip !min-h-9">
                 <AudioLines className="h-4 w-4" aria-hidden />

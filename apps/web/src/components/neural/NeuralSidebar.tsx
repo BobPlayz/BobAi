@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { isGuest, logout } from "@/lib/auth";
+import { toast } from "@/lib/toast";
 import { useEffect, useMemo, useState } from "react";
 import type { Conversation } from "@/types/chat";
 import {
@@ -62,7 +63,7 @@ export default function NeuralSidebar({
     if (!renaming) return;
     const conversation = conversations.find((item) => item.id === renaming.id);
     const nextTitle = renaming.title.trim().slice(0, 80);
-    if (save && conversation && nextTitle && nextTitle !== conversation.title) onRename(conversation.id, nextTitle);
+    if (save && conversation && nextTitle && nextTitle !== conversation.title) { onRename(conversation.id, nextTitle); toast("Renamed"); }
     setRenaming(null);
   }
 
@@ -118,7 +119,7 @@ export default function NeuralSidebar({
         </button>
         {menuId === conversation.id && (
           <div className="absolute right-1 top-10 z-30 w-44 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
-            <button type="button" onClick={() => { onPin(conversation.id); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
+            <button type="button" onClick={() => { onPin(conversation.id); setMenuId(null); toast(conversation.pinned ? "Unpinned" : "Pinned"); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
               <Pin className="h-3.5 w-3.5" aria-hidden /> {conversation.pinned ? "Unpin" : "Pin"}
             </button>
             <button type="button" onClick={() => startRename(conversation)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
@@ -205,7 +206,7 @@ export default function NeuralSidebar({
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <button type="button" onClick={() => setDeleteTarget(null)} className="btn-line !min-h-10 text-sm">Cancel</button>
-              <button type="button" onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }} className="btn-ink !min-h-10 text-sm">Delete</button>
+              <button type="button" onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); toast("Chat deleted"); }} className="btn-ink !min-h-10 text-sm">Delete</button>
             </div>
           </section>
         </div>

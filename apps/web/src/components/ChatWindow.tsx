@@ -7,6 +7,7 @@ import VoiceButton from "@/components/VoiceButton";
 import Markdown from "@/components/Markdown";
 import JarvisStage from "@/components/core/JarvisStage";
 import JarvisMark from "@/components/JarvisMark";
+import { toast } from "@/lib/toast";
 
 /** One line of plain text for previews: no markdown symbols or code blocks. */
 function plainPreview(text: string) {
@@ -56,11 +57,27 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  // Follow new messages, but leave an empty chat at the top so its heading is not scrolled under the core.
+  // Follow new messages only while the reader is at the bottom: scrolling up to reread never gets yanked back down.
+  // An empty chat stays at the top so its heading is not scrolled under the core.
+  const following = useRef(true);
+  const lastSeenId = useRef<string | undefined>(undefined);
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
   useEffect(() => {
-    if (messages.length || loading) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-    else if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+    if (!messages.length && !loading) { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; following.current = true; setAwayFromBottom(false); return; }
+    // Sending a message always brings you back down to it.
+    const lastId = messages.at(-1)?.id;
+    if (messages.at(-1)?.role === "user" && lastId !== lastSeenId.current) { following.current = true; setAwayFromBottom(false); }
+    lastSeenId.current = lastId;
+    if (following.current) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, loading]);
+  function onScroll() {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    following.current = near;
+    setAwayFromBottom(!near);
+  }
+  function jumpToLatest() { following.current = true; setAwayFromBottom(false); endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) { if (event.key === "Escape") { setPreview(null); setMenuId(null); } }
     window.addEventListener("keydown", onKeyDown);
@@ -72,11 +89,11 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
   const actions = (message: ChatMessage) => ({
     open: menuId === message.id,
     toggle: () => setMenuId(menuId === message.id ? null : message.id),
-    pin: () => { onPinMessage(message.id); setMenuId(null); },
-    copy: async () => { try { await navigator.clipboard.writeText(message.content); } catch { /* clipboard unavailable */ } setMenuId(null); },
-    remove: () => { onDeleteMessage(message.id); setMenuId(null); },
+    pin: () => { onPinMessage(message.id); setMenuId(null); toast(message.pinned ? "Unpinned" : "Pinned to the top"); },
+    copy: async () => { try { await navigator.clipboard.writeText(message.content); toast("Copied ✓"); } catch { toast("Couldn't copy. Try selecting the text."); } setMenuId(null); },
+    remove: () => { onDeleteMessage(message.id); setMenuId(null); toast("Message deleted"); },
     ...(onReport && message.role === "assistant" ? {
-      report: () => { setMenuId(null); if (reported.has(message.id)) return; setReported((current) => new Set(current).add(message.id)); void onReport(message.id).catch(() => setReported((current) => { const next = new Set(current); next.delete(message.id); return next; })); },
+      report: () => { setMenuId(null); if (reported.has(message.id)) return; setReported((current) => new Set(current).add(message.id)); void onReport(message.id).then(() => toast("Reported. Thanks for flagging it.")).catch(() => { toast("Couldn't send the report. Try again."); setReported((current) => { const next = new Set(current); next.delete(message.id); return next; }); }); },
       reported: reported.has(message.id),
     } : {}),
   });
@@ -87,7 +104,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
         {/* One persistent 3D core: large and centred on an empty chat, docked small once a chat starts. */}
         <div className="jarvis-stage-layer"><JarvisStage compact={messages.length > 0} /></div>
 
-        <div ref={scrollerRef} className="relative h-full overflow-y-auto">
+        <div ref={scrollerRef} onScroll={onScroll} className="relative h-full overflow-y-auto">
           <div className="mx-auto w-full max-w-[780px] px-4 pb-16 pt-8 sm:px-8">
             {pinnedMessages.length > 0 && (
               <nav aria-label="Pinned messages" className="mb-10 border-y border-[var(--hairline)] py-3">
@@ -140,6 +157,9 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
             <div ref={endRef} className="h-2" />
           </div>
         </div>
+        {awayFromBottom && messages.length > 0 && (
+          <button type="button" onClick={jumpToLatest} className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm shadow-[var(--shadow)] animate-[chatEnter_200ms_ease-out_both] motion-reduce:animate-none">↓ Jump to latest</button>
+        )}
       </section>
 
       {preview && (

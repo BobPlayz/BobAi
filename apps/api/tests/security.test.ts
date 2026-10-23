@@ -47,6 +47,13 @@ async function main() {
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), { error: "invalid request structure" });
   });
+  test("old password sign-up, login and reset routes are off (email codes only)", async () => {
+    const post = (path: string, body: unknown) => fetch(`${base}${path}`, { method: "POST", headers: { "content-type": "application/json", "x-csrf-protection": "1", origin: "http://localhost:3000" }, body: JSON.stringify(body) });
+    for (const [path, body] of [["/auth/register", { email: "a@b.co", username: "abc", password: "a-long-password-123", termsAccepted: true, termsVersion: "2026-10-23" }], ["/auth/login", { email: "a@b.co", password: "x" }], ["/account/password-reset/request", { email: "a@b.co" }], ["/account/password-reset/confirm", { token: "x", password: "y" }]] as const) {
+      const response = await post(path, body);
+      assert.equal(response.status, 404, path);
+    }
+  });
   test("unknown protected routes do not reveal route existence", async () => {
     const response = await fetch(`${base}/v1/security-test-does-not-exist`);
     assert.equal(response.status, 401);

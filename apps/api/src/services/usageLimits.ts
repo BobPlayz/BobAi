@@ -92,3 +92,15 @@ export function quotaMessage(state: QuotaState) {
     ? `you've used all ${state.limit} of today's messages. they reset at ${time} UTC.`
     : `jarvis has hit its daily message limit for everyone (to stay inside its free AI plan). it resets at ${time} UTC.`;
 }
+
+/**
+ * Daily caps for anything that emails a code: per sender IP and per address, so nobody can burn the site's email
+ * allowance or flood someone's inbox through any of the code routes. Keys are hashed, never raw IPs or emails.
+ */
+export async function allowCodeEmail(ip: string | undefined, address: string) {
+  const { createHash } = await import("node:crypto");
+  const hashed = (value: string) => createHash("sha256").update(`jarvis-quota:${value}`).digest("hex").slice(0, 32);
+  const byIp = await consumeQuota("code_requests_ip", hashed(ip || "unknown"));
+  if (!byIp.allowed) return false;
+  return (await consumeQuota("code_requests_email", hashed(address.trim().toLowerCase()))).allowed;
+}

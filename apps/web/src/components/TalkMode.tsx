@@ -96,18 +96,20 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.onresult = (event) => {
+        // Rebuilt from every result each time (browsers resend earlier phrases), so words never repeat.
         let interim = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        finalText = "";
+        for (let i = 0; i < event.results.length; i++) {
           const result = event.results[i];
-          if (result.isFinal) finalText += result[0].transcript; else interim += result[0].transcript;
+          if (result.isFinal) finalText += `${result[0].transcript} `; else interim += `${result[0].transcript} `;
         }
-        if (session.current === id) setHeard((finalText + interim).trim());
+        if (session.current === id) setHeard(`${finalText}${interim}`.replace(/\s+/g, " ").trim());
       };
       recognition.onerror = (event) => {
         if (event.error === "not-allowed" || event.error === "service-not-allowed") reject(new Error("Mic access is blocked. Allow the microphone for this site and try again."));
         else if (event.error === "network") reject(new Error("Voice recognition needs an internet connection."));
       };
-      recognition.onend = () => resolve(finalText.trim());
+      recognition.onend = () => resolve(finalText.replace(/\s+/g, " ").trim());
       res.current.recognition = recognition;
       res.current.finishListening = () => recognition.stop();
       recognition.start();

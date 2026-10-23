@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/neural/ThemeProvider";
 import SiteNav from "@/components/SiteNav";
 import CookieConsent from "@/components/CookieConsent";
 import ServiceWorker from "@/components/ServiceWorker";
+import Toaster from "@/components/Toaster";
 import { siteUrl } from "@/lib/siteUrl";
 
 // Type system: a characterful grotesque for headlines, a calm sans for reading, a mono for labels.
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               {children}
               <CookieConsent />
               <ServiceWorker />
+              <Toaster />
             </ThemeProvider>
           </div>
         </div>
