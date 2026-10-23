@@ -85,6 +85,7 @@ export async function listConversations(includeArchived = false): Promise<Conver
     title: typeof conversation.title === "string" ? conversation.title : "new chat",
     createdAt: new Date(String(conversation.createdAt || Date.now())).getTime(),
     pinned: conversation.isPinned === true,
+    ...(typeof (conversation.metadata as { share?: { token?: unknown } } | null)?.share?.token === "string" ? { shareToken: (conversation.metadata as { share: { token: string } }).share.token } : {}),
     messages: await Promise.all((Array.isArray(conversation.messages) ? conversation.messages : []).map(async (message) => {
       const item = message as Record<string, unknown>;
       const attachments = item.attachments as Record<string, unknown> | null;
@@ -97,12 +98,13 @@ export async function listConversations(includeArchived = false): Promise<Conver
         ...(images.length ? { images } : {}),
         ...(attachments && typeof attachments === "object" && Array.isArray(attachments.files) ? { files: attachments.files as ChatMessage["files"] } : {}),
         ...(attachments?.pinned === true ? { pinned: true } : {}),
+        ...(Array.isArray(attachments?.gallery) ? { gallery: (attachments.gallery as NonNullable<ChatMessage["gallery"]>).filter((item) => item && typeof item.thumb === "string" && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(item.thumb) && typeof item.page === "string" && item.page.startsWith("https://commons.wikimedia.org/")).slice(0, 6) } : {}),
         ...(item.role === "assistant" && typeof item.model === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/.test(item.model) && !["bob", "coding-agent"].includes(item.model) ? { model: item.model } : {}),
       };
     })),
   })));
 }
-export async function saveConversation(conversation: Conversation) { const res = await request("/conversations", { method: "POST", body: JSON.stringify({ id: conversation.id, title: conversation.title, messages: conversation.messages.map((message) => ({ id: message.id, role: message.role, content: message.content, ...(message.model ? { model: message.model } : {}), status: "completed", attachments: { ...(message.images?.length ? { images: message.images.filter((image) => Boolean(image.serverImageId) || !image.url.startsWith("data:image/")).map((image) => image.serverImageId ? { serverImageId: image.serverImageId, prompt: image.prompt } : image) } : {}), ...(message.files?.length ? { files: message.files } : {}), ...(message.pinned ? { pinned: true } : {}) } })) }) }); if (!res.ok) throw new Error((await res.text()) || "Failed to save conversation"); }
+export async function saveConversation(conversation: Conversation) { const res = await request("/conversations", { method: "POST", body: JSON.stringify({ id: conversation.id, title: conversation.title, messages: conversation.messages.map((message) => ({ id: message.id, role: message.role, content: message.content, ...(message.model ? { model: message.model } : {}), status: "completed", attachments: { ...(message.gallery?.length ? { gallery: message.gallery } : {}), ...(message.images?.length ? { images: message.images.filter((image) => Boolean(image.serverImageId) || !image.url.startsWith("data:image/")).map((image) => image.serverImageId ? { serverImageId: image.serverImageId, prompt: image.prompt } : image) } : {}), ...(message.files?.length ? { files: message.files } : {}), ...(message.pinned ? { pinned: true } : {}) } })) }) }); if (!res.ok) throw new Error((await res.text()) || "Failed to save conversation"); }
 export async function updateConversation(conversationId: string, changes: { title?: string; isPinned?: boolean; isArchived?: boolean }) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}`, { method: "PATCH", body: JSON.stringify(changes) }); if (!res.ok) throw new Error((await res.text()) || "Failed to update conversation"); return res.json(); }
 export async function deleteConversation(conversationId: string) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}`, { method: "DELETE" }); if (!res.ok && res.status !== 404) throw new Error((await res.text()) || "Failed to delete conversation"); }
 export async function listMemories() { const res = await request("/memory"); const data = await readBody(res); if (!res.ok) throw new Error(data.error || "Failed to load memory"); return data.memories as Array<Record<string, unknown>>; }
@@ -150,3 +152,10 @@ export async function deleteGuestAccount() { const res = await request("/account
 
 /** Reports a Jarvis reply as harmful, offensive or wrong; the owner sees it in the server logs. */
 export async function reportReply(messageId: string) { const res = await request(`/messages/${encodeURIComponent(messageId)}/feedback`, { method: "POST", body: JSON.stringify({ rating: "down", report: true, note: "reported from the chat" }) }); if (!res.ok) { const data = await readBody(res); throw new Error(data.error || "Could not send the report."); } }
+
+/** Creates (or returns) the chat's read-only share link token. */
+export async function shareConversation(id: string) { const res = await request(`/conversations/${encodeURIComponent(id)}/share`, { method: "POST" }); const data = await readBody(res); if (!res.ok || typeof data.token !== "string") throw new Error(data.error || "Could not create a share link."); return data.token as string; }
+export async function unshareConversation(id: string) { const res = await request(`/conversations/${encodeURIComponent(id)}/share`, { method: "DELETE" }); if (!res.ok) { const data = await readBody(res); throw new Error(data.error || "Could not stop sharing."); } }
+
+/** Real, credited pictures from Wikimedia Commons for "ideas" questions. */
+export async function searchPictures(query: string, signal?: AbortSignal) { const res = await request(`/images/search?q=${encodeURIComponent(query)}`, { signal }); const data = await readBody(res); if (!res.ok) throw new Error(data.error || "Picture search failed"); return (Array.isArray(data.pictures) ? data.pictures : []) as NonNullable<ChatMessage["gallery"]>; }

@@ -47,7 +47,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const light = theme === "light";
   const [tab, setTab] = useState<Tab>("personalization");
-  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en" });
+  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en", autoSendVoice: true, visualAnswers: true });
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [memories, setMemories] = useState<Array<Record<string, unknown>>>([]);
@@ -326,6 +326,18 @@ export default function SettingsPage() {
                 <option value="">Not set (natural style)</option>
                 {GENERATIONS.map((generation) => <option key={generation.id} value={generation.id}>{generation.label} (born {generation.from === 1900 ? `before ${generation.to + 1}` : generation.to === 9999 ? `${generation.from} or later` : `${generation.from}–${generation.to}`})</option>)}
               </select>
+
+              <h2 className="font-display mt-8 text-2xl">Pictures with answers</h2>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+                <input type="checkbox" checked={settings.visualAnswers} onChange={(event) => update("visualAnswers", event.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
+                <span><span className="font-medium">Show pictures to help me understand</span><span className={`mt-1 block ${colors.muted}`}>Ask for ideas (like &quot;muggulu ideas&quot;) and Jarvis shows real pictures from Wikimedia Commons. Ask it to explain something and it draws a simple picture. Great for visual learners.</span></span>
+              </label>
+
+              <h2 className="font-display mt-8 text-2xl">Voice typing</h2>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+                <input type="checkbox" checked={settings.autoSendVoice} onChange={(event) => update("autoSendVoice", event.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
+                <span><span className="font-medium">Send automatically when I stop talking</span><span className={`mt-1 block ${colors.muted}`}>Turn this off to check or edit what the mic typed before sending.</span></span>
+              </label>
 
               <h2 className="font-display mt-8 text-2xl">Learn how I type</h2>
               <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">

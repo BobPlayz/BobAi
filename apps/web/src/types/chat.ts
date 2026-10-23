@@ -41,6 +41,10 @@ export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   images?: ChatImage[];
+  /** Real pictures shown with the answer (visual learners), credited to their authors. */
+  gallery?: Array<{ thumb: string; title: string; page: string; credit: string; license: string }>;
+  /** True while Jarvis is finding or drawing a picture for this answer. */
+  visualPending?: boolean;
   files?: ChatFile[];
   pinned?: boolean;
   liveData?: LiveDataInfo;
@@ -60,5 +64,7 @@ export type Conversation = {
   title: string;
   createdAt: number;
   pinned: boolean;
+  /** Share-link token when the chat is shared (read-only snapshot). */
+  shareToken?: string;
   messages: ChatMessage[];
 };

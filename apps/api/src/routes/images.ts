@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db, images } from "@bobai/db";
 import { generateImages, imageProvider } from "../services/mediaGeneration.js";
 import { consumeQuota } from "../services/usageLimits.js";
+import { searchPictures } from "../services/pictureSearch.js";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
@@ -21,6 +22,20 @@ router.get("/", async (req, res) => {
     return res.json({ images: rows });
   } catch {
     return res.status(503).json({ error: "media history unavailable" });
+  }
+});
+
+// Real pictures from Wikimedia Commons for "ideas" questions (see services/pictureSearch.ts).
+const searchLimit = createUserRateLimit(20, 60_000);
+router.get("/search", searchLimit, async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (!q || q.length > 120) return res.status(400).json({ error: "search words must be 1-120 characters" });
+  try { return res.json({ pictures: await searchPictures(q) }); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/safety policy/i.test(message)) return res.status(400).json({ error: "Jarvis can't search for pictures of that." });
+    console.error(JSON.stringify({ event: "picture_search_failed", error: message.slice(0, 200) }));
+    return res.status(502).json({ error: "picture search isn't working right now" });
   }
 });
 

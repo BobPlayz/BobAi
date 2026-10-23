@@ -6,6 +6,7 @@ import NeuralTopbar from "@/components/neural/NeuralTopbar";
 import NeuralComposer from "@/components/neural/NeuralComposer";
 import ChatWindow from "@/components/ChatWindow";
 import TalkMode from "@/components/TalkMode";
+import Shortcuts from "@/components/Shortcuts";
 import { loadPreferences } from "@/lib/preferences";
 import { reportReply } from "@/lib/api";
 import { useEffect, useState } from "react";
@@ -35,6 +36,8 @@ export default function ChatPage() {
           onPin={chat.togglePin}
           onRename={chat.renameConversation}
           onDelete={chat.deleteConversation}
+          onShare={chat.shareChat}
+          onUnshare={chat.unshareChat}
         />
       }
       topbar={<NeuralTopbar caption={chat.activeConversation?.messages.length ? chat.activeConversation.title : "New chat"} />}
@@ -55,6 +58,7 @@ export default function ChatPage() {
           voiceReplies={voiceReplies}
           onToggleVoiceReplies={toggleVoiceReplies}
           onTalk={() => setTalking(true)}
+          onVoiceSend={(text) => { void chat.send(text); }}
         />
       }
     >
@@ -70,8 +74,10 @@ export default function ChatPage() {
         voiceReplies={voiceReplies && !talking}
         autoPlayMessageId={chat.lastReplyId}
         onReport={reportReply}
+        onEditLast={(id) => chat.editLastUserMessage(chat.activeId, id)}
       />
-      {talking && <TalkMode language={loadPreferences().language} onUtterance={chat.send} onClose={() => setTalking(false)} />}
+      <Shortcuts onNewChat={chat.newChat} onStop={chat.stop} streaming={chat.streaming} />
+      {talking && <TalkMode language={loadPreferences().language} onUtterance={(text) => chat.send(text, { voice: true })} onClose={() => setTalking(false)} />}
     </NeuralShell>
   );
 }

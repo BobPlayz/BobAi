@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Copy, Flag, MoreHorizontal, Pin, RotateCcw, Trash2, X } from "lucide-react";
+import { Copy, Flag, MoreHorizontal, Pencil, Pin, RotateCcw, Trash2, X } from "lucide-react";
 import type { ChatMessage, LiveDataInfo, ToolApproval } from "@/types/chat";
 import VoiceButton from "@/components/VoiceButton";
 import Markdown from "@/components/Markdown";
@@ -33,6 +33,8 @@ type Props = {
   browserVoice?: boolean;
   /** Flags a Jarvis reply as harmful or wrong (Play Store rule for AI apps). Omit to hide Report (the demo). */
   onReport?: (messageId: string) => Promise<void>;
+  /** Puts your latest question back in the box to fix and resend. Omit to hide Edit (the demo). */
+  onEditLast?: (messageId: string) => void;
 };
 
 const SUGGESTIONS = [
@@ -41,7 +43,7 @@ const SUGGESTIONS = [
   "Help me write a Python program that removes duplicates from a list.",
 ];
 
-export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion, browserVoice = false, onReport }: Props) {
+export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion, browserVoice = false, onReport, onEditLast }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [reported, setReported] = useState<Set<string>>(() => new Set());
   const [preview, setPreview] = useState<string | null>(null);
@@ -86,12 +88,14 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
 
   const pinnedMessages = messages.filter((message) => message.pinned);
   const lastAssistantId = [...messages].reverse().find((message) => message.role === "assistant")?.id;
+  const lastUserId = [...messages].reverse().find((message) => message.role === "user")?.id;
   const actions = (message: ChatMessage) => ({
     open: menuId === message.id,
     toggle: () => setMenuId(menuId === message.id ? null : message.id),
     pin: () => { onPinMessage(message.id); setMenuId(null); toast(message.pinned ? "Unpinned" : "Pinned to the top"); },
     copy: async () => { try { await navigator.clipboard.writeText(message.content); toast("Copied ✓"); } catch { toast("Couldn't copy. Try selecting the text."); } setMenuId(null); },
     remove: () => { onDeleteMessage(message.id); setMenuId(null); toast("Message deleted"); },
+    ...(onEditLast && message.role === "user" && message.id === lastUserId && !loading ? { edit: () => { setMenuId(null); onEditLast(message.id); } } : {}),
     ...(onReport && message.role === "assistant" ? {
       report: () => { setMenuId(null); if (reported.has(message.id)) return; setReported((current) => new Set(current).add(message.id)); void onReport(message.id).then(() => toast("Reported. Thanks for flagging it.")).catch(() => { toast("Couldn't send the report. Try again."); setReported((current) => { const next = new Set(current); next.delete(message.id); return next; }); }); },
       reported: reported.has(message.id),
@@ -192,7 +196,7 @@ function EmptyState({ onSuggestion }: { onSuggestion?: (text: string) => void })
   );
 }
 
-type ActionProps = { open: boolean; toggle: () => void; pin: () => void; copy: () => Promise<void>; remove: () => void; report?: () => void; reported?: boolean };
+type ActionProps = { open: boolean; toggle: () => void; pin: () => void; copy: () => Promise<void>; remove: () => void; report?: () => void; reported?: boolean; edit?: () => void };
 
 function UserMessage({ message, ...menu }: { message: ChatMessage } & ActionProps) {
   return (
@@ -220,6 +224,23 @@ function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval
 
       {message.content && <div className="msg-assistant"><Markdown text={message.content} /></div>}
 
+      {message.visualPending && <p className="caption mt-4 animate-pulse normal-case tracking-normal" role="status">Finding a picture to help…</p>}
+      {message.gallery && message.gallery.length > 0 && (
+        <div className="mt-5">
+          <p className="caption mb-2">Pictures to help</p>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {message.gallery.map((picture) => (
+              <li key={picture.page} className="overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)]">
+                <a href={picture.page} target="_blank" rel="noopener noreferrer" className="block" title={`${picture.title}: open on Wikimedia Commons`}>
+                  <img src={picture.thumb} alt={picture.title} loading="lazy" referrerPolicy="no-referrer" className="aspect-square w-full object-cover transition-transform duration-300 hover:scale-[1.03]" />
+                </a>
+                <p className="truncate px-2.5 py-1.5 text-[11px] text-[var(--muted)]" title={`${picture.credit} · ${picture.license}`}>{picture.credit} · {picture.license}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-[var(--muted)]">From Wikimedia Commons. Tap a picture to see where it&apos;s from.</p>
+        </div>
+      )}
       {message.images && message.images.length > 0 && (
         <div className={`grid gap-3 ${message.images.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"} ${message.content ? "mt-5" : ""}`}>
           {message.images.map((image) => (
@@ -259,7 +280,7 @@ function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval
   );
 }
 
-function MessageMenu({ open, toggle, pin, copy, remove, report, reported, pinned, align }: ActionProps & { pinned?: boolean; align: "left" | "right" }) {
+function MessageMenu({ open, toggle, pin, copy, remove, report, reported, edit, pinned, align }: ActionProps & { pinned?: boolean; align: "left" | "right" }) {
   return (
     <div className="relative" data-message-menu>
       <button type="button" onClick={toggle} aria-label="Message actions" aria-expanded={open} className={`atelier-iconbtn !h-8 !w-8 ${open ? "" : "opacity-0 focus:opacity-100 group-hover:opacity-100"} max-sm:opacity-100 [@media(hover:none)]:opacity-100`}>
@@ -267,6 +288,7 @@ function MessageMenu({ open, toggle, pin, copy, remove, report, reported, pinned
       </button>
       {open && (
         <div className={`absolute top-9 z-30 w-40 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)] ${align === "left" ? "right-0" : "right-0"}`}>
+          {edit && <button type="button" onClick={edit} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Pencil className="h-3.5 w-3.5" aria-hidden /> Edit</button>}
           <button type="button" onClick={pin} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Pin className="h-3.5 w-3.5" aria-hidden /> {pinned ? "Unpin" : "Pin"}</button>
           <button type="button" onClick={() => void copy()} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</button>
           <button type="button" onClick={remove} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--surface-2)]"><Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete</button>

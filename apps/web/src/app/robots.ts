@@ -20,6 +20,7 @@ export default function robots(): MetadataRoute.Robots {
         "/agents",
         "/automations",
         "/projects",
+        "/share",
       ],
     },
     sitemap: `${base}/sitemap.xml`,

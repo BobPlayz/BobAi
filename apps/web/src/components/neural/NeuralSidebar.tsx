@@ -11,8 +11,11 @@ import {
   PenSquare,
   Pin,
   Search,
+  Download,
+  Link as LinkIcon,
   LogOut,
   Settings,
+  Share2,
   Trash2,
   Pencil,
   X,
@@ -28,7 +31,21 @@ type Props = {
   onPin: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
+  /** Creates and copies a read-only share link; resolves to the link. */
+  onShare?: (id: string) => Promise<string>;
+  onUnshare?: (id: string) => Promise<void>;
 };
+
+/** Saves a chat as a Markdown file: easy to read anywhere, or paste into notes. */
+function downloadChat(conversation: Conversation) {
+  const body = conversation.messages.map((message) => `**${message.role === "user" ? "You" : "Jarvis"}:**\n\n${message.content || (message.images?.length ? "(a picture)" : "")}`).join("\n\n---\n\n");
+  const url = URL.createObjectURL(new Blob([`# ${conversation.title || "Jarvis chat"}\n\n${body}\n`], { type: "text/markdown" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${(conversation.title || "jarvis-chat").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "jarvis-chat"}.md`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
 
 export default function NeuralSidebar({
   conversations,
@@ -40,6 +57,8 @@ export default function NeuralSidebar({
   onPin,
   onRename,
   onDelete,
+  onShare,
+  onUnshare,
 }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
@@ -124,6 +143,15 @@ export default function NeuralSidebar({
             </button>
             <button type="button" onClick={() => startRename(conversation)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
               <Pencil className="h-3.5 w-3.5" aria-hidden /> Rename
+            </button>
+            {onShare && <button type="button" onClick={() => { setMenuId(null); void onShare(conversation.id).then(() => toast("Share link copied. Anyone with it can read this chat.")).catch((error: unknown) => toast(error instanceof Error ? error.message : "Couldn't make a share link.")); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
+              <Share2 className="h-3.5 w-3.5" aria-hidden /> {conversation.shareToken ? "Copy share link" : "Share link"}
+            </button>}
+            {onUnshare && conversation.shareToken && <button type="button" onClick={() => { setMenuId(null); void onUnshare(conversation.id).then(() => toast("Stopped sharing. The old link no longer works.")).catch(() => toast("Couldn't stop sharing. Try again.")); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
+              <LinkIcon className="h-3.5 w-3.5" aria-hidden /> Stop sharing
+            </button>}
+            <button type="button" onClick={() => { setMenuId(null); downloadChat(conversation); toast("Chat downloaded"); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]">
+              <Download className="h-3.5 w-3.5" aria-hidden /> Download
             </button>
             <button type="button" onClick={() => { setDeleteTarget(conversation); setMenuId(null); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--surface-2)]">
               <Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete

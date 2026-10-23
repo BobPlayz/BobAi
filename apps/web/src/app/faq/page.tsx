@@ -13,6 +13,8 @@ const faqs = [
   ["Can it build websites?", "Ask for something like \"a simple calculator website\" and press Preview to try it right in the chat, Open to run it full screen, or Download to keep it. On a computer running Jarvis locally, ask for it \"on localhost\" and it hosts it for you."],
   ["Does it remember things?", "Only when you ask, for example \"remember that my cat is called Max\". You can see and delete everything it knows about you in Settings → What I know."],
   ["Is there a limit?", "Yes, a daily number of messages, pictures and voice per person, so the free services behind Jarvis keep working for everyone. You can see your messages left in Settings."],
+  ["Can I share a chat?", "Yes. Tap ⋯ next to a chat and choose Share link. Anyone with the link sees a read-only copy of the chat as it was then, never anything you say after. Choose Stop sharing to turn the link off."],
+  ["Can it show me pictures?", "Yes. Ask for ideas (like \"muggulu ideas\") and Jarvis shows real pictures from Wikimedia Commons with credits. Ask it to explain something and it draws a simple picture. You can turn this off in Settings."],
   ["Can other people see my chats?", "No. Every conversation, memory and file belongs to your account, and the server checks that on every request."],
 ] as const;
 
