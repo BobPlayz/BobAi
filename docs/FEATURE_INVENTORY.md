@@ -40,7 +40,7 @@ These have API routes but no page in the website yet: reminders, projects, saved
 
 ## API route groups
 
-`account`, `admin`, `agentOffice`, `agents`, `apiKeys`, `auth`, `automation`, `capabilities`, `chat`, `collaboration`, `conversations`, `deepResearch`, `ffmpeg`, `files`, `health`, `images`, `mcp`, `memory`, `messages`, `model`, `modelAgents`, `music`, `notifications`, `oauth`, `projects`, `prompts`, `reminders`, `research`, `researchBriefs`, `search`, `settings`, `skills`, `stream`, `study`, `tools`, `vision`, `voice`, `webhooks`. Everything except `auth`, `account` and health requires a session.
+`account`, `admin`, `agentOffice`, `agents`, `auth`, `automation`, `capabilities`, `chat`, `collaboration`, `conversations`, `deepResearch`, `ffmpeg`, `files`, `health`, `images`, `mcp`, `memory`, `messages`, `model`, `modelAgents`, `music`, `notifications`, `oauth`, `projects`, `prompts`, `reminders`, `research`, `researchBriefs`, `search`, `settings`, `skills`, `stream`, `study`, `tools`, `vision`, `voice`, `webhooks`. Everything except `auth`, `account` and health requires a session.
 
 ## Database
 

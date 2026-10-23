@@ -1,3 +1,4 @@
+import { boundedText } from "./httpSafety.js";
 export type SkillKind = "image" | "video" | "audio" | "research" | "coding" | "design" | "writing" | "music";
 
 export type SkillDefinition = {
@@ -80,8 +81,9 @@ export async function executeSkill(id: string, payload: Record<string, unknown>)
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ skill: skill.id, ...payload }),
       signal: controller.signal,
+      redirect: "error",
     });
-    const text = await response.text();
+    const text = await boundedText(response, 1024 * 1024);
     let body: unknown = text;
     try { body = JSON.parse(text); } catch { /* provider returned plain text */ }
     if (!response.ok) throw new Error(`skill provider returned ${response.status}`);

@@ -22,7 +22,8 @@ function readCookie(req: Request, name: string) {
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.header("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7).trim() : readCookie(req, "jarvis_access");
+  // An empty "Bearer " header must not hide a valid session cookie.
+  const token = (header?.startsWith("Bearer ") ? header.slice(7).trim() : "") || readCookie(req, "jarvis_access");
   if (!token) return res.status(401).json({ error: "authentication required" });
   try {
     const user = await authenticateAccessToken(token);
