@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { logout } from "@/lib/auth";
 import { useMemo, useState } from "react";
 import type { Conversation } from "@/types/chat";
 import {
@@ -8,6 +10,7 @@ import {
   PenSquare,
   Pin,
   Search,
+  LogOut,
   Settings,
   Trash2,
   Pencil,
@@ -39,6 +42,8 @@ export default function NeuralSidebar({
 }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const router = useRouter();
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -142,6 +147,10 @@ export default function NeuralSidebar({
           <Settings className="h-4 w-4" aria-hidden />
           Settings
         </Link>
+        <button type="button" onClick={async () => { setLoggingOut(true); await logout(); router.replace("/login"); }} disabled={loggingOut} className="convo-item w-full text-left disabled:opacity-60">
+          <LogOut className="h-4 w-4" aria-hidden />
+          {loggingOut ? "Logging out…" : "Log out"}
+        </button>
       </div>
 
       {deleteTarget && (

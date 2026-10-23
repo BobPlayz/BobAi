@@ -7,6 +7,7 @@ import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
 import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, getTypingProfile, getUsage, type TypingProfile, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
 import { logout } from "@/lib/auth";
+import { logOutEverywhere } from "@/lib/api";
 
 import { loadPreferences, savePreferences, type Preferences } from "@/lib/preferences";
 import { GENERATIONS } from "@/lib/generation";
@@ -63,6 +64,7 @@ export default function SettingsPage() {
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => setSettings(readSettings()), []);
 
@@ -328,6 +330,15 @@ export default function SettingsPage() {
           )}
 
           {tab === "privacy" && (
+            <>
+            <section className={`mb-5 rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
+              <h2 className="font-display text-2xl">Log out</h2>
+              <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Log out here, or everywhere you&apos;re signed in (handy if you used Jarvis on someone else&apos;s phone). Your chats stay saved.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" disabled={loggingOut} onClick={async () => { setLoggingOut(true); await logout(); router.replace("/login"); }} className="btn-ink !min-h-11 text-sm disabled:opacity-60">Log out</button>
+                <button type="button" disabled={loggingOut} onClick={async () => { setLoggingOut(true); await logOutEverywhere(); router.replace("/login"); }} className="btn-line !min-h-11 text-sm disabled:opacity-60">Log out on all devices</button>
+              </div>
+            </section>
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
               <h2 className="font-display text-2xl">Privacy basics</h2>
               <ul className={`mt-4 list-disc space-y-3 pl-5 text-sm leading-6 ${colors.muted}`}>
@@ -354,6 +365,7 @@ export default function SettingsPage() {
               </div>
               <p className={`mt-4 text-xs ${colors.muted}`}>This is a practical summary, not a complete legal privacy notice. The service operator should publish a policy matching the actual deployment and providers.</p>
             </section>
+            </>
           )}
 
           {tab === "memory" && (

@@ -172,6 +172,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .atelier-sidebar { display: none; width: 272px; flex: none; flex-direction: column; border-right: 1px solid var(--hairline); background: var(--surface); }
 @media (min-width: 768px) { .atelier-sidebar { display: flex; } }
 .atelier-sidebar-mobile { position: fixed; inset: 0; z-index: 70; display: flex; }
+/* Plain CSS outranks Tailwind's layered utilities, so md:hidden can't hide these: on laptops the sidebar is always shown. */
+@media (min-width: 768px) { .atelier-iconbtn.atelier-menu-btn, .atelier-shell .atelier-sidebar-mobile { display: none; } }
 .atelier-sidebar-mobile > .atelier-sidebar { display: flex; width: min(300px, 86vw); box-shadow: var(--shadow); animation: slideIn 380ms var(--ease-out); }
 .atelier-scrim { flex: 1; background: rgba(21, 19, 15, 0.35); }
 @keyframes slideIn { from { transform: translateX(-100%); } }

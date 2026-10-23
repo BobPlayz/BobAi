@@ -1,5 +1,5 @@
 import type { ChatMessage, Conversation } from "@/types/chat";
-import { API, clearSession, getSession, refreshSession } from "@/lib/auth";
+import { API, clearSession, getSession, logout, refreshSession } from "@/lib/auth";
 import { PREFERENCES_KEY, loadPreferences } from "@/lib/preferences";
 export async function request(path: string, init: RequestInit = {}, retry = true) { const headers = new Headers(init.headers); if (!(init.body instanceof FormData)) headers.set("Content-Type", "application/json"); if (["POST","PUT","PATCH","DELETE"].includes((init.method || "GET").toUpperCase())) headers.set("X-CSRF-Protection", "1"); const session = getSession(); if (session?.accessToken) headers.set("Authorization", `Bearer ${session.accessToken}`); let res = await fetch(`${API}${path}`, { ...init, credentials: "include", headers }); if (res.status === 401 && retry) { const refreshed = await refreshSession(); if (refreshed) { const retryHeaders = new Headers(init.headers); if (!(init.body instanceof FormData)) retryHeaders.set("Content-Type", "application/json"); if (["POST","PUT","PATCH","DELETE"].includes((init.method || "GET").toUpperCase())) retryHeaders.set("X-CSRF-Protection", "1"); if (refreshed.accessToken) retryHeaders.set("Authorization", `Bearer ${refreshed.accessToken}`); res = await fetch(`${API}${path}`, { ...init, credentials: "include", headers: retryHeaders }); } else clearSession(); } return res; }
 type ChatStreamResult = { reply?: string; title?: string; imagePrompt?: string; [key: string]: unknown };
@@ -131,3 +131,6 @@ export async function getUsage(): Promise<{ messages: { used: number; limit: num
 export type TypingProfile = { messages: number; avgLength: number; lowercase: number; emoji: number; exclamation: number; endPunctuation: number; abbreviations: number; slang: Record<string, number> };
 /** The texting-style profile Jarvis has learned (numbers and slang words only), if any. */
 export async function getTypingProfile(): Promise<TypingProfile | null> { const res = await request("/settings"); if (!res.ok) return null; const data = await res.json() as { settings?: Record<string, unknown> }; const value = data.settings?.typingStyle as TypingProfile | undefined; return value && typeof value.messages === "number" ? value : null; }
+
+/** Ends every session on every device (phones, other browsers), then logs out here. */
+export async function logOutEverywhere() { await request("/account/sessions", { method: "DELETE" }).catch(() => undefined); await logout(); }
