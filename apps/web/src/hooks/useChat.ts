@@ -25,10 +25,13 @@ function loadLocalConversationUi(): Conversation[] {
     });
   } catch { return []; }
 }
-function liveAndApproval(result: Record<string, unknown>): Pick<ChatMessage, "liveData" | "approval"> {
+function liveAndApproval(result: Record<string, unknown>): Pick<ChatMessage, "liveData" | "approval" | "model"> {
   const live = result.liveData as LiveDataInfo | undefined;
   const approval = result.approval as Omit<ToolApproval, "state"> | undefined;
+  // The Ollama model that actually answered, shown under the reply.
+  const model = typeof result.model === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/.test(result.model) && !["bob", "coding-agent"].includes(result.model) ? result.model : undefined;
   return {
+    ...(model ? { model } : {}),
     ...(live && typeof live.provider === "string" ? { liveData: { ...live, sources: Array.isArray(live.sources) ? live.sources.filter((source) => typeof source?.url === "string" && /^https?:\/\//.test(source.url)) : [] } } : {}),
     ...(approval && typeof approval.tool === "string" && typeof approval.workspaceId === "string" ? { approval: { ...approval, arguments: approval.arguments && typeof approval.arguments === "object" ? approval.arguments : {}, state: "pending" as const } } : {}),
   };

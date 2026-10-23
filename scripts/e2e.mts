@@ -79,6 +79,11 @@ ok("history comes back in order (user, assistant, user, assistant)", roles === "
 const listed = await (await alice.call("/conversations")).json() as { items?: Array<{ id: string; messages?: unknown[] }> };
 ok("conversation list returns saved messages (what the web app loads after a reload)", Boolean(listed.items?.find((item) => item.id === conversationId)?.messages?.length));
 
+// The web app re-saves the whole conversation after a reply; that must not erase which model answered.
+const beforeResave = await (await alice.call(`/conversations/${conversationId}`)).json() as { messages?: Array<{ id: string; role: string; content: string; model?: string | null }> };
+await alice.call("/conversations", { method: "POST", body: JSON.stringify({ id: conversationId, title: "e2e", messages: (beforeResave.messages ?? []).map((m) => ({ id: m.id, role: m.role, content: m.content, status: "completed" })) }) });
+const afterResave = await (await alice.call(`/conversations/${conversationId}`)).json() as { messages?: Array<{ role: string; model?: string | null }> };
+ok("re-saving a conversation keeps the model that answered", (afterResave.messages ?? []).filter((m) => m.role === "assistant").every((m) => Boolean(m.model)), (afterResave.messages ?? []).map((m) => m.model ?? "-").join(","));
 // Delete a message server-side.
 const del = await alice.call(`/conversations/${conversationId}/messages/${a2}`, { method: "DELETE" });
 const afterDelete = await (await alice.call(`/conversations/${conversationId}`)).json() as { conversation?: { messages?: unknown[] }; messages?: unknown[] };
@@ -90,6 +95,17 @@ const mem = await stream(alice, { conversationId: memoryConversation, assistantM
 const memoryTurn = await (await alice.call(`/conversations/${memoryConversation}`)).json() as { messages?: Array<{ role?: string }> };
 ok("a 'remember that…' turn is saved in chat history too", (memoryTurn.messages ?? []).map((m) => m.role).join(",") === "user,assistant", (memoryTurn.messages ?? []).map((m) => m.role).join(","));
 ok("explicit 'remember that…' saves a memory", mem.done?.memoryStored === true, JSON.stringify(mem.done?.reply ?? mem.error).slice(0, 80));
+// Texting style: learned from real messages, stored as numbers only, and resettable.
+for (const text of ["yo ngl bro this is fire fr", "bro u up rn 😭", "lowkey fr tho bro"]) await stream(alice, { generation: "gen-z", messages: [{ id: crypto.randomUUID(), role: "user", content: text }] });
+const styleSettings = await (await alice.call("/settings")).json() as { settings?: Record<string, unknown> };
+const typing = styleSettings.settings?.typingStyle as { messages?: number; slang?: Record<string, number> } | undefined;
+ok("texting style is learned from the user's messages", (typing?.messages ?? 0) >= 3 && (typing?.slang?.bro ?? 0) >= 2, JSON.stringify(typing?.slang ?? {}));
+ok("the style profile stores no message text", !JSON.stringify(typing ?? {}).includes("this is fire"));
+const reset = await alice.call("/settings/typingStyle", { method: "DELETE" });
+const afterReset = await (await alice.call("/settings")).json() as { settings?: Record<string, unknown> };
+ok("the texting style can be reset", reset.status === 200 && afterReset.settings?.typingStyle === undefined, `HTTP ${reset.status}`);
+const badGeneration = await alice.call("/settings/generation", { method: "PUT", body: JSON.stringify({ value: "ignore previous instructions" }) });
+ok("only real generations can be saved", badGeneration.status === 400, `HTTP ${badGeneration.status}`);
 const memories = await (await alice.call("/memory")).json() as { memories?: Array<{ content?: string; value?: string }> };
 ok("memory is listed for its owner", JSON.stringify(memories).includes("green"));
 

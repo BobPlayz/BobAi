@@ -56,6 +56,7 @@ router.post("/turn", limit, async (req, res) => {
     const messages = [...(Array.isArray(supplied) ? supplied : []), { role: "user", content: spokenText }];
     const memories = memoryEnabled ? await dbRecallRelevant(workspace.id, req.user!.id, spokenText, 12) : [];
     const prepared = await prepareChat({
+      generation: req.body?.generation,
       messages,
       modelId: selectedModelId,
       language: getSetting("language"),

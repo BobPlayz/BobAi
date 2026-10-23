@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
-import { clearMemories, confirmAccountDeletion, deleteMemory, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
+import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
 import { logout } from "@/lib/auth";
 
-import { PREFERENCES_KEY as SETTINGS_KEY } from "@/lib/preferences";
+import { loadPreferences, savePreferences, type Preferences } from "@/lib/preferences";
+import { GENERATIONS } from "@/lib/generation";
 import JarvisMark from "@/components/JarvisMark";
 
-type SettingsState = { personality: string; memory: boolean; sourceTypes: string[] };
+type SettingsState = Preferences;
 type Tab = "personalization" | "privacy" | "memory" | "research" | "about";
 
 const tabs: { id: Tab; label: string }[] = [
@@ -22,17 +23,8 @@ const tabs: { id: Tab; label: string }[] = [
 ];
 
 function readSettings(): SettingsState {
-  const defaults: SettingsState = { personality: "", memory: true, sourceTypes: ["general"] };
-  try {
-    const value = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) || "{}") as Partial<SettingsState>;
-    return {
-      personality: typeof value.personality === "string" ? value.personality.slice(0, 12000) : defaults.personality,
-      memory: value.memory !== false,
-      sourceTypes: Array.isArray(value.sourceTypes) ? [...new Set(value.sourceTypes.filter((item): item is string => typeof item === "string" && ["official", "academic", "news", "general"].includes(item)))].slice(0, 4) : defaults.sourceTypes,
-    };
-  } catch {
-    return defaults;
-  }
+  const value = loadPreferences();
+  return { ...value, sourceTypes: [...new Set(value.sourceTypes.filter((item) => ["official", "academic", "news", "general"].includes(item)))].slice(0, 4) };
 }
 
 export default function SettingsPage() {
@@ -40,7 +32,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const light = theme === "light";
   const [tab, setTab] = useState<Tab>("personalization");
-  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"] });
+  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true });
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [memories, setMemories] = useState<Array<Record<string, unknown>>>([]);
@@ -200,9 +192,18 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
+  const [styleResetBusy, setStyleResetBusy] = useState(false);
+  const [styleResetNotice, setStyleResetNotice] = useState("");
+  async function resetTypingStyle() {
+    setStyleResetBusy(true); setStyleResetNotice("");
+    try { await deleteSetting("typingStyle"); setStyleResetNotice("Done. Jarvis forgot your texting style and will start learning again."); }
+    catch { setStyleResetNotice("Couldn't reset right now. Try again in a moment."); }
+    finally { setStyleResetBusy(false); }
+  }
+
   function save() {
     try {
-      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      savePreferences(settings);
       setDirty(false);
       setSaved(true);
     } catch {
@@ -274,6 +275,21 @@ export default function SettingsPage() {
                 className={`mt-4 w-full resize-y rounded-xl border px-4 py-3 text-sm leading-6 outline-none focus:border-[var(--text)] ${colors.field}`}
               />
               <p className={`mt-2 text-xs ${colors.muted}`}>{settings.personality.length}/12000 characters</p>
+
+              <h2 className="font-display mt-8 text-2xl">Your generation</h2>
+              <p className={`mt-1 text-sm ${colors.muted}`}>Jarvis texts you the way your generation does.</p>
+              <select aria-label="Your generation" value={settings.generation} onChange={(event) => update("generation", event.target.value)} className={`mt-3 h-11 w-full max-w-sm rounded-xl border px-3 text-sm outline-none focus:border-[var(--text)] ${colors.field}`}>
+                <option value="">Not set (natural style)</option>
+                {GENERATIONS.map((generation) => <option key={generation.id} value={generation.id}>{generation.label} (born {generation.from === 1900 ? `before ${generation.to + 1}` : generation.to === 9999 ? `${generation.from} or later` : `${generation.from}–${generation.to}`})</option>)}
+              </select>
+
+              <h2 className="font-display mt-8 text-2xl">Learn how I type</h2>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+                <input type="checkbox" checked={settings.learnStyle} onChange={(event) => update("learnStyle", event.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
+                <span className={colors.muted}>Jarvis picks up your texting style (message length, lowercase, emoji, slang you use) and replies the same way. It keeps only style numbers and a list of slang words, never your messages.</span>
+              </label>
+              <button type="button" onClick={() => void resetTypingStyle()} disabled={styleResetBusy} className={`mt-3 rounded-lg border px-3 py-2 text-sm disabled:opacity-40 ${colors.button}`}>{styleResetBusy ? "Resetting…" : "Forget my texting style"}</button>
+              {styleResetNotice && <p role="status" className={`mt-2 text-sm ${colors.muted}`}>{styleResetNotice}</p>}
             </section>
           )}
 
@@ -282,7 +298,7 @@ export default function SettingsPage() {
               <h2 className="font-display text-2xl">Privacy basics</h2>
               <ul className={`mt-4 list-disc space-y-3 pl-5 text-sm leading-6 ${colors.muted}`}>
                 <li>Chat requests are sent to the Jarvis API configured for this installation. The model provider depends on that server’s configuration.</li>
-                <li>Your response-style and memory preferences are stored in this browser’s local storage.</li>
+                <li>Your response style, generation and memory preferences are stored in this browser. If “Learn how I type” is on, Jarvis keeps a small texting-style profile (numbers and slang words only) with your account.</li>
                 <li>Do not enter secrets into chat or personalization instructions.</li>
                 <li>Use the export and account-deletion controls below for server-side account data. Account deletion has a 30-day grace period; per-category automatic retention controls are not available yet.</li>
               </ul>

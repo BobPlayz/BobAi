@@ -55,7 +55,8 @@ export async function dbSaveConversation(input: { id: string; userId: string; wo
       if (!["user", "assistant", "system"].includes(message.role)) throw new Error("invalid conversation message role");
       const priorMessage = await tx.select({ conversationId: messages.conversationId }).from(messages).where(eq(messages.id, message.id)).limit(1);
       if (priorMessage[0] && priorMessage[0].conversationId !== input.id) throw new Error("message ownership mismatch");
-      await tx.insert(messages).values({ id: message.id, conversationId: input.id, role: message.role, content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null, createdAt: new Date(base + index) }).onConflictDoUpdate({ target: messages.id, set: { content: message.content, model: message.model ?? null, status: message.status ?? "completed", attachments: message.attachments ?? null, updatedAt: new Date() } });
+      const model = typeof message.model === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/.test(message.model) ? message.model : null;
+      await tx.insert(messages).values({ id: message.id, conversationId: input.id, role: message.role, content: message.content, model, status: message.status ?? "completed", attachments: message.attachments ?? null, createdAt: new Date(base + index) }).onConflictDoUpdate({ target: messages.id, set: { content: message.content, model: sql`coalesce(${model}, ${messages.model})`, status: message.status ?? "completed", attachments: message.attachments ?? null, updatedAt: new Date() } });
     }
   }); return true;
 }

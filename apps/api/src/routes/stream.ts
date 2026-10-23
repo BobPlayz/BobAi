@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db, settings } from "@bobai/db";
 import { initSSE } from "../utils/sse.js";
 import { isCodingTask, runCodingAgent } from "../services/codingAgent.js";
+import { describeProfile, learnFromMessage } from "../services/typingStyle.js";
 import { prepareChat, runChat, runStream } from "../services/chatEngine.js";
 import { dbRemember, dbRecallRelevant, isSensitiveMemory } from "../store/memoryDb.js";
 import { dbSaveConversation, dbUpdateMessageStatus } from "../store/conversationDb.js";
@@ -48,7 +49,11 @@ router.post("/", streamLimit, async (req, res) => {
     const memories = memoryEnabled && latestText && !lightweight ? await dbRecallRelevant(workspace.id, req.user!.id, latestText, 12) : [];
     const fileKnowledge = latestText && !lightweight ? await searchDocumentChunks(workspace.id, req.user!.id, latestText, undefined, 8) : [];
     const knowledgeContext = fileKnowledge.map((item) => `[file ${String(item.uploadId || "unknown")}, chunk ${String(item.chunkIndex ?? "?")}] ${typeof item.content === "string" ? item.content.slice(0, 5_000) : ""}`).filter((item) => item.length > 20);
-    const prepared = await prepareChat({ messages: enrichedMessages, personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), responseLength: settingValue(rows, "responseLength"), tone: settingValue(rows, "tone"), customInstructions: settingValue(rows, "customInstructions"), signal: requestController.signal, memoryContext: memoryContext(memories), knowledgeContext });
+    // Learn how this user types (aggregate style numbers only) unless they turned it off in Settings.
+    const learnStyle = req.body?.learnStyle !== false && settingValue(rows, "learnStyle") !== false;
+    const latestRaw = Array.isArray(req.body?.messages) ? [...req.body.messages].reverse().find((message: { role?: unknown; ephemeral?: unknown }) => message?.role === "user" && message?.ephemeral !== true) as { content?: unknown } | undefined : undefined;
+    const typingProfile = learnStyle && typeof latestRaw?.content === "string" ? await learnFromMessage(req.user!.id, workspace.id, latestRaw.content).catch(() => undefined) : undefined;
+    const prepared = await prepareChat({ messages: enrichedMessages, learnedStyle: describeProfile(typingProfile), generation: typeof req.body?.generation === "string" ? req.body.generation : settingValue(rows, "generation"), personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), responseLength: settingValue(rows, "responseLength"), tone: settingValue(rows, "tone"), customInstructions: settingValue(rows, "customInstructions"), signal: requestController.signal, memoryContext: memoryContext(memories), knowledgeContext });
     if (requestController.signal.aborted || res.destroyed) return;
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
     // Saves this turn (the user's message and Jarvis's reply) so it is still there after a reload.

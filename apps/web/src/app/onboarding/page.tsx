@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import { hasCompletedOnboarding, saveOnboarding } from "@/lib/auth";
 import { savePreferences } from "@/lib/preferences";
+import { generationForYear } from "@/lib/generation";
 
 const QUESTIONS = {
   usage: { title: "What will you mostly use Jarvis for?", options: ["Learning and homework", "Coding and building projects", "Creative work", "Research and exploring ideas", "Everyday help"] },
@@ -13,7 +14,7 @@ const QUESTIONS = {
 } as const;
 const INTERESTS = ["Technology", "Science", "Gaming", "Movies & TV", "Music", "Art & design", "Sport", "School"];
 
-type Answers = { name: string; usage: string; personality: string; detail: string; interests: string[] };
+type Answers = { name: string; birthYear: string; usage: string; personality: string; detail: string; interests: string[] };
 
 /** Turns the answers into the personalization text the chat already sends with every message. */
 function toPersonality(answers: Answers) {
@@ -33,13 +34,15 @@ function Chip({ selected, children, onClick }: { selected: boolean; children: st
 
 function Onboarding() {
   const router = useRouter();
-  const [answers, setAnswers] = useState<Answers>({ name: "", usage: "", personality: "", detail: "", interests: [] });
+  const [answers, setAnswers] = useState<Answers>({ name: "", birthYear: "", usage: "", personality: "", detail: "", interests: [] });
+  const generation = generationForYear(Number(answers.birthYear));
 
   useEffect(() => { if (hasCompletedOnboarding()) router.replace("/chat"); }, [router]);
 
   function set<K extends keyof Answers>(key: K, value: Answers[K]) { setAnswers((current) => ({ ...current, [key]: value })); }
   function finish(skip = false) {
-    if (!skip) savePreferences({ personality: toPersonality(answers) });
+    // Only the generation is kept; the birth year itself is never stored or sent.
+    if (!skip) savePreferences({ personality: toPersonality(answers), ...(generation ? { generation: generation.id } : {}) });
     saveOnboarding(answers);
     router.push("/chat");
   }
@@ -54,6 +57,15 @@ function Onboarding() {
           <section>
             <label htmlFor="onboarding-name" className="font-display text-3xl">What should Jarvis call you?</label>
             <input id="onboarding-name" value={answers.name} onChange={(event) => set("name", event.target.value.slice(0, 60))} autoComplete="given-name" placeholder="Your name or nickname" className="mt-4 h-14 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 text-lg outline-none focus:border-[var(--text)]" />
+          </section>
+
+          <section>
+            <label htmlFor="onboarding-year" className="font-display text-3xl">What year were you born?</label>
+            <p className="mt-2 text-[var(--muted)]">Jarvis texts you the way your generation does. Only your generation is saved, not the year.</p>
+            <input id="onboarding-year" value={answers.birthYear} onChange={(event) => set("birthYear", event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" autoComplete="bday-year" placeholder="e.g. 2013" aria-describedby="onboarding-generation" className="mt-4 h-14 w-full max-w-xs rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 text-lg outline-none focus:border-[var(--text)]" />
+            <p id="onboarding-generation" aria-live="polite" className="mt-3 min-h-6 text-[15px]">
+              {generation ? <>That makes you <strong className="text-[var(--accent)]">{generation.label}</strong>, so Jarvis will keep it {generation.vibe}.</> : answers.birthYear.length === 4 ? <span className="text-[var(--muted)]">Hmm, that year doesn&apos;t look right.</span> : null}
+            </p>
           </section>
 
           {(Object.keys(QUESTIONS) as Array<keyof typeof QUESTIONS>).map((key) => (
