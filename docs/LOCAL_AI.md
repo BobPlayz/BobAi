@@ -26,6 +26,43 @@ Jarvis calls a local Python Diffusers pipeline directly (no ComfyUI, no image AP
 - Listening: faster-whisper (`BOBAI_WHISPER_PYTHON_MODEL_PATH`) or whisper.cpp (`BOBAI_WHISPER_MODEL_PATH`).
 - `npm run setup:local-media` downloads Piper, the Alan voice and Whisper. The microphone only listens when you press the button.
 
+## Running on a small board (Raspberry Pi 5 or similar)
+
+Any 64-bit Linux board with **8 GB of RAM** works (Raspberry Pi 5 8 GB, Orange Pi 5, Jetson Orin Nano). Chat and voice
+run on the board; pictures are too slow there, so they come from Pollinations. Use Raspberry Pi OS (64-bit) or Ubuntu.
+
+```bash
+sudo apt update && sudo apt install -y git python3-venv curl
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs   # Node 22
+curl -fsSL https://ollama.com/install.sh | sh && ollama pull qwen3.5:2b                           # the AI model
+git clone https://github.com/BobPlayz/BobAi && cd BobAi && npm ci
+
+mkdir -p ~/jarvis-voice && cd ~/jarvis-voice                                                       # voice files
+curl -LO https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz && tar xzf piper_linux_aarch64.tar.gz
+curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium/en_GB-alan-medium.onnx
+curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium/en_GB-alan-medium.onnx.json
+python3 -m venv venv && venv/bin/pip install faster-whisper
+venv/bin/python -c "from faster_whisper import download_model; download_model('base.en', output_dir='whisper-base')"
+```
+
+Then copy `.env.example` to `.env` in the `BobAi` folder, fill in `DATABASE_URL` and the email settings, and add:
+
+```bash
+BOBAI_OLLAMA_BASE_URL=http://127.0.0.1:11434
+BOBAI_PIPER_COMMAND=/home/<you>/jarvis-voice/piper/piper
+BOBAI_PIPER_EN_MODEL_PATH=/home/<you>/jarvis-voice/en_GB-alan-medium.onnx
+BOBAI_PIPER_EN_CONFIG_PATH=/home/<you>/jarvis-voice/en_GB-alan-medium.onnx.json
+BOBAI_VOICE_PYTHON=/home/<you>/jarvis-voice/venv/bin/python
+BOBAI_WHISPER_PYTHON_MODEL_PATH=/home/<you>/jarvis-voice/whisper-base
+BOBAI_IMAGE_PROVIDER=pollinations
+# so phones and laptops on your Wi-Fi can use it (replace with the board's IP, e.g. 192.168.1.50):
+NEXT_PUBLIC_API_URL=http://<board-ip>:3001
+CORS_ORIGIN=http://<board-ip>:3000,http://localhost:3000
+```
+
+Run `npm run db:migrate` once, then `npm run ai` and open `http://<board-ip>:3000` from any device on the same Wi-Fi.
+Websites Jarvis builds "on localhost" are served by the board at `http://<board-ip>:3001/sites/<name>/`.
+
 ## Web research
 
 Jarvis builds search queries, fetches results (Brave Search with `BOBAI_BRAVE_SEARCH_API_KEY`, otherwise DuckDuckGo), reads the pages, ranks sources and has the model write an answer that cites them. Web pages are treated as untrusted data and cannot steer Jarvis.

@@ -147,3 +147,6 @@ export async function logOutEverywhere() { await request("/account/sessions", { 
 
 /** Guests have no email for a deletion code; the server accepts their session as proof. */
 export async function deleteGuestAccount() { const res = await request("/account/delete/guest", { method: "POST" }); const data = await readBody(res); if (!res.ok) throw new Error(data.error || "Could not delete the guest account."); return data as { status?: string }; }
+
+/** Reports a Jarvis reply as harmful, offensive or wrong; the owner sees it in the server logs. */
+export async function reportReply(messageId: string) { const res = await request(`/messages/${encodeURIComponent(messageId)}/feedback`, { method: "POST", body: JSON.stringify({ rating: "down", report: true, note: "reported from the chat" }) }); if (!res.ok) { const data = await readBody(res); throw new Error(data.error || "Could not send the report."); } }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Copy, MoreHorizontal, Pin, RotateCcw, Trash2, X } from "lucide-react";
+import { Copy, Flag, MoreHorizontal, Pin, RotateCcw, Trash2, X } from "lucide-react";
 import type { ChatMessage, LiveDataInfo, ToolApproval } from "@/types/chat";
 import VoiceButton from "@/components/VoiceButton";
 import Markdown from "@/components/Markdown";
@@ -30,6 +30,8 @@ type Props = {
   onSuggestion?: (text: string) => void;
   /** Demo mode: read aloud with the browser's voice so nothing reaches the server. */
   browserVoice?: boolean;
+  /** Flags a Jarvis reply as harmful or wrong (Play Store rule for AI apps). Omit to hide Report (the demo). */
+  onReport?: (messageId: string) => Promise<void>;
 };
 
 const SUGGESTIONS = [
@@ -38,8 +40,9 @@ const SUGGESTIONS = [
   "Help me write a Python program that removes duplicates from a list.",
 ];
 
-export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion, browserVoice = false }: Props) {
+export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion, browserVoice = false, onReport }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [reported, setReported] = useState<Set<string>>(() => new Set());
   const [preview, setPreview] = useState<string | null>(null);
   // Close an open message menu on a tap outside it or on Escape.
   useEffect(() => {
@@ -72,6 +75,10 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
     pin: () => { onPinMessage(message.id); setMenuId(null); },
     copy: async () => { try { await navigator.clipboard.writeText(message.content); } catch { /* clipboard unavailable */ } setMenuId(null); },
     remove: () => { onDeleteMessage(message.id); setMenuId(null); },
+    ...(onReport && message.role === "assistant" ? {
+      report: () => { setMenuId(null); if (reported.has(message.id)) return; setReported((current) => new Set(current).add(message.id)); void onReport(message.id).catch(() => setReported((current) => { const next = new Set(current); next.delete(message.id); return next; })); },
+      reported: reported.has(message.id),
+    } : {}),
   });
 
   return (
@@ -165,7 +172,7 @@ function EmptyState({ onSuggestion }: { onSuggestion?: (text: string) => void })
   );
 }
 
-type ActionProps = { open: boolean; toggle: () => void; pin: () => void; copy: () => Promise<void>; remove: () => void };
+type ActionProps = { open: boolean; toggle: () => void; pin: () => void; copy: () => Promise<void>; remove: () => void; report?: () => void; reported?: boolean };
 
 function UserMessage({ message, ...menu }: { message: ChatMessage } & ActionProps) {
   return (
@@ -232,7 +239,7 @@ function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval
   );
 }
 
-function MessageMenu({ open, toggle, pin, copy, remove, pinned, align }: ActionProps & { pinned?: boolean; align: "left" | "right" }) {
+function MessageMenu({ open, toggle, pin, copy, remove, report, reported, pinned, align }: ActionProps & { pinned?: boolean; align: "left" | "right" }) {
   return (
     <div className="relative" data-message-menu>
       <button type="button" onClick={toggle} aria-label="Message actions" aria-expanded={open} className={`atelier-iconbtn !h-8 !w-8 ${open ? "" : "opacity-0 focus:opacity-100 group-hover:opacity-100"} max-sm:opacity-100 [@media(hover:none)]:opacity-100`}>
@@ -243,6 +250,7 @@ function MessageMenu({ open, toggle, pin, copy, remove, pinned, align }: ActionP
           <button type="button" onClick={pin} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Pin className="h-3.5 w-3.5" aria-hidden /> {pinned ? "Unpin" : "Pin"}</button>
           <button type="button" onClick={() => void copy()} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)]"><Copy className="h-3.5 w-3.5" aria-hidden /> Copy</button>
           <button type="button" onClick={remove} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--surface-2)]"><Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete</button>
+          {report && <button type="button" onClick={report} disabled={reported} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)] disabled:opacity-60"><Flag className="h-3.5 w-3.5" aria-hidden /> {reported ? "Reported, thanks" : "Report reply"}</button>}
         </div>
       )}
     </div>

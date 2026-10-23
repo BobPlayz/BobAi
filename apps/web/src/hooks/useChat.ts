@@ -28,7 +28,12 @@ function loadLocalConversationUi(): Conversation[] {
 /** Only plain http://localhost links to a /sites/<name>/ page are shown as a button. */
 function localSiteFrom(value: unknown): Pick<ChatMessage, "localSite"> {
   const site = value as { url?: unknown; name?: unknown } | undefined;
-  return site && typeof site.url === "string" && typeof site.name === "string" && /^http:\/\/localhost:\d{2,5}\/sites\/[a-z0-9-]+\/$/.test(site.url) ? { localSite: { url: site.url, name: site.name } } : {};
+  if (!site || typeof site.url !== "string" || typeof site.name !== "string" || !/^http:\/\/localhost:\d{2,5}\/sites\/[a-z0-9-]+\/$/.test(site.url)) return {};
+  // Opened from another device (a phone using a board's address)? "localhost" would mean that device, so use the
+  // address Jarvis was opened from instead.
+  const url = new URL(site.url);
+  if (typeof window !== "undefined" && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) url.hostname = window.location.hostname;
+  return { localSite: { url: url.toString(), name: site.name } };
 }
 function liveAndApproval(result: Record<string, unknown>): Pick<ChatMessage, "liveData" | "approval" | "model" | "compacted" | "localSite"> {
   const live = result.liveData as LiveDataInfo | undefined;

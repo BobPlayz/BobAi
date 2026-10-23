@@ -35,6 +35,7 @@ async function main() {
     "docs/LOCAL_AI.md",
     "docs/QUICK_START_AUTH.md",
     "docs/FEATURE_INVENTORY.md",
+    "docs/MOBILE_APPS.md",
     "docs/FEATURE_SETUP_GUIDE.md",
     "docs/MODEL_ROUTING.md",
     "docs/HANDOFF.md",

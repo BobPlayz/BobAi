@@ -7,6 +7,7 @@ import NeuralComposer from "@/components/neural/NeuralComposer";
 import ChatWindow from "@/components/ChatWindow";
 import TalkMode from "@/components/TalkMode";
 import { loadPreferences } from "@/lib/preferences";
+import { reportReply } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useChat } from "@/hooks/useChat";
 
@@ -68,6 +69,7 @@ export default function ChatPage() {
         onSuggestion={chat.setInput}
         voiceReplies={voiceReplies && !talking}
         autoPlayMessageId={chat.lastReplyId}
+        onReport={reportReply}
       />
       {talking && <TalkMode language={loadPreferences().language} onUtterance={chat.send} onClose={() => setTalking(false)} />}
     </NeuralShell>
