@@ -27,12 +27,16 @@ function readCookie(req: { header(name: string): string | undefined }, name: str
 function setSessionCookies(res: { cookie(name: string, value: string, options: object): void }, session: { accessToken: string; refreshToken: string }) { res.cookie(ACCESS_COOKIE, session.accessToken, cookieOptions(15 * 60 * 1000)); res.cookie(REFRESH_COOKIE, session.refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000)); }
 function clearSessionCookies(res: { clearCookie(name: string, options?: object): void }) { const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/" }; res.clearCookie(ACCESS_COOKIE, options); res.clearCookie(REFRESH_COOKIE, options); }
 
+/** The Terms/Privacy version users must accept. The login page asks for it, so it can never drift from the API. */
+function currentTermsVersion() { return process.env.BOBAI_TERMS_VERSION?.trim() || "2026-10-23"; }
+router.get("/terms-version", (_req, res) => res.json({ version: currentTermsVersion() }));
+
 router.post("/quick-start/request", async (req, res) => {
   const displayName = typeof req.body?.name === "string" ? req.body.name.trim().replace(/\s+/g, " ").slice(0, 80) : "";
   const address = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const termsAccepted = req.body?.termsAccepted === true;
   const termsVersion = typeof req.body?.termsVersion === "string" ? req.body.termsVersion : "";
-  const requiredTermsVersion = process.env.BOBAI_TERMS_VERSION?.trim() || "2026-10-13";
+  const requiredTermsVersion = currentTermsVersion();
   if (displayName.length < 1 || displayName.length > 80 || !email.test(address)) return res.status(400).json({ error: "enter a name and valid email address" });
   if (!termsAccepted || !/^\d{4}-\d{2}-\d{2}$/.test(termsVersion) || (requiredTermsVersion && termsVersion !== requiredTermsVersion)) return res.status(400).json({ error: "acceptance of the current Terms of Service and Privacy Policy is required" });
   if (limited(req, `quick-start-request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many code requests", retryAfterSeconds: 900 });

@@ -8,7 +8,7 @@ The login page asks for a name, an email address and agreement to the Terms and 
 - An email sender, one of:
   - **Gmail SMTP (free, no domain needed):** `BOBAI_EMAIL_PROVIDER=smtp`, `BOBAI_SMTP_HOST=smtp.gmail.com`, `BOBAI_SMTP_PORT=465`, `BOBAI_SMTP_USER` (your Gmail address), `BOBAI_SMTP_PASSWORD` (a Gmail app password), `BOBAI_SMTP_FROM=Jarvis <your Gmail address>`.
   - **Resend:** `RESEND_API_KEY` and `RESEND_FROM_EMAIL`. Without a domain verified in Resend it only delivers to the Resend account owner. If SMTP is also set up, a refused Resend send is retried over SMTP.
-- `BOBAI_TERMS_VERSION` (API) and `NEXT_PUBLIC_TERMS_VERSION` (website): optional, default `2026-10-13`; they must match.
+- `BOBAI_TERMS_VERSION`: optional, default `2026-10-23`. The login page asks the API for it (`GET /auth/terms-version`), so the website never needs its own copy.
 - Local development only: `BOBAI_DEV_LOG_OTP=true` prints codes in the terminal instead of emailing them. It never works in production.
 
 `GET /api/ready` shows `emailConfigured`, `emailProvider` and which providers are set up.

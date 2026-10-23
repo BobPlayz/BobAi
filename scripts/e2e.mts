@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 const API = process.env.E2E_API || "http://localhost:3001";
 const LOG = process.env.E2E_LOG || "api.log";
 if (/vercel\.app|https:/.test(API)) throw new Error("Refusing to run against a hosted API: use a local test setup.");
-const TERMS = "2026-10-13";
+const TERMS = "2026-10-23";
 let failures = 0;
 const ok = (name: string, pass: boolean, detail = "") => { if (!pass) failures += 1; console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
 

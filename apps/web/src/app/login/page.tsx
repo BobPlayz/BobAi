@@ -3,11 +3,11 @@
 import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin, refreshSession } from "@/lib/auth";
+import { API, getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin, refreshSession } from "@/lib/auth";
 import JarvisMark from "@/components/JarvisMark";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
-const TERMS_VERSION = process.env.NEXT_PUBLIC_TERMS_VERSION || "2026-10-13";
+const FALLBACK_TERMS_VERSION = "2026-10-23";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,7 +48,9 @@ export default function LoginPage() {
     if (!EMAIL_PATTERN.test(cleanEmail)) return setError("Enter a valid email address.");
     if (!termsAccepted) return setError("Please accept the Terms and Privacy Policy to continue.");
     setLoading(true);
-    const result = await requestQuickStart(cleanName, cleanEmail, true, TERMS_VERSION);
+    // The API decides which Terms version is current; the built-in date is only a fallback if that lookup fails.
+    const termsVersion = await fetch(`${API}/auth/terms-version`).then((response) => response.ok ? response.json() as Promise<{ version?: unknown }> : {}).then((data) => typeof (data as { version?: unknown }).version === "string" ? (data as { version: string }).version : FALLBACK_TERMS_VERSION).catch(() => FALLBACK_TERMS_VERSION);
+    const result = await requestQuickStart(cleanName, cleanEmail, true, termsVersion);
     setLoading(false);
     if (!result.ok) return setError(result.error || "Could not send your code.");
     setName(cleanName);

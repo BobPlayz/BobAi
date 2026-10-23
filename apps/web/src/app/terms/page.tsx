@@ -1,40 +1,43 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Terms of Service",
-  description: "The terms that apply when you use Jarvis.",
+  description: "The rules for using Jarvis, in plain words.",
 };
 
-const sections = [
-  ["1. Using Jarvis", "Jarvis provides AI chat, research, creation, development, memory, file, agent, and automation features. Features and limits may change as the service evolves. You are responsible for using the service lawfully and for checking important AI-generated results before relying on them."],
-  ["2. Accounts", "Keep your account credentials secure and use only accounts, workspaces, files, conversations, tasks, and integrations you are authorized to access. Do not bypass access controls or attempt to access another person's data."],
-  ["3. Agents and automated actions", "Agents and automations may interact with tools or external services. Use least-privilege permissions and review sensitive actions before they run. You remain responsible for permissions and instructions you give to an agent."],
-  ["4. Your content", "You retain rights in content you submit, subject to the limited processing needed to provide the requested feature. You must have the rights and authorization needed to submit content."],
-  ["5. AI output", "AI-generated text, code, images, audio, video, and research can be inaccurate, incomplete, or unsuitable. Review outputs before using them for important decisions or publishing them."],
-  ["6. Prohibited use", "Do not use Jarvis to obtain unauthorized access to systems or data, distribute malware, evade security controls, abuse other users, violate privacy or intellectual-property rights, or break applicable law."],
-  ["7. Third-party services", "Some features may depend on external AI, search, storage, media, email, or other providers. Those providers can have separate terms, privacy notices, availability limits, and content rules."],
-  ["8. Availability and termination", "Jarvis may be changed, suspended, or made unavailable for maintenance, security, abuse prevention, legal compliance, or other operational reasons. Accounts may be restricted when required to protect users or the service."],
-  ["9. Disclaimers and liability", "To the maximum extent permitted by applicable law, Jarvis is provided on an as-available basis and does not promise uninterrupted or error-free operation. Nothing in these terms excludes liability that cannot legally be excluded."],
-  ["10. Privacy", "Our Privacy Policy explains the personal data Jarvis may process, why it is processed, retention and security practices, and how to exercise applicable rights."],
-  ["11. Changes", "When material changes are made, Jarvis will provide notice as required by applicable law. The latest version and effective date will be published on this page."],
+const UPDATED = "October 23, 2026";
+
+const sections: Array<[string, string]> = [
+  ["What Jarvis is", "Jarvis is a free AI assistant made as a school project by BobPlayz (Origin Productions). It chats, helps with code, looks up weather, cricket and the web, reads files you share, and can remember things you ask it to. Features can change, and it may sometimes be offline."],
+  ["Who can use it", "Anyone who agrees to these terms. If you are under 18, use Jarvis only with a parent or guardian's permission."],
+  ["Your account", "You sign in with a code sent to your email. Keep your email account safe, don't share codes, and only use your own account. Don't try to get into anyone else's account or data."],
+  ["AI can be wrong", "Jarvis's answers come from AI models and can be wrong, out of date or made up, even when they sound confident. Check anything important (homework, health, money, safety) with a trusted source or adult. Live data like weather and cricket shows where it came from; web answers list their sources."],
+  ["Be decent", "Don't use Jarvis to bully or harass anyone, break the law, create harmful or adult content, spread malware, spam, or attack the service. Don't paste other people's private information. Jarvis may refuse requests that break these rules."],
+  ["Your stuff", "What you write and upload stays yours. You let Jarvis process it only to answer you and keep your history. Only upload things you're allowed to share."],
+  ["Actions need your OK", "If Jarvis wants to do something for you with a tool, it shows you exactly what and waits for your approval. You're responsible for what you approve."],
+  ["Other services", "Jarvis uses other services to work: Vercel (hosting), Neon (database), Ollama (AI models), Gmail or Resend (login codes), and weather, search and cricket providers. Their own terms apply to them."],
+  ["No guarantees", "Jarvis is provided free and \"as is\". It might be unavailable, slow, or lose data, and it isn't a replacement for professional advice. As far as the law allows, the maker isn't responsible for losses from using it."],
+  ["Ending things", "You can delete your account any time in Settings. Accounts that break these rules may be limited or removed."],
+  ["Changes", "These terms may be updated; the date at the top will change. Continuing to use Jarvis after a change means you accept it."],
 ];
 
 export default function TermsPage() {
   return (
     <main id="main" tabIndex={-1} className="relative z-[1] mx-auto min-h-screen max-w-3xl px-5 pb-20 pt-28 text-[var(--text)] sm:px-8">
-      <article className="">
-        <p className="text-sm text-[var(--muted)]">Last updated: September 8, 2026</p>
-        <h1 className="font-display mt-3 text-6xl leading-none">Terms<em className="text-[var(--accent)]">.</em></h1>
-        <p className="mt-4 max-w-2xl leading-7 text-[var(--muted)]">These terms describe the basic rules for using Jarvis. They are a product/legal draft and must be reviewed and completed with the operator&apos;s legal identity, contact details, governing law, and any applicable commercial terms before public launch.</p>
-        <div className="mt-10 space-y-8">
-          {sections.map(([title, body]) => (
-            <section key={title}>
-              <h2 className="text-xl font-semibold">{title}</h2>
-              <p className="mt-2 leading-7 text-[var(--muted)]">{body}</p>
-              {title === "10. Privacy" && <a href="/privacy" className="mt-3 inline-block text-[var(--accent)] underline underline-offset-4">Read the Privacy Policy →</a>}
-            </section>
-          ))}
-        </div>
-        <p className="mt-10 border-t border-[var(--hairline)] pt-6 text-sm leading-6 text-[var(--muted)]">Nothing on this page is legal advice. The operator should obtain jurisdiction-specific legal review before accepting users in production.</p>
-      </article>
+      <p className="text-sm text-[var(--muted)]">Last updated: {UPDATED}</p>
+      <h1 className="font-display mt-3 text-6xl leading-none">Terms<em className="text-[var(--accent)]">.</em></h1>
+      <p className="mt-4 leading-7 text-[var(--muted)]">The short version: be nice, double-check important answers, and only use your own account. The details:</p>
+      <div className="mt-10 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
+        {sections.map(([title, body], index) => (
+          <section key={title} className="py-5">
+            <h2 className="font-display text-2xl">{index + 1}. {title}</h2>
+            <p className="mt-2 leading-7 text-[var(--muted)]">{body}</p>
+          </section>
+        ))}
+      </div>
+      <p className="mt-8 leading-7 text-[var(--muted)]">
+        How your data is handled: <Link href="/privacy" className="md-link">Privacy Policy</Link>. Questions: <Link href="/contact" className="md-link">contact</Link>.
+      </p>
     </main>
   );
 }
