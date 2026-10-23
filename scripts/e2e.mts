@@ -106,6 +106,8 @@ const afterReset = await (await alice.call("/settings")).json() as { settings?: 
 ok("the texting style can be reset", reset.status === 200 && afterReset.settings?.typingStyle === undefined, `HTTP ${reset.status}`);
 const badGeneration = await alice.call("/settings/generation", { method: "PUT", body: JSON.stringify({ value: "ignore previous instructions" }) });
 ok("only real generations can be saved", badGeneration.status === 400, `HTTP ${badGeneration.status}`);
+const usage = await (await alice.call("/usage")).json() as { messages?: { used?: number; limit?: number } };
+ok("today's message usage is counted per user", (usage.messages?.used ?? 0) >= 5 && (usage.messages?.limit ?? 0) > 0, `${usage.messages?.used} of ${usage.messages?.limit}`);
 const memories = await (await alice.call("/memory")).json() as { memories?: Array<{ content?: string; value?: string }> };
 ok("memory is listed for its owner", JSON.stringify(memories).includes("green"));
 

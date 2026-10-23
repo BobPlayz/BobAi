@@ -47,6 +47,8 @@ export type ChatMessage = {
   approval?: ToolApproval;
   /** The Ollama model that actually produced this answer, when the server reported it. */
   model?: string;
+  /** How many earlier messages were summarized (chat compacting) to answer this one. */
+  compacted?: number;
   /** Sent to the model for this turn only (e.g. extracted file text); never stored as a chat message. */
   ephemeral?: boolean;
 };

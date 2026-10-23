@@ -33,3 +33,21 @@ Discovery never runs inference, so it costs nothing and downloads nothing. Jarvi
 ## On an 8 GB laptop
 
 Install one or two small models, for example `ollama pull qwen3.5:2b` (chat, code and images in one). Jarvis unloads other local models before switching so only one sits in memory.
+
+## Chat compacting
+
+When a chat no longer fits the model's window, Jarvis summarizes everything except the newest 8 messages and keeps those word for word. The summary is saved with the chat (`conversations.metadata.compaction`) and only extended after 6 more messages, or rebuilt if earlier messages changed. Replies that used a summary say so under the answer. `BOBAI_CONTEXT_COMPACTION=false` turns it off (old messages are then trimmed instead).
+
+## Usage limits
+
+Counters are shared across all server instances (`rate_limit_buckets`) and reset at midnight UTC (Brave: monthly). Defaults stay under each free tier; set the variable to change a limit, or `0` for unlimited.
+
+| Limit | Variable | Default | Why |
+| --- | --- | --- | --- |
+| Messages per person per day | `BOBAI_LIMIT_CHAT_PER_USER_PER_DAY` | 60 | Ollama Cloud free plan has a small, unpublished allowance |
+| Messages per day, whole site | `BOBAI_LIMIT_CHAT_PER_DAY` | 600 | Same |
+| Login emails per day | `BOBAI_LIMIT_EMAILS_PER_DAY` | 450 (Gmail) / 90 (Resend) | Gmail ~500/day, Resend free 100/day |
+| Cricket feed calls per day | `BOBAI_LIMIT_CRICKET_CALLS_PER_DAY` | 95 | CricketData.org free 100/day; after that web search is used |
+| Brave searches per month | `BOBAI_LIMIT_BRAVE_SEARCHES_PER_MONTH` | 900 | ~$5 free credit ≈ 1,000 searches; after that DuckDuckGo is used |
+
+People see how many messages they have left in Settings.

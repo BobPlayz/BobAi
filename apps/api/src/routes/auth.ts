@@ -53,7 +53,8 @@ router.post("/quick-start/request", async (req, res) => {
     return res.status(202).json({ message: "If this email can be used, a verification code has been sent.", email: address });
   } catch (error) {
     console.error(JSON.stringify({ event: "quick_start_request_failed", error: error instanceof Error ? error.message.replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, "[redacted-email]").slice(0, 300) : "unknown error" }));
-    return res.status(503).json({ error: "could not send a verification code right now; check email delivery configuration and try again" });
+    const publicMessage = (error as { publicMessage?: unknown } | null)?.publicMessage;
+    return res.status(503).json({ error: typeof publicMessage === "string" ? publicMessage : "could not send a verification code right now; check email delivery configuration and try again" });
   }
 });
 router.post("/quick-start/verify", async (req, res) => {

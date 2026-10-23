@@ -1,3 +1,4 @@
+import { consumeQuota } from "./usageLimits.js";
 import { fetchWeatherData } from "./toolExecution.js";
 import { webSearch } from "./research.js";
 
@@ -65,6 +66,8 @@ type CricketMatch = { name?: string; status?: string; venue?: string; date?: str
 async function cricketFeed(query: string, signal?: AbortSignal): Promise<Omit<LiveDataResult, "cached"> | null> {
   const apiKey = process.env.BOBAI_CRICKET_API_KEY?.trim();
   if (!apiKey) return null;
+  // Stay inside the free plan's daily calls; when they run out, web search takes over.
+  if (!(await consumeQuota("cricket_feed")).allowed) return null;
   const url = new URL("https://api.cricapi.com/v1/currentMatches");
   url.searchParams.set("apikey", apiKey);
   url.searchParams.set("offset", "0");

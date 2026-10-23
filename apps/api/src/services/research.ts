@@ -1,3 +1,4 @@
+import { consumeQuota } from "./usageLimits.js";
 import { boundedText } from "./httpSafety.js";
 const DEFAULT_TIMEOUT_MS = 20_000, MAX_QUERY_LENGTH = 2_000, MAX_RESPONSE_BYTES = 10 * 1024 * 1024, MAX_RETRIES = 2, CACHE_TTL_MS = 2 * 60_000, CACHE_MAX = 500;
 type CacheEntry = { expiresAt: number; result: ResearchResult }; const cache = new Map<string, CacheEntry>();
@@ -135,7 +136,8 @@ async function searchOnce(query: string, options: Record<string, unknown>, signa
   if (cached) return cached;
   const selectedTypes = sourceTypesFrom(options);
   const braveKey = process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim();
-  if (braveKey) {
+  // Brave's free credit covers about 1,000 searches a month; after the limit, DuckDuckGo is used instead.
+  if (braveKey && (await consumeQuota("brave_search")).allowed) {
     try {
       const sources = (await searchBrave(sourceSearchQuery(normalized, selectedTypes), braveKey, signal, recencyFrom(options)))
         .filter((source) => matchesSourceTypes(source, selectedTypes));

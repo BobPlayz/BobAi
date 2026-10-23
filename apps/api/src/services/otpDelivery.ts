@@ -1,3 +1,4 @@
+import { consumeQuota } from "./usageLimits.js";
 import { setOtpSender } from "./otp.js";
 import { sendEmailOtp } from "./email.js";
 
@@ -71,22 +72,31 @@ export function otpDeliveryConfigured() {
   return provider === "resend" || provider === "smtp";
 }
 
+/** Wraps a real sender with the daily email limit (Gmail ~500/day, Resend free 100/day). */
+function withEmailLimit(send: (email: string, code: string) => Promise<void>) {
+  return async (email: string, code: string) => {
+    const state = await consumeQuota("email");
+    if (!state.allowed) throw Object.assign(new Error(`daily email limit of ${state.limit} reached`), { publicMessage: "Jarvis has sent all the sign-in emails it can for today. Please try again tomorrow." });
+    await send(email, code);
+  };
+}
+
 export function configureOtpDelivery() {
   const provider = otpDeliveryProvider();
   if (provider === "resend") {
     // Without a verified domain Resend only delivers to the account owner. If SMTP is also configured, a refused
     // Resend send is retried over SMTP instead of failing the login (never logs the code or the address).
-    setOtpSender(async (email, code) => {
+    setOtpSender(withEmailLimit(async (email, code) => {
       try { await sendResendOtp(email, code); }
       catch (error) {
         if (!smtpConfigured() || process.env.BOBAI_EMAIL_PROVIDER?.trim().toLowerCase() === "resend") throw error;
         console.warn(JSON.stringify({ event: "otp_resend_failed_trying_smtp", error: error instanceof Error ? error.message.slice(0, 200) : "unknown" }));
         await sendEmailOtp(email, code);
       }
-    });
+    }));
     return;
   }
-  if (provider === "smtp") { setOtpSender(sendEmailOtp); return; }
+  if (provider === "smtp") { setOtpSender(withEmailLimit(sendEmailOtp)); return; }
   if (provider === "dev-log") {
     setOtpSender(async (email, code) => { console.log(`[OTP development only] ${email}: ${code}`); });
     return;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
-import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
+import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, getTypingProfile, getUsage, type TypingProfile, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
 import { logout } from "@/lib/auth";
 
 import { loadPreferences, savePreferences, type Preferences } from "@/lib/preferences";
@@ -18,13 +18,26 @@ type Tab = "personalization" | "privacy" | "memory" | "research" | "about";
 const tabs: { id: Tab; label: string }[] = [
   { id: "personalization", label: "Personalization" },
   { id: "privacy", label: "Privacy" },
-  { id: "memory", label: "Memory" },
+  { id: "memory", label: "What I know" },
   { id: "about", label: "About" },
 ];
 
 function readSettings(): SettingsState {
   const value = loadPreferences();
   return { ...value, sourceTypes: [...new Set(value.sourceTypes.filter((item) => ["official", "academic", "news", "general"].includes(item)))].slice(0, 4) };
+}
+
+/** Plain-language summary of the learned texting style. */
+function describeTyping(profile: TypingProfile) {
+  const lines = [profile.avgLength < 40 ? "You send short, quick messages." : profile.avgLength < 120 ? "Your messages are fairly short." : "You write longer, detailed messages."];
+  if (profile.lowercase > 0.6) lines.push("You mostly type in lowercase.");
+  if (profile.endPunctuation < 0.3) lines.push("You usually skip the full stop at the end.");
+  else if (profile.endPunctuation > 0.7) lines.push("You use proper punctuation.");
+  if (profile.emoji > 0.15) lines.push("You use emoji a lot.");
+  else if (profile.emoji < 0.03) lines.push("You rarely use emoji.");
+  if (profile.exclamation > 0.4) lines.push("You use plenty of exclamation marks!");
+  if (profile.abbreviations > 0.3) lines.push("You use texting shortcuts like u, ur and rn.");
+  return lines;
 }
 
 export default function SettingsPage() {
@@ -192,11 +205,15 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
+  const [typingProfile, setTypingProfile] = useState<TypingProfile | null>(null);
+  useEffect(() => { void getTypingProfile().then(setTypingProfile).catch(() => undefined); }, []);
+  const [usage, setUsage] = useState<{ used: number; limit: number; resetsAt: string } | null>(null);
+  useEffect(() => { void getUsage().then((value) => setUsage(value?.messages ?? null)).catch(() => undefined); }, []);
   const [styleResetBusy, setStyleResetBusy] = useState(false);
   const [styleResetNotice, setStyleResetNotice] = useState("");
   async function resetTypingStyle() {
     setStyleResetBusy(true); setStyleResetNotice("");
-    try { await deleteSetting("typingStyle"); setStyleResetNotice("Done. Jarvis forgot your texting style and will start learning again."); }
+    try { await deleteSetting("typingStyle"); setTypingProfile(null); setStyleResetNotice("Done. Jarvis forgot your texting style and will start learning again."); }
     catch { setStyleResetNotice("Couldn't reset right now. Try again in a moment."); }
     finally { setStyleResetBusy(false); }
   }
@@ -276,6 +293,16 @@ export default function SettingsPage() {
               />
               <p className={`mt-2 text-xs ${colors.muted}`}>{settings.personality.length}/12000 characters</p>
 
+              {usage && usage.limit > 0 && (
+                <div className="mt-8">
+                  <h2 className="font-display text-2xl">Today&apos;s messages</h2>
+                  <p className={`mt-1 text-sm ${colors.muted}`}>{Math.min(usage.used, usage.limit)} of {usage.limit} used · resets {new Date(usage.resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                  <div className="mt-3 h-2 w-full max-w-sm overflow-hidden rounded-full bg-[var(--surface-2)]" role="progressbar" aria-label="Messages used today" aria-valuemin={0} aria-valuemax={usage.limit} aria-valuenow={Math.min(usage.used, usage.limit)}>
+                    <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+
               <h2 className="font-display mt-8 text-2xl">Your generation</h2>
               <p className={`mt-1 text-sm ${colors.muted}`}>Jarvis texts you the way your generation does.</p>
               <select aria-label="Your generation" value={settings.generation} onChange={(event) => update("generation", event.target.value)} className={`mt-3 h-11 w-full max-w-sm rounded-xl border px-3 text-sm outline-none focus:border-[var(--text)] ${colors.field}`}>
@@ -324,6 +351,32 @@ export default function SettingsPage() {
 
           {tab === "memory" && (
             <div className="space-y-5">
+              <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
+                <h2 className="font-display text-2xl">What Jarvis has learned about you</h2>
+                <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Everything Jarvis uses to personalize replies, in one place. You can change or delete any of it.</p>
+                <dl className="mt-5 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] text-sm">
+                  <div className="py-3">
+                    <dt className="font-medium">Your generation</dt>
+                    <dd className={`mt-1 ${colors.muted}`}>{GENERATIONS.find((generation) => generation.id === settings.generation)?.label ?? "Not set"} <button type="button" onClick={() => setTab("personalization")} className="md-link ml-1">change</button></dd>
+                  </div>
+                  <div className="py-3">
+                    <dt className="font-medium">How you text</dt>
+                    <dd className={`mt-1 leading-6 ${colors.muted}`}>
+                      {!settings.learnStyle ? "Turned off in Personalization." : typingProfile && typingProfile.messages >= 3 ? (
+                        <>
+                          <ul className="list-disc space-y-1 pl-5">{describeTyping(typingProfile).map((line) => <li key={line}>{line}</li>)}</ul>
+                          {Object.keys(typingProfile.slang).length > 0 && <p className="mt-2 flex flex-wrap gap-1.5">{Object.entries(typingProfile.slang).slice(0, 10).map(([word, count]) => <span key={word} className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs">{word} ×{count}</span>)}</p>}
+                          <p className="mt-2 text-xs">Based on {typingProfile.messages} of your messages. <button type="button" onClick={() => void resetTypingStyle()} disabled={styleResetBusy} className="md-link">Forget this</button></p>
+                        </>
+                      ) : "Still learning. Chat a bit more and this will fill in."}
+                    </dd>
+                  </div>
+                  <div className="py-3">
+                    <dt className="font-medium">Things you asked it to remember</dt>
+                    <dd className={`mt-1 ${colors.muted}`}>{memories.length ? `${memories.length} saved, listed below.` : "Nothing yet. Say \"remember that…\" in a chat."}</dd>
+                  </div>
+                </dl>
+              </section>
               <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
                 <h2 className="font-display text-2xl">Memory preference</h2>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Turn memory off to stop using saved memories in future chats. This switch does not delete memories already stored on the server.</p>

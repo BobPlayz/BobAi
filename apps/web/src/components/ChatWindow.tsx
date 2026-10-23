@@ -193,6 +193,7 @@ function AssistantMessage({ message, autoPlayId, onResolveApproval, onPreview, o
       )}
 
       {message.liveData && <LiveDataBadge info={message.liveData} />}
+      {message.compacted ? <p className="caption mt-3 normal-case tracking-normal text-[var(--faint)]">Jarvis summarized {message.compacted} earlier messages to keep this chat going.</p> : null}
       {message.model && <p className="caption mt-3 normal-case tracking-normal text-[var(--faint)]">via {message.model}</p>}
       {message.approval && <ApprovalCard approval={message.approval} onResolve={onResolveApproval} />}
 

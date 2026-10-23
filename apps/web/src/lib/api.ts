@@ -126,3 +126,8 @@ export async function deleteRemoteMessage(conversationId: string, messageId: str
 export async function deleteSetting(key: string) { const res = await request(`/settings/${encodeURIComponent(key)}`, { method: "DELETE" }); if (!res.ok) throw new Error("Could not reset that setting"); }
 /** Asks the server to write a short AI title for a chat after its first reply. */
 export async function autoTitleConversation(conversationId: string) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}/auto-title`, { method: "POST", body: "{}" }); if (!res.ok) return ""; const data = await res.json() as { title?: unknown }; return typeof data.title === "string" ? data.title : ""; }
+/** Today's message usage against the daily limit. */
+export async function getUsage(): Promise<{ messages: { used: number; limit: number; resetsAt: string } } | null> { const res = await request("/usage"); if (!res.ok) return null; return res.json(); }
+export type TypingProfile = { messages: number; avgLength: number; lowercase: number; emoji: number; exclamation: number; endPunctuation: number; abbreviations: number; slang: Record<string, number> };
+/** The texting-style profile Jarvis has learned (numbers and slang words only), if any. */
+export async function getTypingProfile(): Promise<TypingProfile | null> { const res = await request("/settings"); if (!res.ok) return null; const data = await res.json() as { settings?: Record<string, unknown> }; const value = data.settings?.typingStyle as TypingProfile | undefined; return value && typeof value.messages === "number" ? value : null; }

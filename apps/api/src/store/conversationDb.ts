@@ -81,3 +81,16 @@ export async function dbDeleteMessage(conversationId: string, messageId: string,
 export async function dbDeleteConversation(id: string, userId: string, workspaceId: string) {
   const database = await getDb(); if (!database) return false; const result = await database.db.delete(database.conversations).where(and(eq(database.conversations.id, id), eq(database.conversations.userId, userId), eq(database.conversations.workspaceId, workspaceId))).returning({ id: database.conversations.id }); return Boolean(result[0]);
 }
+
+/** The saved chat-compacting summary for an owned conversation (kept in conversations.metadata.compaction). */
+export async function dbLoadCompaction(conversationId: string, userId: string, workspaceId: string) {
+  const database = await getDb(); if (!database) return undefined; const { conversations } = database;
+  const [row] = await database.db.select({ metadata: conversations.metadata }).from(conversations).where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId))).limit(1);
+  const value = (row?.metadata as { compaction?: unknown } | null)?.compaction as { summary?: unknown; covered?: unknown; hash?: unknown } | undefined;
+  return value && typeof value.summary === "string" && typeof value.covered === "number" && typeof value.hash === "string" ? { summary: value.summary, covered: value.covered, hash: value.hash } : undefined;
+}
+
+export async function dbSaveCompaction(conversationId: string, userId: string, workspaceId: string, compaction: { summary: string; covered: number; hash: string }) {
+  const database = await getDb(); if (!database) return; const { conversations } = database;
+  await database.db.update(conversations).set({ metadata: sql`coalesce(${conversations.metadata}, '{}'::jsonb) || ${JSON.stringify({ compaction })}::jsonb` }).where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId), eq(conversations.workspaceId, workspaceId)));
+}
