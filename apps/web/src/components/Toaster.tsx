@@ -19,7 +19,7 @@ export default function Toaster() {
     return () => { window.removeEventListener(TOAST_EVENT, onToast); window.clearTimeout(timer); };
   }, []);
   return (
-    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-28 z-[100] flex justify-center px-4">
+    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[calc(6rem+env(safe-area-inset-top))] z-[100] flex justify-center px-4">
       {message && <p key={message.key} className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm text-[var(--bg)] shadow-[var(--shadow)] animate-[chatEnter_220ms_ease-out_both] motion-reduce:animate-none">{message.text}</p>}
     </div>
   );
