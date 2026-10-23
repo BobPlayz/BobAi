@@ -11,6 +11,7 @@ const collected: Array<[string, string]> = [
   ["Your name and email", "To sign you in with a 6-digit code and to greet you. Login codes are stored scrambled (hashed), expire after 10 minutes and are deleted after use."],
   ["Your chats", "Your messages and Jarvis's replies are saved to your account so you can come back to them. You can delete single messages or whole chats."],
   ["Memories", "Only things you ask Jarvis to remember (\"remember that…\"). Jarvis refuses to save passwords or codes. You can view, edit and clear memories in Settings."],
+  ["Your reply language", "The language you pick for replies, saved in your browser."],
   ["Your generation", "If you tell Jarvis your birth year, it keeps only your generation (for example \"Gen Z\") to choose a texting style. The year itself is never saved or sent."],
   ["Your texting style", "If \"Learn how I type\" is on, Jarvis keeps a small style profile: numbers like average message length and how often you use lowercase or emoji, plus a short list of common slang words you use. It never stores your messages for this. You can turn it off or reset it in Settings."],
   ["Files you upload", "Used to answer questions about them. Images are deleted after 30 days and documents after 90 days."],
@@ -23,6 +24,9 @@ const services: Array<[string, string]> = [
   ["Ollama (Ollama Cloud, or Ollama on the owner's computer)", "Writes Jarvis's replies. Your messages, and the context needed to answer them, are sent to the model for each reply. Ollama Cloud says it does not train on these prompts."],
   ["Gmail or Resend", "Sends your login code. They receive your email address and the code."],
   ["Open-Meteo, DuckDuckGo or Brave Search, CricketData.org", "Only when you ask for weather, a web search or cricket scores. They receive the place name or search words, not your account details."],
+  ["Pollinations", "Only when you ask the website to make a picture. It receives the picture description, not your account details. Requests are marked private."],
+  ["ElevenLabs", "Only when you use voice on the website (if the owner has turned it on): it receives your voice recording to turn it into text, and the text of replies being read aloud. Not your account details."],
+  ["Your browser's speech service", "If ElevenLabs isn't on, talk mode uses your browser's built-in speech recognition and voice. Some browsers (like Chrome) send what you say to their own servers to recognize it."],
 ];
 
 export default function PrivacyPage() {

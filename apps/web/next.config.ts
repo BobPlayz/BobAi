@@ -22,6 +22,14 @@ const nextConfig: NextConfig = {
         { key: "X-DNS-Prefetch-Control", value: "off" },
         { key: "Content-Security-Policy", value: `default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src ${scriptSources}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: blob: https:; media-src 'self' blob:; connect-src ${connectSources}` },
       ],
+    }, {
+      // The website preview (see Markdown.tsx): sandboxed by this header (an isolated origin with no cookies or storage),
+      // framed only by Jarvis itself, and no network access at all.
+      source: "/preview-frame.html",
+      headers: [
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        { key: "Content-Security-Policy", value: "sandbox allow-scripts allow-forms allow-modals; default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; form-action 'none'; base-uri 'none'; frame-ancestors 'self'" },
+      ],
     }];
   },
 };

@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, settings } from "@bobai/db";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 import { isGeneration } from "../services/generationStyle.js";
+import { isLanguage } from "../services/language.js";
 const router = Router();
 const SAFE_KEYS = new Set(["personality", "model", "memoryEnabled", "theme", "language", "responseStyle", "responseLength", "tone", "defaultModel", "defaultToolPermissions", "customInstructions", "promptTemplates", "notifications", "voice", "privacy", "accessibility", "generation", "learnStyle"]);
 // Server-managed: the learned typing-style profile can be reset (deleted) by the user but never written by the client.
@@ -17,7 +18,8 @@ function validateSetting(key: string, value: unknown): string | null {
   if (key === "memoryEnabled") return typeof value === "boolean" ? null : "memoryEnabled must be boolean";
   if (key === "learnStyle") return typeof value === "boolean" ? null : "learnStyle must be boolean";
   if (key === "generation") return value === "" || isGeneration(value) ? null : "unsupported generation";
-  if (["personality", "model", "language", "responseStyle", "responseLength", "tone", "defaultModel", "customInstructions"].includes(key) && typeof value !== "string") return `${key} must be a string`;
+  if (key === "language") return isLanguage(value) ? null : "unsupported language";
+  if (["personality", "model", "responseStyle", "responseLength", "tone", "defaultModel", "customInstructions"].includes(key) && typeof value !== "string") return `${key} must be a string`;
   if (key === "theme" && (typeof value !== "string" || !THEMES.has(value))) return "unsupported theme";
   if (key === "responseLength" && (typeof value !== "string" || !RESPONSE_LENGTHS.has(value))) return "unsupported response length";
   if (key === "tone" && (typeof value !== "string" || !TONES.has(value))) return "unsupported tone";

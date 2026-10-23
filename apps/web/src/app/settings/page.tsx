@@ -10,6 +10,7 @@ import { logout } from "@/lib/auth";
 
 import { loadPreferences, savePreferences, type Preferences } from "@/lib/preferences";
 import { GENERATIONS } from "@/lib/generation";
+import { LANGUAGES, languageLabel, type LanguageId } from "@/lib/language";
 import JarvisMark from "@/components/JarvisMark";
 
 type SettingsState = Preferences;
@@ -45,7 +46,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const light = theme === "light";
   const [tab, setTab] = useState<Tab>("personalization");
-  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true });
+  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en" });
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [memories, setMemories] = useState<Array<Record<string, unknown>>>([]);
@@ -303,6 +304,12 @@ export default function SettingsPage() {
                 </div>
               )}
 
+              <h2 className="font-display mt-8 text-2xl">Reply language</h2>
+              <p className={`mt-1 text-sm ${colors.muted}`}>Jarvis always answers in this language, unless you ask for a translation.</p>
+              <select aria-label="Reply language" value={settings.language} onChange={(event) => update("language", event.target.value as LanguageId)} className={`mt-3 h-11 w-full max-w-sm rounded-xl border px-3 text-sm outline-none focus:border-[var(--text)] ${colors.field}`}>
+                {LANGUAGES.map((language) => <option key={language.id} value={language.id}>{languageLabel(language.id)}</option>)}
+              </select>
+
               <h2 className="font-display mt-8 text-2xl">Your generation</h2>
               <p className={`mt-1 text-sm ${colors.muted}`}>Jarvis texts you the way your generation does.</p>
               <select aria-label="Your generation" value={settings.generation} onChange={(event) => update("generation", event.target.value)} className={`mt-3 h-11 w-full max-w-sm rounded-xl border px-3 text-sm outline-none focus:border-[var(--text)] ${colors.field}`}>
@@ -355,6 +362,10 @@ export default function SettingsPage() {
                 <h2 className="font-display text-2xl">What Jarvis has learned about you</h2>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Everything Jarvis uses to personalize replies, in one place. You can change or delete any of it.</p>
                 <dl className="mt-5 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] text-sm">
+                  <div className="py-3">
+                    <dt className="font-medium">Reply language</dt>
+                    <dd className={`mt-1 ${colors.muted}`}>{languageLabel(settings.language)} <button type="button" onClick={() => setTab("personalization")} className="md-link ml-1">change</button></dd>
+                  </div>
                   <div className="py-3">
                     <dt className="font-medium">Your generation</dt>
                     <dd className={`mt-1 ${colors.muted}`}>{GENERATIONS.find((generation) => generation.id === settings.generation)?.label ?? "Not set"} <button type="button" onClick={() => setTab("personalization")} className="md-link ml-1">change</button></dd>

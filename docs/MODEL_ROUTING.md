@@ -49,5 +49,7 @@ Counters are shared across all server instances (`rate_limit_buckets`) and reset
 | Login emails per day | `BOBAI_LIMIT_EMAILS_PER_DAY` | 450 (Gmail) / 90 (Resend) | Gmail ~500/day, Resend free 100/day |
 | Cricket feed calls per day | `BOBAI_LIMIT_CRICKET_CALLS_PER_DAY` | 95 | CricketData.org free 100/day; after that web search is used |
 | Brave searches per month | `BOBAI_LIMIT_BRAVE_SEARCHES_PER_MONTH` | 900 | ~$5 free credit ≈ 1,000 searches; after that DuckDuckGo is used |
+| Pictures per person per day | `BOBAI_LIMIT_IMAGES_PER_USER_PER_DAY` | 20 | Pollinations is free but shared |
+| Spoken characters per month | `BOBAI_LIMIT_SPEECH_CHARACTERS_PER_MONTH` | 15,000 | ElevenLabs free plan ≈ 20,000 characters with Flash v2.5 |
 
 People see how many messages they have left in Settings.

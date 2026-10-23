@@ -1,5 +1,6 @@
 import { assertMediaPromptSafe } from "./mediaSafety.js";
 import { fluxGenerate } from "./flux.js";
+import { pollinationsGenerate } from "./pollinations.js";
 
 export type GeneratedImage = { url: string; prompt: string; index: number; seed?: number; width?: number; height?: number };
 type MediaOptions = { prompt: string; count?: number; width?: number; height?: number; seed?: number };
@@ -22,6 +23,13 @@ function normalizeImages(inputImages: string[] | undefined) {
   return image;
  });
 }
+export type ImageProvider = "local" | "pollinations" | "off";
+/** BOBAI_IMAGE_PROVIDER picks one; otherwise the local generator on a PC that has it, Pollinations everywhere else. */
+export function imageProvider(): ImageProvider {
+ const chosen = process.env.BOBAI_IMAGE_PROVIDER?.trim().toLowerCase();
+ if (chosen === "local" || chosen === "pollinations" || chosen === "off") return chosen;
+ return process.env.VERCEL === "1" || !process.env.BOBAI_IMAGE_MODEL_PATH?.trim() ? "pollinations" : "local";
+}
 export async function generateImages(prompt:string,count=1,inputImages?:string[],signal?:AbortSignal,options: { width?: number; height?: number; seed?: number; steps?: number; guidanceScale?: number; negativePrompt?: string } = {}):Promise<GeneratedImage[]> {
  const normalized=prompt.trim();
  if(!normalized)throw new Error("image prompt is required");
@@ -38,6 +46,12 @@ export async function generateImages(prompt:string,count=1,inputImages?:string[]
  if(!Number.isInteger(width)||width<256||width>768||width%8!==0||!Number.isInteger(height)||height<256||height>768||height%8!==0) throw new Error("image width and height must be multiples of 8 between 256 and 768");
  if(seed!==undefined&&(!Number.isInteger(seed)||seed<0||seed>2_147_483_647)) throw new Error("image seed must be an integer between 0 and 2147483647");
  if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("image generation cancelled");
+ const provider=imageProvider();
+ if(provider==="off") throw new Error("image generation is turned off on this server");
+ if(provider==="pollinations"){
+  if(images.length) throw new Error("editing pictures needs the local image generator on your PC; this server can only create new images");
+  return pollinationsGenerate(normalized,requested,signal,{width,height,seed});
+ }
  const generated=await fluxGenerate(normalized,requested,images,signal,{width,height,seed,steps,guidanceScale,negativePrompt});
  if(generated?.length)return generated;
  throw new Error("image generation is unavailable; configure a supported image-generation provider");

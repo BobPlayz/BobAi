@@ -49,6 +49,8 @@ export type ChatMessage = {
   model?: string;
   /** How many earlier messages were summarized (chat compacting) to answer this one. */
   compacted?: number;
+  /** A website Jarvis saved and is serving on this computer ("…on localhost"). */
+  localSite?: { url: string; name: string };
   /** Sent to the model for this turn only (e.g. extracted file text); never stored as a chat message. */
   ephemeral?: boolean;
 };

@@ -75,12 +75,12 @@ export function ollamaContextTokens() {
   return Math.min(32768, Math.max(1024, Number.isFinite(raw) ? Math.trunc(raw) : 4096));
 }
 
-export function ollamaPredictTokens(defaultPredict = 1024) {
+export function ollamaPredictTokens(defaultPredict = 1536) {
   const raw = Number(process.env.BOBAI_OLLAMA_NUM_PREDICT || defaultPredict);
   return Math.min(4096, Math.max(64, Number.isFinite(raw) ? Math.trunc(raw) : defaultPredict));
 }
 
-function inferenceOptions(defaultPredict = 1024) {
+function inferenceOptions(defaultPredict = 1536) {
   return { num_ctx: ollamaContextTokens(), num_predict: ollamaPredictTokens(defaultPredict) };
 }
 

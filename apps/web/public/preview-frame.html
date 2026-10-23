@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Preview</title></head>
+<body>
+<script>
+  // Website preview for code Jarvis writes. Its CSP header (next.config.ts) sandboxes it (no same-origin) and
+  // blocks all network access, so the page can run its own scripts but cannot reach Jarvis, cookies or the internet.
+  addEventListener("message", function (event) {
+    if (event.source !== parent || typeof event.data !== "string") return;
+    document.open(); document.write(event.data); document.close();
+  }, { once: true });
+  parent.postMessage("jarvis-preview-ready", "*");
+</script>
+</body></html>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Paperclip, Square, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUp, AudioLines, Paperclip, Square, Volume2, VolumeX, X } from "lucide-react";
 import VoiceButton from "@/components/VoiceButton";
 
 type Props = {
@@ -16,9 +16,11 @@ type Props = {
   onCancelUpload?: (key: string) => void;
   voiceReplies?: boolean;
   onToggleVoiceReplies?: () => void;
+  /** Opens hands-free talk mode. */
+  onTalk?: () => void;
 };
 
-export default function NeuralComposer({ input, setInput, onSend, onFiles, disabled, streaming, onStop, uploadingFiles = [], uploadProgress = {}, onCancelUpload, voiceReplies = false, onToggleVoiceReplies }: Props) {
+export default function NeuralComposer({ input, setInput, onSend, onFiles, disabled, streaming, onStop, uploadingFiles = [], uploadProgress = {}, onCancelUpload, voiceReplies = false, onToggleVoiceReplies, onTalk }: Props) {
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -58,13 +60,19 @@ export default function NeuralComposer({ input, setInput, onSend, onFiles, disab
               <input type="file" multiple accept=".pdf,.txt,.md,.csv,.html,.css,.js,.xml,.png,.jpg,.jpeg,.webp" className="sr-only" onChange={(event) => { onFiles(event.target.files); event.currentTarget.value = ""; }} />
             </label>
             <VoiceButton onTranscript={(text) => setInput(text)} disabled={disabled} />
+            {onTalk && (
+              <button type="button" onClick={onTalk} disabled={disabled} aria-label="Talk to Jarvis (hands-free voice chat)" title="Talk mode" className="atelier-chip !min-h-9">
+                <AudioLines className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Talk</span>
+              </button>
+            )}
             {onToggleVoiceReplies && (
               <button
                 type="button"
                 onClick={onToggleVoiceReplies}
                 aria-pressed={voiceReplies}
                 aria-label={voiceReplies ? "Turn off spoken replies" : "Turn on spoken replies"}
-                title={voiceReplies ? "Spoken replies on (Alan)" : "Spoken replies off"}
+                title={voiceReplies ? "Spoken replies on" : "Spoken replies off"}
                 className="atelier-chip !min-h-9"
               >
                 {voiceReplies ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}

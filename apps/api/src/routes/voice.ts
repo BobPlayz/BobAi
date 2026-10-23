@@ -149,12 +149,12 @@ router.post("/turn", limit, async (req, res) => {
 
 router.post("/transcribe", limit, async (req, res) => {
   try { return res.json(await transcribe(decode(req.body?.audio, 25 * 1024 * 1024), req.body?.options)); }
-  catch (error) { console.error(JSON.stringify({ event: "voice_transcription_failed", error: error instanceof Error ? error.message.slice(0, 300) : "unknown" })); const message = error instanceof Error ? error.message : "voice transcription unavailable"; return res.status(message === "invalid audio" ? 400 : 503).json({ error: message === "invalid audio" ? message : "local voice transcription unavailable" }); }
+  catch (error) { console.error(JSON.stringify({ event: "voice_transcription_failed", error: error instanceof Error ? error.message.slice(0, 300) : "unknown" })); const message = error instanceof Error ? error.message : "voice transcription unavailable"; const publicMessage = (error as { publicMessage?: unknown })?.publicMessage; return res.status(message === "invalid audio" ? 400 : typeof publicMessage === "string" ? 429 : 503).json({ error: message === "invalid audio" ? message : typeof publicMessage === "string" ? publicMessage : "Voice typing isn't available right now." }); }
 });
 router.post("/synthesize", limit, async (req, res) => {
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
   if (!text || text.length > 20_000) return res.status(400).json({ error: "invalid text" });
   try { return res.json(await synthesize(text, req.body?.options)); }
-  catch { return res.status(503).json({ error: "local speech synthesis unavailable" }); }
+  catch (error) { const publicMessage = (error as { publicMessage?: unknown })?.publicMessage; return res.status(typeof publicMessage === "string" ? 429 : 503).json({ error: typeof publicMessage === "string" ? publicMessage : "Jarvis's voice isn't available right now." }); }
 });
 export default router;

@@ -3,12 +3,13 @@
  * preferences saved under the old key are read once so nobody loses what they set before.
  */
 import { isGenerationId } from "./generation";
+import { isLanguageId, type LanguageId } from "./language";
 
 export const PREFERENCES_KEY = "jarvis.settings.v1";
 const LEGACY_KEY = "bobai.settings.v1";
 
-export type Preferences = { personality: string; memory: boolean; sourceTypes: string[]; generation: string; learnStyle: boolean };
-const DEFAULTS: Preferences = { personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true };
+export type Preferences = { personality: string; memory: boolean; sourceTypes: string[]; generation: string; learnStyle: boolean; language: LanguageId };
+const DEFAULTS: Preferences = { personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en" };
 
 export function loadPreferences(): Preferences {
   if (typeof window === "undefined") return DEFAULTS;
@@ -21,6 +22,7 @@ export function loadPreferences(): Preferences {
       sourceTypes: Array.isArray(value.sourceTypes) && value.sourceTypes.every((item) => typeof item === "string") ? value.sourceTypes : DEFAULTS.sourceTypes,
       generation: isGenerationId(value.generation) ? value.generation : "",
       learnStyle: value.learnStyle !== false,
+      language: isLanguageId(value.language) ? value.language : "en",
     };
   } catch { return DEFAULTS; }
 }

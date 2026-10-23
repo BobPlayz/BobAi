@@ -5,6 +5,8 @@ import NeuralSidebar from "@/components/neural/NeuralSidebar";
 import NeuralTopbar from "@/components/neural/NeuralTopbar";
 import NeuralComposer from "@/components/neural/NeuralComposer";
 import ChatWindow from "@/components/ChatWindow";
+import TalkMode from "@/components/TalkMode";
+import { loadPreferences } from "@/lib/preferences";
 import { useEffect, useState } from "react";
 import { useChat } from "@/hooks/useChat";
 
@@ -13,6 +15,7 @@ const VOICE_REPLIES_KEY = "jarvis.voiceReplies";
 export default function ChatPage() {
   const chat = useChat();
   const [voiceReplies, setVoiceReplies] = useState(false);
+  const [talking, setTalking] = useState(false);
   useEffect(() => { try { setVoiceReplies(localStorage.getItem(VOICE_REPLIES_KEY) === "on"); } catch { /* storage unavailable */ } }, []);
   function toggleVoiceReplies() {
     setVoiceReplies((current) => { const next = !current; try { localStorage.setItem(VOICE_REPLIES_KEY, next ? "on" : "off"); } catch { /* storage unavailable */ } return next; });
@@ -50,6 +53,7 @@ export default function ChatPage() {
           onCancelUpload={chat.cancelUpload}
           voiceReplies={voiceReplies}
           onToggleVoiceReplies={toggleVoiceReplies}
+          onTalk={() => setTalking(true)}
         />
       }
     >
@@ -62,9 +66,10 @@ export default function ChatPage() {
         onRegenerate={chat.regenerateLastAssistant}
         onResolveApproval={chat.resolveApproval}
         onSuggestion={chat.setInput}
-        voiceReplies={voiceReplies}
+        voiceReplies={voiceReplies && !talking}
         autoPlayMessageId={chat.lastReplyId}
       />
+      {talking && <TalkMode language={loadPreferences().language} onUtterance={chat.send} onClose={() => setTalking(false)} />}
     </NeuralShell>
   );
 }

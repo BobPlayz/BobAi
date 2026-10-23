@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Check, Code, Copy, Download, Play } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Small, dependency-free Markdown renderer for model output.
@@ -174,23 +174,58 @@ export function highlight(code: string, lang: string): ReactNode[] {
   return nodes;
 }
 
+const isHtmlPage = (code: string, lang: string) => lang === "html" || /^\s*(<!doctype html|<html)/i.test(code);
+
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const [copied, setCopied] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const html = isHtmlPage(code, lang);
   async function copy() {
     try { await navigator.clipboard.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* clipboard unavailable */ }
+  }
+  function download() {
+    const url = URL.createObjectURL(new Blob([code], { type: "text/html" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "jarvis-site.html"; link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
   }
   return (
     <div className="md-code">
       <div className="md-code-bar">
         <span>{lang || "code"}</span>
-        <button type="button" onClick={copy} aria-label={copied ? "Copied" : "Copy code"} className="md-code-copy">
-          {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
-          <span>{copied ? "Copied" : "Copy"}</span>
-        </button>
+        <span className="flex items-center gap-1">
+          {html && (
+            <>
+              <button type="button" onClick={() => setPreview((value) => !value)} aria-pressed={preview} className="md-code-copy">{preview ? <Code className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}<span>{preview ? "Code" : "Preview"}</span></button>
+              <button type="button" onClick={download} className="md-code-copy"><Download className="h-3.5 w-3.5" aria-hidden /><span>Download</span></button>
+            </>
+          )}
+          <button type="button" onClick={copy} aria-label={copied ? "Copied" : "Copy code"} className="md-code-copy">
+            {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+            <span>{copied ? "Copied" : "Copy"}</span>
+          </button>
+        </span>
       </div>
-      <pre tabIndex={0}><code>{highlight(code, lang)}</code></pre>
+      {preview
+        // Sandboxed without allow-same-origin: the page runs its own scripts but cannot reach Jarvis's cookies, storage or window.
+        ? <SitePreview code={code} />
+        : <pre tabIndex={0}><code>{highlight(code, lang)}</code></pre>}
     </div>
   );
+}
+
+// Runs the page in /preview-frame.html, whose own CSP header sandboxes it (no allow-same-origin) and blocks all network
+// access, so the page's scripts run but cannot reach Jarvis's cookies, storage, window or the internet.
+function SitePreview({ code }: { code: string }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.source === frame.current?.contentWindow && event.data === "jarvis-preview-ready") frame.current?.contentWindow?.postMessage(code, "*");
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [code]);
+  return <iframe key={code} ref={frame} title="Website preview" src="/preview-frame.html" className="block h-[440px] w-full bg-white" />;
 }
 
 export default function Markdown({ text }: { text: string }) {

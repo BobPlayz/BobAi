@@ -19,8 +19,11 @@ Jarvis chats, helps with code, checks the weather and cricket, researches with r
 | 🔎 **Research** | Searches the web, reads the pages and lists its sources | ✅ | ✅ |
 | 🖼️ **Pictures** | Describe or ask about an image, using a vision-capable model | ✅ | ✅ |
 | 📎 **Files** | PDFs, text and code, checked before they are read | Needs a malware scanner | ✅ |
-| 🗣️ **Voice** | Talk to Jarvis and hear replies as *Alan* (Piper), all offline | — | ✅ |
-| 🎨 **Drawing** | Image generation with Stable Diffusion, no API key (slow on a laptop) | — | ✅ |
+| 🗣️ **Talk mode** | Hands-free voice chat: Jarvis listens, answers out loud, listens again. ElevenLabs when a key is set, otherwise your browser's voice; Whisper + Piper offline on a PC | ✅ | ✅ |
+| 🎨 **Drawing** | Pollinations on the live site (free, no key); Stable Diffusion offline on a PC | ✅ | ✅ |
+| 🛠️ **Build a website** | Ask for a calculator, game or quiz: press **Preview** to run it in a locked-down sandbox, or ask for it *"on localhost"* and Jarvis hosts it on your PC | Preview | ✅ |
+| 🌍 **Your language** | Pick the reply language (24 to choose from) and Jarvis sticks to it | ✅ | ✅ |
+| 👋 **Texts like you** | Matches your generation's texting style and learns how you type (you can turn it off) | ✅ | ✅ |
 | ✅ **Asks first** | Anything that acts for you shows an approval card first | ✅ | ✅ |
 | 🔐 **Sign in** | 6-digit email code, no passwords. Sessions stored securely in Postgres | ✅ | ✅ |
 

@@ -15,7 +15,7 @@ const sections: Array<[string, string]> = [
   ["Be decent", "Don't use Jarvis to bully or harass anyone, break the law, create harmful or adult content, spread malware, spam, or attack the service. Don't paste other people's private information. Jarvis may refuse requests that break these rules."],
   ["Your stuff", "What you write and upload stays yours. You let Jarvis process it only to answer you and keep your history. Only upload things you're allowed to share."],
   ["Actions need your OK", "If Jarvis wants to do something for you with a tool, it shows you exactly what and waits for your approval. You're responsible for what you approve."],
-  ["Other services", "Jarvis uses other services to work: Vercel (hosting), Neon (database), Ollama (AI models), Gmail or Resend (login codes), and weather, search and cricket providers. Their own terms apply to them."],
+  ["Other services", "Jarvis uses other services to work: Vercel (hosting), Neon (database), Ollama (AI models), Gmail or Resend (login codes), Pollinations (pictures), ElevenLabs (voice, when turned on), and weather, search and cricket providers. Their own terms apply to them."],
   ["No guarantees", "Jarvis is provided free and \"as is\". It might be unavailable, slow, or lose data, and it isn't a replacement for professional advice. As far as the law allows, the maker isn't responsible for losses from using it."],
   ["Ending things", "You can delete your account any time in Settings. Accounts that break these rules may be limited or removed."],
   ["Changes", "These terms may be updated; the date at the top will change. Continuing to use Jarvis after a change means you accept it."],

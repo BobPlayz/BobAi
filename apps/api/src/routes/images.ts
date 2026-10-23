@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db, images } from "@bobai/db";
-import { generateImages } from "../services/mediaGeneration.js";
+import { generateImages, imageProvider } from "../services/mediaGeneration.js";
+import { consumeQuota } from "../services/usageLimits.js";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
 import { ensurePersonalWorkspace } from "../services/workspace.js";
 
@@ -48,12 +49,14 @@ router.post("/generate", limit, async (req, res) => {
   res.once("close", onDisconnect);
 
   try {
+    const quota = await consumeQuota("image_user", req.user!.id, new Date(), count);
+    if (!quota.allowed) return res.status(429).json({ error: `you've made all ${quota.limit} of today's images. more tomorrow!` });
     const generated = await generateImages(prompt, count, inputImages, controller.signal, { width, height, steps, guidanceScale, negativePrompt, ...(seed === undefined ? {} : { seed }) });
     if (controller.signal.aborted || res.destroyed) return;
     if (!generated.length || generated.length > count) throw new Error("local image generation returned no images");
     for (const item of generated) {
-      if (typeof item.url !== "string" || item.url.length > MAX_DATA_URL || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.url)) {
-        throw new Error("local image generation returned an invalid image");
+      if (typeof item.url !== "string" || item.url.length > MAX_DATA_URL || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(item.url)) {
+        throw new Error("image generation returned an invalid image");
       }
     }
 
@@ -63,12 +66,12 @@ router.post("/generate", limit, async (req, res) => {
       workspaceId: workspace.id,
       createdBy: req.user!.id,
       prompt,
-      model: process.env.BOBAI_IMAGE_MODEL_PATH ? "local-diffusers" : "unconfigured",
+      model: imageProvider() === "pollinations" ? "pollinations" : "local-diffusers",
       width: item.width ?? width,
       height: item.height ?? height,
       seed: item.seed ?? seed ?? null,
       operation: inputImages?.length ? "edit" : "generate",
-      metadata: { url: item.url, index: item.index, source: "local" },
+      metadata: { url: item.url, index: item.index, source: imageProvider() },
     }))).returning();
 
     const response = { images: created.map((row, index) => ({ ...row, url: generated[index].url, prompt })) };
@@ -77,7 +80,13 @@ router.post("/generate", limit, async (req, res) => {
     if (controller.signal.aborted || res.destroyed) return;
     const message = error instanceof Error ? error.message : "";
     const clientError = /^(image prompt.{0,100}|count must be.{0,100}|width and height.{0,100}|seed must be.{0,100}|steps must be.{0,100}|guidanceScale must be.{0,100}|negativePrompt must be.{0,100}|local image editing is not configured.{0,100}|Power image mode currently supports text-to-image only.{0,100}|up to 4 input images are supported|reference images.{0,100}|MIME does not match.{0,100}|media request violates the safety policy|image request exceeds the 12 MB limit)$/i.test(message);
-    const safeMessage = clientError ? message : "Local image generation is not ready. Run npm run setup:image-generation and npm run test:image-generation, then restart Jarvis.";
+    // Messages written for users by the image providers pass through; anything else is logged and replaced.
+    const providerMessage = /^(the image service.{0,200}|editing pictures needs.{0,200}|image generation is turned off.{0,100})$/i.test(message);
+    if (/^the image service is busy/i.test(message)) return res.status(429).json({ error: message });
+    if (!clientError && !providerMessage) console.error(JSON.stringify({ event: "image_generation_failed", provider: imageProvider(), error: message.slice(0, 300) }));
+    const safeMessage = clientError || providerMessage ? message
+      : imageProvider() === "pollinations" ? "The picture service didn't answer properly. Try again in a moment."
+      : "Local image generation is not ready. Run npm run setup:image-generation and npm run test:image-generation, then restart Jarvis.";
     return res.status(clientError ? 400 : 502).json({ error: safeMessage });
   } finally {
     req.off("aborted", onDisconnect);

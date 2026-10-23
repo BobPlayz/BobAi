@@ -10,8 +10,9 @@ import { db } from "@bobai/db";
  * - email: Gmail allows about 500 a day; Resend's free plan 100 a day
  * - cricket feed: CricketData.org free plan, 100 calls a day
  * - Brave Search: about $5 of free credit a month, roughly 1,000 searches
+ * - images (Pollinations, free) per person per day; ElevenLabs speech characters per month (free plan)
  */
-export type QuotaName = "chat_user" | "chat_site" | "email" | "cricket_feed" | "brave_search";
+export type QuotaName = "chat_user" | "chat_site" | "email" | "cricket_feed" | "brave_search" | "image_user" | "tts_chars" | "stt_seconds";
 type QuotaSpec = { env: string; defaultLimit: () => number; period: "day" | "month" };
 
 const SPECS: Record<QuotaName, QuotaSpec> = {
@@ -20,6 +21,11 @@ const SPECS: Record<QuotaName, QuotaSpec> = {
   email: { env: "BOBAI_LIMIT_EMAILS_PER_DAY", defaultLimit: () => (process.env.BOBAI_EMAIL_PROVIDER?.trim().toLowerCase() === "smtp" || !process.env.RESEND_API_KEY ? 450 : 90), period: "day" },
   cricket_feed: { env: "BOBAI_LIMIT_CRICKET_CALLS_PER_DAY", defaultLimit: () => 95, period: "day" },
   brave_search: { env: "BOBAI_LIMIT_BRAVE_SEARCHES_PER_MONTH", defaultLimit: () => 900, period: "month" },
+  // Pollinations is free but shared; keep each person's image use reasonable.
+  image_user: { env: "BOBAI_LIMIT_IMAGES_PER_USER_PER_DAY", defaultLimit: () => 20, period: "day" },
+  // ElevenLabs free plan: 10,000 credits a month, about 20,000 characters with Flash v2.5.
+  tts_chars: { env: "BOBAI_LIMIT_SPEECH_CHARACTERS_PER_MONTH", defaultLimit: () => 15_000, period: "month" },
+  stt_seconds: { env: "BOBAI_LIMIT_SPEECH_INPUT_SECONDS_PER_MONTH", defaultLimit: () => 3_600, period: "month" },
 };
 
 export type QuotaState = { name: QuotaName; used: number; limit: number; allowed: boolean; resetsAt: string };
@@ -44,14 +50,14 @@ function bucketKey(name: QuotaName, scope: string, label: string) { return `quot
  * Counts one use and says whether it was within the limit. A database problem allows the use (never block sign-in or
  * chat because a counter is unavailable) and is logged.
  */
-export async function consumeQuota(name: QuotaName, scope = "site", now = new Date()): Promise<QuotaState> {
+export async function consumeQuota(name: QuotaName, scope = "site", now = new Date(), amount = 1): Promise<QuotaState> {
   const limit = quotaLimit(name);
   const { label, endsAt } = quotaPeriod(name, now);
   if (limit === 0) return { name, used: 0, limit, allowed: true, resetsAt: endsAt.toISOString() };
   try {
     const key = bucketKey(name, scope, label);
-    const rows = await db.execute(sql`INSERT INTO rate_limit_buckets (bucket_key, window_start, count, expires_at) VALUES (${key}, ${now.toISOString()}, 1, ${endsAt.toISOString()}) ON CONFLICT (bucket_key) DO UPDATE SET count = rate_limit_buckets.count + 1 RETURNING count`);
-    const used = Number((rows[0] as { count?: number } | undefined)?.count ?? 1);
+    const rows = await db.execute(sql`INSERT INTO rate_limit_buckets (bucket_key, window_start, count, expires_at) VALUES (${key}, ${now.toISOString()}, ${amount}, ${endsAt.toISOString()}) ON CONFLICT (bucket_key) DO UPDATE SET count = rate_limit_buckets.count + ${amount} RETURNING count`);
+    const used = Number((rows[0] as { count?: number } | undefined)?.count ?? amount);
     return { name, used, limit, allowed: used <= limit, resetsAt: endsAt.toISOString() };
   } catch (error) {
     console.error(JSON.stringify({ event: "quota_check_failed", quota: name, error: error instanceof Error ? error.message.slice(0, 200) : "unknown" }));

@@ -193,6 +193,15 @@ function AssistantMessage({ message, autoPlayId, onResolveApproval, onPreview, o
       )}
 
       {message.liveData && <LiveDataBadge info={message.liveData} />}
+      {message.localSite && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--accent)] bg-[var(--surface)] p-4">
+          <div className="min-w-0">
+            <p className="font-medium">Your site is running on localhost 🎉</p>
+            <p className="truncate text-sm text-[var(--muted)]">{message.localSite.url}</p>
+          </div>
+          <a href={message.localSite.url} target="_blank" rel="noopener noreferrer" className="btn-ink !min-h-10 text-sm">Open localhost <span className="btn-arrow" aria-hidden>→</span></a>
+        </div>
+      )}
       {message.compacted ? <p className="caption mt-3 normal-case tracking-normal text-[var(--faint)]">Jarvis summarized {message.compacted} earlier messages to keep this chat going.</p> : null}
       {message.model && <p className="caption mt-3 normal-case tracking-normal text-[var(--faint)]">via {message.model}</p>}
       {message.approval && <ApprovalCard approval={message.approval} onResolve={onResolveApproval} />}
