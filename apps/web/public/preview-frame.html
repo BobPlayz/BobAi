@@ -1,13 +1,26 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Preview</title></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Jarvis website</title></head>
 <body>
 <script>
-  // Website preview for code Jarvis writes. Its CSP header (next.config.ts) sandboxes it (no same-origin) and
-  // blocks all network access, so the page can run its own scripts but cannot reach Jarvis, cookies or the internet.
-  addEventListener("message", function (event) {
-    if (event.source !== parent || typeof event.data !== "string") return;
-    document.open(); document.write(event.data); document.close();
-  }, { once: true });
-  parent.postMessage("jarvis-preview-ready", "*");
+  // Runs a website Jarvis wrote. Its CSP header (next.config.ts) sandboxes it (no same-origin) and blocks all network
+  // access, so the page can run its own scripts but cannot reach Jarvis, cookies or the internet.
+  // The code arrives either from the chat's preview frame (postMessage) or, when opened in its own tab, in the URL
+  // fragment (#code=...), which browsers never send to the server.
+  function show(html) { document.open(); document.write(html); document.close(); }
+  var match = /^#code=(.+)$/.exec(location.hash);
+  if (match) {
+    try {
+      var bytes = Uint8Array.from(atob(match[1].replace(/-/g, "+").replace(/_/g, "/")), function (c) { return c.charCodeAt(0); });
+      show(new TextDecoder().decode(bytes));
+    } catch (error) { document.body.textContent = "This website link is broken. Go back to Jarvis and press Open again."; }
+  } else {
+    var shown = false;
+    addEventListener("message", function (event) {
+      if (shown || event.source !== parent || typeof event.data !== "string") return;
+      shown = true;
+      show(event.data);
+    });
+    parent.postMessage("jarvis-preview-ready", "*");
+  }
 </script>
 </body></html>

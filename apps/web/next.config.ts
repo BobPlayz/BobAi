@@ -7,7 +7,8 @@ const connectSources = isProduction ? "'self' https: wss:" : "'self' https: http
 const localApiProxy = process.env.BOBAI_LOCAL_API_PROXY?.trim().replace(/\/+$/, "");
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  ...(localApiProxy ? { async rewrites() { return [{ source: "/api/:path*", destination: `${localApiProxy}/:path*` }]; } } : {}),
+  // Pictures and long replies can take over a minute; the proxy's default 30 s would cut them off.
+  ...(localApiProxy ? { experimental: { proxyTimeout: 180_000 }, async rewrites() { return [{ source: "/api/:path*", destination: `${localApiProxy}/:path*` }]; } } : {}),
   async headers() {
     return [{
       source: "/:path*",

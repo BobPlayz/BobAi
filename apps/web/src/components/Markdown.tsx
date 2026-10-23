@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Code, Copy, Download, Play } from "lucide-react";
+import { Check, Code, Copy, Download, ExternalLink, Play } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
@@ -183,6 +183,15 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
   async function copy() {
     try { await navigator.clipboard.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* clipboard unavailable */ }
   }
+  // Runs the website full screen in its own tab: the sandboxed preview page, with the code in the URL fragment (never
+  // sent to any server) and no link back to this tab.
+  function openFull() {
+    const bytes = new TextEncoder().encode(code);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    const encoded = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    window.open(`/preview-frame.html#code=${encoded}`, "_blank", "noopener,noreferrer");
+  }
   function download() {
     const url = URL.createObjectURL(new Blob([code], { type: "text/html" }));
     const link = document.createElement("a");
@@ -197,6 +206,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
           {html && (
             <>
               <button type="button" onClick={() => setPreview((value) => !value)} aria-pressed={preview} className="md-code-copy">{preview ? <Code className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}<span>{preview ? "Code" : "Preview"}</span></button>
+              <button type="button" onClick={openFull} className="md-code-copy" title="Run it full screen in a new tab"><ExternalLink className="h-3.5 w-3.5" aria-hidden /><span>Open</span></button>
               <button type="button" onClick={download} className="md-code-copy"><Download className="h-3.5 w-3.5" aria-hidden /><span>Download</span></button>
             </>
           )}

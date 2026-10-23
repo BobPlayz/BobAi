@@ -40,3 +40,16 @@ test("localhost sites are never available on the hosted site", () => {
   try { assert.equal(localSitesEnabled(), false); } finally { delete process.env.VERCEL; }
   assert.equal(localSitesEnabled(), true);
 });
+
+test("Jarvis only promises a localhost button where it can actually host one", async () => {
+  const { buildSystemPrompt } = await import("../src/services/chatEngine.js");
+  const saved = process.env.VERCEL;
+  try {
+    process.env.VERCEL = "1";
+    const hosted = buildSystemPrompt("").content;
+    assert.match(hosted, /can't start servers on their computer/);
+    assert.doesNotMatch(hosted, /Open localhost button/);
+    delete process.env.VERCEL;
+    assert.match(buildSystemPrompt("").content, /Open localhost button/);
+  } finally { if (saved === undefined) delete process.env.VERCEL; else process.env.VERCEL = saved; }
+});
