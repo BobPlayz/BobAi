@@ -147,6 +147,8 @@ async function sendSmtp(to: string, subject: string, text: string) {
 }
 
 export async function sendEmail(to: string, subject: string, text: string) {
+  // Guest accounts (and any other .invalid address) can never receive email; don't spend the daily allowance trying.
+  if (/\.invalid$/i.test(to.trim())) throw new Error("this address can't receive email");
   await sendSmtp(to, subject, text);
 }
 

@@ -3,11 +3,13 @@
 import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API, getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, verifyQuickStart, verifyMfaLogin, refreshSession } from "@/lib/auth";
+import { API, getPendingVerificationEmail, getPendingVerificationName, requestQuickStart, startGuest, verifyQuickStart, verifyMfaLogin, refreshSession } from "@/lib/auth";
 import JarvisMark from "@/components/JarvisMark";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const FALLBACK_TERMS_VERSION = "2026-10-23";
+// The API decides which Terms version is current; the built-in date is only a fallback if that lookup fails.
+const currentTermsVersion = () => fetch(`${API}/auth/terms-version`).then((response) => response.ok ? response.json() as Promise<{ version?: unknown }> : {}).then((data) => typeof (data as { version?: unknown }).version === "string" ? (data as { version: string }).version : FALLBACK_TERMS_VERSION).catch(() => FALLBACK_TERMS_VERSION);
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,6 +40,16 @@ export default function LoginPage() {
     return () => { cancelled = true; };
   }, [router]);
 
+  async function tryAsGuest() {
+    setError("");
+    setNotice("");
+    setLoading(true);
+    const result = await startGuest(name, await currentTermsVersion());
+    setLoading(false);
+    if (!result.ok) return setError(result.error || "Guest sign-in isn't working right now.");
+    router.push("/onboarding");
+  }
+
   async function submitDetails(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -48,8 +60,7 @@ export default function LoginPage() {
     if (!EMAIL_PATTERN.test(cleanEmail)) return setError("Enter a valid email address.");
     if (!termsAccepted) return setError("Please accept the Terms and Privacy Policy to continue.");
     setLoading(true);
-    // The API decides which Terms version is current; the built-in date is only a fallback if that lookup fails.
-    const termsVersion = await fetch(`${API}/auth/terms-version`).then((response) => response.ok ? response.json() as Promise<{ version?: unknown }> : {}).then((data) => typeof (data as { version?: unknown }).version === "string" ? (data as { version: string }).version : FALLBACK_TERMS_VERSION).catch(() => FALLBACK_TERMS_VERSION);
+    const termsVersion = await currentTermsVersion();
     const result = await requestQuickStart(cleanName, cleanEmail, true, termsVersion);
     setLoading(false);
     if (!result.ok) return setError(result.error || "Could not send your code.");
@@ -126,8 +137,11 @@ export default function LoginPage() {
                 <span id="terms-label">I agree to the <Link href="/terms" target="_blank" className="md-link">Terms</Link> and <Link href="/privacy" target="_blank" className="md-link">Privacy Policy</Link>.</span>
               </label>
               <button disabled={loading} className="btn-ink w-full justify-center disabled:opacity-50">
-                {loading ? "Sending code…" : <>Send my code <span className="btn-arrow" aria-hidden>→</span></>}
+                {loading ? "One sec…" : <>Send my code <span className="btn-arrow" aria-hidden>→</span></>}
               </button>
+              <div className="flex items-center gap-3 pt-2 text-xs uppercase tracking-widest text-[var(--muted)]" aria-hidden><span className="h-px flex-1 bg-[var(--hairline)]" />or<span className="h-px flex-1 bg-[var(--hairline)]" /></div>
+              <button type="button" onClick={() => void tryAsGuest()} disabled={loading} className="btn-line w-full justify-center disabled:opacity-50">Just try it, no email needed</button>
+              <p className="text-center text-xs leading-5 text-[var(--muted)]">By trying it you agree to the <Link href="/terms" target="_blank" className="md-link">Terms</Link> and <Link href="/privacy" target="_blank" className="md-link">Privacy Policy</Link>. Guest chats live on this device only, so logging out ends them.</p>
             </form>
           ) : step === "verify" ? (
             <form onSubmit={submitCode} className="mt-8 space-y-5">

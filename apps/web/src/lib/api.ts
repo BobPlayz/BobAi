@@ -144,3 +144,6 @@ export async function getTypingProfile(): Promise<TypingProfile | null> { const 
 
 /** Ends every session on every device (phones, other browsers), then logs out here. */
 export async function logOutEverywhere() { await request("/account/sessions", { method: "DELETE" }).catch(() => undefined); await logout(); }
+
+/** Guests have no email for a deletion code; the server accepts their session as proof. */
+export async function deleteGuestAccount() { const res = await request("/account/delete/guest", { method: "POST" }); const data = await readBody(res); if (!res.ok) throw new Error(data.error || "Could not delete the guest account."); return data as { status?: string }; }

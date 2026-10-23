@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, users } from "@bobai/db";
 import { Router, type Request, type Response } from "express";
-import { completeMfaLogin, createUser, login, loginWithEmailOtp, refresh, revoke } from "../services/auth.js";
+import { completeMfaLogin, createUser, issueSession, login, loginWithEmailOtp, refresh, revoke } from "../services/auth.js";
 import { completeSocialLogin, beginSocialLogin, socialProviders, type SocialProvider } from "../services/socialAuth.js";
 import { requestEmailOtp, verifyEmailOtp } from "../services/otp.js";
 import { resetPassword, requestPasswordReset } from "../services/passwordReset.js";
@@ -10,6 +10,7 @@ import { sendPasswordResetEmail } from "../services/email.js";
 import { requireAuth } from "../middleware/auth.js";
 import { authAbuseKey, checkAuthAbuse, clearAuthFailures, recordAuthFailure } from "../services/authAbuse.js";
 import { consumeQuota } from "../services/usageLimits.js";
+import { GUEST_EMAIL_DOMAIN } from "../services/guest.js";
 
 const router = Router();
 const hashedKey = (value: string) => createHash("sha256").update(`jarvis-quota:${value}`).digest("hex").slice(0, 32);
@@ -39,7 +40,7 @@ router.post("/quick-start/request", async (req, res) => {
   const termsAccepted = req.body?.termsAccepted === true;
   const termsVersion = typeof req.body?.termsVersion === "string" ? req.body.termsVersion : "";
   const requiredTermsVersion = currentTermsVersion();
-  if (displayName.length < 1 || displayName.length > 80 || !email.test(address)) return res.status(400).json({ error: "enter a name and valid email address" });
+  if (displayName.length < 1 || displayName.length > 80 || !email.test(address) || address.endsWith(".invalid")) return res.status(400).json({ error: "enter a name and valid email address" });
   if (!termsAccepted || !/^\d{4}-\d{2}-\d{2}$/.test(termsVersion) || (requiredTermsVersion && termsVersion !== requiredTermsVersion)) return res.status(400).json({ error: "acceptance of the current Terms of Service and Privacy Policy is required" });
   if (limited(req, `quick-start-request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many code requests", retryAfterSeconds: 900 });
   try {
@@ -61,6 +62,31 @@ router.post("/quick-start/request", async (req, res) => {
     console.error(JSON.stringify({ event: "quick_start_request_failed", error: error instanceof Error ? error.message.replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, "[redacted-email]").slice(0, 300) : "unknown error" }));
     const publicMessage = (error as { publicMessage?: unknown } | null)?.publicMessage;
     return res.status(503).json({ error: typeof publicMessage === "string" ? publicMessage : "could not send a verification code right now; check email delivery configuration and try again" });
+  }
+});
+/**
+ * Guest sign-in: one tap, no email. Every guest gets their own new, private, empty account (never a shared login) on
+ * an address under the reserved .invalid domain, so no email can ever be sent to it. The normal 30-day session keeps
+ * them signed in on that device. Capped per IP per day; BOBAI_GUEST_ACCESS=false turns it off.
+ */
+router.post("/guest", async (req, res) => {
+  if (process.env.BOBAI_GUEST_ACCESS?.trim().toLowerCase() === "false") return res.status(404).json({ error: "guest access is turned off" });
+  const termsVersion = typeof req.body?.termsVersion === "string" ? req.body.termsVersion : "";
+  if (req.body?.termsAccepted !== true || termsVersion !== currentTermsVersion()) return res.status(400).json({ error: "acceptance of the current Terms of Service and Privacy Policy is required" });
+  const displayName = typeof req.body?.name === "string" && req.body.name.trim() ? req.body.name.trim().replace(/\s+/g, " ").slice(0, 40) : "Guest";
+  if (limited(req, "guest")) return res.status(429).json({ error: "too many guest sign-ins. try again later." });
+  try {
+    const quota = await consumeQuota("guest_accounts_ip", hashedKey(req.ip || "unknown"));
+    if (!quota.allowed) return res.status(429).json({ error: "too many guest accounts from this network today. sign in with your email instead." });
+    const id = randomBytes(9).toString("hex");
+    const created = await createUser(`guest-${id}@${GUEST_EMAIL_DOMAIN}`, `guest_${id.slice(0, 12)}`, randomBytes(48).toString("base64url"), { termsAccepted: true, termsVersion });
+    await db.update(users).set({ displayName, updatedAt: new Date() }).where(eq(users.id, created.id));
+    const session = await issueSession(created.id, { userAgent: req.get("user-agent"), guest: true });
+    setSessionCookies(res, session);
+    return res.json({ expiresIn: session.expiresIn, guest: true });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "guest_sign_in_failed", error: error instanceof Error ? error.message.slice(0, 200) : "unknown" }));
+    return res.status(503).json({ error: "guest sign-in isn't working right now. try again in a moment." });
   }
 });
 router.post("/quick-start/verify", async (req, res) => {

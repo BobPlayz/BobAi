@@ -61,6 +61,13 @@ ok("session works (/auth/status)", status.status === 200);
 const before = alice.cookies.get("jarvis_refresh");
 const refreshed = await alice.call("/auth/refresh", { method: "POST" });
 ok("token refresh rotates the session", refreshed.status === 200 && alice.cookies.get("jarvis_refresh") !== before);
+// Two tabs refreshing at the same moment: one wins, and the winner must stay signed in (no false theft alarm).
+const twin = new Client(); twin.cookies = new Map(alice.cookies);
+const [raceA, raceB] = await Promise.all([alice.call("/auth/refresh", { method: "POST" }), twin.call("/auth/refresh", { method: "POST" })]);
+const winner = raceA.status === 200 ? alice : twin;
+ok("simultaneous refreshes: exactly one rotates", [raceA.status, raceB.status].filter((code) => code === 200).length === 1, `${raceA.status}/${raceB.status}`);
+ok("simultaneous refreshes: the winner stays signed in", (await winner.call("/auth/status")).status === 200);
+if (winner !== alice) alice.cookies = new Map(twin.cookies);
 
 // Chat + persistence without duplicates.
 const conversationId = crypto.randomUUID();
@@ -84,6 +91,15 @@ const beforeResave = await (await alice.call(`/conversations/${conversationId}`)
 await alice.call("/conversations", { method: "POST", body: JSON.stringify({ id: conversationId, title: "e2e", messages: (beforeResave.messages ?? []).map((m) => ({ id: m.id, role: m.role, content: m.content, status: "completed" })) }) });
 const afterResave = await (await alice.call(`/conversations/${conversationId}`)).json() as { messages?: Array<{ role: string; model?: string | null }> };
 ok("re-saving a conversation keeps the model that answered", (afterResave.messages ?? []).filter((m) => m.role === "assistant").every((m) => Boolean(m.model)), (afterResave.messages ?? []).map((m) => m.model ?? "-").join(","));
+// A renamed chat keeps its name when later replies are saved.
+await alice.call(`/conversations/${conversationId}`, { method: "PATCH", body: JSON.stringify({ title: "Renamed chat" }) });
+const u3 = crypto.randomUUID(), a3 = crypto.randomUUID();
+const keptHistory = (afterResave.messages ?? []) as Array<{ role: string; content?: string }>;
+await stream(alice, { conversationId, assistantMessageId: a3, messages: [...(beforeResave.messages ?? []).map((m) => ({ id: m.id, role: m.role, content: m.content })), { id: u3, role: "user", content: "Say ok." }] });
+const renamed = await (await alice.call(`/conversations/${conversationId}`)).json() as { title?: string; conversation?: { title?: string } };
+ok("later replies don't overwrite a chat's title", (renamed.conversation?.title ?? renamed.title) === "Renamed chat", String(renamed.conversation?.title ?? renamed.title) + ` (${keptHistory.length} earlier messages)`);
+await alice.call(`/conversations/${conversationId}/messages/${u3}`, { method: "DELETE" });
+await alice.call(`/conversations/${conversationId}/messages/${a3}`, { method: "DELETE" });
 // Delete a message server-side.
 const del = await alice.call(`/conversations/${conversationId}/messages/${a2}`, { method: "DELETE" });
 const afterDelete = await (await alice.call(`/conversations/${conversationId}`)).json() as { conversation?: { messages?: unknown[] }; messages?: unknown[] };
@@ -135,6 +151,21 @@ ok("text file upload is accepted and read", upload.status === 200 && (uploaded.t
 const voice = await alice.call("/voice/synthesize", { method: "POST", body: JSON.stringify({ text: "Hello, I am Jarvis." }) });
 const voiceBody = await voice.json() as { audio?: string; data?: { audio?: string } };
 ok("voice synthesis returns Alan audio", voice.status === 200 && ((voiceBody.audio ?? voiceBody.data?.audio ?? "").length > 1000), `HTTP ${voice.status}`);
+
+// Guest sign-in: no email, a private account of its own, deletable without a code.
+const guest = new Client();
+const guestIn = await guest.call("/auth/guest", { method: "POST", body: JSON.stringify({ name: "Friend", termsAccepted: true, termsVersion: TERMS }) });
+ok("guest sign-in works without an email", guestIn.status === 200 && guest.cookies.has("jarvis_access"), `HTTP ${guestIn.status}`);
+const guestMe = await (await guest.call("/account/me")).json() as { guest?: boolean; displayName?: string };
+ok("guest account is marked as a guest", guestMe.guest === true && guestMe.displayName === "Friend");
+const guestChats = await (await guest.call("/conversations")).json() as { items?: unknown[] };
+ok("guest sees none of anyone else's chats", (guestChats.items ?? []).length === 0);
+const guestNoTerms = await new Client().call("/auth/guest", { method: "POST", body: JSON.stringify({}) });
+ok("guest sign-in still requires accepting the terms", guestNoTerms.status === 400);
+const guestDelete = await guest.call("/account/delete/guest", { method: "POST" });
+ok("guest can delete their own account without a code", guestDelete.status === 202);
+ok("deleted guest is signed out everywhere", (await guest.call("/auth/refresh", { method: "POST" })).status === 401);
+ok("a normal account can't use the no-code delete", (await alice.call("/account/delete/guest", { method: "POST" })).status === 403);
 
 // Logout revokes the session.
 await alice.call("/auth/logout", { method: "POST" });

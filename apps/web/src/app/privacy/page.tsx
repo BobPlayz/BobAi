@@ -9,6 +9,7 @@ const UPDATED = "October 23, 2026";
 
 const collected: Array<[string, string]> = [
   ["Your name and email", "To sign you in with a 6-digit code and to greet you. Login codes are stored scrambled (hashed), expire after 10 minutes and are deleted after use."],
+  ["Guest accounts", "If you tap \"Just try it\", Jarvis makes a private account with no email at all. It stays on your device through the sign-in cookie; logging out or deleting it in Settings ends it for good."],
   ["Your chats", "Your messages and Jarvis's replies are saved to your account so you can come back to them. You can delete single messages or whole chats."],
   ["Memories", "Only things you ask Jarvis to remember (\"remember that…\"). Jarvis refuses to save passwords or codes. You can view, edit and clear memories in Settings."],
   ["Your reply language", "The language you pick for replies, saved in your browser."],

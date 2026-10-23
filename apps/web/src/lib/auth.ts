@@ -3,6 +3,8 @@ const PENDING_EMAIL_KEY = "bobai_pending_verification_email";
 const PENDING_NAME_KEY = "bobai_pending_verification_name";
 // The name typed at sign-in, kept until onboarding has used it.
 const SIGNUP_NAME_KEY = "jarvis.signupName";
+// Set while signed in as a guest (an account with no email), so log out can warn that guest chats are lost.
+const GUEST_KEY = "jarvis.guest";
 const LEGACY_SESSION_KEY = "bobai_session";
 export const API = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:3001");
 type ApiError = { error?: string };
@@ -30,6 +32,7 @@ export async function verifyQuickStart(name: string, email: string, code: string
     if (typeof data.expiresIn !== "number") return { ok: false, error: "invalid session from backend" };
     session = { accessToken: "", expiresIn: data.expiresIn, email: email.trim().toLowerCase() };
     if (name.trim()) localStorage.setItem(SIGNUP_NAME_KEY, name.trim().slice(0, 60));
+    localStorage.removeItem(GUEST_KEY);
     localStorage.removeItem(PENDING_EMAIL_KEY);
     localStorage.removeItem(PENDING_NAME_KEY);
     return { ok: true };
@@ -40,13 +43,26 @@ export const verifyLoginOtp = (email: string, code: string) => authenticate("/au
 export async function verifyMfaLogin(challengeToken: string, code: string): Promise<{ ok: boolean; error?: string }> { try { const res = await fetch(`${API}/auth/mfa/verify`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ challengeToken, code }) }); const data = await readJson<{ expiresIn?: number } & ApiError>(res); if (!res.ok || typeof data.expiresIn !== "number") return { ok: false, error: data.error || "MFA verification failed" }; session = { accessToken: "", expiresIn: data.expiresIn }; return { ok: true }; } catch { return { ok: false, error: "backend unavailable" }; } }
 export async function register(username: string, email: string, password: string, legal: { termsAccepted: true; termsVersion: string }): Promise<{ ok: boolean; error?: string; requiresVerification?: boolean }> { try { const res = await fetch(`${API}/auth/register`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ username, email, password, termsAccepted: legal.termsAccepted, termsVersion: legal.termsVersion }) }); const data = await readJson<{ requiresVerification?: boolean } & ApiError>(res); if (!res.ok) return { ok: false, error: data.error || "account could not be created" }; if (data.requiresVerification) { localStorage.setItem(PENDING_EMAIL_KEY, email.trim().toLowerCase()); return { ok: true, requiresVerification: true }; } return { ok: false, error: "verification is required" }; } catch { return { ok: false, error: "backend unavailable" }; } }
 export function getPendingVerificationEmail() { if (typeof window === "undefined") return ""; return localStorage.getItem(PENDING_EMAIL_KEY) || ""; }
+/** One-tap guest sign-in: a private account with no email, kept on this device by the normal session. */
+export async function startGuest(name: string, termsVersion: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API}/auth/guest`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", "X-CSRF-Protection": "1" }, body: JSON.stringify({ name: name.trim().slice(0, 40), termsAccepted: true, termsVersion }) });
+    const data = await readJson<{ expiresIn?: number } & ApiError>(res);
+    if (!res.ok || typeof data.expiresIn !== "number") return { ok: false, error: data.error || "Guest sign-in isn't working right now." };
+    session = { accessToken: "", expiresIn: data.expiresIn };
+    localStorage.setItem(GUEST_KEY, "1");
+    if (name.trim()) localStorage.setItem(SIGNUP_NAME_KEY, name.trim().slice(0, 60));
+    return { ok: true };
+  } catch { return { ok: false, error: "Guest sign-in isn't working right now." }; }
+}
+export function isGuest() { if (typeof window === "undefined") return false; return localStorage.getItem(GUEST_KEY) === "1"; }
 /** The name typed at sign-in (for onboarding), then forgotten. */
 export function takeSignupName() { if (typeof window === "undefined") return ""; const name = localStorage.getItem(SIGNUP_NAME_KEY) || ""; localStorage.removeItem(SIGNUP_NAME_KEY); return name; }
 export function getPendingVerificationName() { if (typeof window === "undefined") return ""; return localStorage.getItem(PENDING_NAME_KEY) || ""; }
 /** Logs out of this device: ends the server session, clears the sign-in cookies and this browser's sign-in state. */
 // Personal data this browser keeps for the signed-in person: chat titles, onboarding answers and preferences. Cleared
 // on log out so the next person on a shared device sees none of it. Theme and cookie choices are device settings and stay.
-const PERSONAL_KEYS = ["bobai.conversation-ui.v3", "bobai.conversations.v2", "jarvis.settings.v1", "bobai.settings.v1", "jarvis.voiceReplies"];
+const PERSONAL_KEYS = ["jarvis.guest", "bobai.conversation-ui.v3", "bobai.conversations.v2", "jarvis.settings.v1", "bobai.settings.v1", "jarvis.voiceReplies"];
 export async function logout() { session = null; for (const key of PERSONAL_KEYS) localStorage.removeItem(key); localStorage.removeItem(LEGACY_SESSION_KEY); localStorage.removeItem(ONBOARDING_KEY); localStorage.removeItem(PENDING_EMAIL_KEY); localStorage.removeItem(PENDING_NAME_KEY); localStorage.removeItem(SIGNUP_NAME_KEY); await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include", keepalive: true, headers: { "X-CSRF-Protection": "1" } }).catch(() => undefined); }
 export function getSession(): Session | null { if (typeof window !== "undefined") localStorage.removeItem(LEGACY_SESSION_KEY); return session; }
 export function clearSession() { session = null; }

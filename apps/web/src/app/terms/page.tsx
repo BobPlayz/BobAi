@@ -10,7 +10,7 @@ const UPDATED = "October 23, 2026";
 const sections: Array<[string, string]> = [
   ["What Jarvis is", "Jarvis is a free AI assistant made as a school project by BobPlayz (Origin Productions). It chats, helps with code, looks up weather, cricket and the web, reads files you share, and can remember things you ask it to. Features can change, and it may sometimes be offline."],
   ["Who can use it", "Anyone who agrees to these terms. If you are under 18, use Jarvis only with a parent or guardian's permission."],
-  ["Your account", "You sign in with a code sent to your email. Keep your email account safe, don't share codes, and only use your own account. Don't try to get into anyone else's account or data."],
+  ["Your account", "You sign in with a code sent to your email, or as a guest without one. Keep your email account safe, don't share codes, and only use your own account. Don't try to get into anyone else's account or data. Guest accounts can't be recovered once you log out."],
   ["AI can be wrong", "Jarvis's answers come from AI models and can be wrong, out of date or made up, even when they sound confident. Check anything important (homework, health, money, safety) with a trusted source or adult. Live data like weather and cricket shows where it came from; web answers list their sources."],
   ["Be decent", "Don't use Jarvis to bully or harass anyone, break the law, create harmful or adult content, spread malware, spam, or attack the service. Don't paste other people's private information. Jarvis may refuse requests that break these rules."],
   ["Your stuff", "What you write and upload stays yours. You let Jarvis process it only to answer you and keep your history. Only upload things you're allowed to share."],

@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
 import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, getTypingProfile, getUsage, type TypingProfile, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
-import { logout } from "@/lib/auth";
-import { logOutEverywhere } from "@/lib/api";
+import { isGuest, logout } from "@/lib/auth";
+import { deleteGuestAccount, logOutEverywhere } from "@/lib/api";
 
 import { loadPreferences, savePreferences, type Preferences } from "@/lib/preferences";
 import { GENERATIONS } from "@/lib/generation";
@@ -66,9 +66,11 @@ export default function SettingsPage() {
   const [deleteMessage, setDeleteMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
   // Two-tap confirmation for destructive buttons (in-app browsers often block window.confirm).
-  const [armed, setArmed] = useState<"account" | "memories" | null>(null);
+  const [armed, setArmed] = useState<"account" | "memories" | "guest" | null>(null);
+  const [guest, setGuest] = useState(false);
+  useEffect(() => setGuest(isGuest()), []);
   const armTimer = useRef<number | undefined>(undefined);
-  function arm(action: "account" | "memories") { setArmed(action); window.clearTimeout(armTimer.current); armTimer.current = window.setTimeout(() => setArmed(null), 6_000); }
+  function arm(action: "account" | "memories" | "guest") { setArmed(action); window.clearTimeout(armTimer.current); armTimer.current = window.setTimeout(() => setArmed(null), 6_000); }
 
   useEffect(() => setSettings(readSettings()), []);
 
@@ -359,6 +361,18 @@ export default function SettingsPage() {
                 <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-[var(--ink)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
                 {exportMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{exportMessage}</p>}
               </div>
+              {guest ? (
+              <div className={`mt-4 rounded-xl border border-red-500/25 p-4 ${colors.field}`}>
+                <h3 className="text-sm font-semibold text-red-600">Delete guest account</h3>
+                <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>You&apos;re using Jarvis as a guest. This deletes your guest chats, memories and settings and signs you out. It can&apos;t be undone.</p>
+                <button type="button" disabled={deleteBusy} onClick={async () => {
+                  if (armed !== "guest") { arm("guest"); return; }
+                  setArmed(null); setDeleteBusy(true);
+                  try { await deleteGuestAccount(); await logout(); router.replace("/"); } catch (error) { setDeleteMessage(error instanceof Error ? error.message : "Could not delete the guest account."); } finally { setDeleteBusy(false); }
+                }} className="mt-3 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{armed === "guest" ? "Tap again to delete everything" : "Delete guest account"}</button>
+                {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
+              </div>
+              ) : (
               <div className={`mt-4 rounded-xl border border-red-500/25 p-4 ${colors.field}`}>
                 <h3 className="text-sm font-semibold text-red-600">Delete account</h3>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Verify your email with a one-time code to schedule account deletion. Your account is disabled immediately; permanent deletion is scheduled after a 30-day grace period. This does not replace any legally required data-retention obligations.</p>
@@ -369,7 +383,8 @@ export default function SettingsPage() {
                 </div>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
-              <p className={`mt-4 text-xs ${colors.muted}`}>This is a practical summary, not a complete legal privacy notice. The service operator should publish a policy matching the actual deployment and providers.</p>
+              )}
+              <p className={`mt-4 text-xs ${colors.muted}`}>Full details are in the <Link href="/privacy" className="md-link">Privacy Policy</Link>.</p>
             </section>
             </>
           )}

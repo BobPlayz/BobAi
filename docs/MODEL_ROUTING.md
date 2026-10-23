@@ -56,5 +56,6 @@ Counters are shared across all server instances (`rate_limit_buckets`) and reset
 | Seconds of speech heard per person per day | `BOBAI_LIMIT_SPEECH_INPUT_SECONDS_PER_USER_PER_DAY` | 600 | Same |
 | Login code requests per IP per day | `BOBAI_LIMIT_CODE_REQUESTS_PER_IP_PER_DAY` | 20 | Stops one visitor using up the day's login emails |
 | Login code requests per email per day | `BOBAI_LIMIT_CODE_REQUESTS_PER_EMAIL_PER_DAY` | 8 | Stops someone flooding another person's inbox |
+| New guest accounts per IP per day | `BOBAI_LIMIT_GUEST_ACCOUNTS_PER_IP_PER_DAY` | 10 | Friends on one Wi-Fi can all join; nobody can farm accounts |
 
 People see how many messages they have left in Settings.

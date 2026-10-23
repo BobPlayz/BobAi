@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logout } from "@/lib/auth";
+import { isGuest, logout } from "@/lib/auth";
 import { useEffect, useMemo, useState } from "react";
 import type { Conversation } from "@/types/chat";
 import {
@@ -44,6 +44,7 @@ export default function NeuralSidebar({
   const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [confirmGuestLogout, setConfirmGuestLogout] = useState(false);
   const router = useRouter();
 
   const filtered = useMemo(() => {
@@ -177,9 +178,18 @@ export default function NeuralSidebar({
           <Settings className="h-4 w-4" aria-hidden />
           Settings
         </Link>
-        <button type="button" onClick={async () => { setLoggingOut(true); await logout(); router.replace("/login"); }} disabled={loggingOut} className="convo-item w-full text-left disabled:opacity-60">
+        <button
+          type="button"
+          onClick={async () => {
+            // A guest can't sign back into the same account, so the first tap only warns.
+            if (isGuest() && !confirmGuestLogout) { setConfirmGuestLogout(true); window.setTimeout(() => setConfirmGuestLogout(false), 6_000); return; }
+            setLoggingOut(true); await logout(); router.replace("/login");
+          }}
+          disabled={loggingOut}
+          className={`convo-item w-full text-left disabled:opacity-60 ${confirmGuestLogout ? "!text-[var(--danger)]" : ""}`}
+        >
           <LogOut className="h-4 w-4" aria-hidden />
-          {loggingOut ? "Logging out…" : "Log out"}
+          {loggingOut ? "Logging out…" : confirmGuestLogout ? "Tap again: guest chats will be gone" : "Log out"}
         </button>
       </div>
 

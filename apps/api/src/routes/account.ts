@@ -8,6 +8,7 @@ import { requestPasswordReset, resetPassword } from "../services/passwordReset.j
 import { listSessions, revokeAllSessions, revokeSession } from "../services/sessionManager.js";
 import { recordAudit } from "../services/audit.js";
 import { requestEmailOtp, verifyEmailOtp } from "../services/otp.js";
+import { isGuestEmail } from "../services/guest.js";
 const router = Router(); const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; const password = (value: unknown): value is string => typeof value === "string" && value.length >= 12 && value.length <= 128; const resetBuckets = new Map<string, { startedAt: number; count: number }>(); const RESET_WINDOW_MS = 15 * 60_000, RESET_MAX_ATTEMPTS = 10, MAX_RESET_BUCKETS = 10_000, MAX_EXPORT_BYTES = 25 * 1024 * 1024;
 function cleanupResetBuckets(now = Date.now()) { const cutoff = now - RESET_WINDOW_MS; for (const [key, bucket] of resetBuckets) if (bucket.startedAt < cutoff) resetBuckets.delete(key); }
 function limited(req: { ip?: string }, key: string) { const now = Date.now(); const bucketKey = `${req.ip || "unknown"}:${key}`; const current = resetBuckets.get(bucketKey); if (!current || now - current.startedAt >= RESET_WINDOW_MS) { if (resetBuckets.size >= MAX_RESET_BUCKETS) cleanupResetBuckets(now); if (resetBuckets.size >= MAX_RESET_BUCKETS) return true; resetBuckets.set(bucketKey, { startedAt: now, count: 1 }); return false; } current.count += 1; return current.count > RESET_MAX_ATTEMPTS; }
@@ -20,10 +21,26 @@ router.post("/delete/request", async (req, res) => {
   try {
     const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, req.user!.id)).limit(1);
     if (!user) return res.status(404).json({ error: "user not found" });
+    if (isGuestEmail(user.email)) return res.status(400).json({ error: "guest accounts have no email. use \"Delete guest account\" instead.", guest: true });
     await requestEmailOtp(user.email, "account-delete");
     return res.status(202).json({ message: "If email delivery is configured, a deletion code has been sent." });
   } catch {
     return res.status(503).json({ error: "account deletion verification could not be sent" });
+  }
+});
+// Guests have no email for a code; their session is the only key to the account, so it is proof enough.
+router.post("/delete/guest", async (req, res) => {
+  if (limited(req, `delete-guest:${req.user!.id}`)) return res.status(429).json({ error: "too many account deletion attempts", retryAfterSeconds: 900 });
+  try {
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, req.user!.id)).limit(1);
+    if (!user || !isGuestEmail(user.email)) return res.status(403).json({ error: "only guest accounts can be deleted without an email code" });
+    const now = new Date();
+    await revokeAllSessions(req.user!.id);
+    await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id));
+    await recordAudit({ action: "account_deletion_requested", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id, metadata: { guest: true } });
+    return res.status(202).json({ status: "guest account deleted" });
+  } catch {
+    return res.status(503).json({ error: "account deletion could not be scheduled" });
   }
 });
 router.post("/delete/confirm", async (req, res) => {
@@ -43,7 +60,7 @@ router.post("/delete/confirm", async (req, res) => {
     return res.status(503).json({ error: "account deletion could not be scheduled" });
   }
 });
-router.get("/me", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled }).from(users).where(eq(users.id, req.user!.id)).limit(1); return user ? res.json(user) : res.status(404).json({ error: "user not found" }); });
+router.get("/me", async (req, res) => { const [user] = await db.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, role: users.role, emailVerifiedAt: users.emailVerifiedAt, mfaEnabled: users.mfaEnabled }).from(users).where(eq(users.id, req.user!.id)).limit(1); return user ? res.json({ ...user, guest: isGuestEmail(user.email) }) : res.status(404).json({ error: "user not found" }); });
 router.get("/mfa", async (req, res) => res.json({ enabled: await userMfaStatus(req.user!.id) }));
 router.post("/mfa/setup", async (req, res) => { try { return res.json(await beginMfaSetup(req.user!.id)); } catch { return res.status(503).json({ error: "MFA setup unavailable" }); } });
 router.post("/mfa/enable", async (req, res) => { const secret = typeof req.body?.secret === "string" ? req.body.secret.trim().toUpperCase() : ""; const code = typeof req.body?.code === "string" ? req.body.code : ""; if (!secret || !/^\d{6}$/.test(code)) return res.status(400).json({ error: "secret and six-digit code are required" }); try { if (!await enableMfa(req.user!.id, secret, code)) return res.status(400).json({ error: "invalid MFA secret or code" }); return res.json({ enabled: true }); } catch { return res.status(503).json({ error: "MFA enablement unavailable" }); } });
