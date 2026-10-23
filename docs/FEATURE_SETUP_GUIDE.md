@@ -51,6 +51,8 @@ Free-plan caps (change in env): `BOBAI_LIMIT_SPEECH_CHARACTERS_PER_MONTH` (defau
 - **Gmail SMTP (free, no domain):** turn on 2-Step Verification, create an app password, then set `BOBAI_EMAIL_PROVIDER=smtp`, `BOBAI_SMTP_HOST=smtp.gmail.com`, `BOBAI_SMTP_PORT=465`, `BOBAI_SMTP_USER`, `BOBAI_SMTP_PASSWORD`, `BOBAI_SMTP_FROM=Jarvis <you@gmail.com>`.
 - **Resend:** `RESEND_API_KEY`, `RESEND_FROM_EMAIL` with a domain you verified in Resend.
 - Local only: `BOBAI_DEV_LOG_OTP=true` prints codes in the terminal.
+- **Sign everyone out:** set `BOBAI_SESSIONS_VALID_AFTER` in Vercel to the current time (for example `2026-10-24T00:00:00Z`) and redeploy. Every login from before then stops working, so everyone signs in again. Accounts, chats and memories are kept.
+- Code requests are capped per IP and per email address each day (see the limits table in [MODEL_ROUTING.md](MODEL_ROUTING.md)).
 
 Details: [QUICK_START_AUTH.md](QUICK_START_AUTH.md).
 

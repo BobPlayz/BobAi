@@ -41,7 +41,7 @@ router.post("/turn", limit, async (req, res) => {
     if (req.body?.modelId !== undefined && (typeof req.body.modelId !== "string" || req.body.modelId.length > 160)) return res.status(400).json({ error: "invalid modelId" });
 
     const audio = decode(req.body?.audio, 25 * 1024 * 1024);
-    const transcript = await transcribe(audio, req.body?.options);
+    const transcript = await transcribe(audio, req.body?.options, req.user!.id);
     if (controller.signal.aborted || res.destroyed) return;
     const spokenText = typeof transcript?.text === "string" ? transcript.text.trim() : "";
     if (!spokenText) return res.status(422).json({ error: "no speech was recognized; try recording again" });
@@ -76,7 +76,7 @@ router.post("/turn", limit, async (req, res) => {
       if (isSensitiveMemory(prepared.latestUserMessage.content)) return res.json({ transcript: spokenText, reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", memoryStored: false, audio: null });
       const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() });
       if (!stored) return res.status(503).json({ error: "memory storage unavailable" });
-      const speech = await synthesize("got it. i will remember that for future conversations.", req.body?.voiceOptions).catch(() => null);
+      const speech = await synthesize("got it. i will remember that for future conversations.", req.body?.voiceOptions, req.user!.id).catch(() => null);
       return res.json({ transcript: spokenText, reply: "got it. i will remember that for future conversations.", memoryStored: true, audio: speech?.audio ?? null, mimeType: speech?.mimeType ?? null, voice: speech ? { engine: speech.engine, model: speech.model, language: speech.language, offline: speech.offline } : null });
     }
 
@@ -114,7 +114,7 @@ router.post("/turn", limit, async (req, res) => {
       id: conversationId, userId: req.user!.id, workspaceId: workspace.id,
       title: prepared.title, messages: conversationMessages,
     }).catch(() => false);
-    const speech = await synthesize(replyText, req.body?.voiceOptions).catch((error) => {
+    const speech = await synthesize(replyText, req.body?.voiceOptions, req.user!.id).catch((error) => {
       if (process.env.NODE_ENV !== "production") console.error("voice synthesis failed", error);
       return null;
     });
@@ -148,13 +148,13 @@ router.post("/turn", limit, async (req, res) => {
 });
 
 router.post("/transcribe", limit, async (req, res) => {
-  try { return res.json(await transcribe(decode(req.body?.audio, 25 * 1024 * 1024), req.body?.options)); }
+  try { return res.json(await transcribe(decode(req.body?.audio, 25 * 1024 * 1024), req.body?.options, req.user!.id)); }
   catch (error) { console.error(JSON.stringify({ event: "voice_transcription_failed", error: error instanceof Error ? error.message.slice(0, 300) : "unknown" })); const message = error instanceof Error ? error.message : "voice transcription unavailable"; const publicMessage = (error as { publicMessage?: unknown })?.publicMessage; return res.status(message === "invalid audio" ? 400 : typeof publicMessage === "string" ? 429 : 503).json({ error: message === "invalid audio" ? message : typeof publicMessage === "string" ? publicMessage : "Voice typing isn't available right now." }); }
 });
 router.post("/synthesize", limit, async (req, res) => {
   const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
   if (!text || text.length > 20_000) return res.status(400).json({ error: "invalid text" });
-  try { return res.json(await synthesize(text, req.body?.options)); }
+  try { return res.json(await synthesize(text, req.body?.options, req.user!.id)); }
   catch (error) { const publicMessage = (error as { publicMessage?: unknown })?.publicMessage; return res.status(typeof publicMessage === "string" ? 429 : 503).json({ error: typeof publicMessage === "string" ? publicMessage : "Jarvis's voice isn't available right now." }); }
 });
 export default router;

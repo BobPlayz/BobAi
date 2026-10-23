@@ -51,5 +51,10 @@ Counters are shared across all server instances (`rate_limit_buckets`) and reset
 | Brave searches per month | `BOBAI_LIMIT_BRAVE_SEARCHES_PER_MONTH` | 900 | ~$5 free credit ≈ 1,000 searches; after that DuckDuckGo is used |
 | Pictures per person per day | `BOBAI_LIMIT_IMAGES_PER_USER_PER_DAY` | 20 | Pollinations is free but shared |
 | Spoken characters per month | `BOBAI_LIMIT_SPEECH_CHARACTERS_PER_MONTH` | 15,000 | ElevenLabs free plan ≈ 20,000 characters with Flash v2.5 |
+| Spoken characters per person per day | `BOBAI_LIMIT_SPEECH_CHARACTERS_PER_USER_PER_DAY` | 3,000 | Keeps one person from using the month's voice |
+| Seconds of speech heard per month | `BOBAI_LIMIT_SPEECH_INPUT_SECONDS_PER_MONTH` | 3,600 | ElevenLabs Scribe uses the same free credits |
+| Seconds of speech heard per person per day | `BOBAI_LIMIT_SPEECH_INPUT_SECONDS_PER_USER_PER_DAY` | 600 | Same |
+| Login code requests per IP per day | `BOBAI_LIMIT_CODE_REQUESTS_PER_IP_PER_DAY` | 20 | Stops one visitor using up the day's login emails |
+| Login code requests per email per day | `BOBAI_LIMIT_CODE_REQUESTS_PER_EMAIL_PER_DAY` | 8 | Stops someone flooding another person's inbox |
 
 People see how many messages they have left in Settings.

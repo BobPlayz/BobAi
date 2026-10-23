@@ -91,7 +91,7 @@ const EXECUTORS: Record<string, Executor> = {
   "data-analysis": async (args, context) => callConfiguredProvider(getTool("data-analysis")!, args, context.signal),
   diagrams: async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("diagram_generation", args),
   "sketch-to-ui": async (args) => (await import("./capabilityProviders.js")).executeProviderCapability("sketch_to_ui", args),
-  voice: async (args) => { if (args.operation !== "synthesize" || typeof args.text !== "string") throw new Error("local voice tool supports synthesis and requires text"); return (await import("./voice.js")).synthesize(args.text); },
+  voice: async (args, context) => { if (args.operation !== "synthesize" || typeof args.text !== "string") throw new Error("local voice tool supports synthesis and requires text"); return (await import("./voice.js")).synthesize(args.text, undefined, context.userId); },
   image: async (args, context) => {
     if (typeof args.prompt !== "string") throw new Error("image prompt is required");
     const prompt = args.prompt.trim();

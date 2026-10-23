@@ -152,8 +152,10 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
   }
 
   async function loop(id: number) {
+    let quickEmpties = 0;
     while (session.current === id) {
       setPhase("listening"); setHeard(""); setError("");
+      const listenedAt = performance.now();
       let text: string;
       try { text = engines.current.hear === "server" ? await listenServer(id) : await listenBrowser(id); }
       catch (problem) {
@@ -164,7 +166,14 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
         setError(message); setPhase("error"); return;
       }
       if (session.current !== id) return;
-      if (!text) continue;
+      if (!text) {
+        // Recognition that keeps ending instantly (mic busy elsewhere) would spin; back off, then stop.
+        quickEmpties = performance.now() - listenedAt < 1_000 ? quickEmpties + 1 : 0;
+        if (quickEmpties >= 5) { setError("The mic keeps cutting out. Is another app using it?"); setPhase("error"); return; }
+        await new Promise((resolve) => window.setTimeout(resolve, 150 * quickEmpties));
+        continue;
+      }
+      quickEmpties = 0;
       setHeard(text); setReply(""); setPhase("thinking");
       const answer = await utter.current(text);
       if (session.current !== id) return;

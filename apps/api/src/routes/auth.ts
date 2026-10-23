@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, users } from "@bobai/db";
 import { Router, type Request, type Response } from "express";
@@ -9,8 +9,10 @@ import { resetPassword, requestPasswordReset } from "../services/passwordReset.j
 import { sendPasswordResetEmail } from "../services/email.js";
 import { requireAuth } from "../middleware/auth.js";
 import { authAbuseKey, checkAuthAbuse, clearAuthFailures, recordAuthFailure } from "../services/authAbuse.js";
+import { consumeQuota } from "../services/usageLimits.js";
 
 const router = Router();
+const hashedKey = (value: string) => createHash("sha256").update(`jarvis-quota:${value}`).digest("hex").slice(0, 32);
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const username = /^[A-Za-z0-9_]{3,32}$/;
 const authBuckets = new Map<string, { startedAt: number; count: number }>();
@@ -41,6 +43,10 @@ router.post("/quick-start/request", async (req, res) => {
   if (!termsAccepted || !/^\d{4}-\d{2}-\d{2}$/.test(termsVersion) || (requiredTermsVersion && termsVersion !== requiredTermsVersion)) return res.status(400).json({ error: "acceptance of the current Terms of Service and Privacy Policy is required" });
   if (limited(req, `quick-start-request:${address.slice(0, 254)}`)) return res.status(429).json({ error: "too many code requests", retryAfterSeconds: 900 });
   try {
+    // Daily caps that survive restarts and are shared by every server instance. Keys are hashed, never raw IPs or emails.
+    const byIp = await consumeQuota("code_requests_ip", hashedKey(req.ip || "unknown"));
+    const byEmail = byIp.allowed ? await consumeQuota("code_requests_email", hashedKey(address)) : byIp;
+    if (!byIp.allowed || !byEmail.allowed) return res.status(429).json({ error: "too many code requests today. try again tomorrow." });
     let [user] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.email, address)).limit(1);
     if (!user) {
       const base = displayName.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/^_+|_+$/g, "").slice(0, 18) || "user";

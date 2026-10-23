@@ -12,7 +12,7 @@ import { db } from "@bobai/db";
  * - Brave Search: about $5 of free credit a month, roughly 1,000 searches
  * - images (Pollinations, free) per person per day; ElevenLabs speech characters per month (free plan)
  */
-export type QuotaName = "chat_user" | "chat_site" | "email" | "cricket_feed" | "brave_search" | "image_user" | "tts_chars" | "stt_seconds";
+export type QuotaName = "chat_user" | "chat_site" | "email" | "cricket_feed" | "brave_search" | "image_user" | "tts_chars" | "stt_seconds" | "code_requests_ip" | "code_requests_email" | "tts_user_chars" | "stt_user_seconds";
 type QuotaSpec = { env: string; defaultLimit: () => number; period: "day" | "month" };
 
 const SPECS: Record<QuotaName, QuotaSpec> = {
@@ -26,6 +26,12 @@ const SPECS: Record<QuotaName, QuotaSpec> = {
   // ElevenLabs free plan: 10,000 credits a month, about 20,000 characters with Flash v2.5.
   tts_chars: { env: "BOBAI_LIMIT_SPEECH_CHARACTERS_PER_MONTH", defaultLimit: () => 15_000, period: "month" },
   stt_seconds: { env: "BOBAI_LIMIT_SPEECH_INPUT_SECONDS_PER_MONTH", defaultLimit: () => 3_600, period: "month" },
+  // Per person, so one heavy user can't use up the whole month's voice allowance for everyone.
+  tts_user_chars: { env: "BOBAI_LIMIT_SPEECH_CHARACTERS_PER_USER_PER_DAY", defaultLimit: () => 3_000, period: "day" },
+  stt_user_seconds: { env: "BOBAI_LIMIT_SPEECH_INPUT_SECONDS_PER_USER_PER_DAY", defaultLimit: () => 600, period: "day" },
+  // Sign-in codes: stops one visitor burning the site's daily email allowance or spamming someone's inbox.
+  code_requests_ip: { env: "BOBAI_LIMIT_CODE_REQUESTS_PER_IP_PER_DAY", defaultLimit: () => 20, period: "day" },
+  code_requests_email: { env: "BOBAI_LIMIT_CODE_REQUESTS_PER_EMAIL_PER_DAY", defaultLimit: () => 8, period: "day" },
 };
 
 export type QuotaState = { name: QuotaName; used: number; limit: number; allowed: boolean; resetsAt: string };
