@@ -51,7 +51,9 @@ router.post("/", streamLimit, async (req, res) => {
     const prepared = await prepareChat({ messages: enrichedMessages, personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), responseLength: settingValue(rows, "responseLength"), tone: settingValue(rows, "tone"), customInstructions: settingValue(rows, "customInstructions"), signal: requestController.signal, memoryContext: memoryContext(memories), knowledgeContext });
     if (requestController.signal.aborted || res.destroyed) return;
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
-    if (prepared.memoryRequest && prepared.latestUserMessage) { if (!memoryEnabled) { send("done", { reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } if (isSensitiveMemory(prepared.latestUserMessage.content)) { send("done", { reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() }); if (!stored) { send("error", { message: "memory storage unavailable" }); return res.end(); } send("done", { reply: "got it. i will remember that for future conversations.", title: prepared.title, memoryStored: true, conversationId }); return res.end(); }
+    // Saves this turn (the user's message and Jarvis's reply) so it is still there after a reload.
+    const saveTurn = (reply: string, model: string | null) => dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedTurnMessages(req.body?.messages), { id: clientAssistantId(req.body?.assistantMessageId), role: "assistant", content: reply, model, status: "completed" }] }).catch(() => false);
+    if (prepared.memoryRequest && prepared.latestUserMessage) { if (!memoryEnabled) { const reply = "memory is off, so i won't save that."; const persisted = await saveTurn(reply, null); send("done", { reply, title: prepared.title, memoryStored: false, conversationId, persisted }); return res.end(); } if (isSensitiveMemory(prepared.latestUserMessage.content)) { /* not saved to history either: the message may contain a secret */ send("done", { reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() }); if (!stored) { send("error", { message: "memory storage unavailable" }); return res.end(); } const reply = "got it. i will remember that for future conversations."; const persisted = await saveTurn(reply, null); send("done", { reply, title: prepared.title, memoryStored: true, conversationId, persisted }); return res.end(); }
     if (prepared.latestUserMessage) {
       const imagePrompt = extractImagePrompt(prepared.latestUserMessage.content);
       if (imagePrompt) {
@@ -68,15 +70,16 @@ router.post("/", streamLimit, async (req, res) => {
     }
     if (!liveIntent && prepared.latestUserMessage && shouldRouteTools(prepared.latestUserMessage.content) && process.env.BOBAI_TOOLS_ENABLED !== "false") {
       const toolContext = { userId: req.user!.id, workspaceId: workspace.id, modelId: prepared.modelId, mode: "chat", signal: requestController.signal } as const;
+      let toolModel: string | null = null;
       const toolResult = await runToolLoop(prepared.providerMessages, toolContext, decideTools, async (messages, modelId) => {
         const result = await runChat(messages, modelId, requestController.signal);
+        toolModel = result.model;
         return { content: result.message.content };
       });
       if (toolResult.status === "cancelled" || toolResult.status === "approval_required" || toolResult.status === "completed" || toolResult.status === "failed" || toolResult.status === "limit_reached") {
-        const persisted = toolResult.status === "completed"
-          ? await dbSaveConversation({ id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedTurnMessages(req.body?.messages), { id: clientAssistantId(req.body?.assistantMessageId), role: "assistant", content: toolResult.message, model: prepared.modelId || "bob", status: "completed" }] }).catch(() => false)
-          : false;
-        if (!clientDisconnected && !res.writableEnded && !res.destroyed) send("done", { reply: toolResult.message, title: prepared.title, conversationId, status: toolResult.status, toolCalls: toolResult.toolCalls, tools: toolResult.usedTools, backgroundJobIds: toolResult.backgroundJobIds, persisted, ...(toolResult.status === "approval_required" && toolResult.pendingCall ? { approval: { ...toolResult.pendingCall, workspaceId: workspace.id } } : {}) });
+        // Every outcome except a cancel is kept, so the user's message does not vanish when a tool fails or waits for approval.
+        const persisted = toolResult.status !== "cancelled" && toolResult.message ? await saveTurn(toolResult.message, toolModel) : false;
+        if (!clientDisconnected && !res.writableEnded && !res.destroyed) send("done", { reply: toolResult.message, title: prepared.title, conversationId, status: toolResult.status, ...(toolModel ? { model: toolModel } : {}), toolCalls: toolResult.toolCalls, tools: toolResult.usedTools, backgroundJobIds: toolResult.backgroundJobIds, persisted, ...(toolResult.status === "approval_required" && toolResult.pendingCall ? { approval: { ...toolResult.pendingCall, workspaceId: workspace.id } } : {}) });
         return res.writableEnded || res.destroyed ? undefined : res.end();
       }
     }

@@ -262,7 +262,7 @@ async function ollamaEmbeddingUnlocked(text: string): Promise<number[] | null> {
 }
 
 export function ollamaEmbedding(text: string) {
-  return withLocalModelLock(() => ollamaEmbeddingUnlocked(text));
+  return lockIfLocal(() => ollamaEmbeddingUnlocked(text));
 }
 
 export function ollamaVisionModel(override?: string) {
@@ -440,16 +440,24 @@ export async function unloadOllamaModelsExcept(keepModel?: string): Promise<stri
   return unloaded;
 }
 
+/**
+ * One local model run at a time keeps an 8 GB machine from loading two models together. Ollama Cloud runs on its
+ * own servers, so queueing there would only make simultaneous users wait for each other.
+ */
+function lockIfLocal<T>(work: () => Promise<T>): Promise<T> {
+  return isHostedOllama() ? work() : withLocalModelLock(work);
+}
+
 export function ollamaChat(input: NativeMessage[], provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
-  return withLocalModelLock(() => ollamaChatUnlocked(input, provider, override, signal));
+  return lockIfLocal(() => ollamaChatUnlocked(input, provider, override, signal));
 }
 
 export function ollamaVision(imageBase64: string, prompt: string, signal?: AbortSignal, model?: string) {
-  return withLocalModelLock(() => ollamaVisionUnlocked(imageBase64, prompt, signal, model));
+  return lockIfLocal(() => ollamaVisionUnlocked(imageBase64, prompt, signal, model));
 }
 
 export function ollamaStream(input: NativeMessage[], onToken: (token: string) => void, provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal, options?: StreamOptions) {
-  return withLocalModelLock(() => ollamaStreamUnlocked(input, onToken, provider, override, signal, options));
+  return lockIfLocal(() => ollamaStreamUnlocked(input, onToken, provider, override, signal, options));
 }
 
 export function unloadOllamaModels(): Promise<string[]> { return unloadOllamaModelsExcept(); }

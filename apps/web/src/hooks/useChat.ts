@@ -6,7 +6,7 @@ import { approveAndRunTool, deleteRemoteMessage, deleteConversation as deleteRem
 import type { Conversation, ChatMessage, ChatImage, ChatFile, LiveDataInfo, ToolApproval } from "@/types/chat";
 const STORAGE_KEY = "bobai.conversation-ui.v3";
 const LEGACY_STORAGE_KEY = "bobai.conversations.v2";
-type GeneratedImage = { id?: string; url: string; prompt?: string }; type ImageResponse = { images: GeneratedImage[] };
+type GeneratedImage = { id?: string; url: string; prompt?: string };
 type ChatSettings = { personality: string; memory?: boolean };
 function readImageDataUrl(file: File): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("The image could not be read.")); reader.onerror = () => reject(new Error("The image could not be read.")); reader.readAsDataURL(file); }); }
 function createConversation(): Conversation { return { id: crypto.randomUUID(), title: "new chat", createdAt: Date.now(), pinned: false, messages: [] }; }

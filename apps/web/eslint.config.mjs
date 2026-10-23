@@ -14,7 +14,9 @@ export default defineConfig([
     },
     rules: {
       "no-undef": "off",
-      "no-unused-vars": "warn",
+      // The core rule cannot tell parameter names in TypeScript type signatures (e.g. `(id: string) => void`) from
+      // real code, so it only checks variables and imports here; TypeScript itself covers parameters.
+      "no-unused-vars": ["warn", { args: "none" }],
     },
   },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "node_modules/**"]),

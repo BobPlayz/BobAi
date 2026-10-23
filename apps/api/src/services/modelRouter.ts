@@ -177,7 +177,8 @@ async function route(task: RouteTask, messages: NativeMessage[], options: RouteO
     } catch (error) {
       if (options.signal?.aborted) throw error;
       const problem = problemOf(error);
-      recordFailure(model, problem);
+      // A bad key or an unreachable server is not this model's fault, so it must not put the model on a cooldown.
+      if (!NON_RETRYABLE.includes(problem)) recordFailure(model, problem);
       logAttempt({ task, model, ok: false, problem, totalMs: Date.now() - attemptStarted, partial: firstTokenAt !== undefined });
       lastError = error;
       // Text already reached the user: never splice a second model's answer onto it.

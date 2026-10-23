@@ -262,3 +262,26 @@ test("routing logs carry model metadata only, never prompts, answers or keys", a
     assert.ok(!line.includes("diary") && !line.includes("secret answer") && !line.includes(KEY));
   }
 });
+
+test("simultaneous users are served in parallel on Ollama Cloud but one at a time on a local machine", async () => {
+  for (const hosted of [true, false]) {
+    let active = 0, peak = 0;
+    await withOllama({ hosted, models: MODELS, chat: async (_model, body) => {
+      active += 1; peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      active -= 1;
+      return answer(body, "ok");
+    } }, async () => {
+      await Promise.all([routeChat(user("hi")), routeChat(user("hello"))]);
+    });
+    assert.equal(peak, hosted ? 2 : 1, hosted ? "cloud requests must not queue behind each other" : "local inference stays serialized for RAM");
+  }
+});
+
+test("a bad key or unreachable server does not put the model on a cooldown", async () => {
+  await withOllama({ models: MODELS, chat: () => Response.json({ error: "unauthorized" }, { status: 401 }) }, async () => {
+    await assert.rejects(routeChat(user("hi")));
+    assert.equal(getHealth("small-chat")?.cooldownUntil, undefined);
+    assert.equal(getHealth("small-chat")?.failures ?? 0, 0);
+  });
+});

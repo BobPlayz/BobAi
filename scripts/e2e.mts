@@ -85,7 +85,10 @@ const afterDelete = await (await alice.call(`/conversations/${conversationId}`))
 ok("deleted message stays deleted", del.status === 200 && ((afterDelete.conversation?.messages ?? afterDelete.messages ?? []) as unknown[]).length === 3);
 
 // Memory: explicit command saves; recall is per-user.
-const mem = await stream(alice, { messages: [{ id: crypto.randomUUID(), role: "user", content: "Remember that my favourite colour is green" }] });
+const memoryConversation = crypto.randomUUID();
+const mem = await stream(alice, { conversationId: memoryConversation, assistantMessageId: crypto.randomUUID(), messages: [{ id: crypto.randomUUID(), role: "user", content: "Remember that my favourite colour is green" }] });
+const memoryTurn = await (await alice.call(`/conversations/${memoryConversation}`)).json() as { messages?: Array<{ role?: string }> };
+ok("a 'remember that…' turn is saved in chat history too", (memoryTurn.messages ?? []).map((m) => m.role).join(",") === "user,assistant", (memoryTurn.messages ?? []).map((m) => m.role).join(","));
 ok("explicit 'remember that…' saves a memory", mem.done?.memoryStored === true, JSON.stringify(mem.done?.reply ?? mem.error).slice(0, 80));
 const memories = await (await alice.call("/memory")).json() as { memories?: Array<{ content?: string; value?: string }> };
 ok("memory is listed for its owner", JSON.stringify(memories).includes("green"));
