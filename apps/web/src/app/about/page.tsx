@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 const parts = [
-  ["Runs on Ollama", "Every answer comes from an open model you run yourself, either on your computer or through Ollama Cloud. No secret third-party AI."],
+  ["Open models", "Every answer comes from open AI models through Ollama. No secret third-party AI."],
   ["Shows its sources", "Research, weather and cricket answers say where the facts came from and when they were fetched."],
   ["Asks first", "Anything that acts for you, like running a tool, waits for your approval."],
 ] as const;

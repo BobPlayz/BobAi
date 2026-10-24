@@ -1,7 +1,7 @@
 # Jarvis
 
 **A chill AI assistant powered by [Ollama](https://ollama.com).**
-Jarvis chats, helps with code, checks the weather and cricket, researches with real sources, reads your files and talks back in a British voice. It runs on open AI models through Ollama, either on your own computer or on Ollama Cloud, and it picks the best available model for each message by itself.
+Jarvis chats, helps with code, checks the weather and cricket, researches with real sources, reads your files and talks back in a British voice. It uses open AI models through Ollama and picks the best available model for each message by itself.
 
 > School project by BobPlayz · Class 8 · 2026 · Live at <https://jarvis-x-ai-two.vercel.app>
 

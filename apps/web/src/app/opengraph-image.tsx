@@ -17,8 +17,8 @@ export default function OpenGraphImage() {
           <span style={{ color: "#D9381E" }}>not an oracle.</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 26, color: "#6B6357", borderTop: "2px solid #15130F", paddingTop: 24, fontFamily: "monospace" }}>
-          <span>LOCAL-FIRST AI ASSISTANT</span>
-          <span>RUNS ON OLLAMA</span>
+          <span>AI ASSISTANT</span>
+          <span>SHOWS ITS SOURCES</span>
         </div>
       </div>
     ),

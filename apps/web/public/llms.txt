@@ -1,6 +1,6 @@
 # Jarvis
 
-Jarvis is a local-first AI assistant: chat, coding help, live weather, web research with sources, file reading, offline voice and local image generation. The language model runs on the user's own computer through Ollama.
+Jarvis is an AI assistant: chat, coding help, live weather, web research with sources, file reading, offline voice and local image generation. Answers come from open AI models through Ollama.
 
 ## Public pages
 

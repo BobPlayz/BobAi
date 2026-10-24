@@ -29,7 +29,7 @@ const STATES: Array<{ id: AssistantVisualState; label: string; note: string }> =
 ];
 
 const PRINCIPLES = [
-  ["Runs on Ollama", "Open AI models through Ollama, either on your own PC or Ollama Cloud. No mystery AI company in the middle."],
+  ["Works anywhere", "Open it in any browser on your phone, tablet or laptop. Nothing to install, and you can add it to your home screen."],
   ["No making stuff up", "Weather comes from a real weather service and says when it was checked. Cricket scores from a web search are labelled as search results, not fake live scores."],
   ["Asks first", "If Jarvis wants to actually do something for you, it shows you exactly what and waits for you to say yes."],
   ["Only remembers what you ask", "Say “remember that…” and it will. Everything else is just chat. No secret note-taking."],
@@ -141,7 +141,7 @@ export default function HomePage() {
         <div className="marquee" aria-hidden="true">
           {[0, 1].map((copy) => (
             <div key={copy} className="marquee-track font-display text-3xl sm:text-4xl">
-              {["Runs on Ollama", "Talks like Alan", "Shows its sources", "Asks first", "No made-up facts", "Works on an 8 GB laptop"].map((item) => (
+              {["Works anywhere", "Talks like Alan", "Shows its sources", "Asks first", "No made-up facts", "Reads your files"].map((item) => (
                 <span key={item} className="flex items-center gap-12 whitespace-nowrap">{item}<span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--accent)]" aria-hidden /></span>
               ))}
             </div>
