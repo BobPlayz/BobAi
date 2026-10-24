@@ -20,6 +20,8 @@ test("in production without a scanner, low-risk files pass and everything else i
     process.env.NODE_ENV = "production"; delete process.env.BOBAI_MALWARE_SCANNER_URL; delete process.env.BOBAI_MALWARE_SCAN_REQUIRED;
     assert.deepEqual(await scanUpload(Buffer.from("hi"), "a.txt", "text/plain", { lowRisk: true }), { clean: true, status: "skipped" });
     await assert.rejects(scanUpload(Buffer.from("%PDF-1.7"), "a.pdf", "application/pdf"), MalwareScannerUnavailableError);
+    // A PDF whose text was extracted is kept as text only (the original bytes are never stored), so it is allowed.
+    assert.deepEqual(await scanUpload(Buffer.from("%PDF-1.7"), "a.pdf", "application/pdf", { textOnly: true }), { clean: true, status: "text-only" });
   } finally {
     process.env.NODE_ENV = saved.env;
     if (saved.url === undefined) delete process.env.BOBAI_MALWARE_SCANNER_URL; else process.env.BOBAI_MALWARE_SCANNER_URL = saved.url;

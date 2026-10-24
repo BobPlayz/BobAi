@@ -27,7 +27,10 @@
 | Cricket | `services/liveData.ts` (CricketData.org key or labelled web search) | Web-search path verified locally |
 | Web research | `services/research.ts`, `deepResearch.ts` | Verified locally (sources returned) |
 | Image understanding | `services/vision.ts` → `routeVision` | Verified locally |
-| File uploads | `routes/files.ts`, `documentIndexer.ts`, `malwareScanner.ts` | Verified locally; live needs a malware scanner |
+| File uploads | `routes/files.ts`, `documentIndexer.ts`, `malwareScanner.ts` | Verified locally (text, images, PDFs, names with spaces/Telugu; 4MB cap, big photos shrunk in the browser). Without a malware scanner a PDF keeps only its extracted text |
+| Live news | `services/liveData.ts` (DuckDuckGo, past week then month) | Verified locally: answers only from fetched sources, shown under Sources |
+| Long code replies | `routes/stream.ts`, `continuation.ts` | Verified locally: cut-off replies continue automatically (up to 3 times); anything still unfinished is labelled incomplete |
+| Cultural terms | `services/culturalTerms.ts` | Verified locally: muggulu, kolam, Sankranti etc. are explained to the model |
 | Tools with approval | `toolRegistry.ts`, `toolLoop.ts`, `toolDecision.ts` | Tested; approval card shown in the demo |
 | Voice (Alan, Whisper) | `routes/voice.ts`, `bobVoice.ts`, `whisperCpp.ts` | Verified on a PC; not available on Vercel |
 | Image generation | `flux.ts`, `scripts/local_image_generation.py` | Verified on a PC (Tiny-SD); not available on Vercel |

@@ -1,6 +1,6 @@
 import { getInventory, invalidateInventory, type Inventory, type ModelInfo } from "./modelInventory.js";
 import { getHealth, isCoolingDown, isDenied, recordFailure, recordSuccess, reliability } from "./modelHealth.js";
-import { ModelUnavailableError, ollamaChat, ollamaPredictTokens, ollamaStatus, ollamaStream, ollamaVision, preferredModel, type ModelProblem } from "./ollamaProvider.js";
+import { ModelUnavailableError, ollamaChat, ollamaPredictTokens, ollamaStatus, ollamaStream, ollamaVision, preferredModel, type ModelProblem, type FinishReason } from "./ollamaProvider.js";
 import type { NativeMessage } from "./nativeModel.js";
 
 /**
@@ -17,7 +17,7 @@ import type { NativeMessage } from "./nativeModel.js";
 export type RouteTask = "chat" | "coding" | "reasoning" | "vision" | "tool_decision";
 export type RouteStrategy = "auto" | "fastest" | "strongest" | "fixed";
 export type RouteOptions = { task?: RouteTask; preferredModel?: string; signal?: AbortSignal };
-export type RouteResult = { content: string; model: string; fallbacks: number };
+export type RouteResult = { content: string; model: string; fallbacks: number; finishReason?: FinishReason };
 export type RankedModel = { name: string; score: number; reasons: string[] };
 
 const NON_RETRYABLE: ModelProblem[] = ["auth", "not_configured", "unreachable", "no_model"];
@@ -137,7 +137,7 @@ function logAttempt(fields: Record<string, unknown>) {
 }
 
 type AttemptContext = { firstTokenTimeoutMs: number; onFirstToken: () => void };
-type Attempt = (model: string, context: AttemptContext) => Promise<{ content: string }>;
+type Attempt = (model: string, context: AttemptContext) => Promise<{ content: string; finishReason?: FinishReason }>;
 
 async function route(task: RouteTask, messages: NativeMessage[], options: RouteOptions, attempt: Attempt): Promise<RouteResult> {
   const started = Date.now();
@@ -173,7 +173,7 @@ async function route(task: RouteTask, messages: NativeMessage[], options: RouteO
       const firstTokenMs = firstTokenAt !== undefined ? firstTokenAt - attemptStarted : undefined;
       recordSuccess(model, { firstTokenMs, totalMs });
       logAttempt({ task, model, ok: true, firstTokenMs, totalMs, fallbacks: tried.size - 1 });
-      return { content: result.content, model, fallbacks: tried.size - 1 };
+      return { content: result.content, model, fallbacks: tried.size - 1, ...(result.finishReason ? { finishReason: result.finishReason } : {}) };
     } catch (error) {
       if (options.signal?.aborted) throw error;
       const problem = problemOf(error);

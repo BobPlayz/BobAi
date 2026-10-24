@@ -6,21 +6,25 @@
   // access, so the page can run its own scripts but cannot reach Jarvis, cookies or the internet.
   // The code arrives either from the chat's preview frame (postMessage) or, when opened in its own tab, in the URL
   // fragment (#code=...), which browsers never send to the server.
-  function show(html) { document.open(); document.write(html); document.close(); }
-  var match = /^#code=(.+)$/.exec(location.hash);
-  if (match) {
-    try {
-      var bytes = Uint8Array.from(atob(match[1].replace(/-/g, "+").replace(/_/g, "/")), function (c) { return c.charCodeAt(0); });
-      show(new TextDecoder().decode(bytes));
-    } catch (error) { document.body.textContent = "This website link is broken. Go back to Jarvis and press Open again."; }
-  } else {
-    var shown = false;
-    addEventListener("message", function (event) {
-      if (shown || event.source !== parent || typeof event.data !== "string") return;
-      shown = true;
-      show(event.data);
-    });
-    parent.postMessage("jarvis-preview-ready", "*");
-  }
+  // Everything is wrapped in a function: document.write keeps this page's global scope, so any global name here
+  // (like "show") would clash with the website's own code and silently break it.
+  (function () {
+    function show(html) { document.open(); document.write(html); document.close(); }
+    var match = /^#code=(.+)$/.exec(location.hash);
+    if (match) {
+      try {
+        var bytes = Uint8Array.from(atob(match[1].replace(/-/g, "+").replace(/_/g, "/")), function (c) { return c.charCodeAt(0); });
+        show(new TextDecoder().decode(bytes));
+      } catch (error) { document.body.textContent = "This website link is broken. Go back to Jarvis and press Open again."; }
+    } else {
+      var shown = false;
+      addEventListener("message", function (event) {
+        if (shown || event.source !== parent || typeof event.data !== "string") return;
+        shown = true;
+        show(event.data);
+      });
+      parent.postMessage("jarvis-preview-ready", "*");
+    }
+  })();
 </script>
 </body></html>

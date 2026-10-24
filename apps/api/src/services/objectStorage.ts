@@ -6,7 +6,16 @@ const MAX_OBJECT_BYTES = 10 * 1024 * 1024;
 // Vercel functions have a read-only deployment directory; only the temp dir is writable (and not persistent).
 // Extracted text and chunks live in Postgres, so document understanding survives; raw bytes may not.
 const DEFAULT_ROOT = process.env.VERCEL === "1" ? path.join(tmpdir(), "jarvis-objects") : path.join(process.cwd(), "storage", "objects");
-const ROOT = path.resolve(process.env.BOBAI_FILE_STORAGE_DIR?.trim() || DEFAULT_ROOT);
+// On Vercel a storage folder copied from .env.example (like "storage/objects") points into the read-only deployment,
+// which made every upload fail with "failed to process file"; only folders inside the temp dir are writable there.
+function storageRoot() {
+  const configured = process.env.BOBAI_FILE_STORAGE_DIR?.trim();
+  if (!configured) return DEFAULT_ROOT;
+  const resolved = path.resolve(configured);
+  if (process.env.VERCEL === "1" && resolved !== tmpdir() && !resolved.startsWith(`${tmpdir()}${path.sep}`)) return DEFAULT_ROOT;
+  return resolved;
+}
+const ROOT = storageRoot();
 
 function safeKey(key: string) {
   const normalized = key.replace(/\\/g, "/").replace(/^\/+/, "");

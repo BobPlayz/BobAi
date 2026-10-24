@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { setAssistantActivity } from "@/lib/assistantState";
 import { loadPreferences } from "@/lib/preferences";
 import { explainPicturePrompt, ideaPicturePrompt, topicOf, visualKind } from "@/lib/visuals";
-import { approveAndRunTool, autoTitleConversation, searchPictures, shareConversation, unshareConversation, deleteRemoteMessage, deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, updateConversation as updateRemoteConversation, uploadFile } from "@/lib/api";
+import { approveAndRunTool, autoTitleConversation, cancelGeneration, fetchSavedReply, searchPictures, shareConversation, unshareConversation, deleteRemoteMessage, deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, updateConversation as updateRemoteConversation, uploadFile } from "@/lib/api";
 import type { Conversation, ChatMessage, ChatImage, ChatFile, LiveDataInfo, ToolApproval } from "@/types/chat";
 const STORAGE_KEY = "bobai.conversation-ui.v3";
 const LEGACY_STORAGE_KEY = "bobai.conversations.v2";
@@ -36,7 +36,7 @@ function localSiteFrom(value: unknown): Pick<ChatMessage, "localSite"> {
   if (typeof window !== "undefined" && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) url.hostname = window.location.hostname;
   return { localSite: { url: url.toString(), name: site.name } };
 }
-function liveAndApproval(result: Record<string, unknown>): Pick<ChatMessage, "liveData" | "approval" | "model" | "compacted" | "localSite"> {
+function liveAndApproval(result: Record<string, unknown>): Pick<ChatMessage, "liveData" | "approval" | "model" | "compacted" | "localSite" | "incomplete"> {
   const live = result.liveData as LiveDataInfo | undefined;
   const approval = result.approval as Omit<ToolApproval, "state"> | undefined;
   // The Ollama model that actually answered, shown under the reply.
@@ -44,13 +44,35 @@ function liveAndApproval(result: Record<string, unknown>): Pick<ChatMessage, "li
   return {
     ...(model ? { model } : {}),
     ...(typeof result.compacted === "number" && result.compacted > 0 ? { compacted: result.compacted } : {}),
+    ...(result.incomplete === true ? { incomplete: true } : {}),
     ...localSiteFrom(result.localSite),
     ...(live && typeof live.provider === "string" ? { liveData: { ...live, sources: Array.isArray(live.sources) ? live.sources.filter((source) => typeof source?.url === "string" && /^https?:\/\//.test(source.url)) : [] } } : {}),
     ...(approval && typeof approval.tool === "string" && typeof approval.workspaceId === "string" ? { approval: { ...approval, arguments: approval.arguments && typeof approval.arguments === "object" ? approval.arguments : {}, state: "pending" as const } } : {}),
   };
 }
+/** Vercel refuses request bodies over 4.5 MB, so uploads are capped just under it. */
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+/** Scales a photo down to at most 1600 px and re-encodes it as JPEG (about 0.3-0.9 MB) when it is bigger than 900 KB. */
+async function shrinkImage(file: File): Promise<File> {
+  if (file.size <= 900_000 || typeof createImageBitmap !== "function") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    for (const quality of [0.85, 0.7, 0.55]) {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+      if (blob && blob.size <= 950_000) return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg", lastModified: file.lastModified });
+    }
+  } catch { /* fall back to the original file */ }
+  return file;
+}
+
 export function useChat() {
-  const [conversations, setConversations] = useState<Conversation[]>([]); const [activeId, setActiveId] = useState(""); const [input, setInput] = useState(""); const [search, setSearch] = useState(""); const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null); const [settings, setSettings] = useState<ChatSettings>(loadSettings); const [uploadingFiles, setUploadingFiles] = useState<string[]>([]); const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}); const [serverReady, setServerReady] = useState(false); const [streaming, setStreaming] = useState(false); const [generatingImage, setGeneratingImage] = useState(false); const activeStream = useRef<AbortController | null>(null); /** The reply produced in this page session that voice replies may speak; old replies are never auto-played. */ const [lastReplyId, setLastReplyId] = useState<string | null>(null); const uploadControllers = useRef(new Map<string, AbortController>());
+  const [conversations, setConversations] = useState<Conversation[]>([]); const [activeId, setActiveId] = useState(""); const [input, setInput] = useState(""); const [search, setSearch] = useState(""); const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null); const [settings, setSettings] = useState<ChatSettings>(loadSettings); const [uploadingFiles, setUploadingFiles] = useState<string[]>([]); const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({}); const [serverReady, setServerReady] = useState(false); const [streaming, setStreaming] = useState(false); const [generatingImage, setGeneratingImage] = useState(false); const activeStream = useRef<AbortController | null>(null); const activeAssistantId = useRef<string | null>(null); /** The reply produced in this page session that voice replies may speak; old replies are never auto-played. */ const [lastReplyId, setLastReplyId] = useState<string | null>(null); const uploadControllers = useRef(new Map<string, AbortController>());
   useEffect(() => () => { activeStream.current?.abort(); for (const controller of uploadControllers.current.values()) controller.abort(); uploadControllers.current.clear(); }, []);
   useEffect(() => {
     let cancelled = false;
@@ -83,22 +105,25 @@ export function useChat() {
   function updateConversation(id: string, updater: (c: Conversation) => Conversation) { setConversations((prev) => prev.map((c) => c.id === id ? updater(c) : c)); }
   function imageMessage(images: GeneratedImage[]): ChatMessage { return { id: crypto.randomUUID(), role: "assistant", content: "", images: images.filter((img): img is GeneratedImage & { url: string } => typeof img.url === "string").map((img): ChatImage => ({ id: img.id || crypto.randomUUID(), ...(img.id ? { serverImageId: img.id } : {}), url: img.url, prompt: img.prompt ?? "" })) }; }
   /** Sends the composer text, or the given text (talk mode, voice typing); resolves to the reply text (null if nothing was answered). `voice` asks for a short, speakable reply. */
-  async function send(spoken?: unknown, options: { voice?: boolean } = {}): Promise<string | null> { const direct = typeof spoken === "string"; const fromVoice = options.voice === true; const text = direct ? spoken.trim() : input.trim(); if (!text || !activeConversation || loadingConversationId) return null; const conversationId = activeId; const controller = new AbortController(); activeStream.current = controller; setStreaming(true); setAssistantActivity("request", true); setInput(""); setLoadingConversationId(conversationId); const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text }; const nextMessages = [...activeConversation.messages, userMessage]; const assistantMessageId = crypto.randomUUID(); updateConversation(conversationId, (c) => ({ ...c, messages: nextMessages })); try { const result = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, conversationId, (token) => { setAssistantActivity("stream", true); updateConversation(conversationId, (conversation) => { const exists = conversation.messages.some((message) => message.id === assistantMessageId); const messages = exists ? conversation.messages.map((message) => message.id === assistantMessageId ? { ...message, content: message.content + token } : message) : [...conversation.messages, { id: assistantMessageId, role: "assistant" as const, content: token }]; return { ...conversation, messages }; }); }, controller.signal, assistantMessageId, fromVoice);  let aiMessage: ChatMessage; if (result.imagePrompt) { setGeneratingImage(true); try { const generated = await generateImage(result.imagePrompt, [], controller.signal); aiMessage = imageMessage(generated.images); } finally { setGeneratingImage(false); } } else { aiMessage = { id: assistantMessageId, role: "assistant", content: typeof result.reply === "string" ? result.reply : "", ...liveAndApproval(result) }; setLastReplyId(assistantMessageId); } updateConversation(conversationId, (c) => ({ ...c, title: activeConversation.messages.length === 0 ? result.title || c.title : c.title, messages: [...nextMessages, aiMessage] })); if (!result.imagePrompt && aiMessage.content.trim()) void addVisuals(conversationId, aiMessage.id, text); if (activeConversation.messages.length === 0 && (result.imagePrompt ? aiMessage.images?.length : aiMessage.content.trim())) { const titleIt = () => void autoTitleConversation(conversationId).then((title) => { if (title) updateConversation(conversationId, (c) => ({ ...c, title })); }).catch(() => undefined); /* picture chats are saved a moment later by the autosave */ if (result.imagePrompt) window.setTimeout(titleIt, 2_000); else titleIt(); } return aiMessage.content; } catch (error) { if (!(error instanceof Error && error.name === "AbortError")) updateConversation(conversationId, (c) => ({ ...c, messages: [...c.messages.filter((message) => message.id !== assistantMessageId || message.content.trim()), { id: crypto.randomUUID(), role: "assistant", content: error instanceof Error ? error.message : "The AI request failed. Please try again." }] })); return null; } finally { if (activeStream.current === controller) activeStream.current = null; setStreaming(false); setAssistantActivity("request", false); setAssistantActivity("stream", false); setLoadingConversationId(null); } } function stop() { activeStream.current?.abort(); }
+  async function send(spoken?: unknown, options: { voice?: boolean } = {}): Promise<string | null> { const direct = typeof spoken === "string"; const fromVoice = options.voice === true; const text = direct ? spoken.trim() : input.trim(); if (!text || !activeConversation || loadingConversationId) return null; const conversationId = activeId; const controller = new AbortController(); activeStream.current = controller; setStreaming(true); setAssistantActivity("request", true); setInput(""); setLoadingConversationId(conversationId); const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text }; const nextMessages = [...activeConversation.messages, userMessage]; const assistantMessageId = crypto.randomUUID(); activeAssistantId.current = assistantMessageId; updateConversation(conversationId, (c) => ({ ...c, messages: nextMessages })); try { const result = await sendMessage(nextMessages, settings.personality, undefined, settings.memory, conversationId, (token) => { setAssistantActivity("stream", true); updateConversation(conversationId, (conversation) => { const exists = conversation.messages.some((message) => message.id === assistantMessageId); const messages = exists ? conversation.messages.map((message) => message.id === assistantMessageId ? { ...message, content: message.content + token, streaming: true } : message) : [...conversation.messages, { id: assistantMessageId, role: "assistant" as const, content: token, streaming: true }]; return { ...conversation, messages }; }); }, controller.signal, assistantMessageId, fromVoice);  let aiMessage: ChatMessage; if (result.imagePrompt) { setGeneratingImage(true); try { const generated = await generateImage(result.imagePrompt, [], controller.signal); aiMessage = imageMessage(generated.images); } finally { setGeneratingImage(false); } } else { aiMessage = { id: assistantMessageId, role: "assistant", content: typeof result.reply === "string" ? result.reply : "", ...liveAndApproval(result) }; setLastReplyId(assistantMessageId); } updateConversation(conversationId, (c) => ({ ...c, title: activeConversation.messages.length === 0 ? result.title || c.title : c.title, messages: [...nextMessages, aiMessage] })); if (!result.imagePrompt && aiMessage.content.trim()) void addVisuals(conversationId, aiMessage.id, text); if (activeConversation.messages.length === 0 && (result.imagePrompt ? aiMessage.images?.length : aiMessage.content.trim())) { const titleIt = () => void autoTitleConversation(conversationId).then((title) => { if (title) updateConversation(conversationId, (c) => ({ ...c, title })); }).catch(() => undefined); /* picture chats are saved a moment later by the autosave */ if (result.imagePrompt) window.setTimeout(titleIt, 2_000); else titleIt(); } return aiMessage.content; } catch (error) { if (error instanceof Error && error.name === "AbortError") { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === assistantMessageId ? { ...m, streaming: false } : m) })); return null; } /* The connection dropped or stalled: the server keeps writing and saves the reply, so fetch it instead of losing it. */ const recovered = await recoverReply(conversationId, assistantMessageId); if (recovered) return recovered; updateConversation(conversationId, (c) => ({ ...c, messages: [...c.messages.map((m) => m.id === assistantMessageId ? { ...m, streaming: false, incomplete: m.content.trim() ? true : m.incomplete } : m).filter((message) => message.id !== assistantMessageId || message.content.trim()), { id: crypto.randomUUID(), role: "assistant", content: error instanceof Error ? error.message : "The AI request failed. Please try again." }] })); return null; } finally { if (activeStream.current === controller) activeStream.current = null; setStreaming(false); setAssistantActivity("request", false); setAssistantActivity("stream", false); setLoadingConversationId(null); } } function stop() { activeStream.current?.abort(); if (activeAssistantId.current) void cancelGeneration(activeAssistantId.current); }
   async function handleFiles(files: File[]) {
     if (!activeConversation || !files.length) return;
     setLoadingConversationId(activeId);
     setAssistantActivity("request", true);
     let workingMessages = activeConversation.messages;
     try {
-      for (const file of files) {
+      for (let file of files) {
         const uploadKey = `${file.name}:${file.size}:${file.lastModified}`;
         const uploadController = new AbortController();
         uploadControllers.current.set(uploadKey, uploadController);
         setUploadingFiles((prev) => [...prev, uploadKey]);
         setUploadProgress((prev) => ({ ...prev, [uploadKey]: 0 }));
         try {
-          if (file.type.startsWith("image/") && !["image/png", "image/jpeg", "image/webp"].includes(file.type.toLowerCase())) throw new Error("Image understanding currently supports PNG, JPEG, and WebP images.");
-          if (file.type.startsWith("image/") && file.size > 1_000_000) throw new Error("For image understanding, attach an image smaller than 1 MB for now.");
+          if (file.type.startsWith("image/") && !["image/png", "image/jpeg", "image/webp"].includes(file.type.toLowerCase())) throw new Error("Pictures need to be PNG, JPEG or WebP. (iPhone HEIC photos: share them as JPEG.)");
+          // Phone photos are 3-5 MB; shrink them in the browser so they fit the upload and image-understanding limits.
+          const original = file;
+          file = file.type.startsWith("image/") ? await shrinkImage(file) : file;
+          if (file.size > MAX_UPLOAD_BYTES) throw new Error(`That file is ${(original.size / 1024 / 1024).toFixed(1)} MB. Files up to 4 MB work here. Try a smaller file, or copy the text into the chat.`);
           const result = await uploadFile(file, (progress) => setUploadProgress((prev) => ({ ...prev, [uploadKey]: progress })), uploadController.signal);
           const fileData: ChatFile = { id: crypto.randomUUID(), name: result.name, type: result.type, text: result.text };
           if (uploadController.signal.aborted) throw Object.assign(new Error("Upload cancelled."), { name: "AbortError" });
@@ -181,7 +206,23 @@ export function useChat() {
       setLoadingConversationId(null);
     }
   }
-  function newChat() { if (activeConversation && activeConversation.messages.length === 0) { setInput(""); return; } const convo = createConversation(); setConversations((prev) => [convo, ...prev.filter((conversation) => conversation.messages.length > 0)]); setActiveId(convo.id); setInput(""); } function togglePin(id: string) { const current = conversations.find((conversation) => conversation.id === id); if (!current) return; const pinned = !current.pinned; updateConversation(id, (c) => ({ ...c, pinned })); void updateRemoteConversation(id, { isPinned: pinned }).catch(() => undefined); } function togglePinMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) })); } /** Pictures with answers (visual learners): real pictures for "ideas" questions, a drawn picture for "explain" ones. Runs after the text reply, so the answer is never slowed down. */
+  function newChat() { if (activeConversation && activeConversation.messages.length === 0) { setInput(""); return; } const convo = createConversation(); setConversations((prev) => [convo, ...prev.filter((conversation) => conversation.messages.length > 0)]); setActiveId(convo.id); setInput(""); } function togglePin(id: string) { const current = conversations.find((conversation) => conversation.id === id); if (!current) return; const pinned = !current.pinned; updateConversation(id, (c) => ({ ...c, pinned })); void updateRemoteConversation(id, { isPinned: pinned }).catch(() => undefined); } function togglePinMessage(conversationId: string, messageId: string) { updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, pinned: !m.pinned } : m) })); } /** After a dropped connection: waits for the server to finish the reply it kept writing, then shows the saved version. */
+  async function recoverReply(conversationId: string, messageId: string): Promise<string | null> {
+    const deadline = Date.now() + 120_000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2_500));
+      const saved = await fetchSavedReply(conversationId, messageId).catch(() => null);
+      if (!saved) continue;
+      if (saved.content.trim()) updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.some((m) => m.id === messageId) ? c.messages.map((m) => m.id === messageId ? { ...m, content: saved.content, streaming: !["completed", "incomplete", "failed", "cancelled"].includes(saved.status) } : m) : [...c.messages, { id: messageId, role: "assistant" as const, content: saved.content, streaming: true }] }));
+      if (saved.status === "completed" || saved.status === "incomplete") {
+        updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, streaming: false, ...(saved.status === "incomplete" ? { incomplete: true } : {}) } : m) }));
+        return saved.content.trim() ? saved.content : null;
+      }
+      if (saved.status === "failed" || saved.status === "cancelled") return null;
+    }
+    return null;
+  }
+  /** Pictures with answers (visual learners): real pictures for "ideas" questions, a drawn picture for "explain" ones. Runs after the text reply, so the answer is never slowed down. */
   async function addVisuals(conversationId: string, messageId: string, question: string) {
     if (!loadPreferences().visualAnswers) return;
     const kind = visualKind(question);

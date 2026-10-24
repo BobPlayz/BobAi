@@ -63,7 +63,7 @@ export async function dbSaveConversation(input: { id: string; userId: string; wo
   }); return true;
 }
 
-export async function dbUpdateMessageStatus(input: { conversationId: string; messageId: string; userId: string; workspaceId: string; status: "pending" | "streaming" | "completed" | "failed" | "cancelled"; content?: string; model?: string | null }) {
+export async function dbUpdateMessageStatus(input: { conversationId: string; messageId: string; userId: string; workspaceId: string; status: "pending" | "streaming" | "completed" | "incomplete" | "failed" | "cancelled"; content?: string; model?: string | null }) {
   const database = await getDb(); if (!database) return false; const { conversations, messages } = database;
   const owner = await database.db.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.id, input.conversationId), eq(conversations.userId, input.userId), eq(conversations.workspaceId, input.workspaceId))).limit(1);
   if (!owner[0]) return false;

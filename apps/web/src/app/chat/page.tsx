@@ -9,19 +9,13 @@ import TalkMode from "@/components/TalkMode";
 import Shortcuts from "@/components/Shortcuts";
 import { loadPreferences } from "@/lib/preferences";
 import { reportReply } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useChat } from "@/hooks/useChat";
 
-const VOICE_REPLIES_KEY = "jarvis.voiceReplies";
 
 export default function ChatPage() {
   const chat = useChat();
-  const [voiceReplies, setVoiceReplies] = useState(false);
   const [talking, setTalking] = useState(false);
-  useEffect(() => { try { setVoiceReplies(localStorage.getItem(VOICE_REPLIES_KEY) === "on"); } catch { /* storage unavailable */ } }, []);
-  function toggleVoiceReplies() {
-    setVoiceReplies((current) => { const next = !current; try { localStorage.setItem(VOICE_REPLIES_KEY, next ? "on" : "off"); } catch { /* storage unavailable */ } return next; });
-  }
 
   return (
     <NeuralShell
@@ -55,8 +49,6 @@ export default function ChatPage() {
           uploadingFiles={chat.uploadingFiles}
           uploadProgress={chat.uploadProgress}
           onCancelUpload={chat.cancelUpload}
-          voiceReplies={voiceReplies}
-          onToggleVoiceReplies={toggleVoiceReplies}
           onTalk={() => setTalking(true)}
           onVoiceSend={(text) => { void chat.send(text); }}
         />
@@ -71,13 +63,12 @@ export default function ChatPage() {
         onRegenerate={chat.regenerateLastAssistant}
         onResolveApproval={chat.resolveApproval}
         onSuggestion={chat.setInput}
-        voiceReplies={voiceReplies && !talking}
         autoPlayMessageId={chat.lastReplyId}
         onReport={reportReply}
         onEditLast={(id) => chat.editLastUserMessage(chat.activeId, id)}
       />
       <Shortcuts onNewChat={chat.newChat} onStop={chat.stop} streaming={chat.streaming} />
-      {talking && <TalkMode language={loadPreferences().language} onUtterance={(text) => chat.send(text, { voice: true })} onClose={() => setTalking(false)} />}
+      {talking && <TalkMode language={loadPreferences().language} onUtterance={(text) => chat.send(text, { voice: true })} onCancel={chat.stop} onClose={() => setTalking(false)} />}
     </NeuralShell>
   );
 }

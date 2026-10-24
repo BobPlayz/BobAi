@@ -70,9 +70,18 @@ function thinkingEnabled() {
   return ["1", "true", "yes", "on"].includes(raw);
 }
 
+/** Context window: small on a laptop, bigger on Ollama Cloud where long code and long chats need the room. */
 export function ollamaContextTokens() {
-  const raw = Number(process.env.BOBAI_OLLAMA_NUM_CTX || 4096);
-  return Math.min(32768, Math.max(1024, Number.isFinite(raw) ? Math.trunc(raw) : 4096));
+  const fallback = isHostedOllama() ? 16384 : 4096;
+  const raw = Number(process.env.BOBAI_OLLAMA_NUM_CTX || fallback);
+  return Math.min(32768, Math.max(1024, Number.isFinite(raw) ? Math.trunc(raw) : fallback));
+}
+
+/** Reply budget for code: as much as fits beside the prompt (half the window), up to 4096 tokens. */
+export function ollamaCodingPredictTokens() {
+  const configured = Number(process.env.BOBAI_OLLAMA_CODING_NUM_PREDICT);
+  if (Number.isFinite(configured) && configured > 0) return Math.min(8192, Math.max(64, Math.trunc(configured)));
+  return Math.max(ollamaPredictTokens(), Math.min(4096, Math.floor(ollamaContextTokens() / 2)));
 }
 
 export function ollamaPredictTokens(defaultPredict = 1536) {
@@ -80,8 +89,8 @@ export function ollamaPredictTokens(defaultPredict = 1536) {
   return Math.min(4096, Math.max(64, Number.isFinite(raw) ? Math.trunc(raw) : defaultPredict));
 }
 
-function inferenceOptions(defaultPredict = 1536) {
-  return { num_ctx: ollamaContextTokens(), num_predict: ollamaPredictTokens(defaultPredict) };
+function inferenceOptions(provider: "bob" | "coding" | number = "bob") {
+  return { num_ctx: ollamaContextTokens(), num_predict: typeof provider === "number" ? ollamaPredictTokens(provider) : provider === "coding" ? ollamaCodingPredictTokens() : ollamaPredictTokens() };
 }
 
 function timeoutMs() {
@@ -169,8 +178,8 @@ function statusError(status: number, model: string, detail: string): ModelUnavai
 }
 
 
-async function request(messages: ReturnType<typeof normalizeMessages>, model: string, stream: boolean, signal?: AbortSignal) {
-  const body = JSON.stringify({ model, messages, stream, think: thinkingEnabled(), keep_alive: "10m", options: inferenceOptions() });
+async function request(messages: ReturnType<typeof normalizeMessages>, model: string, stream: boolean, signal?: AbortSignal, provider: "bob" | "coding" = "bob") {
+  const body = JSON.stringify({ model, messages, stream, think: thinkingEnabled(), keep_alive: "10m", options: inferenceOptions(provider) });
   if (Buffer.byteLength(body) > MAX_REQUEST_BYTES) throw new Error("Ollama request is too large");
   assertModelConfigured();
   // Freeing RAM only matters on our own machine; hosted Ollama manages its own memory, and a failed unload must not block chat.
@@ -208,15 +217,16 @@ async function readLimited(response: Response) {
 
 async function ollamaChatUnlocked(input: NativeMessage[], provider: "bob" | "coding" = "bob", override?: string, signal?: AbortSignal) {
   const model = ollamaModelFor(provider, override);
-  const response = await request(normalizeMessages(input), model, false, signal);
-  let data: { message?: { content?: unknown }; error?: unknown };
+  const response = await request(normalizeMessages(input), model, false, signal, provider);
+  let data: { message?: { content?: unknown }; done_reason?: unknown; error?: unknown };
   try { data = JSON.parse(await readLimited(response)); } catch (error) {
     if (error instanceof Error && error.message.includes("too large")) throw error;
     throw new Error("Ollama returned invalid JSON");
   }
   const content = data.message?.content;
   if (typeof content !== "string" || !content.trim() || content.length > MAX_RESPONSE_CHARS) { const failure = new ModelUnavailableError("failed", "Ollama returned an invalid or empty answer"); failure.model = model; throw failure; }
-  return { content: content.trim(), model };
+  const finishReason: FinishReason = data.done_reason === "length" ? "length" : "stop";
+  return { content: finishReason === "stop" ? content.trim() : content, model, finishReason };
 }
 
 export function ollamaEmbeddingEnabled() {
@@ -300,6 +310,7 @@ async function ollamaVisionUnlocked(imageBase64: string, prompt: string, signal?
 }
 
 export type StreamOptions = { firstTokenTimeoutMs?: number };
+export type FinishReason = "stop" | "length" | "interrupted";
 
 function generationError(model: string, detail: unknown) {
   const failure = new ModelUnavailableError("failed", `Ollama reported a generation error: ${String(detail).replace(/[\r\n\t]+/g, " ").slice(0, 200)}`);
@@ -319,11 +330,11 @@ async function ollamaStreamUnlocked(input: NativeMessage[], onToken: (token: str
     return error;
   };
   let response: Response;
-  try { response = await request(normalizeMessages(input), model, true, combined); }
+  try { response = await request(normalizeMessages(input), model, true, combined, provider); }
   catch (error) { clearTimeout(timer); throw timedOut(error); }
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
-  let pending = "", content = "", total = 0, done = false;
+  let pending = "", content = "", total = 0, done = false, doneReason = "";
   const emit = (token: string) => { if (!content) clearTimeout(timer); content += token; if (content.length > MAX_RESPONSE_CHARS) throw new Error("Ollama response is too large"); onToken(token); };
   try {
     while (!done) {
@@ -337,23 +348,24 @@ async function ollamaStreamUnlocked(input: NativeMessage[], onToken: (token: str
         const line = pending.slice(0, newline).trim();
         pending = pending.slice(newline + 1);
         if (line) {
-          let data: { message?: { content?: unknown }; done?: boolean; error?: unknown };
+          let data: { message?: { content?: unknown }; done?: boolean; done_reason?: unknown; error?: unknown };
           try { data = JSON.parse(line); } catch { throw new Error("Ollama stream returned invalid data"); }
           if (data.error) throw generationError(model, data.error);
           const token = data.message?.content;
           if (typeof token === "string" && token) emit(token);
-          if (data.done === true) done = true;
+          if (data.done === true) { done = true; doneReason = typeof data.done_reason === "string" ? data.done_reason : ""; }
         }
         newline = pending.indexOf("\n");
       }
     }
     pending += decoder.decode();
     if (pending.trim()) {
-      let data: { message?: { content?: unknown }; done?: boolean; error?: unknown };
+      let data: { message?: { content?: unknown }; done?: boolean; done_reason?: unknown; error?: unknown };
       try { data = JSON.parse(pending.trim()); } catch { throw new Error("Ollama stream returned invalid data"); }
       if (data.error) throw generationError(model, data.error);
       const token = data.message?.content;
       if (typeof token === "string" && token) emit(token);
+      if (data.done === true) { done = true; doneReason = typeof data.done_reason === "string" ? data.done_reason : ""; }
     }
   } catch (error) {
     clearTimeout(timer);
@@ -362,7 +374,10 @@ async function ollamaStreamUnlocked(input: NativeMessage[], onToken: (token: str
   }
   clearTimeout(timer);
   if (!content.trim()) { const failure = new ModelUnavailableError("failed", "Ollama returned an empty answer"); failure.model = model; throw failure; }
-  return { content: content.trim(), model };
+  // "length": the reply hit its token budget; "interrupted": the connection ended before Ollama said it was done.
+  // Either way the text is NOT a complete answer, and callers must not present it as one.
+  const finishReason: FinishReason = !done ? "interrupted" : doneReason === "length" ? "length" : "stop";
+  return { content: finishReason === "stop" ? content.trim() : content, model, finishReason };
 }
 
 /** Provider-level health: configuration, credentials and reachability. Which models exist is the inventory's job. */

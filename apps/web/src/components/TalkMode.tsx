@@ -13,7 +13,7 @@ import { audioUrl, browserRecognition, getVoiceAvailability, speakable, speechLo
  */
 
 type Phase = "starting" | "listening" | "thinking" | "speaking" | "error";
-type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void };
+type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void; /** Cancels the answer being worked out (you started talking again). */ onCancel?: () => void };
 
 const SILENCE_MS = 1_100;
 const NO_SPEECH_MS = 10_000;
@@ -21,7 +21,7 @@ const MAX_TURN_MS = 30_000;
 
 const LABEL: Record<Phase, string> = { starting: "Getting ready…", listening: "Listening…", thinking: "Thinking…", speaking: "Talking · tap to interrupt", error: "Paused" };
 
-export default function TalkMode({ language, onUtterance, onClose }: Props) {
+export default function TalkMode({ language, onUtterance, onClose, onCancel }: Props) {
   const [phase, setPhase] = useState<Phase>("starting");
   const [heard, setHeard] = useState("");
   const [reply, setReply] = useState("");
@@ -29,6 +29,8 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
   const [level, setLevel] = useState(0);
   const [browserVoice, setBrowserVoice] = useState(false);
   const session = useRef(0);
+  const turnRef = useRef(0);
+  const noiseFloor = useRef(0.01);
   const utter = useRef(onUtterance);
   const closeButton = useRef<HTMLButtonElement>(null);
   const res = useRef<{ stream?: MediaStream; context?: AudioContext; analyser?: AnalyserNode; recognition?: BrowserRecognition; audio?: HTMLAudioElement; timer?: number; finishListening?: () => void; stopSpeaking?: () => void }>({});
@@ -76,7 +78,7 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
         const rms = Math.sqrt(sum / samples.length);
         const now = performance.now();
         // The first moment calibrates to the room's background noise.
-        if (now - started < 350) { floor = (floor * calibrated + rms) / (calibrated + 1); calibrated += 1; return; }
+        if (now - started < 350) { floor = (floor * calibrated + rms) / (calibrated + 1); calibrated += 1; noiseFloor.current = floor; return; }
         const threshold = Math.max(0.015, floor * 3);
         setLevel(Math.min(1, rms / (threshold * 4)));
         if (rms > threshold) { spoke = true; lastVoice = now; }
@@ -153,6 +155,27 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
     if ("speechSynthesis" in window) await speakBrowser(words);
   }
 
+  /**
+   * Barge-in: watches the open mic and calls `onSpeech` once someone has been talking for about 0.3 s. The bar is
+   * higher than when listening, so Jarvis's own voice leaking from the speakers doesn't interrupt it.
+   */
+  function watchForSpeech(id: number, onSpeech: () => void) {
+    const analyser = res.current.analyser;
+    if (!analyser) return () => undefined;
+    const samples = new Float32Array(analyser.fftSize);
+    let voiced = 0;
+    const timer = window.setInterval(() => {
+      if (session.current !== id) { window.clearInterval(timer); return; }
+      analyser.getFloatTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) sum += sample * sample;
+      const rms = Math.sqrt(sum / samples.length);
+      voiced = rms > Math.max(0.05, noiseFloor.current * 6) ? voiced + 50 : Math.max(0, voiced - 50);
+      if (voiced >= 300) { window.clearInterval(timer); onSpeech(); }
+    }, 50);
+    return () => window.clearInterval(timer);
+  }
+
   async function loop(id: number) {
     let quickEmpties = 0;
     while (session.current === id) {
@@ -177,11 +200,20 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
       }
       quickEmpties = 0;
       setHeard(text); setReply(""); setPhase("thinking");
+      // Talking again while Jarvis is still thinking cancels that answer; a late reply to an old question is ignored.
+      const turn = ++turnRef.current;
+      let interrupted = false;
+      const stopWatching = watchForSpeech(id, () => { interrupted = true; onCancel?.(); });
       const answer = await utter.current(text);
+      stopWatching();
       if (session.current !== id) return;
+      if (interrupted || turn !== turnRef.current) { setReply(""); continue; }
       if (!answer?.trim()) { setReply("Hmm, I couldn't answer that one. Try again?"); continue; }
       setReply(answer); setPhase("speaking");
+      // Talking over Jarvis stops the voice at once and goes straight back to listening.
+      const stopBargeIn = watchForSpeech(id, () => res.current.stopSpeaking?.());
       await speak(answer, id);
+      stopBargeIn();
       res.current.stopSpeaking = undefined;
     }
   }
@@ -199,8 +231,10 @@ export default function TalkMode({ language, onUtterance, onClose }: Props) {
       const speakWith = available.textToSpeech ? "server" : "speechSynthesis" in window ? "browser" : "none";
       engines.current = { hear, speak: speakWith };
       setBrowserVoice(hear === "browser" || speakWith === "browser");
-      if (hear === "server") {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      // The mic stays open for the whole conversation (echo-cancelled) so you can talk over Jarvis to interrupt it.
+      // With the browser's recognition it is only used for that; if it is refused there, tapping still interrupts.
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).catch((problem: unknown) => { if (hear === "server") throw problem; return null; });
+      if (stream) {
         if (session.current !== id) { stream.getTracks().forEach((track) => track.stop()); return; }
         const context = new AudioContext();
         const analyser = context.createAnalyser();

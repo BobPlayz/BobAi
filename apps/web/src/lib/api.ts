@@ -36,7 +36,10 @@ async function readChatStream(response: Response, onToken?: (token: string) => v
   };
   try {
     while (true) {
-      const chunk = await reader.read();
+      // The server pings every 15 s, so 45 s of total silence means the connection is dead, not slow.
+      let stallTimer: ReturnType<typeof setTimeout> | undefined;
+      const stalled = new Promise<never>((_, reject) => { stallTimer = setTimeout(() => reject(Object.assign(new Error("The connection stalled."), { name: "StreamStalled" })), 45_000); });
+      const chunk = await Promise.race([reader.read(), stalled]).finally(() => clearTimeout(stallTimer));
       if (chunk.done) break;
       pending += decoder.decode(chunk.value, { stream: true });
       let separator = pending.match(/\r?\n\r?\n/);
@@ -98,6 +101,7 @@ export async function listConversations(includeArchived = false): Promise<Conver
         ...(images.length ? { images } : {}),
         ...(attachments && typeof attachments === "object" && Array.isArray(attachments.files) ? { files: attachments.files as ChatMessage["files"] } : {}),
         ...(attachments?.pinned === true ? { pinned: true } : {}),
+        ...(item.status === "incomplete" ? { incomplete: true } : {}),
         ...(Array.isArray(attachments?.gallery) ? { gallery: (attachments.gallery as NonNullable<ChatMessage["gallery"]>).filter((item) => item && typeof item.thumb === "string" && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(item.thumb) && typeof item.page === "string" && item.page.startsWith("https://commons.wikimedia.org/")).slice(0, 6) } : {}),
         ...(item.role === "assistant" && typeof item.model === "string" && /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/.test(item.model) && !["bob", "coding-agent"].includes(item.model) ? { model: item.model } : {}),
       };
@@ -159,3 +163,8 @@ export async function unshareConversation(id: string) { const res = await reques
 
 /** Real, credited pictures from Wikimedia Commons for "ideas" questions. */
 export async function searchPictures(query: string, signal?: AbortSignal) { const res = await request(`/images/search?q=${encodeURIComponent(query)}`, { signal }); const data = await readBody(res); if (!res.ok) throw new Error(data.error || "Picture search failed"); return (Array.isArray(data.pictures) ? data.pictures : []) as NonNullable<ChatMessage["gallery"]>; }
+
+/** The saved state of one reply, used to recover it after the connection dropped mid-stream. */
+export async function fetchSavedReply(conversationId: string, messageId: string) { const res = await request(`/conversations/${encodeURIComponent(conversationId)}`); if (!res.ok) return null; const data = await readBody(res) as { messages?: Array<{ id?: string; content?: string; status?: string }>; conversation?: { messages?: Array<{ id?: string; content?: string; status?: string }> } }; const message = (data.messages ?? data.conversation?.messages ?? []).find((item) => item.id === messageId); return message ? { content: typeof message.content === "string" ? message.content : "", status: typeof message.status === "string" ? message.status : "" } : null; }
+/** Asks the server to stop writing a reply (Stop button). */
+export async function cancelGeneration(assistantMessageId: string) { await request("/stream/cancel", { method: "POST", body: JSON.stringify({ assistantMessageId }) }).catch(() => undefined); }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Copy, Flag, MoreHorizontal, Pencil, Pin, RotateCcw, Trash2, X } from "lucide-react";
+import { ArrowDown, Copy, Flag, MoreHorizontal, Pencil, Pin, RotateCcw, Trash2, X } from "lucide-react";
 import type { ChatMessage, LiveDataInfo, ToolApproval } from "@/types/chat";
 import VoiceButton from "@/components/VoiceButton";
 import Markdown from "@/components/Markdown";
@@ -162,7 +162,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
           </div>
         </div>
         {awayFromBottom && messages.length > 0 && (
-          <button type="button" onClick={jumpToLatest} className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm shadow-[var(--shadow)] animate-[chatEnter_200ms_ease-out_both] motion-reduce:animate-none">↓ Jump to latest</button>
+          <button type="button" onClick={jumpToLatest} aria-label="Jump to latest" title="Jump to latest" className="absolute bottom-4 left-1/2 z-20 grid h-9 w-9 -translate-x-1/2 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] shadow-[var(--shadow)] hover:text-[var(--text)] animate-[chatEnter_200ms_ease-out_both] motion-reduce:animate-none"><ArrowDown className="h-4 w-4" aria-hidden /></button>
         )}
       </section>
 
@@ -222,7 +222,8 @@ function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval
         </div>
       </div>
 
-      {message.content && <div className="msg-assistant"><Markdown text={message.content} /></div>}
+      {message.content && <div className="msg-assistant"><Markdown text={message.content} live={message.streaming === true} /></div>}
+      {message.incomplete && !message.streaming && <p className="mt-3 rounded-xl border border-[var(--danger)]/40 px-3 py-2 text-sm text-[var(--danger)]" role="status">This answer got cut off before it finished. Tap “Try again” to get the full version.</p>}
 
       {message.visualPending && <p className="caption mt-4 animate-pulse normal-case tracking-normal" role="status">Finding a picture to help…</p>}
       {message.gallery && message.gallery.length > 0 && (
@@ -268,7 +269,6 @@ function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval
         </div>
       )}
       {message.compacted ? <p className="caption mt-3 normal-case tracking-normal text-[var(--faint)]">Jarvis summarized {message.compacted} earlier messages to keep this chat going.</p> : null}
-      {message.model && <p className="caption mt-3 normal-case tracking-normal text-[var(--faint)]">via {message.model}</p>}
       {message.approval && <ApprovalCard approval={message.approval} onResolve={onResolveApproval} />}
 
       {onRegenerate && (
@@ -307,6 +307,11 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleString();
 }
 
+/** Only real web links become clickable; anything else (or a malformed URL) is shown as plain text. */
+function safeHttpUrl(value: unknown) {
+  try { const url = new URL(String(value)); return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null; } catch { return null; }
+}
+
 /** Shows where live data came from and whether it is live, cached, or only web-search snippets. */
 function LiveDataBadge({ info }: { info: LiveDataInfo }) {
   const label = info.freshness === "web-search" ? "Web search — may be delayed" : info.cached ? "Cached" : "Live";
@@ -319,16 +324,19 @@ function LiveDataBadge({ info }: { info: LiveDataInfo }) {
         <time dateTime={info.fetchedAt} title={new Date(info.fetchedAt).toLocaleString()} suppressHydrationWarning>fetched {timeAgo(info.fetchedAt)}</time>
       </div>
       {info.sources.length > 0 && (
-        <ol className="live-badge-sources">
-          {info.sources.slice(0, 6).map((source, index) => (
-            <li key={`${source.url}-${index}`}>
-              <a href={source.url} target="_blank" rel="noopener noreferrer nofollow">
-                <span className="live-badge-index">{index + 1}</span>
-                <span className="truncate">{source.title || new URL(source.url).hostname}</span>
-              </a>
-            </li>
-          ))}
-        </ol>
+        <details className="group mt-2">
+          <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--text)]">
+            <span aria-hidden className="transition-transform group-open:rotate-90">›</span> Sources ({Math.min(info.sources.length, 6)})
+          </summary>
+          <ol className="live-badge-sources">
+            {info.sources.slice(0, 6).map((source, index) => {
+              const href = safeHttpUrl(source.url);
+              const site = href ? new URL(href).hostname.replace(/^www\./, "") : "";
+              const inner = (<><span className="live-badge-index">{index + 1}</span><span className="min-w-0 flex-1 truncate">{source.title || site || "Source"}</span>{site && <span className="shrink-0 text-[11px] text-[var(--faint)]">{site}{source.publishedAt ? ` · ${String(source.publishedAt).slice(0, 10)}` : ""}</span>}</>);
+              return <li key={`${source.url}-${index}`}>{href ? <a href={href} target="_blank" rel="noopener noreferrer nofollow">{inner}</a> : <span>{inner}</span>}</li>;
+            })}
+          </ol>
+        </details>
       )}
     </div>
   );

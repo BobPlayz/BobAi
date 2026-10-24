@@ -17,7 +17,7 @@ export type LiveDataSource = { title: string; url: string; snippet?: string; pub
 
 /** Where a live answer's data came from, shown as a badge so users can tell live, cached and search data apart. */
 export type LiveDataInfo = {
-  kind: "weather" | "cricket";
+  kind: "weather" | "cricket" | "news";
   provider: string;
   fetchedAt: string;
   cached: boolean;
@@ -43,6 +43,10 @@ export type ChatMessage = {
   images?: ChatImage[];
   /** Real pictures shown with the answer (visual learners), credited to their authors. */
   gallery?: Array<{ thumb: string; title: string; page: string; credit: string; license: string }>;
+  /** True while the reply is still arriving. */
+  streaming?: boolean;
+  /** The reply stopped before it was finished (length limit or a dropped connection that couldn't be recovered). */
+  incomplete?: boolean;
   /** True while Jarvis is finding or drawing a picture for this answer. */
   visualPending?: boolean;
   files?: ChatFile[];

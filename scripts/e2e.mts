@@ -146,6 +146,26 @@ form.append("file", new Blob(["Jarvis test notes. The secret word is pineapple."
 const upload = await alice.call("/files/upload", { method: "POST", body: form });
 const uploaded = await upload.json() as { text?: string };
 ok("text file upload is accepted and read", upload.status === 200 && (uploaded.text ?? "").includes("pineapple"), `HTTP ${upload.status}`);
+// Real-world names (spaces, brackets, Telugu) used to fail with "failed to process file".
+const named = new FormData();
+named.append("file", new Blob(["Muggulu notes for Sankranti."], { type: "text/plain" }), "నా notes (1).txt");
+const namedUpload = await alice.call("/files/upload", { method: "POST", body: named });
+const namedBody = await namedUpload.json() as { name?: string; text?: string; error?: string };
+ok("files with spaces and Telugu in the name upload, and keep their name", namedUpload.status === 200 && namedBody.name === "నా notes (1).txt", `HTTP ${namedUpload.status} ${namedBody.name ?? namedBody.error ?? ""}`);
+const pdfText = "BT /F1 12 Tf 40 760 Td (Jarvis PDF test: the secret colour is teal.) Tj ET";
+const pdfObjects = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>", `<< /Length ${pdfText.length} >>\nstream\n${pdfText}\nendstream`, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
+let pdf = "%PDF-1.4\n"; const offsets: number[] = [];
+pdfObjects.forEach((object, index) => { offsets.push(pdf.length); pdf += `${index + 1} 0 obj\n${object}\nendobj\n`; });
+const xref = pdf.length; pdf += `xref\n0 ${pdfObjects.length + 1}\n0000000000 65535 f \n${offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${pdfObjects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+const pdfForm = new FormData();
+pdfForm.append("file", new Blob([pdf], { type: "application/pdf" }), "My Homework.pdf");
+const pdfUpload = await alice.call("/files/upload", { method: "POST", body: pdfForm });
+const pdfBody = await pdfUpload.json() as { text?: string; error?: string };
+ok("a PDF named with spaces is read", pdfUpload.status === 200 && (pdfBody.text ?? "").includes("teal"), `HTTP ${pdfUpload.status} ${pdfBody.error ?? ""}`);
+const exeForm = new FormData();
+exeForm.append("file", new Blob(["MZ fake program"], { type: "application/x-msdownload" }), "app.exe");
+const exeUpload = await alice.call("/files/upload", { method: "POST", body: exeForm });
+ok("unsupported files get a clear 415 explaining what works", exeUpload.status === 415 && /PDFs/.test(((await exeUpload.json()) as { error?: string }).error ?? ""));
 
 // Voice output with Alan.
 const voice = await alice.call("/voice/synthesize", { method: "POST", body: JSON.stringify({ text: "Hello, I am Jarvis." }) });

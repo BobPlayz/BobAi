@@ -13,7 +13,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  */
 
 type Block =
-  | { type: "code"; lang: string; code: string }
+  | { type: "code"; lang: string; code: string; closed: boolean }
   | { type: "heading"; level: number; text: string }
   | { type: "list"; ordered: boolean; start: number; items: string[] }
   | { type: "quote"; text: string }
@@ -38,8 +38,9 @@ export function parseBlocks(source: string): Block[] {
       const code: string[] = [];
       index += 1;
       while (index < lines.length && !lines[index].trimStart().startsWith(fence[1])) { code.push(lines[index]); index += 1; }
+      const closed = index < lines.length;
       index += 1;
-      blocks.push({ type: "code", lang: fence[2].toLowerCase(), code: code.join("\n") });
+      blocks.push({ type: "code", lang: fence[2].toLowerCase(), code: code.join("\n"), closed });
       continue;
     }
     if (!line.trim()) { index += 1; continue; }
@@ -176,10 +177,11 @@ export function highlight(code: string, lang: string): ReactNode[] {
 
 const isHtmlPage = (code: string, lang: string) => lang === "html" || /^\s*(<!doctype html|<html)/i.test(code);
 
-function CodeBlock({ code, lang }: { code: string; lang: string }) {
+/** `incomplete`: the reply ended before this code block was closed, so it is shown but never run, previewed or hosted. */
+function CodeBlock({ code, lang, incomplete = false }: { code: string; lang: string; incomplete?: boolean }) {
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState(false);
-  const html = isHtmlPage(code, lang);
+  const html = isHtmlPage(code, lang) && !incomplete;
   async function copy() {
     try { await navigator.clipboard.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* clipboard unavailable */ }
   }
@@ -201,7 +203,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
   return (
     <div className="md-code">
       <div className="md-code-bar">
-        <span>{lang || "code"}</span>
+        <span>{lang || "code"}{incomplete && <span className="ml-2 rounded-full border border-[var(--danger)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--danger)]" title="The reply stopped before this code was finished">incomplete</span>}</span>
         <span className="flex items-center gap-1">
           {html && (
             <>
@@ -238,14 +240,15 @@ function SitePreview({ code }: { code: string }) {
   return <iframe key={code} ref={frame} title="Website preview" src="/preview-frame.html" className="block h-[440px] w-full bg-white" />;
 }
 
-export default function Markdown({ text }: { text: string }) {
+/** `live`: the text is still streaming in, so an unclosed code block is just unfinished, not cut off. */
+export default function Markdown({ text, live = false }: { text: string; live?: boolean }) {
   const blocks = parseBlocks(text);
   return (
     <div className="md">
       {blocks.map((block, index) => {
         const key = `b${index}`;
         switch (block.type) {
-          case "code": return <CodeBlock key={key} code={block.code} lang={block.lang} />;
+          case "code": return <CodeBlock key={key} code={block.code} lang={block.lang} incomplete={!block.closed && !live} />;
           case "heading": {
             const Tag = (`h${Math.min(block.level + 1, 6)}`) as "h2" | "h3" | "h4" | "h5" | "h6";
             return <Tag key={key} className="md-heading">{renderInline(block.text, key)}</Tag>;
@@ -254,7 +257,7 @@ export default function Markdown({ text }: { text: string }) {
             const items = block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item, `${key}-${itemIndex}`)}</li>);
             return block.ordered ? <ol key={key} start={block.start}>{items}</ol> : <ul key={key}>{items}</ul>;
           }
-          case "quote": return <blockquote key={key}><Markdown text={block.text} /></blockquote>;
+          case "quote": return <blockquote key={key}><Markdown text={block.text} live={live} /></blockquote>;
           case "table": return (
             <div key={key} className="md-table" tabIndex={0}>
               <table>

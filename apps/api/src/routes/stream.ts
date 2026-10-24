@@ -8,6 +8,7 @@ import { isCodingTask, runCodingAgent } from "../services/codingAgent.js";
 import { describeProfile, learnFromMessage } from "../services/typingStyle.js";
 import { consumeQuota, quotaMessage } from "../services/usageLimits.js";
 import { isLanguage } from "../services/language.js";
+import { MAX_CONTINUATIONS, continuationEmitter, continuePrompt, hasOpenFence } from "../services/continuation.js";
 import { extractHtml, localSitesEnabled, saveLocalSite, wantsLocalSite } from "../services/localSites.js";
 import { prepareChat, runChat, runStream } from "../services/chatEngine.js";
 import { dbRemember, dbRecallRelevant, isSensitiveMemory } from "../store/memoryDb.js";
@@ -32,7 +33,19 @@ function latestUserText(value: unknown) { if (!Array.isArray(value)) return ""; 
 function clientAssistantId(value: unknown) { return typeof value === "string" && UUID.test(value) ? value : randomUUID(); }
 function persistedTurnMessages(rawMessages: unknown) { if (!Array.isArray(rawMessages)) return []; for (let index = rawMessages.length - 1; index >= 0; index -= 1) { const message = rawMessages[index]; if (!message || typeof message !== "object") continue; const record = message as Record<string, unknown>; if (record.role !== "user" || typeof record.content !== "string") continue; if (record.ephemeral === true) return []; return [{ id: typeof record.id === "string" && UUID.test(record.id) ? record.id : randomUUID(), role: "user", content: record.content, model: null, status: "completed" }]; } return []; }
 function memoryContext(memories: Array<Record<string, unknown>> | null) { return (memories || []).map((memory) => typeof memory.content === "string" ? memory.content : "").filter(Boolean).slice(0, 12); }
+/** "Build/make/write a website, app, game, page…" is a coding request: it streams like any reply (with cut-off
+ * protection) instead of going through the tool loop, which only answers once everything is finished. */
+function wantsToBuild(text: string) { return /\b(build|make|create|write|code|design|generate|program)\b[\s\S]{0,60}\b(website|site|web ?page|page|app|game|calculator|quiz|form|landing|portfolio|html|css|javascript|script|program)\b/i.test(text); }
 function shouldRouteTools(text: string) { return /\b(search|research|verify|latest|current|weather|forecast|temperature|cricket|match score|live score|last match|latest match|browse|website|open (?:the )?site|look up|generate (?:an )?(?:image|video)|create (?:an )?(?:image|video|diagram)|edit (?:an )?image|use (?:the )?computer|paint|blender|analyze (?:this )?data|run (?:the )?automation|transcribe|synthesize|voice|music|sketch to ui)\b/i.test(text); }
+/** Replies being written right now, so an explicit Stop can end one (best effort: same server instance). */
+const activeGenerations = new Map<string, { userId: string; controller: AbortController }>();
+router.post("/cancel", async (req, res) => {
+  const id = typeof req.body?.assistantMessageId === "string" ? req.body.assistantMessageId : "";
+  const active = activeGenerations.get(id);
+  if (active && active.userId === req.user!.id) active.controller.abort(new Error("stopped by the user"));
+  return res.status(204).send();
+});
+
 router.post("/", streamLimit, async (req, res) => {
   let clientDisconnected = false;
   const requestController = new AbortController();
@@ -90,7 +103,7 @@ router.post("/", streamLimit, async (req, res) => {
       try { liveData = await getLiveData(liveIntent, requestController.signal); providerMessages = [...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }]; }
       catch (error) { if (requestController.signal.aborted) throw error; const reason = error instanceof Error ? error.message.slice(0, 200) : "unknown error"; providerMessages = [...prepared.providerMessages, { role: "user", content: `[live ${liveIntent.kind} lookup failed: ${reason}]\nTell the user the live ${liveIntent.kind} data could not be fetched right now. Do not guess or use remembered values.` }]; }
     }
-    if (!liveIntent && prepared.latestUserMessage && !wantsLocalSite(prepared.latestUserMessage.content) && shouldRouteTools(prepared.latestUserMessage.content) && process.env.BOBAI_TOOLS_ENABLED !== "false") {
+    if (!liveIntent && prepared.latestUserMessage && !wantsLocalSite(prepared.latestUserMessage.content) && !wantsToBuild(prepared.latestUserMessage.content) && shouldRouteTools(prepared.latestUserMessage.content) && process.env.BOBAI_TOOLS_ENABLED !== "false") {
       const toolContext = { userId: req.user!.id, workspaceId: workspace.id, modelId: prepared.modelId, mode: "chat", signal: requestController.signal } as const;
       let toolModel: string | null = null;
       const toolResult = await runToolLoop(prepared.providerMessages, toolContext, decideTools, async (messages, modelId) => {
@@ -107,10 +120,31 @@ router.post("/", streamLimit, async (req, res) => {
       }
     }
     assistantId = clientAssistantId(req.body?.assistantMessageId); const initialMessages = [...persistedTurnMessages(req.body?.messages), { id: assistantId, role: "assistant", content: "", model: null, status: "pending" }]; const persisted = await dbSaveConversation({ keepTitle: true, id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: initialMessages }); if (!persisted) throw new Error("persistent chat storage unavailable"); await dbUpdateMessageStatus({ conversationId, messageId: assistantId, userId: req.user!.id, workspaceId: workspace.id, status: "streaming" });
-    let disconnected = clientDisconnected; let streamedContent = ""; const streamController = requestController; const onClose = () => { disconnected = true; clientDisconnected = true; streamController.abort(new Error("client disconnected")); }; res.once("close", onClose); if (res.destroyed) onClose();
-    try { const result = await runStream(providerMessages, (token) => { if (!disconnected && !res.writableEnded) { streamedContent += token; send("token", { token }); } }, prepared.modelId, streamController.signal); const finalStatus = disconnected ? "cancelled" : "completed"; await dbUpdateMessageStatus({ conversationId, messageId: assistantId!, userId: req.user!.id, workspaceId: workspace.id, status: finalStatus, content: result.content, model: result.model }); // "…on localhost": save the website Jarvis just wrote and hand back its local address.
-      const localSite = await localSiteFor(result.content);
-      if (disconnected || res.writableEnded) return; send("done", { ...localSite, reply: result.content, title: prepared.title, model: result.model, provider: result.provider, fallbacks: result.fallbacks, ...(prepared.compacted ? { compacted: prepared.compacted } : {}), conversationId, persisted: true, status: finalStatus, ...(liveData ? { liveData: { kind: liveData.kind, provider: liveData.provider, fetchedAt: liveData.fetchedAt, cached: liveData.cached, freshness: liveData.freshness, sources: liveData.sources } } : {}) }); return res.end(); } catch (error) { await dbUpdateMessageStatus({ conversationId, messageId: assistantId!, userId: req.user!.id, workspaceId: workspace.id, status: disconnected ? "cancelled" : "failed", content: streamedContent }).catch(() => false); throw error; } finally { res.off("close", onClose); }
+    // Once the reply is being written, a dropped connection does NOT stop it: the reply is finished and saved, and the
+    // website picks it up when it reconnects. Only an explicit Stop (POST /stream/cancel) ends generation early.
+    let disconnected = clientDisconnected; let streamedContent = ""; const generation = new AbortController(); if (requestController.signal.aborted) generation.abort(requestController.signal.reason); activeGenerations.set(assistantId, { userId: req.user!.id, controller: generation }); const onClose = () => { disconnected = true; clientDisconnected = true; }; res.once("close", onClose); if (res.destroyed) onClose();
+    const emit = (token: string) => { streamedContent += token; if (!disconnected && !res.writableEnded) send("token", { token }); };
+    try {
+      let result: { content: string; model: string; provider?: string; fallbacks?: number; finishReason?: "stop" | "length" | "interrupted" };
+      try { result = await runStream(providerMessages, emit, prepared.modelId, generation.signal); }
+      catch (error) {
+        // Text already arrived and the user didn't press Stop: keep it and try to finish it, rather than losing it all.
+        if (!streamedContent.trim() || generation.signal.aborted) throw error;
+        result = { content: streamedContent, model: (error as { model?: string }).model ?? prepared.modelId ?? "unknown", finishReason: "interrupted" };
+      }
+      let content = result.content; let finishReason = result.finishReason ?? "stop"; let continuations = 0;
+      while ((finishReason !== "stop" || hasOpenFence(content)) && continuations < MAX_CONTINUATIONS && !generation.signal.aborted) {
+        continuations += 1;
+        const piece = continuationEmitter(content, emit);
+        try { const more = await runStream([...providerMessages, { role: "assistant", content }, { role: "user", content: continuePrompt(content) }], piece.onToken, result.model, generation.signal); content += piece.finish() || ""; finishReason = more.finishReason ?? "stop"; void more; }
+        catch (error) { const added = piece.finish(); content += added; if (generation.signal.aborted) break; if (!added) { console.error(JSON.stringify({ event: "continuation_failed", error: error instanceof Error ? error.message.slice(0, 200) : "unknown" })); break; } finishReason = "interrupted"; }
+      }
+      const incomplete = finishReason !== "stop" || hasOpenFence(content);
+      const finalStatus = generation.signal.aborted ? "cancelled" : incomplete ? "incomplete" : "completed";
+      await dbUpdateMessageStatus({ conversationId, messageId: assistantId!, userId: req.user!.id, workspaceId: workspace.id, status: finalStatus, content, model: result.model });
+      // "…on localhost": save the website Jarvis just wrote and hand back its local address.
+      const localSite = incomplete ? {} : await localSiteFor(content);
+      if (disconnected || res.writableEnded) return; send("done", { ...localSite, reply: content, title: prepared.title, model: result.model, provider: result.provider, fallbacks: result.fallbacks, ...(incomplete ? { incomplete: true } : {}), ...(continuations ? { continued: continuations } : {}), ...(prepared.compacted ? { compacted: prepared.compacted } : {}), conversationId, persisted: true, status: finalStatus, ...(liveData ? { liveData: { kind: liveData.kind, provider: liveData.provider, fetchedAt: liveData.fetchedAt, cached: liveData.cached, freshness: liveData.freshness, sources: liveData.sources } } : {}) }); return res.end(); } catch (error) { await dbUpdateMessageStatus({ conversationId, messageId: assistantId!, userId: req.user!.id, workspaceId: workspace.id, status: generation.signal.aborted ? "cancelled" : streamedContent.trim() ? "incomplete" : "failed", content: streamedContent }).catch(() => false); throw error; } finally { res.off("close", onClose); activeGenerations.delete(assistantId!); }
   } catch (error) { if (process.env.NODE_ENV !== "production") console.error("STREAM ROUTE ERROR:", error); if (assistantId && workspaceId && !clientDisconnected) await dbUpdateMessageStatus({ conversationId, messageId: assistantId, userId: req.user!.id, workspaceId, status: "failed" }).catch(() => false); if (!clientDisconnected && !res.writableEnded && !res.destroyed) { const publicMessage = (error as { publicMessage?: unknown } | null)?.publicMessage; send("error", { message: typeof publicMessage === "string" ? publicMessage : process.env.NODE_ENV === "production" ? "stream failed" : error instanceof Error ? error.message : "stream failed" }); res.end(); } }
 });
 export default router;

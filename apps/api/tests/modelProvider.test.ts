@@ -49,7 +49,7 @@ test("Ollama chat sends requests only to the configured local runtime", async ()
       return new Response(JSON.stringify({ message: { content: "  local answer  " }, done: true }), { status: 200 });
     };
     const result = await ollamaChat([{ role: "user", content: "hello" }], "bob");
-    assert.deepEqual(result, { content: "local answer", model: "qwen2.5:3b" });
+    assert.deepEqual(result, { content: "local answer", model: "qwen2.5:3b", finishReason: "stop" });
   } finally { restore(); }
 });
 
