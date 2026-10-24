@@ -49,7 +49,9 @@ router.post("/cancel", async (req, res) => {
 router.post("/", streamLimit, async (req, res) => {
   let clientDisconnected = false;
   const requestController = new AbortController();
-  const markClientDisconnected = () => { if (!res.writableEnded) { clientDisconnected = true; requestController.abort(new Error("client disconnected")); } };
+  // A dropped connection (reload, closed tab, bad signal) is only noted: the message is still answered and saved, so
+  // nothing the user sent is lost. Only an explicit Stop (POST /stream/cancel) cancels.
+  const markClientDisconnected = () => { if (!res.writableEnded) clientDisconnected = true; };
   req.once("aborted", markClientDisconnected);
   res.once("close", markClientDisconnected);
   const { send } = initSSE(res); const conversationId = typeof req.body?.conversationId === "string" && req.body.conversationId.trim() ? req.body.conversationId.trim() : randomUUID(); let assistantId: string | null = null; let workspaceId: string | null = null;
@@ -75,15 +77,15 @@ router.post("/", streamLimit, async (req, res) => {
     const latestRaw = Array.isArray(req.body?.messages) ? [...req.body.messages].reverse().find((message: { role?: unknown; ephemeral?: unknown }) => message?.role === "user" && message?.ephemeral !== true) as { content?: unknown } | undefined : undefined;
     const typingProfile = learnStyle && typeof latestRaw?.content === "string" ? await learnFromMessage(req.user!.id, workspace.id, latestRaw.content).catch(() => undefined) : undefined;
     const compactionCache = { load: () => dbLoadCompaction(conversationId, req.user!.id, workspace.id), save: (state: { summary: string; covered: number; hash: string }) => dbSaveCompaction(conversationId, req.user!.id, workspace.id, state) };
-    const prepared = await prepareChat({ messages: enrichedMessages, compactionCache, learnedStyle: describeProfile(typingProfile), spoken: req.body?.voice === true, generation: typeof req.body?.generation === "string" ? req.body.generation : settingValue(rows, "generation"), personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: isLanguage(req.body?.language) ? req.body.language : settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), responseLength: settingValue(rows, "responseLength"), tone: settingValue(rows, "tone"), customInstructions: settingValue(rows, "customInstructions"), signal: requestController.signal, memoryContext: memoryContext(memories), knowledgeContext });
-    if (requestController.signal.aborted || res.destroyed) return;
+    const prepared = await prepareChat({ messages: enrichedMessages, compactionCache, learnedStyle: describeProfile(typingProfile), spoken: req.body?.voice === true, askBeforeBuilding: req.body?.askBeforeBuilding !== false, generation: typeof req.body?.generation === "string" ? req.body.generation : settingValue(rows, "generation"), personality: typeof req.body?.personality === "string" ? req.body.personality : settingValue(rows, "personality"), modelId: typeof req.body?.modelId === "string" ? req.body.modelId : settingValue(rows, "model"), language: isLanguage(req.body?.language) ? req.body.language : settingValue(rows, "language"), responseStyle: settingValue(rows, "responseStyle"), responseLength: settingValue(rows, "responseLength"), tone: settingValue(rows, "tone"), customInstructions: settingValue(rows, "customInstructions"), signal: requestController.signal, memoryContext: memoryContext(memories), knowledgeContext });
+    if (requestController.signal.aborted) return;
     if (prepared.validationError) { send("error", { message: prepared.validationError }); return res.end(); }
-    // "…on localhost": save the website Jarvis just wrote and hand back its local address (local computer only).
+    // Every website Jarvis writes on a local computer is saved and hosted on localhost and hand back its local address (local computer only).
     const localSiteFor = async (reply: string) => {
       const request = prepared.latestUserMessage?.content ?? "";
-      const html = localSitesEnabled() && wantsLocalSite(request) ? extractHtml(reply) : "";
+      const html = localSitesEnabled() ? extractHtml(reply) : "";
       if (!html) return {};
-      const site = await saveLocalSite(html, request, Number(process.env.PORT || 3001)).catch(() => null);
+      const site = await saveLocalSite(html, prepared.website ? `${request} ${prepared.website.request}` : request, Number(process.env.PORT || 3001)).catch(() => null);
       return site ? { localSite: { url: site.url, name: site.slug } } : {};
     };
     // Saves this turn (the user's message and Jarvis's reply) so it is still there after a reload.
@@ -103,7 +105,7 @@ router.post("/", streamLimit, async (req, res) => {
       try { liveData = await getLiveData(liveIntent, requestController.signal); providerMessages = [...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }]; }
       catch (error) { if (requestController.signal.aborted) throw error; const reason = error instanceof Error ? error.message.slice(0, 200) : "unknown error"; providerMessages = [...prepared.providerMessages, { role: "user", content: `[live ${liveIntent.kind} lookup failed: ${reason}]\nTell the user the live ${liveIntent.kind} data could not be fetched right now. Do not guess or use remembered values.` }]; }
     }
-    if (!liveIntent && prepared.latestUserMessage && !wantsLocalSite(prepared.latestUserMessage.content) && !wantsToBuild(prepared.latestUserMessage.content) && shouldRouteTools(prepared.latestUserMessage.content) && process.env.BOBAI_TOOLS_ENABLED !== "false") {
+    if (!liveIntent && prepared.latestUserMessage && !wantsLocalSite(prepared.latestUserMessage.content) && !wantsToBuild(prepared.latestUserMessage.content) && !prepared.website && shouldRouteTools(prepared.latestUserMessage.content) && process.env.BOBAI_TOOLS_ENABLED !== "false") {
       const toolContext = { userId: req.user!.id, workspaceId: workspace.id, modelId: prepared.modelId, mode: "chat", signal: requestController.signal } as const;
       let toolModel: string | null = null;
       const toolResult = await runToolLoop(prepared.providerMessages, toolContext, decideTools, async (messages, modelId) => {

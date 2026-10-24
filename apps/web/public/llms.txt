@@ -1,23 +1,29 @@
 # Jarvis
 
-Jarvis is an AI assistant: chat, coding help, live weather, web research with sources, file reading, offline voice and local image generation. Answers come from open AI models through Ollama.
+> Jarvis is a free AI assistant at https://jarvis-x-ai-two.vercel.app. It chats, helps with homework and code, builds simple websites you can open straight away, finds live news and weather with real sources, reads files and photos, and talks back in a British voice. It asks before acting and never makes up live data or sources.
 
-## Public pages
+Made by BobPlayz (Origin Productions) as a school project. Answers come from open AI models through Ollama. You can try it without an account ("Just try it, no email needed") or sign in with an emailed code. No password.
 
-- `/` What Jarvis is and how it works.
-- `/demo` The interface with clearly labelled sample data (no account needed).
-- `/about` About the project.
-- `/faq` Frequently asked questions.
-- `/contact` How to reach the developer (GitHub issues).
-- `/privacy` Privacy policy.
-- `/terms` Terms of service.
+## What it does
 
-## Principles
+- Chat and homework help in English, Telugu, Hindi and more, including Indian cultural topics (muggulu/kolam, Sankranti, Bathukamma and others).
+- Website builder: ask for a simple website, answer a couple of quick questions, and Jarvis builds it with a live preview and an Open button.
+- Live news, weather and cricket with a "Sources" list showing where each fact came from and when it was fetched.
+- Reads PDFs, text files and photos you upload.
+- Voice: speak to it, hear replies, and talk back and forth hands-free (you can interrupt it).
+- Pictures with answers: real photos for "ideas" questions and simple drawings for explanations.
+- Asks before acting: tools that do something for you wait for your approval.
+- Remembers only when told ("remember that…").
+- Installable as an app on phones and computers.
 
-- Local first: answers are generated on the user's machine.
-- Honest about live data: sources and fetch times are shown; scores are never invented.
-- Asks before it acts: tools that act for the user need explicit approval.
-- Remembers only when told: memory is saved only on an explicit "remember that…".
+## Pages
+
+- [Home](https://jarvis-x-ai-two.vercel.app/): what Jarvis is and how it works.
+- [Demo](https://jarvis-x-ai-two.vercel.app/demo): the interface with clearly labelled sample data, no account needed.
+- [About](https://jarvis-x-ai-two.vercel.app/about): the project and who builds it.
+- [FAQ](https://jarvis-x-ai-two.vercel.app/faq): common questions.
+- [Contact](https://jarvis-x-ai-two.vercel.app/contact): how to reach the developer.
+- [Privacy](https://jarvis-x-ai-two.vercel.app/privacy) and [Terms](https://jarvis-x-ai-two.vercel.app/terms).
 
 ## Accuracy
 

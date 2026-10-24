@@ -87,6 +87,10 @@ export function useChat() {
         const localById = new Map(localConversations.map((conversation) => [conversation.id, conversation]));
         const merged = remote.map((conversation) => ({ ...conversation, pinned: localById.get(conversation.id)?.pinned ?? false }));
         setConversations((current) => [...current.filter((conversation) => conversation.messages.length === 0 && !merged.some((saved) => saved.id === conversation.id)), ...merged]);
+        // A reply still being written when the page was reloaded or closed: keep following it until it's saved.
+        for (const conversation of merged) for (const message of conversation.messages) {
+          if (message.streaming) void recoverReply(conversation.id, message.id).then((reply) => { if (!reply) updateConversation(conversation.id, (c) => ({ ...c, messages: c.messages.map((m) => m.id === message.id ? { ...m, streaming: false, incomplete: true } : m) })); });
+        }
       }
       setServerReady(true);
     }).catch(() => {

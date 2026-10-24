@@ -138,7 +138,7 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
                           browserVoice={browserVoice}
                           onResolveApproval={(approve) => onResolveApproval(message.id, approve)}
                           onPreview={setPreview}
-                          onRegenerate={isLastAssistant && onRegenerate ? onRegenerate : undefined}
+                          onRegenerate={isLastAssistant && onRegenerate && !message.streaming ? onRegenerate : undefined}
                           loading={loading}
                           {...actions(message)}
                         />
@@ -149,7 +149,8 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
               </div>
             )}
 
-            {loading && (
+            {/* Hidden while the reply is already appearing word by word: one sign of life is enough. */}
+            {loading && !(messages.at(-1)?.streaming && messages.at(-1)?.content) && (
               <div className="mt-10 flex items-center gap-3" role="status" aria-live="polite">
                 <JarvisMark className="msg-sigil" />
                 <span className="caption">{loadingLabel}</span>

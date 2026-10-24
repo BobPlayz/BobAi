@@ -48,8 +48,8 @@ test("Jarvis only promises a localhost button where it can actually host one", a
     process.env.VERCEL = "1";
     const hosted = buildSystemPrompt("").content;
     assert.match(hosted, /can't start servers on their computer/);
-    assert.doesNotMatch(hosted, /Open localhost button/);
+    assert.doesNotMatch(hosted, /press Open localhost/);
     delete process.env.VERCEL;
-    assert.match(buildSystemPrompt("").content, /Open localhost button/);
+    assert.match(buildSystemPrompt("").content, /press Open localhost/);
   } finally { if (saved === undefined) delete process.env.VERCEL; else process.env.VERCEL = saved; }
 });

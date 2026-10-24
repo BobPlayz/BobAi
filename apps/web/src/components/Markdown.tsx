@@ -2,6 +2,7 @@
 
 import { Check, Code, Copy, Download, ExternalLink, Play } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { loadPreferences } from "@/lib/preferences";
 
 /**
  * Small, dependency-free Markdown renderer for model output.
@@ -178,10 +179,17 @@ export function highlight(code: string, lang: string): ReactNode[] {
 const isHtmlPage = (code: string, lang: string) => lang === "html" || /^\s*(<!doctype html|<html)/i.test(code);
 
 /** `incomplete`: the reply ended before this code block was closed, so it is shown but never run, previewed or hosted. */
-function CodeBlock({ code, lang, incomplete = false }: { code: string; lang: string; incomplete?: boolean }) {
+/**
+ * A finished website shows as the running site (with View code) unless "Show the code" is on in Settings; while it is
+ * still being written, a short "building" line stands in for the code. `building`: the block is still streaming.
+ */
+function CodeBlock({ code, lang, incomplete = false, building = false }: { code: string; lang: string; incomplete?: boolean; building?: boolean }) {
   const [copied, setCopied] = useState(false);
-  const [preview, setPreview] = useState(false);
-  const html = isHtmlPage(code, lang) && !incomplete;
+  const [view, setView] = useState<"auto" | "code" | "site">("auto");
+  const [codeFirst] = useState(() => loadPreferences().showCode);
+  const page = isHtmlPage(code, lang);
+  const html = page && !incomplete && !building;
+  const preview = view === "site" || (view === "auto" && html && !codeFirst);
   async function copy() {
     try { await navigator.clipboard.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* clipboard unavailable */ }
   }
@@ -200,14 +208,24 @@ function CodeBlock({ code, lang, incomplete = false }: { code: string; lang: str
     link.href = url; link.download = "jarvis-site.html"; link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
   }
+  if (page && building && !codeFirst && view !== "code") {
+    return (
+      <div className="md-code">
+        <div className="md-code-bar">
+          <span role="status">Building your website… {code.split("\n").length} lines so far</span>
+          <button type="button" onClick={() => setView("code")} className="md-code-copy"><Code className="h-3.5 w-3.5" aria-hidden /><span>View code</span></button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="md-code">
       <div className="md-code-bar">
-        <span>{lang || "code"}{incomplete && <span className="ml-2 rounded-full border border-[var(--danger)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--danger)]" title="The reply stopped before this code was finished">incomplete</span>}</span>
+        <span>{html ? "website" : lang || "code"}{incomplete && <span className="ml-2 rounded-full border border-[var(--danger)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--danger)]" title="The reply stopped before this code was finished">incomplete</span>}</span>
         <span className="flex items-center gap-1">
           {html && (
             <>
-              <button type="button" onClick={() => setPreview((value) => !value)} aria-pressed={preview} className="md-code-copy">{preview ? <Code className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}<span>{preview ? "Code" : "Preview"}</span></button>
+              <button type="button" onClick={() => setView(preview ? "code" : "site")} className="md-code-copy">{preview ? <Code className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}<span>{preview ? "View code" : "Preview"}</span></button>
               <button type="button" onClick={openFull} className="md-code-copy" title="Run it full screen in a new tab"><ExternalLink className="h-3.5 w-3.5" aria-hidden /><span>Open</span></button>
               <button type="button" onClick={download} className="md-code-copy"><Download className="h-3.5 w-3.5" aria-hidden /><span>Download</span></button>
             </>
@@ -248,7 +266,7 @@ export default function Markdown({ text, live = false }: { text: string; live?: 
       {blocks.map((block, index) => {
         const key = `b${index}`;
         switch (block.type) {
-          case "code": return <CodeBlock key={key} code={block.code} lang={block.lang} incomplete={!block.closed && !live} />;
+          case "code": return <CodeBlock key={key} code={block.code} lang={block.lang} incomplete={!block.closed && !live} building={!block.closed && live} />;
           case "heading": {
             const Tag = (`h${Math.min(block.level + 1, 6)}`) as "h2" | "h3" | "h4" | "h5" | "h6";
             return <Tag key={key} className="md-heading">{renderInline(block.text, key)}</Tag>;

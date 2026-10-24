@@ -8,8 +8,8 @@ import { isLanguageId, type LanguageId } from "./language";
 export const PREFERENCES_KEY = "jarvis.settings.v1";
 const LEGACY_KEY = "bobai.settings.v1";
 
-export type Preferences = { personality: string; memory: boolean; sourceTypes: string[]; generation: string; learnStyle: boolean; language: LanguageId; autoSendVoice: boolean; visualAnswers: boolean };
-const DEFAULTS: Preferences = { personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en", autoSendVoice: true, visualAnswers: true };
+export type Preferences = { personality: string; memory: boolean; sourceTypes: string[]; generation: string; learnStyle: boolean; language: LanguageId; autoSendVoice: boolean; visualAnswers: boolean; voiceReplies: boolean; askBeforeBuilding: boolean; showCode: boolean };
+const DEFAULTS: Preferences = { personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en", autoSendVoice: true, visualAnswers: true, voiceReplies: false, askBeforeBuilding: true, showCode: false };
 
 export function loadPreferences(): Preferences {
   if (typeof window === "undefined") return DEFAULTS;
@@ -25,6 +25,9 @@ export function loadPreferences(): Preferences {
       language: isLanguageId(value.language) ? value.language : "en",
       autoSendVoice: value.autoSendVoice !== false,
       visualAnswers: value.visualAnswers !== false,
+      voiceReplies: value.voiceReplies === true,
+      askBeforeBuilding: value.askBeforeBuilding !== false,
+      showCode: value.showCode === true,
     };
   } catch { return DEFAULTS; }
 }

@@ -9,13 +9,16 @@ import TalkMode from "@/components/TalkMode";
 import Shortcuts from "@/components/Shortcuts";
 import { loadPreferences } from "@/lib/preferences";
 import { reportReply } from "@/lib/api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useChat } from "@/hooks/useChat";
 
 
 export default function ChatPage() {
   const chat = useChat();
   const [talking, setTalking] = useState(false);
+  // "Read replies out loud" lives in Settings; read after mount so the server render matches.
+  const [voiceReplies, setVoiceReplies] = useState(false);
+  useEffect(() => { setVoiceReplies(loadPreferences().voiceReplies); }, []);
 
   return (
     <NeuralShell
@@ -63,6 +66,7 @@ export default function ChatPage() {
         onRegenerate={chat.regenerateLastAssistant}
         onResolveApproval={chat.resolveApproval}
         onSuggestion={chat.setInput}
+        voiceReplies={voiceReplies && !talking}
         autoPlayMessageId={chat.lastReplyId}
         onReport={reportReply}
         onEditLast={(id) => chat.editLastUserMessage(chat.activeId, id)}

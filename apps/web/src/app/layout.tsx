@@ -17,16 +17,20 @@ const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variab
 export const viewport: Viewport = { themeColor: [{ media: "(prefers-color-scheme: light)", color: "#F2EDE3" }, { media: "(prefers-color-scheme: dark)", color: "#12110E" }] };
 
 const site = siteUrl();
+// Ownership codes from Google Search Console and Bing Webmaster Tools (Bing also feeds ChatGPT search and Copilot).
+// Set them in Vercel; nothing is added while they are empty.
+const googleVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim();
+const bingVerification = process.env.BING_SITE_VERIFICATION?.trim();
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
   title: { default: "Jarvis", template: "%s | Jarvis" },
-  description: "Jarvis is a chill AI assistant powered by Ollama: chat, code help, live weather, research with sources and files. It asks before doing stuff.",
+  description: "Jarvis is a free AI assistant: chat, homework and code help, builds simple websites for you, live news and weather with real sources, reads your files and photos, and talks back. It asks before doing stuff.",
   applicationName: "Jarvis",
   creator: "Origin Productions",
   publisher: "Origin Productions",
   generator: "Next.js",
-  keywords: ["AI workspace", "AI assistant", "AI chat", "AI tools", "research", "coding"],
+  keywords: ["free AI assistant", "AI chat", "AI website builder", "homework help", "AI with sources", "coding help", "voice assistant", "Telugu AI", "Ollama", "Jarvis AI"],
   manifest: "/manifest.webmanifest",
   openGraph: {
     title: "Jarvis",
@@ -42,7 +46,8 @@ export const metadata: Metadata = {
     description: "A chill AI assistant that shows its sources, never makes up live scores, and asks before doing stuff.",
     images: ["/opengraph-image"],
   },
-  robots: { index: true, follow: true },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
+  ...(googleVerification || bingVerification ? { verification: { ...(googleVerification ? { google: googleVerification } : {}), ...(bingVerification ? { other: { "msvalidate.01": bingVerification } } : {}) } } : {}),
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

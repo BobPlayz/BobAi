@@ -16,9 +16,13 @@ const structuredData = {
   name: "Jarvis",
   publisher: { "@type": "Organization", name: "Origin Productions" },
   applicationCategory: "ProductivityApplication",
-  operatingSystem: "Web",
-  description: "A chill AI assistant powered by Ollama that shows its sources and asks before doing stuff.",
+  operatingSystem: "Web, Android, iOS",
+  description: "A free AI assistant that shows its sources, builds simple websites for you, reads files and photos, talks back, and asks before doing stuff.",
   url: siteUrl(),
+  inLanguage: ["en", "te", "hi"],
+  isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  featureList: ["AI chat", "Live news and weather with sources", "Website builder with live preview", "File and photo understanding", "Voice conversations", "Pictures with answers", "Asks before acting"],
 };
 
 const STATES: Array<{ id: AssistantVisualState; label: string; note: string }> = [

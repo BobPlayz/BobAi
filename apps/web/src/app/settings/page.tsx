@@ -47,7 +47,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const light = theme === "light";
   const [tab, setTab] = useState<Tab>("personalization");
-  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en", autoSendVoice: true, visualAnswers: true });
+  const [settings, setSettings] = useState<SettingsState>({ personality: "", memory: true, sourceTypes: ["general"], generation: "", learnStyle: true, language: "en", autoSendVoice: true, visualAnswers: true, voiceReplies: false, askBeforeBuilding: true, showCode: false });
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [memories, setMemories] = useState<Array<Record<string, unknown>>>([]);
@@ -331,6 +331,22 @@ export default function SettingsPage() {
               <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
                 <input type="checkbox" checked={settings.visualAnswers} onChange={(event) => update("visualAnswers", event.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
                 <span><span className="font-medium">Show pictures to help me understand</span><span className={`mt-1 block ${colors.muted}`}>Ask for ideas (like &quot;muggulu ideas&quot;) and Jarvis shows real pictures from Wikimedia Commons. Ask it to explain something and it draws a simple picture. Great for visual learners.</span></span>
+              </label>
+
+              <h2 className="font-display mt-8 text-2xl">Voice</h2>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+                <input type="checkbox" checked={settings.voiceReplies} onChange={(event) => update("voiceReplies", event.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
+                <span><span className="font-medium">Read replies out loud</span><span className={`mt-1 block ${colors.muted}`}>Jarvis speaks each new answer in its voice. You can always tap the speaker on any reply, and Talk mode always speaks.</span></span>
+              </label>
+
+              <h2 className="font-display mt-8 text-2xl">Building websites</h2>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+                <input type="checkbox" checked={settings.askBeforeBuilding} onChange={(event) => update("askBeforeBuilding", event.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
+                <span><span className="font-medium">Ask me a few questions first</span><span className={`mt-1 block ${colors.muted}`}>Before building, Jarvis asks what the site is for and how it should look, and waits for your go-ahead. Say &quot;just build it&quot; anytime to skip.</span></span>
+              </label>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm">
+                <input type="checkbox" checked={settings.showCode} onChange={(event) => update("showCode", event.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
+                <span><span className="font-medium">Show the code</span><span className={`mt-1 block ${colors.muted}`}>Off: you see the finished website, with a View code button. On: you see the code first.</span></span>
               </label>
 
               <h2 className="font-display mt-8 text-2xl">Voice typing</h2>

@@ -50,6 +50,19 @@ Codes are 6 digits, expire after 10 minutes, are single use, allow 5 attempts, a
 - `GET /api/ready` → yes/no checks for the database, email (`emailProvider`), the model (`modelReachable`, plus `modelProblem`: `not_configured`, `auth`, `model_missing`, `unreachable`, ...), production mode, and the *names* of missing settings. No secrets or hostnames are shown.
 - If the API cannot start at all, `/api/*` answers `503` with `status: "startup_failed"` and a redacted one-line reason; full details are in Vercel → Deployments → Functions logs.
 
+## Getting found on Google and by AI assistants
+
+Nobody can force Google or an AI to recommend a site, but these steps make sure they can find, read and trust it:
+
+1. **Google:** open [Google Search Console](https://search.google.com/search-console), add the URL-prefix property
+   `https://jarvis-x-ai-two.vercel.app`, choose **HTML tag**, and copy only the `content="..."` value into the Vercel
+   variable `GOOGLE_SITE_VERIFICATION`. Redeploy, press **Verify**, then under **Sitemaps** submit `sitemap.xml`.
+2. **Bing** (also feeds ChatGPT search, Copilot and DuckDuckGo): open [Bing Webmaster Tools](https://www.bing.com/webmasters),
+   choose **Import from Google Search Console** (easiest), or use the meta tag with `BING_SITE_VERIFICATION`, then submit the sitemap.
+3. AI assistants read `/llms.txt` (a plain summary of Jarvis) and the structured data on the home page. `robots.txt`
+   lets every search and AI crawler read the public pages; chats, settings and accounts stay private.
+4. Links help most: put the URL in your GitHub repo's About box, your school project write-up, and anywhere you share it.
+
 ## What does not run on Vercel
 
 - Ollama models (use the gateway), local voice (Piper/Whisper) and local image generation: these run on your own computer with `npm run ai`.
