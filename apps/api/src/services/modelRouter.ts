@@ -46,6 +46,16 @@ export function classifyTask(messages: NativeMessage[], hint?: RouteTask): Route
   return "chat";
 }
 
+// Hard requests are the only ones worth the biggest (most expensive) models: long pasted material, or explicit
+// heavy reasoning. Everyday code and "explain" questions go to a mid-size model, which keeps Ollama Cloud usage low.
+const HARD = /\b(prove|proof|step[- ]by[- ]step|derive|optimi[sz]e|architecture|research paper|in depth|thoroughly|full app|whole project|multi-?file|from scratch)\b/i;
+export function isHardRequest(messages: NativeMessage[]) {
+  const latest = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  return latest.length > 3_000 || HARD.test(latest);
+}
+/** Above this size a model costs more usage than everyday tasks need (BOBAI_MODEL_SIZE_CAP_B, in billions of parameters). */
+const sizeCapBillions = () => numberEnv("BOBAI_MODEL_SIZE_CAP_B", 150, 1, 10_000);
+
 /** ~3 characters per token (conservative for English and code), plus room for the reply. */
 export function requiredContextTokens(messages: NativeMessage[]) {
   const characters = messages.reduce((sum, message) => sum + message.content.length, 0);
@@ -57,7 +67,7 @@ function preferenceFor(task: RouteTask) {
 }
 
 /** Ordered candidates for a task. Exported for the readiness report and tests. */
-export function rankModels(inventory: Inventory, task: RouteTask, options: { requiredTokens?: number; preferredModel?: string; now?: number } = {}): RankedModel[] {
+export function rankModels(inventory: Inventory, task: RouteTask, options: { requiredTokens?: number; preferredModel?: string; now?: number; hard?: boolean } = {}): RankedModel[] {
   const now = options.now ?? Date.now();
   const mode = strategy();
   const complex = task === "coding" || task === "reasoning";
@@ -89,7 +99,12 @@ export function rankModels(inventory: Inventory, task: RouteTask, options: { req
     if (billions) {
       const sizeSignal = Math.min(Math.log2(Math.max(billions, 0.5)), 9);
       const wantStrong = mode === "strongest" || (mode === "auto" && complex);
-      score += wantStrong ? sizeSignal * 3 : -sizeSignal * 1.5;
+      // Everyday coding and reasoning get credit for size only up to the cap; bigger models lose points for the extra
+      // usage they cost. Hard requests (and "strongest" routing) still go to the biggest model.
+      const cap = Math.log2(sizeCapBillions());
+      const budgeted = mode === "auto" && complex && !options.hard;
+      score += !wantStrong ? -sizeSignal * 1.5 : budgeted ? Math.min(sizeSignal, cap) * 3 - Math.max(0, sizeSignal - cap) * 6 : sizeSignal * 3;
+      if (budgeted && sizeSignal > cap) reasons.push("bigger than this task needs");
       reasons.push(model.parameterCount ? `${billions.toFixed(1)}B parameters` : "size not reported");
     }
     if (model.capabilities.includes("thinking") && complex) { score += 4; reasons.push("supports thinking"); }
@@ -153,7 +168,7 @@ async function route(task: RouteTask, messages: NativeMessage[], options: RouteO
   let lastError: unknown;
   while (Date.now() - started < routeBudgetMs() && total < 8) {
     if (options.signal?.aborted) throw options.signal.reason instanceof Error ? options.signal.reason : new DOMException("cancelled", "AbortError");
-    let candidates = fixed ? [preferred!] : rankModels(inventory, task, { requiredTokens, preferredModel: options.preferredModel }).map((item) => item.name);
+    let candidates = fixed ? [preferred!] : rankModels(inventory, task, { requiredTokens, preferredModel: options.preferredModel, hard: isHardRequest(messages) }).map((item) => item.name);
     // If discovery failed entirely, a configured preference is still worth one try.
     if (!candidates.length && !fixed && inventory.error && preferred) candidates = [preferred];
     candidates = candidates.filter((name) => !tried.has(name));

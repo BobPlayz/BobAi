@@ -285,3 +285,19 @@ test("a bad key or unreachable server does not put the model on a cooldown", asy
     assert.equal(getHealth("small-chat")?.failures ?? 0, 0);
   });
 });
+
+test("everyday code goes to a mid-size model; only hard requests use the biggest, most expensive one", async () => {
+  const models: FakeModel[] = [
+    { name: "small", capabilities: ["completion"], params: "20B", context: 131_072 },
+    { name: "mid", capabilities: ["completion"], params: "120B", context: 131_072 },
+    { name: "huge", capabilities: ["completion"], params: "671B", context: 131_072 },
+  ];
+  await withOllama({ models, chat: (model, body) => answer(body, `from ${model}`) }, async () => {
+    const inventory = await getInventory();
+    assert.equal(rankModels(inventory, "chat")[0].name, "small", "plain chat uses the cheapest model");
+    assert.equal(rankModels(inventory, "coding")[0].name, "mid", "everyday code doesn't need the biggest model");
+    assert.equal(rankModels(inventory, "coding", { hard: true })[0].name, "huge", "hard requests still get the strongest");
+    const reply = await routeChat([{ role: "user", content: "write a python function to reverse a string" }]);
+    assert.equal(reply.model, "mid");
+  });
+});
