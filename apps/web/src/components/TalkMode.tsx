@@ -271,7 +271,8 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       if (session.current !== id) return;
       const canRecord = typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
       // Prefer browser recognition because it can show interim words while the user is still speaking.
-      const hear = browserRecognition() ? "browser" : available.speechToText && canRecord ? "server" : null;
+      // Prefer Jarvis server transcription (Whisper or Scribe) for accuracy; use browser recognition only as fallback.
+      const hear = available.speechToText && canRecord ? "server" : browserRecognition() ? "browser" : null;
       if (!hear) throw new Error("This browser can't do voice chat. Try Chrome, Edge or Safari.");
       const speakWith = available.textToSpeech ? "server" : "speechSynthesis" in window ? "browser" : "none";
       engines.current = { hear, speak: speakWith };
