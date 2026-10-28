@@ -25,10 +25,13 @@ function editDistance(a: string, b: string): number {
 }
 
 function normalizeImageWords(text: string): string {
+  let position = 0;
   return text.replace(/[A-Za-z]+/g, (word) => {
+    const wordPosition = position++;
     const lower = word.toLowerCase();
     if (COMMON_PROMPT_TYPO[lower]) return COMMON_PROMPT_TYPO[lower];
-    // Fuzzy-match only image actions/nouns, never arbitrary words or names in the user's subject.
+    // Fuzzy-match command words only near the start, never arbitrary words/names in the subject.
+    if (wordPosition > 3) return word;
     const candidate = IMAGE_WORDS.find((known) => {
       const limit = lower.length >= 8 ? 2 : lower.length >= 5 ? 1 : 0;
       return limit > 0 && Math.abs(known.length - lower.length) <= limit && editDistance(lower, known) <= limit;
