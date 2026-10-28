@@ -31,8 +31,9 @@ function initialQuality(): CoreQuality {
     const info = gl?.getExtension("WEBGL_debug_renderer_info");
     if (gl && info) renderer = String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL));
   } catch { /* hint unavailable */ }
-  // Integrated Intel graphics (for example UHD 620) and 8 GB machines start at medium.
-  if (/intel|uhd|hd graphics|iris|swiftshader|llvmpipe|software/i.test(renderer) || (nav.deviceMemory ?? 8) <= 8) return "medium";
+  // Integrated Intel graphics (for example UHD 620), software renderers, and 8 GB-or-less machines start low.
+  // The scene can step up only when the device is comfortably fast; chat responsiveness comes first.
+  if (/intel|uhd|hd graphics|iris|swiftshader|llvmpipe|software/i.test(renderer) || (nav.deviceMemory ?? 8) <= 8) return "low";
   return "high";
 }
 

@@ -23,7 +23,7 @@ Jarvis chats, helps with code, checks the weather and cricket, researches with r
 | 🗣️ **Talk mode** | Hands-free voice chat: Jarvis listens, answers out loud, listens again. ElevenLabs when a key is set, otherwise your browser's voice; Whisper + Piper offline on a PC | ✅ | ✅ |
 | 🎨 **Drawing** | Pollinations on the live site (free, no key); Stable Diffusion offline on a PC | ✅ | ✅ |
 | 🛠️ **Build a website** | Ask for a calculator, game or quiz: press **Preview** to run it in a locked-down sandbox, or ask for it *"on localhost"* and Jarvis hosts it on your PC | Preview | ✅ |
-| 🖼️ **Pictures with answers** | Ideas questions show real, credited pictures from Wikimedia Commons; explanations get a simple drawn picture (for visual learners) | ✅ | ✅ |
+| 🖼️ **Pictures with answers** | Relevant answers can include credited reference pictures from Wikimedia Commons and a Google Images search link. Jarvis only generates AI artwork when you explicitly ask for it | ✅ | ✅ |
 | 🔗 **Share & edit** | Share a read-only snapshot link, edit your last question, download a chat, keyboard shortcuts (`?`) | ✅ | ✅ |
 | 🌍 **Your language** | Pick the reply language (24 to choose from) and Jarvis sticks to it | ✅ | ✅ |
 | 👋 **Texts like you** | Matches your generation's texting style and learns how you type (you can turn it off) | ✅ | ✅ |
