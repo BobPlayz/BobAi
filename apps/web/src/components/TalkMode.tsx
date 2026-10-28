@@ -247,7 +247,8 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       const available = await getVoiceAvailability();
       if (session.current !== id) return;
       const canRecord = typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
-      // Prefer browser recognition because it can show interim words while the user is still speaking.\n      const hear = browserRecognition() ? "browser" : available.speechToText && canRecord ? "server" : null;
+      // Prefer browser recognition because it can show interim words while the user is still speaking.
+      const hear = browserRecognition() ? "browser" : available.speechToText && canRecord ? "server" : null;
       if (!hear) throw new Error("This browser can't do voice chat. Try Chrome, Edge or Safari.");
       const speakWith = available.textToSpeech ? "server" : "speechSynthesis" in window ? "browser" : "none";
       engines.current = { hear, speak: speakWith };
