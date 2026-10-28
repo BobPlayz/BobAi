@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 export const metadata = {
   title: "Privacy Policy",
@@ -34,6 +35,7 @@ const services: Array<[string, string]> = [
 export default function PrivacyPage() {
   return (
     <main id="main" tabIndex={-1} className="relative z-[1] mx-auto min-h-screen max-w-3xl px-5 pb-20 pt-28 text-[var(--text)] sm:px-8">
+      <Breadcrumbs current="Privacy Policy" />
       <p className="text-sm text-[var(--muted)]">Last updated: {UPDATED}</p>
       <h1 className="font-display mt-3 text-6xl leading-none">Privacy<em className="text-[var(--accent)]">.</em></h1>
       <p className="mt-4 leading-7 text-[var(--muted)]">

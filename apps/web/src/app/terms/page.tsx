@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 export const metadata = {
   title: "Terms of Service",
@@ -24,6 +25,7 @@ const sections: Array<[string, string]> = [
 export default function TermsPage() {
   return (
     <main id="main" tabIndex={-1} className="relative z-[1] mx-auto min-h-screen max-w-3xl px-5 pb-20 pt-28 text-[var(--text)] sm:px-8">
+      <Breadcrumbs current="Terms of Service" />
       <p className="text-sm text-[var(--muted)]">Last updated: {UPDATED}</p>
       <h1 className="font-display mt-3 text-6xl leading-none">Terms<em className="text-[var(--accent)]">.</em></h1>
       <p className="mt-4 leading-7 text-[var(--muted)]">The short version: be nice, double-check important answers, and only use your own account. The details:</p>

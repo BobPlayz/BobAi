@@ -390,24 +390,24 @@ export default function SettingsPage() {
                 {exportMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{exportMessage}</p>}
               </div>
               {guest ? (
-              <div className={`mt-4 rounded-xl border border-red-500/25 p-4 ${colors.field}`}>
-                <h3 className="text-sm font-semibold text-red-600">Delete guest account</h3>
+              <div className={`mt-4 rounded-xl border border-[var(--danger)]/30 p-4 ${colors.field}`}>
+                <h3 className="text-sm font-semibold text-[var(--danger)]">Delete guest account</h3>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>You&apos;re using Jarvis as a guest. This deletes your guest chats, memories and settings and signs you out. It can&apos;t be undone.</p>
                 <button type="button" disabled={deleteBusy} onClick={async () => {
                   if (armed !== "guest") { arm("guest"); return; }
                   setArmed(null); setDeleteBusy(true);
                   try { await deleteGuestAccount(); await logout(); router.replace("/"); } catch (error) { setDeleteMessage(error instanceof Error ? error.message : "Could not delete the guest account."); } finally { setDeleteBusy(false); }
-                }} className="mt-3 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-[#fff] disabled:opacity-40">{armed === "guest" ? "Tap again to delete everything" : "Delete guest account"}</button>
+                }} className="mt-3 btn-danger">{armed === "guest" ? "Tap again to delete everything" : "Delete guest account"}</button>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
               ) : (
-              <div className={`mt-4 rounded-xl border border-red-500/25 p-4 ${colors.field}`}>
-                <h3 className="text-sm font-semibold text-red-600">Delete account</h3>
+              <div className={`mt-4 rounded-xl border border-[var(--danger)]/30 p-4 ${colors.field}`}>
+                <h3 className="text-sm font-semibold text-[var(--danger)]">Delete account</h3>
                 <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Verify your email with a one-time code to schedule account deletion. Your account is disabled immediately; permanent deletion is scheduled after a 30-day grace period. This does not replace any legally required data-retention obligations.</p>
-                <button type="button" onClick={() => void sendDeletionCode()} disabled={deleteBusy} className="mt-3 rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-600 disabled:opacity-40">{deleteBusy ? "Please wait…" : "Email me a deletion code"}</button>
+                <button type="button" onClick={() => void sendDeletionCode()} disabled={deleteBusy} className="mt-3 btn-danger-line">{deleteBusy ? "Please wait…" : "Email me a deletion code"}</button>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <input value={deleteCode} onChange={(event) => setDeleteCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" aria-label="Account deletion email code" className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm ${colors.field}`} />
-                  <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-[#fff] disabled:opacity-40">{armed === "account" ? "Tap again: disable my account now" : "Confirm deletion"}</button>
+                  <button type="button" onClick={() => void deleteAccount()} disabled={deleteBusy || deleteCode.length !== 6} className="btn-danger">{armed === "account" ? "Tap again: disable my account now" : "Confirm deletion"}</button>
                 </div>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
@@ -466,11 +466,11 @@ export default function SettingsPage() {
                     <h2 className="font-display text-2xl">Saved memories</h2>
                     <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Review or delete information stored in your account. Deleting memory does not delete chat history.</p>
                   </div>
-                  <button type="button" onClick={removeAllMemories} disabled={memoryLoading || memories.length === 0 || memoryBusyId !== null} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-600 disabled:opacity-40">
+                  <button type="button" onClick={removeAllMemories} disabled={memoryLoading || memories.length === 0 || memoryBusyId !== null} className="inline-flex items-center gap-2 rounded-lg border border-[var(--danger)]/30 px-3 py-2 text-sm text-[var(--danger)] disabled:opacity-40">
                     <Trash2 className="h-4 w-4" aria-hidden /> {armed === "memories" ? "Tap again to delete all" : "Delete all"}
                   </button>
                 </div>
-                {memoryError && <p role="alert" className="mt-4 text-sm text-red-500">{memoryError}</p>}
+                {memoryError && <p role="alert" className="mt-4 text-sm text-[var(--danger)]">{memoryError}</p>}
                 {memoryNotice && <p role="status" className="mt-4 text-sm text-emerald-600">{memoryNotice}</p>}
                 {memoryLoading ? (
                   <p className={`mt-5 text-sm ${colors.muted}`}>Loading saved memories…</p>
@@ -507,7 +507,7 @@ export default function SettingsPage() {
                           ) : (
                             <div className="flex shrink-0 gap-1">
                               <button type="button" onClick={() => { setMemoryEditId(id); setMemoryEditContent(body); setMemoryError(""); setMemoryNotice(""); }} disabled={!id || memoryBusyId !== null} aria-label={`Edit memory: ${body.slice(0, 40)}`} className={`rounded-lg p-2 ${colors.muted} hover:bg-[var(--surface-2)] disabled:opacity-40`}><Pencil className="h-4 w-4" /></button>
-                              <button type="button" onClick={() => id && void removeMemory(id)} disabled={!id || memoryBusyId !== null} aria-label={`Delete memory: ${body.slice(0, 40)}`} className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40">
+                              <button type="button" onClick={() => id && void removeMemory(id)} disabled={!id || memoryBusyId !== null} aria-label={`Delete memory: ${body.slice(0, 40)}`} className="rounded-lg p-2 text-[var(--danger)] hover:bg-[var(--danger)]/10 disabled:opacity-40">
                                 {memoryBusyId === id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                               </button>
                             </div>
