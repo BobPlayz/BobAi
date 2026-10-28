@@ -4,7 +4,8 @@ const IMAGE_NOUN = "(?:images?|pictures?|illustrations?|artworks?|drawings?|wall
 /** Route clear image-making requests directly to the image endpoint, without asking the chat model to infer capability. */
 export function extractImagePrompt(text: string): string | null {
   const normalized = text.trim()
-    .replace(/^(?:(?:hey|hi)[,!. ]+)?(?:(?:please|pls|plz)[,!. ]+)?(?:(?:can|could|would|will)\s+(?:you|u)\s+)?(?:(?:please|pls|plz)\s+)?/i, "")
+    // Ignore casual openers so "yo, generate an image of a robot" still routes to the image tool.
+    .replace(/^(?:(?:hey|hi|yo|sup)[,!. ]+)?(?:(?:jarvis)[,!. ]+)?(?:(?:please|pls|plz)[,!. ]+)?(?:(?:can|could|would|will)\s+(?:you|u)\s+)?(?:(?:please|pls|plz)\s+)?/i, "")
     .trim();
 
   // Accept the common slash-command form, but treat it as a normal image-generation request.
