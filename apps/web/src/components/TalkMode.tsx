@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, X } from "lucide-react";
+import { Maximize2, Mic, Minus, X } from "lucide-react";
 import { setAssistantActivity } from "@/lib/assistantState";
 import { audioUrl, browserRecognition, getVoiceAvailability, speakable, speechLocale, synthesizeSpeech, toPcm16Wav, transcribeAudio, type BrowserRecognition } from "@/lib/voice";
 
@@ -13,7 +13,7 @@ import { audioUrl, browserRecognition, getVoiceAvailability, speakable, speechLo
  */
 
 type Phase = "starting" | "listening" | "thinking" | "speaking" | "error";
-type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void; /** Cancels the answer being worked out (you started talking again). */ onCancel?: () => void };
+type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void; minimized?: boolean; onMinimize?: () => void; onExpand?: () => void; /** Cancels the answer being worked out (you started talking again). */ onCancel?: () => void };
 
 const SILENCE_MS = 1_100;
 const NO_SPEECH_MS = 10_000;
@@ -21,7 +21,7 @@ const MAX_TURN_MS = 30_000;
 
 const LABEL: Record<Phase, string> = { starting: "Getting ready…", listening: "Listening…", thinking: "Thinking…", speaking: "Talking · tap to interrupt", error: "Paused" };
 
-export default function TalkMode({ language, onUtterance, onClose, onCancel }: Props) {
+export default function TalkMode({ language, onUtterance, onClose, minimized = false, onMinimize, onExpand, onCancel }: Props) {
   const [phase, setPhase] = useState<Phase>("starting");
   const [heard, setHeard] = useState("");
   const [reply, setReply] = useState("");
@@ -133,26 +133,47 @@ export default function TalkMode({ language, onUtterance, onClose, onCancel }: P
     });
   }
 
+  function sentenceChunks(text: string): string[] {
+    const clean = speakable(text).replace(/\\s+/g, " ").trim();
+    if (!clean) return [];
+    // Keep punctuation with its sentence so each spoken chunk is also what appears on screen.
+    return clean.match(/[^.!?]+[.!?]+[”’"')\\]]*|[^.!?]+$/g)?.map((part) => part.trim()).filter(Boolean) ?? [clean];
+  }
+
   async function speak(text: string, id: number) {
-    const words = speakable(text);
-    if (!words || engines.current.speak === "none") return;
-    if (engines.current.speak === "server") {
-      try {
-        const result = await synthesizeSpeech(words);
-        if (session.current !== id) return;
-        const url = audioUrl(result.audio, result.mimeType);
-        const audio = new Audio(url);
-        res.current.audio = audio;
-        await new Promise<void>((resolve) => {
-          const end = () => { audio.pause(); URL.revokeObjectURL(url); resolve(); };
-          audio.onended = end; audio.onerror = end;
-          res.current.stopSpeaking = end;
-          audio.play().catch(end);
-        });
-        return;
-      } catch { /* server voice unavailable or used up: fall back to the browser's voice */ }
+    const sentences = sentenceChunks(text);
+    if (!sentences.length || engines.current.speak === "none") return;
+    for (const sentence of sentences) {
+      if (session.current !== id) return;
+      setReply(sentence);
+      if (engines.current.speak === "server") {
+        try {
+          const result = await synthesizeSpeech(sentence);
+          if (session.current !== id) return;
+          const url = audioUrl(result.audio, result.mimeType);
+          const audio = new Audio(url);
+          res.current.audio = audio;
+          await new Promise<void>((resolve) => {
+            let finished = false;
+            const end = () => {
+              if (finished) return;
+              finished = true;
+              audio.pause();
+              URL.revokeObjectURL(url);
+              if (res.current.audio === audio) res.current.audio = undefined;
+              resolve();
+            };
+            audio.onended = end; audio.onerror = end;
+            res.current.stopSpeaking = end;
+            audio.play().catch(end);
+          });
+          if (session.current !== id) return;
+          continue;
+        } catch { /* Server voice unavailable or out of allowance: fall back to browser speech. */ }
+      }
+      if ("speechSynthesis" in window) await speakBrowser(sentence);
+      if (session.current !== id) return;
     }
-    if ("speechSynthesis" in window) await speakBrowser(words);
   }
 
   /**
@@ -226,7 +247,7 @@ export default function TalkMode({ language, onUtterance, onClose, onCancel }: P
       const available = await getVoiceAvailability();
       if (session.current !== id) return;
       const canRecord = typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
-      const hear = available.speechToText && canRecord ? "server" : browserRecognition() ? "browser" : null;
+      // Prefer browser recognition because it can show interim words while the user is still speaking.\n      const hear = browserRecognition() ? "browser" : available.speechToText && canRecord ? "server" : null;
       if (!hear) throw new Error("This browser can't do voice chat. Try Chrome, Edge or Safari.");
       const speakWith = available.textToSpeech ? "server" : "speechSynthesis" in window ? "browser" : "none";
       engines.current = { hear, speak: speakWith };
@@ -273,11 +294,29 @@ export default function TalkMode({ language, onUtterance, onClose, onCancel }: P
   }
 
   const scale = phase === "listening" ? 1 + level * 0.35 : 1;
+  if (minimized) {
+    return (
+      <div role="region" aria-label="Talk mode minimized" className="fixed bottom-4 right-4 z-[60] w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-3 text-[var(--text)] shadow-2xl">
+        <div className="flex items-center gap-3">
+          <span className={`size-3 shrink-0 rounded-full ${phase === "speaking" ? "bg-[var(--accent)] animate-pulse" : phase === "listening" ? "bg-emerald-500" : "bg-[var(--muted)]"}`} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Jarvis · {LABEL[phase]}</p>
+            <p className="truncate text-xs text-[var(--muted)]">{phase === "speaking" ? reply : heard || error || "Voice conversation is still running"}</p>
+          </div>
+          <button type="button" onClick={onExpand} aria-label="Restore talk mode" title="Restore talk mode" className="atelier-iconbtn"><Maximize2 className="h-4 w-4" aria-hidden /></button>
+          <button type="button" onClick={onClose} aria-label="End talk mode" title="End talk mode" className="atelier-iconbtn"><X className="h-4 w-4" aria-hidden /></button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div role="dialog" aria-modal="true" aria-label="Talk to Jarvis" className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] text-[var(--text)] animate-[chatEnter_250ms_ease-out_both] motion-reduce:animate-none">
       <div className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <p className="caption">Talk mode{browserVoice ? " · browser voice" : ""}</p>
-        <button ref={closeButton} type="button" onClick={onClose} aria-label="End talk mode" className="atelier-iconbtn !h-11 !w-11"><X className="h-5 w-5" aria-hidden /></button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={onMinimize} aria-label="Minimize talk mode" title="Minimize and return to chat" className="atelier-iconbtn !h-11 !w-11"><Minus className="h-5 w-5" aria-hidden /></button>
+          <button ref={closeButton} type="button" onClick={onClose} aria-label="End talk mode" className="atelier-iconbtn !h-11 !w-11"><X className="h-5 w-5" aria-hidden /></button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6 text-center">
@@ -295,7 +334,7 @@ export default function TalkMode({ language, onUtterance, onClose, onCancel }: P
           <p className="font-display text-3xl">{phase === "error" ? "Tap to try again" : LABEL[phase]}</p>
           {error && <p role="alert" className="text-[var(--danger)]">{error}</p>}
           {heard && <p className="text-lg text-[var(--muted)]">&ldquo;{heard}&rdquo;</p>}
-          {reply && phase !== "listening" && <p className="line-clamp-4 text-lg leading-8">{speakable(reply)}</p>}
+          {reply && phase !== "listening" && <p className="text-lg leading-8">{reply}</p>}
         </div>
       </div>
 
