@@ -363,6 +363,22 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
         analyser.smoothingTimeConstant = 0.15;
         context.createMediaStreamSource(stream).connect(analyser);
         res.current = { ...res.current, stream, context, analyser };
+        // Calibrate once before the first phrase so barge-in also adapts when browser recognition is used.
+        const levels: number[] = [];
+        const calibrationSamples = new Float32Array(analyser.fftSize);
+        const calibrationStarted = performance.now();
+        while (session.current === id && performance.now() - calibrationStarted < 500) {
+          analyser.getFloatTimeDomainData(calibrationSamples);
+          let sum = 0;
+          for (const sample of calibrationSamples) sum += sample * sample;
+          levels.push(Math.sqrt(sum / calibrationSamples.length));
+          await new Promise((resolve) => window.setTimeout(resolve, 50));
+        }
+        if (levels.length) {
+          levels.sort((a, b) => a - b);
+          noiseFloor.current = Math.min(0.12, Math.max(0.002, levels[Math.floor(levels.length * 0.3)] ?? 0.01));
+        }
+        if (session.current !== id) return;
       }
       await loop(id);
     } catch (problem) {
