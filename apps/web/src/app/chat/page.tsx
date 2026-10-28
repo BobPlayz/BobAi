@@ -61,6 +61,7 @@ export default function ChatPage() {
       <ChatWindow
         messages={chat.activeConversation?.messages ?? []}
         loading={chat.loading}
+        voiceControl={talking ? <TalkMode language={loadPreferences().language} minimized={talkMinimized} onMinimize={() => setTalkMinimized(true)} onExpand={() => setTalkMinimized(false)} onUtterance={(text) => chat.send(text, { voice: true })} onCancel={chat.stop} onClose={() => { setTalking(false); setTalkMinimized(false); }} /> : undefined}
         loadingLabel={chat.generatingImage ? "creating your image" : "working on it"}
         onPinMessage={(id) => chat.togglePinMessage(chat.activeId, id)}
         onDeleteMessage={(id) => chat.deleteMessage(chat.activeId, id)}
@@ -73,7 +74,6 @@ export default function ChatPage() {
         onEditLast={(id) => chat.editLastUserMessage(chat.activeId, id)}
       />
       <Shortcuts onNewChat={chat.newChat} onStop={chat.stop} streaming={chat.streaming} />
-      {talking && <TalkMode language={loadPreferences().language} minimized={talkMinimized} onMinimize={() => setTalkMinimized(true)} onExpand={() => setTalkMinimized(false)} onUtterance={(text) => chat.send(text, { voice: true })} onCancel={chat.stop} onClose={() => { setTalking(false); setTalkMinimized(false); }} />}
     </NeuralShell>
   );
 }

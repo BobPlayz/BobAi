@@ -283,6 +283,10 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
   }, []);
 
   useEffect(() => {
+    if (!minimized) closeButton.current?.focus();
+  }, [minimized]);
+
+  useEffect(() => {
     setAssistantActivity("voice-input", phase === "listening");
     setAssistantActivity("voice-output", phase === "speaking");
     return () => { setAssistantActivity("voice-input", false); setAssistantActivity("voice-output", false); };
@@ -297,16 +301,14 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
   const scale = phase === "listening" ? 1 + level * 0.35 : 1;
   if (minimized) {
     return (
-      <div role="region" aria-label="Talk mode minimized" className="fixed bottom-4 right-4 z-[60] w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-[var(--border)] bg-[var(--panel)] p-3 text-[var(--text)] shadow-2xl">
-        <div className="flex items-center gap-3">
-          <span className={`size-3 shrink-0 rounded-full ${phase === "speaking" ? "bg-[var(--accent)] animate-pulse" : phase === "listening" ? "bg-emerald-500" : "bg-[var(--muted)]"}`} />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Jarvis · {LABEL[phase]}</p>
-            <p className="truncate text-xs text-[var(--muted)]">{phase === "speaking" ? reply : heard || error || "Voice conversation is still running"}</p>
-          </div>
-          <button type="button" onClick={onExpand} aria-label="Restore talk mode" title="Restore talk mode" className="atelier-iconbtn"><Maximize2 className="h-4 w-4" aria-hidden /></button>
-          <button type="button" onClick={onClose} aria-label="End talk mode" title="End talk mode" className="atelier-iconbtn"><X className="h-4 w-4" aria-hidden /></button>
+      <div role="region" aria-label="Talk mode minimized" className="mx-auto flex w-full max-w-[820px] items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2.5 text-[var(--text)] shadow-sm">
+        <span className={`size-2.5 shrink-0 rounded-full ${phase === "speaking" ? "bg-[var(--accent)] animate-pulse" : phase === "listening" ? "bg-emerald-500" : "bg-[var(--muted)]"}`} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">Jarvis · {LABEL[phase]}</p>
+          <p className="truncate text-xs text-[var(--muted)]" title={phase === "speaking" ? reply : heard || error}>{phase === "speaking" ? reply : heard || error || "Voice conversation is still running"}</p>
         </div>
+        <button type="button" onClick={onExpand} aria-label="Restore talk mode" title="Restore talk mode" className="atelier-iconbtn !h-9 !w-9 shrink-0"><Maximize2 className="h-4 w-4" aria-hidden /></button>
+        <button type="button" onClick={onClose} aria-label="End talk mode" title="End talk mode" className="atelier-iconbtn !h-9 !w-9 shrink-0"><X className="h-4 w-4" aria-hidden /></button>
       </div>
     );
   }

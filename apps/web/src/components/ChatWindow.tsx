@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, Copy, Flag, MoreHorizontal, Pencil, Pin, RotateCcw, Trash2, X } from "lucide-react";
 import type { ChatMessage, LiveDataInfo, ToolApproval } from "@/types/chat";
 import VoiceButton from "@/components/VoiceButton";
@@ -17,6 +17,8 @@ function plainPreview(text: string) {
 type Props = {
   messages: ChatMessage[];
   loading: boolean;
+  /** Persistent voice session: the minimized control occupies its own row and never covers chat controls. */
+  voiceControl?: ReactNode;
   loadingLabel?: string;
   onPinMessage: (id: string) => void;
   onDeleteMessage: (id: string) => void;
@@ -43,7 +45,7 @@ const SUGGESTIONS = [
   "Help me write a Python program that removes duplicates from a list.",
 ];
 
-export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion, browserVoice = false, onReport, onEditLast }: Props) {
+export default function ChatWindow({ messages, loading, loadingLabel = "Working on it", voiceControl, onPinMessage, onDeleteMessage, onRegenerate, onResolveApproval, voiceReplies = false, autoPlayMessageId = null, onSuggestion, browserVoice = false, onReport, onEditLast }: Props) {
   const [menuId, setMenuId] = useState<string | null>(null);
   const [reported, setReported] = useState<Set<string>>(() => new Set());
   const [preview, setPreview] = useState<string | null>(null);
@@ -104,11 +106,11 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
 
   return (
     <>
-      <section className="relative h-full min-h-0 overflow-hidden" aria-label="Conversation">
+      <section className="relative flex h-full min-h-0 flex-col overflow-hidden" aria-label="Conversation">
         {/* One persistent 3D core: large and centred on an empty chat, docked small once a chat starts. */}
         <div className="jarvis-stage-layer"><JarvisStage compact={messages.length > 0} /></div>
 
-        <div ref={scrollerRef} onScroll={onScroll} className="relative h-full overflow-y-auto">
+        <div ref={scrollerRef} onScroll={onScroll} className="relative min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[780px] px-4 pb-16 pt-8 sm:px-8">
             {pinnedMessages.length > 0 && (
               <nav aria-label="Pinned messages" className="mb-10 border-y border-[var(--hairline)] py-3">
@@ -149,21 +151,25 @@ export default function ChatWindow({ messages, loading, loadingLabel = "Working 
               </div>
             )}
 
-            {/* Hidden while the reply is already appearing word by word: one sign of life is enough. */}
-            {loading && !(messages.at(-1)?.streaming && messages.at(-1)?.content) && (
-              <div className="mt-10 flex items-center gap-3" role="status" aria-live="polite">
-                <JarvisMark className="msg-sigil" />
-                <span className="caption">{loadingLabel}</span>
-                <span className="flex gap-1" aria-hidden>
-                  {[0, 1, 2].map((dot) => <span key={dot} className="h-1 w-1 animate-pulse rounded-full bg-[var(--accent)]" style={{ animationDelay: `${dot * 160}ms` }} />)}
-                </span>
-              </div>
-            )}
             <div ref={endRef} className="h-2" />
           </div>
         </div>
         {awayFromBottom && messages.length > 0 && (
-          <button type="button" onClick={jumpToLatest} aria-label="Jump to latest" title="Jump to latest" className="absolute bottom-4 left-1/2 z-20 grid h-9 w-9 -translate-x-1/2 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] shadow-[var(--shadow)] hover:text-[var(--text)] animate-[chatEnter_200ms_ease-out_both] motion-reduce:animate-none"><ArrowDown className="h-4 w-4" aria-hidden /></button>
+          <button type="button" onClick={jumpToLatest} aria-label="Jump to latest" title="Jump to latest" className="absolute bottom-28 left-1/2 z-20 grid h-9 w-9 -translate-x-1/2 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] shadow-[var(--shadow)] hover:text-[var(--text)] animate-[chatEnter_200ms_ease-out_both] motion-reduce:animate-none"><ArrowDown className="h-4 w-4" aria-hidden /></button>
+        )}
+        {(loading || voiceControl) && (
+          <div className="relative z-10 flex shrink-0 flex-wrap items-center gap-3 border-t border-[var(--hairline)] bg-[var(--bg)]/95 px-3 py-2 sm:px-6">
+            {loading && !(messages.at(-1)?.streaming && messages.at(-1)?.content) && (
+              <div className="flex min-w-0 flex-1 items-center gap-3" role="status" aria-live="polite">
+                <JarvisMark className="msg-sigil" />
+                <span className="caption truncate">{loadingLabel}</span>
+                <span className="flex shrink-0 gap-1" aria-hidden>
+                  {[0, 1, 2].map((dot) => <span key={dot} className="h-1 w-1 animate-pulse rounded-full bg-[var(--accent)]" style={{ animationDelay: `${dot * 160}ms` }} />)}
+                </span>
+              </div>
+            )}
+            {voiceControl && <div className="min-w-0 flex-[1_1_22rem]">{voiceControl}</div>}
+          </div>
         )}
       </section>
 
