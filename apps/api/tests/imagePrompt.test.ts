@@ -9,7 +9,7 @@ test("explicit image requests extract only the image subject", () => {
   assert.equal(extractImagePrompt("i want an image of a red fox in snow"), "a red fox in snow");
   assert.equal(extractImagePrompt("create a poster showing a futuristic cyan city"), "a futuristic cyan city");
   assert.equal(extractImagePrompt("generate an image of an apple"), "an apple");
-  assert.equal(extractImagePrompt("genrate an imge of a robt in teh skyy"), "a robot in the the sky");
+  assert.equal(extractImagePrompt("genrate an imge of a robt in teh skyy"), "a robot in the sky");
   assert.equal(extractImagePrompt("yo, plz cretae a pictur of a flover"), "a flower");
   assert.equal(extractImagePrompt("genrate an imge"), "a polished, high-quality digital illustration");
   assert.equal(extractImagePrompt("yo generate an image of a robot in the sky"), "a robot in the sky");
