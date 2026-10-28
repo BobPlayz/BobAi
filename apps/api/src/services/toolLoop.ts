@@ -132,7 +132,7 @@ export async function executeApprovedTool(toolId: string, args: Record<string, u
   catch (error) { await recordAudit({ action: "tool_execution_failed", resourceType: "tool", userId: context.userId, workspaceId: context.workspaceId, metadata: { toolId, error: safeError(error) } }); throw error; }
 }
 export function serializeToolResult(value: unknown): string { let text = "[unserializable tool result]"; try { const serialized = JSON.stringify(value); if (typeof serialized === "string") text = serialized; } catch {} return text.slice(0, MAX_TOOL_RESULT_CHARS); }
-export async function runToolLoop(initialMessages: ToolLoopMessage[], context: ToolLoopContext, decide: (messages: ToolLoopMessage[], modelId?: string, signal?: AbortSignal) => Promise<{ action: "respond" | "use_tools"; calls: Array<{ tool: string; arguments: Record<string, unknown> }>; reason?: string }>, respond: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ content: string }>, execute: (toolId: string, args: Record<string, unknown>, context: ToolLoopContext) => Promise<unknown> = executeApprovedTool): Promise<ToolLoopResult> {
+export async function runToolLoop(initialMessages: ToolLoopMessage[], context: ToolLoopContext, decide: (messages: ToolLoopMessage[], modelId?: string, signal?: AbortSignal) => Promise<{ action: "respond" | "use_tools" | "clarify"; calls: Array<{ tool: string; arguments: Record<string, unknown> }>; reason?: string; message?: string }>, respond: (messages: ToolLoopMessage[], modelId?: string) => Promise<{ content: string }>, execute: (toolId: string, args: Record<string, unknown>, context: ToolLoopContext) => Promise<unknown> = executeApprovedTool): Promise<ToolLoopResult> {
   let messages = [...initialMessages]; const usedTools: string[] = []; const backgroundJobIds: string[] = []; let toolCalls = 0;
   const rounds = Math.min(Math.max(Math.floor(context.maxRounds ?? MAX_ROUNDS), 1), MAX_ROUNDS);
   const throwIfAborted = () => { if (context.signal?.aborted) throw context.signal.reason instanceof Error ? context.signal.reason : new Error("tool loop cancelled"); };
@@ -141,6 +141,7 @@ export async function runToolLoop(initialMessages: ToolLoopMessage[], context: T
     throwIfAborted();
     if (process.env.BOBAI_TOOLS_ENABLED === "false") { const response = await respond(messages, context.modelId); return { status: "completed", message: response.content, toolCalls, usedTools, backgroundJobIds }; }
     const decision = await decide(messages, context.modelId, context.signal); throwIfAborted();
+    if (decision.action === "clarify") return { status: "completed", message: decision.message || "I need one more detail before I can safely continue.", toolCalls, usedTools, backgroundJobIds };
     if (decision.action === "respond") { const response = await respond(messages, context.modelId); throwIfAborted(); return { status: "completed", message: response.content, toolCalls, usedTools, backgroundJobIds }; }
     if (decision.calls.length > MAX_TOOL_CALLS - toolCalls) return { status: "limit_reached", message: "BobAI reached the maximum number of tool calls for this request.", toolCalls, usedTools, backgroundJobIds };
     for (const call of decision.calls) {
@@ -150,12 +151,24 @@ export async function runToolLoop(initialMessages: ToolLoopMessage[], context: T
       try {
         const result = await execute(tool.id, call.arguments, context); throwIfAborted();
         if (result && typeof result === "object" && "status" in result && (result as { status?: string }).status === "approval_required") return { status: "approval_required", message: `${tool.name} requires user approval before BobAI can execute it.`, toolCalls, usedTools: [...usedTools, tool.id], backgroundJobIds };
+        const resultStatus = result && typeof result === "object" && "status" in result ? String((result as { status?: unknown }).status ?? "").toLowerCase() : "";
+        if (result === undefined || ["unavailable", "failed", "error", "denied"].includes(resultStatus)) {
+          toolCalls += 1; usedTools.push(tool.id);
+          return { status: "failed", message: `The ${tool.name} tool did not return a verified successful result. I cannot claim the action worked. Please try again later.`, toolCalls, usedTools, backgroundJobIds };
+        }
+        try { const serialized = JSON.stringify(result); if (typeof serialized !== "string") throw new Error("not serializable"); }
+        catch {
+          toolCalls += 1; usedTools.push(tool.id);
+          return { status: "failed", message: `The ${tool.name} tool returned an invalid result. I cannot verify that it succeeded.`, toolCalls, usedTools, backgroundJobIds };
+        }
         toolCalls += 1; usedTools.push(tool.id);
         if (result && typeof result === "object" && "id" in result && (tool.id === "coding" || tool.id === "automation")) backgroundJobIds.push(String((result as { id: string }).id));
         messages.push({ role: "assistant", content: `[bob requested tool: ${tool.id}]` }); messages.push({ role: "user", content: `[untrusted tool result for ${tool.id}]\n${serializeToolResult(result)}\n[/untrusted tool result]` });
       } catch (error) {
         if (context.signal?.aborted) throw error;
-        toolCalls += 1; usedTools.push(tool.id); messages.push({ role: "assistant", content: `[bob requested tool: ${tool.id}]` }); messages.push({ role: "user", content: `[untrusted tool error for ${tool.id}]\n${safeError(error)}\n[/untrusted tool error]` });
+        toolCalls += 1; usedTools.push(tool.id);
+        // Fail closed: do not ask the model to narrate a failed action, because it may hallucinate success.
+        return { status: "failed", message: `The ${tool.name} tool failed during execution. No successful result was confirmed, so I cannot claim the action worked.`, toolCalls, usedTools, backgroundJobIds };
       }
     }
   }

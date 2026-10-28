@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildToolDecisionMessages, validateToolDecision } from "../src/services/toolDecision.js";
+import { buildToolDecisionMessages, explicitBrowserAgentDecision, validateToolDecision } from "../src/services/toolDecision.js";
 
 test("tool decisions fail closed on malformed model output", () => {
   assert.deepEqual(validateToolDecision(undefined), { action: "respond", calls: [], reason: "invalid router output" });
@@ -36,4 +36,48 @@ test("live weather and cricket tools are selectable with validated arguments", (
   assert.equal(validateToolDecision({ action: "use_tools", calls: [{ tool: "weather", arguments: { city: "Delhi" } }] }).action, "use_tools");
   assert.equal(validateToolDecision({ action: "use_tools", calls: [{ tool: "cricket", arguments: { query: "latest international cricket match score" } }] }).action, "use_tools");
   assert.equal(validateToolDecision({ action: "use_tools", calls: [{ tool: "weather", arguments: {} }] }).action, "respond");
+});
+
+
+test("explicit browser-agent requests ask for a URL instead of answering an unrelated browser question", () => {
+  const decision = explicitBrowserAgentDecision([{ role: "user", content: "run browser agent" }]);
+  assert.equal(decision?.action, "clarify");
+  assert.match(decision?.message || "", /full URL/i);
+  assert.match(decision?.message || "", /No browser action has been run/i);
+});
+
+test("explicit browser-agent requests report missing provider configuration honestly", () => {
+  const previous = process.env.BOBAI_BROWSER_PROVIDER_URL;
+  delete process.env.BOBAI_BROWSER_PROVIDER_URL;
+  try {
+    const decision = explicitBrowserAgentDecision([{ role: "user", content: "run browser agent on https://example.com" }]);
+    assert.equal(decision?.action, "clarify");
+    assert.match(decision?.message || "", /not configured/i);
+    assert.match(decision?.message || "", /No browser action was performed/i);
+  } finally {
+    if (previous === undefined) delete process.env.BOBAI_BROWSER_PROVIDER_URL;
+    else process.env.BOBAI_BROWSER_PROVIDER_URL = previous;
+  }
+});
+
+test("explicit browser-agent requests select the real browser tool when configured", () => {
+  const previous = process.env.BOBAI_BROWSER_PROVIDER_URL;
+  process.env.BOBAI_BROWSER_PROVIDER_URL = "https://browser.example.test";
+  try {
+    const decision = explicitBrowserAgentDecision([{ role: "user", content: "run browser agent on https://example.com" }]);
+    assert.equal(decision?.action, "use_tools");
+    assert.deepEqual(decision?.calls, [{ tool: "browser", arguments: { url: "https://example.com" } }]);
+  } finally {
+    if (previous === undefined) delete process.env.BOBAI_BROWSER_PROVIDER_URL;
+    else process.env.BOBAI_BROWSER_PROVIDER_URL = previous;
+  }
+});
+
+test("explicit browser routing does not repeat after a browser tool was requested", () => {
+  const decision = explicitBrowserAgentDecision([
+    { role: "user", content: "run browser agent on https://example.com" },
+    { role: "assistant", content: "[bob requested tool: browser]" },
+    { role: "user", content: "[untrusted tool result for browser] {} [/untrusted tool result]" },
+  ]);
+  assert.equal(decision, null);
 });

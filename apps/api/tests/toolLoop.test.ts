@@ -105,3 +105,46 @@ test("tool loop forwards the request abort signal to the model-based router", as
   assert.equal(receivedSignal, controller.signal);
   assert.equal(result.status, "completed");
 });
+
+
+test("tool loop returns a deterministic clarification without calling the answer model", async () => {
+  let answered = false;
+  const result = await runToolLoop(
+    [{ role: "user", content: "run browser agent" }],
+    { userId: "u", workspaceId: "w" },
+    async () => ({ action: "clarify", calls: [], message: "Send the full URL first." }),
+    async () => { answered = true; return { content: "I checked your user agent." }; },
+    async () => ({ status: "unexpected" }),
+  );
+  assert.equal(result.status, "completed");
+  assert.equal(result.message, "Send the full URL first.");
+  assert.equal(answered, false);
+});
+
+test("tool loop fails closed when an executor throws instead of asking the model to narrate success", async () => {
+  let decisions = 0;
+  let answered = false;
+  const result = await runToolLoop(
+    [{ role: "user", content: "research this" }],
+    { userId: "u", workspaceId: "w", maxRounds: 3 },
+    async () => { decisions += 1; return { action: "use_tools", calls: [{ tool: "research", arguments: { query: "test" } }] }; },
+    async () => { answered = true; return { content: "It succeeded." }; },
+    async () => { throw new Error("provider unavailable"); },
+  );
+  assert.equal(result.status, "failed");
+  assert.match(result.message, /No successful result was confirmed/i);
+  assert.equal(decisions, 1);
+  assert.equal(answered, false);
+});
+
+test("tool loop treats explicit unavailable results as failures", async () => {
+  const result = await runToolLoop(
+    [{ role: "user", content: "run a tool" }],
+    { userId: "u", workspaceId: "w" },
+    async () => ({ action: "use_tools", calls: [{ tool: "research", arguments: { query: "test" } }] }),
+    async () => ({ content: "It succeeded." }),
+    async () => ({ status: "unavailable", reason: "not configured" }),
+  );
+  assert.equal(result.status, "failed");
+  assert.match(result.message, /did not return a verified successful result/i);
+});
