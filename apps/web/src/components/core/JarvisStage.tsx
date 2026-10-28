@@ -16,7 +16,13 @@ const QUALITY_ORDER: CoreQuality[] = ["low", "medium", "high"];
 function webglAvailable() {
   try {
     const canvas = document.createElement("canvas");
-    return Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    if (!gl) return false;
+    // Software WebGL (common in headless browsers and remote desktops) can make the whole page feel stuck.
+    // The CSS reactor is a better experience there; keep the full scene for real hardware renderers.
+    const debug = gl.getExtension("WEBGL_debug_renderer_info");
+    const renderer = debug ? String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)) : "";
+    return !/swiftshader|llvmpipe|software rasterizer/i.test(renderer);
   } catch { return false; }
 }
 
