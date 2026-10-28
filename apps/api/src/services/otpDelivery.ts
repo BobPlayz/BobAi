@@ -54,15 +54,15 @@ function resendConfigured() { return Boolean(process.env.RESEND_API_KEY?.trim() 
 function smtpConfigured() { return Boolean(process.env.BOBAI_SMTP_HOST?.trim() && process.env.BOBAI_SMTP_FROM?.trim()); }
 
 /**
- * Which provider sends login codes. BOBAI_EMAIL_PROVIDER ("resend" or "smtp") picks one explicitly; without it Resend
- * wins when configured, then SMTP, so existing deployments keep their current behaviour.
+ * Which provider sends login codes. BOBAI_EMAIL_PROVIDER ("resend" or "smtp") picks one explicitly.
+ * Without it, prefer SMTP when configured (Jarvis's primary mail transport), then use Resend as a fallback.
  */
 export function otpDeliveryProvider(): OtpDeliveryProvider {
   const chosen = process.env.BOBAI_EMAIL_PROVIDER?.trim().toLowerCase();
   if (chosen === "smtp") return smtpConfigured() ? "smtp" : "none";
   if (chosen === "resend") return resendConfigured() ? "resend" : "none";
-  if (resendConfigured()) return "resend";
   if (smtpConfigured()) return "smtp";
+  if (resendConfigured()) return "resend";
   if (!isProduction && process.env.BOBAI_DEV_LOG_OTP === "true") return "dev-log";
   return "none";
 }

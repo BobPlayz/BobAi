@@ -18,10 +18,12 @@ function withEnv(env: Partial<Record<(typeof KEYS)[number], string>>, fn: () => 
 const resend = { RESEND_API_KEY: ["re", "test"].join("_"), RESEND_FROM_EMAIL: "Jarvis <login@example.com>" };
 const smtp = { BOBAI_SMTP_HOST: "smtp.gmail.com", BOBAI_SMTP_FROM: "Jarvis <someone@gmail.com>" };
 
-test("existing Resend deployments keep using Resend unless SMTP is chosen explicitly", () => {
-  withEnv({ ...resend, ...smtp }, () => assert.equal(otpDeliveryProvider(), "resend"));
+test("SMTP is preferred when both transports are configured, while explicit provider selection is respected", () => {
+  withEnv({ ...resend, ...smtp }, () => assert.equal(otpDeliveryProvider(), "smtp"));
   withEnv({ ...resend, ...smtp, BOBAI_EMAIL_PROVIDER: "smtp" }, () => assert.equal(otpDeliveryProvider(), "smtp"));
+  withEnv({ ...resend, ...smtp, BOBAI_EMAIL_PROVIDER: "resend" }, () => assert.equal(otpDeliveryProvider(), "resend"));
   withEnv({ ...smtp }, () => assert.equal(otpDeliveryProvider(), "smtp"));
+  withEnv({ ...resend }, () => assert.equal(otpDeliveryProvider(), "resend"));
 });
 
 test("choosing a provider that is not configured is reported, never silently swapped", () => {
