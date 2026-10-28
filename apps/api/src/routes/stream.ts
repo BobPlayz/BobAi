@@ -21,6 +21,7 @@ import { runToolLoop } from "../services/toolLoop.js";
 import { extractImagePrompt } from "../services/imagePrompt.js";
 import { isLightweightConversation } from "../services/lightweightConversation.js";
 import { detectLiveDataIntent, getLiveData, liveDataContext, type LiveDataResult } from "../services/liveData.js";
+import { calculatorCodeBlock, isCalculatorBuildRequest } from "../services/calculatorTemplate.js";
 import type { ProviderMessage } from "../services/modelProvider.js";
 const router = Router();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -132,7 +133,16 @@ router.post("/", streamLimit, async (req, res) => {
     const emit = (token: string) => { streamedContent += token; if (!disconnected && !res.writableEnded) send("token", { token }); };
     try {
       let result: { content: string; model: string; provider?: string; fallbacks?: number; finishReason?: "stop" | "length" | "interrupted" };
-      try { result = await runStream(providerMessages, emit, prepared.modelId, generation.signal); }
+      try {
+        // Deterministic calculator UI prevents the model from inventing button wiring or arithmetic behavior.
+        if (isCalculatorBuildRequest(prepared.latestUserMessage?.content ?? "")) {
+          const content = calculatorCodeBlock();
+          for (let offset = 0; offset < content.length; offset += 96) emit(content.slice(offset, offset + 96));
+          result = { content, model: "jarvis-calculator-template", provider: "coding", finishReason: "stop" };
+        } else {
+          result = await runStream(providerMessages, emit, prepared.modelId, generation.signal);
+        }
+      }
       catch (error) {
         // Text already arrived and the user didn't press Stop: keep it and try to finish it, rather than losing it all.
         if (!streamedContent.trim() || generation.signal.aborted) throw error;
