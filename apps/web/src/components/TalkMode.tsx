@@ -118,7 +118,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
           const result = event.results[i];
           if (result.isFinal) finalText += `${result[0].transcript} `; else interim += `${result[0].transcript} `;
         }
-        const combined = `${finalText}${interim}`.replace(/\\s+/g, " ").trim();
+        const combined = `${finalText}${interim}`.replace(/\s+/g, " ").trim();
         if (combined) lastSpeechAt = performance.now();
         if (session.current === id) setHeard(combined);
       };
@@ -129,7 +129,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       recognition.onend = () => {
         if (finished || session.current !== id || !lastSpeechAt || performance.now() - lastSpeechAt >= SILENCE_MS) {
           window.clearInterval(res.current.timer);
-          resolve(finalText.replace(/\\s+/g, " ").trim());
+          resolve(finalText.replace(/\s+/g, " ").trim());
           return;
         }
         // Some browsers end a continuous recognition session early. Reopen it during the user's thinking pause.

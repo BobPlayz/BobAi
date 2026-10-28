@@ -70,19 +70,31 @@ export default function JarvisStage({ compact = false, hero = false, stateOverri
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReducedMotion(motion.matches);
-    sync();
-    motion.addEventListener("change", sync);
+    let sceneTimer = 0;
+    const scheduleScene = () => {
+      window.clearTimeout(sceneTimer);
+      if (motion.matches) {
+        setMode("fallback");
+        return;
+      }
+      // Keep the lightweight reactor on screen first; load Three.js after the initial page has settled.
+      sceneTimer = window.setTimeout(() => setMode(webglAvailable() ? "webgl" : "fallback"), 900);
+    };
+    const syncMotion = () => {
+      setReducedMotion(motion.matches);
+      scheduleScene();
+    };
+    syncMotion();
+    motion.addEventListener("change", syncMotion);
     setQuality(initialQuality());
     const narrowQuery = window.matchMedia("(max-width: 640px)");
     const syncNarrow = () => setNarrow(narrowQuery.matches);
     syncNarrow();
     narrowQuery.addEventListener("change", syncNarrow);
-    setMode(webglAvailable() ? "webgl" : "fallback");
     // Stop rendering entirely while the tab is hidden.
     const onVisibility = () => setVisible(document.visibilityState === "visible");
     document.addEventListener("visibilitychange", onVisibility);
-    return () => { motion.removeEventListener("change", sync); narrowQuery.removeEventListener("change", syncNarrow); document.removeEventListener("visibilitychange", onVisibility); };
+    return () => { window.clearTimeout(sceneTimer); motion.removeEventListener("change", syncMotion); narrowQuery.removeEventListener("change", syncNarrow); document.removeEventListener("visibilitychange", onVisibility); };
   }, []);
 
   const onFps = useCallback((fps: number) => {
@@ -119,7 +131,7 @@ export default function JarvisStage({ compact = false, hero = false, stateOverri
           <SceneBoundary fallback={<ReactorFallback />}>
             <JarvisCoreScene key={quality} state={state} quality={quality} theme={theme} reducedMotion={reducedMotion} onFps={onFps} />
           </SceneBoundary>
-        ) : mode === "fallback" ? <ReactorFallback /> : null}
+        ) : <ReactorFallback />}
       </div>
       <p className="jarvis-stage-label" role="status" aria-live="polite">
         <span className="jarvis-stage-dot" aria-hidden />
