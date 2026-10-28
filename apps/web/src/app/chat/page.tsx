@@ -16,6 +16,7 @@ import { useChat } from "@/hooks/useChat";
 export default function ChatPage() {
   const chat = useChat();
   const [talking, setTalking] = useState(false);
+  const [talkMinimized, setTalkMinimized] = useState(false);
   // "Read replies out loud" lives in Settings; read after mount so the server render matches.
   const [voiceReplies, setVoiceReplies] = useState(false);
   useEffect(() => { setVoiceReplies(loadPreferences().voiceReplies); }, []);
@@ -52,7 +53,7 @@ export default function ChatPage() {
           uploadingFiles={chat.uploadingFiles}
           uploadProgress={chat.uploadProgress}
           onCancelUpload={chat.cancelUpload}
-          onTalk={() => setTalking(true)}
+          onTalk={() => { setTalkMinimized(false); setTalking(true); }}
           onVoiceSend={(text) => { void chat.send(text); }}
         />
       }
@@ -72,7 +73,7 @@ export default function ChatPage() {
         onEditLast={(id) => chat.editLastUserMessage(chat.activeId, id)}
       />
       <Shortcuts onNewChat={chat.newChat} onStop={chat.stop} streaming={chat.streaming} />
-      {talking && <TalkMode language={loadPreferences().language} onUtterance={(text) => chat.send(text, { voice: true })} onCancel={chat.stop} onClose={() => setTalking(false)} />}
+      {talking && <TalkMode language={loadPreferences().language} minimized={talkMinimized} onMinimize={() => setTalkMinimized(true)} onExpand={() => setTalkMinimized(false)} onUtterance={(text) => chat.send(text, { voice: true })} onCancel={chat.stop} onClose={() => { setTalking(false); setTalkMinimized(false); }} />}
     </NeuralShell>
   );
 }
