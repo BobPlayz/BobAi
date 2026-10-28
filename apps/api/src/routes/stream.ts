@@ -91,12 +91,16 @@ router.post("/", streamLimit, async (req, res) => {
     // Saves this turn (the user's message and Jarvis's reply) so it is still there after a reload.
     const saveTurn = (reply: string, model: string | null) => dbSaveConversation({ keepTitle: true, id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedTurnMessages(req.body?.messages), { id: clientAssistantId(req.body?.assistantMessageId), role: "assistant", content: reply, model, status: "completed" }] }).catch(() => false);
     if (prepared.memoryRequest && prepared.latestUserMessage) { if (!memoryEnabled) { const reply = "memory is off, so i won't save that."; const persisted = await saveTurn(reply, null); send("done", { reply, title: prepared.title, memoryStored: false, conversationId, persisted }); return res.end(); } if (isSensitiveMemory(prepared.latestUserMessage.content)) { /* not saved to history either: the message may contain a secret */ send("done", { reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, conversationId }); return res.end(); } const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, key: "explicit memory", value: prepared.latestUserMessage.content.trim() }); if (!stored) { send("error", { message: "memory storage unavailable" }); return res.end(); } const reply = "got it. i will remember that for future conversations."; const persisted = await saveTurn(reply, null); send("done", { reply, title: prepared.title, memoryStored: true, conversationId, persisted }); return res.end(); }
-    if (prepared.latestUserMessage) {
-      const imagePrompt = extractImagePrompt(prepared.latestUserMessage.content);
-      if (imagePrompt) {
-        send("done", { reply: "", title: prepared.title, conversationId, imagePrompt, mode: "image-generation" });
-        return res.end();
-      }
+    // Route image requests from the original user text first. prepareChat may rewrite or enrich the
+    // latest message, which must not turn an explicit image-generation request into ordinary chat.
+    const rawImagePrompt = typeof latestRaw?.content === "string" ? extractImagePrompt(latestRaw.content) : null;
+    const preparedImagePrompt = prepared.latestUserMessage
+      ? extractImagePrompt(prepared.latestUserMessage.content)
+      : null;
+    const imagePrompt = rawImagePrompt ?? preparedImagePrompt;
+    if (imagePrompt) {
+      send("done", { reply: "", title: prepared.title, conversationId, imagePrompt, mode: "image-generation" });
+      return res.end();
     }
     if (prepared.latestUserMessage && isCodingTask(prepared.latestUserMessage.content) && process.env.BOBAI_CODING_AGENTS_DIR) { const result = await runCodingAgent(prepared.latestUserMessage.content); const reply = result.output || "the coding agent completed without output."; const persisted = await dbSaveConversation({ keepTitle: true, id: conversationId, userId: req.user!.id, workspaceId: workspace.id, title: prepared.title, messages: [...persistedTurnMessages(req.body?.messages), { id: clientAssistantId(req.body?.assistantMessageId), role: "assistant", content: reply, model: "coding-agent", status: "completed" }] }).catch(() => false); send("done", { reply, title: prepared.title, agent: "coding", warnings: result.warnings, conversationId, persisted }); return res.end(); }
     let providerMessages: ProviderMessage[] = prepared.providerMessages; let liveData: LiveDataResult | null = null;
