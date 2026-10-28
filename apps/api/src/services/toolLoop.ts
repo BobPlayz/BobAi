@@ -139,7 +139,7 @@ export async function runToolLoop(initialMessages: ToolLoopMessage[], context: T
   try {
   for (let round = 0; round < rounds; round++) {
     throwIfAborted();
-    if (process.env.BOBAI_TOOLS_ENABLED === "false") { const response = await respond(messages, context.modelId); return { status: "completed", message: response.content, toolCalls, usedTools, backgroundJobIds }; }
+    if (process.env.BOBAI_TOOLS_ENABLED === "false") return { status: "failed", message: "Tools are disabled on this Jarvis deployment, so I could not perform or verify the requested action. No tool was run.", toolCalls, usedTools, backgroundJobIds };
     const decision = await decide(messages, context.modelId, context.signal); throwIfAborted();
     if (decision.action === "clarify") return { status: "completed", message: decision.message || "I need one more detail before I can safely continue.", toolCalls, usedTools, backgroundJobIds };
     if (decision.action === "respond" && decision.reason) return { status: "failed", message: "Tool routing could not be validated, so Jarvis did not run or verify the requested action. Please check tool configuration and try again.", toolCalls, usedTools, backgroundJobIds };
