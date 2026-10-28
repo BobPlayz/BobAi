@@ -10,6 +10,14 @@ test("explicit image requests extract only the image subject", () => {
   assert.equal(extractImagePrompt("create a poster showing a futuristic cyan city"), "a futuristic cyan city");
 });
 
+test("casual wording and plural image requests still use the image tool", () => {
+  assert.equal(extractImagePrompt("can u generate an image of a corgi"), "a corgi");
+  assert.equal(extractImagePrompt("pls make me a picture of a tiny house"), "a tiny house");
+  assert.equal(extractImagePrompt("could you generate images of planets"), "of planets");
+  assert.equal(extractImagePrompt("generate an image?"), "a polished, high-quality digital illustration");
+  assert.equal(extractImagePrompt("hey, draw me a dragon"), "a dragon");
+});
+
 test("draw and paint requests work without the word image", () => {
   assert.equal(extractImagePrompt("draw a dragon flying above a mountain"), "a dragon flying above a mountain");
   assert.equal(extractImagePrompt("paint me a watercolor garden"), "a watercolor garden");
