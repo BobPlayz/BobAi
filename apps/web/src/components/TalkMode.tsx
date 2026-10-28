@@ -134,10 +134,10 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
   }
 
   function sentenceChunks(text: string): string[] {
-    const clean = speakable(text).replace(/\\s+/g, " ").trim();
+    const clean = speakable(text).replace(/\s+/g, " ").trim();
     if (!clean) return [];
     // Keep punctuation with its sentence so each spoken chunk is also what appears on screen.
-    return clean.match(/[^.!?]+[.!?]+[”’"')\\]]*|[^.!?]+$/g)?.map((part) => part.trim()).filter(Boolean) ?? [clean];
+    return clean.match(/[^.!?]+[.!?]+[”’"')\]]*|[^.!?]+$/g)?.map((part) => part.trim()).filter(Boolean) ?? [clean];
   }
 
   async function speak(text: string, id: number) {
