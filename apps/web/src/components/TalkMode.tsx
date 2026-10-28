@@ -15,7 +15,7 @@ import { audioUrl, browserRecognition, getVoiceAvailability, speakable, speechLo
 type Phase = "starting" | "listening" | "thinking" | "speaking" | "error";
 type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void; minimized?: boolean; onMinimize?: () => void; onExpand?: () => void; /** Cancels the answer being worked out (you started talking again). */ onCancel?: () => void };
 
-const SILENCE_MS = 1_100;
+const SILENCE_MS = 7_000;
 const NO_SPEECH_MS = 10_000;
 const MAX_TURN_MS = 30_000;
 
@@ -95,7 +95,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       const recognition = new Recognition();
       let finalText = "";
       recognition.lang = speechLocale(language);
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = true;
       recognition.onresult = (event) => {
         // Rebuilt from every result each time (browsers resend earlier phrases), so words never repeat.
