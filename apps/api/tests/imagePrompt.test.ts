@@ -9,6 +9,9 @@ test("explicit image requests extract only the image subject", () => {
   assert.equal(extractImagePrompt("i want an image of a red fox in snow"), "a red fox in snow");
   assert.equal(extractImagePrompt("create a poster showing a futuristic cyan city"), "a futuristic cyan city");
   assert.equal(extractImagePrompt("generate an image of an apple"), "an apple");
+  assert.equal(extractImagePrompt("yo generate an image of a robot in the sky"), "a robot in the sky");
+  assert.equal(extractImagePrompt("yo, generate an image of a robot in the sky"), "a robot in the sky");
+  assert.equal(extractImagePrompt("hey Jarvis, generate an image of a robot in the sky"), "a robot in the sky");
 });
 
 test("casual wording, slash commands, and plural image requests route to generation", () => {
