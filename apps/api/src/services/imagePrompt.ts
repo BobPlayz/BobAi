@@ -15,7 +15,7 @@ export function extractImagePrompt(text: string): string | null {
   }
 
   const explicit = normalized.match(new RegExp(
-    String.raw`^(?:generate|create|make|draw|paint|render|design)\s+(?:(?:me|us)\s+)?(?:an?\s+)?${IMAGE_NOUN}\\b(?:\s+(?:of|showing|depicting|with|for|about))?\s*([\s\S]*)$`,
+    String.raw`^(?:generate|create|make|draw|paint|render|design)\s+(?:(?:me|us)\s+)?(?:an?\s+)?${IMAGE_NOUN}\b(?:\s+(?:of|showing|depicting|with|for|about))?\s*([\s\S]*)$`,
     "i",
   ));
   if (explicit) {
