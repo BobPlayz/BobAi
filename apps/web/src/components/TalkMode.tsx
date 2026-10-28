@@ -94,9 +94,22 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       if (!Recognition) return reject(new Error("This browser can't do voice chat. Try Chrome or Edge."));
       const recognition = new Recognition();
       let finalText = "";
+      let lastSpeechAt = 0;
+      let finished = false;
+      const startedAt = performance.now();
       recognition.lang = speechLocale(language);
       recognition.continuous = true;
       recognition.interimResults = true;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        window.clearInterval(res.current.timer);
+        try { recognition.stop(); } catch { /* Recognition may already have stopped. */ }
+      };
+      res.current.timer = window.setInterval(() => {
+        const elapsed = performance.now() - (lastSpeechAt || startedAt);
+        if (lastSpeechAt ? elapsed >= SILENCE_MS : elapsed >= NO_SPEECH_MS) finish();
+      }, 100);
       recognition.onresult = (event) => {
         // Rebuilt from every result each time (browsers resend earlier phrases), so words never repeat.
         let interim = "";
@@ -105,15 +118,25 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
           const result = event.results[i];
           if (result.isFinal) finalText += `${result[0].transcript} `; else interim += `${result[0].transcript} `;
         }
-        if (session.current === id) setHeard(`${finalText}${interim}`.replace(/\s+/g, " ").trim());
+        const combined = `${finalText}${interim}`.replace(/\\s+/g, " ").trim();
+        if (combined) lastSpeechAt = performance.now();
+        if (session.current === id) setHeard(combined);
       };
       recognition.onerror = (event) => {
         if (event.error === "not-allowed" || event.error === "service-not-allowed") reject(new Error("Mic access is blocked. Allow the microphone for this site and try again."));
         else if (event.error === "network") reject(new Error("Voice recognition needs an internet connection."));
       };
-      recognition.onend = () => resolve(finalText.replace(/\s+/g, " ").trim());
+      recognition.onend = () => {
+        if (finished || session.current !== id || !lastSpeechAt || performance.now() - lastSpeechAt >= SILENCE_MS) {
+          window.clearInterval(res.current.timer);
+          resolve(finalText.replace(/\\s+/g, " ").trim());
+          return;
+        }
+        // Some browsers end a continuous recognition session early. Reopen it during the user's thinking pause.
+        try { recognition.start(); } catch { /* Fall through if the browser won't restart recognition. */ }
+      };
       res.current.recognition = recognition;
-      res.current.finishListening = () => recognition.stop();
+      res.current.finishListening = finish;
       recognition.start();
     });
   }
