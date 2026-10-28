@@ -33,7 +33,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
   const noiseFloor = useRef(0.01);
   const utter = useRef(onUtterance);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const res = useRef<{ stream?: MediaStream; context?: AudioContext; analyser?: AnalyserNode; recognition?: BrowserRecognition; audio?: HTMLAudioElement; timer?: number; finishListening?: () => void; stopSpeaking?: () => void }>({});
+  const res = useRef<{ stream?: MediaStream; context?: AudioContext; analyser?: AnalyserNode; recognition?: BrowserRecognition; audio?: HTMLAudioElement; timer?: number; finishListening?: () => void; stopSpeaking?: () => void; transcriptionController?: AbortController }>({});
   const engines = useRef<{ hear: "server" | "browser"; speak: "server" | "browser" | "none" }>({ hear: "browser", speak: "browser" });
 
   useEffect(() => { utter.current = onUtterance; }, [onUtterance]);
@@ -42,6 +42,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
     const r = res.current;
     window.clearInterval(r.timer);
     r.recognition?.abort();
+    r.transcriptionController?.abort();
     r.stopSpeaking?.();
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     r.stream?.getTracks().forEach((track) => track.stop());
@@ -67,6 +68,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       // transcription produces the final text. If browser recognition is unavailable, recording still works.
       const Recognition = browserRecognition();
       let liveRecognition: BrowserRecognition | undefined;
+      let liveText = "";
       if (Recognition) {
         try {
           liveRecognition = new Recognition();
@@ -77,10 +79,11 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
             if (session.current !== id) return;
             let live = "";
             for (let i = 0; i < event.results.length; i++) live += `${event.results[i][0].transcript} `;
-            if (live.trim()) setHeard(live.replace(/\\s+/g, " ").trim());
+            if (live.trim()) { liveText = live.replace(/\\s+/g, " ").trim(); setHeard(liveText); }
           };
           liveRecognition.onerror = () => undefined;
           liveRecognition.onend = () => undefined;
+          res.current.recognition = liveRecognition;
           liveRecognition.start();
         } catch { liveRecognition = undefined; }
       }
@@ -89,10 +92,17 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
         if (session.current !== id) return resolve("");
         if (!spoke) return resolve("");
         try {
-          const finalText = await transcribeAudio(await toPcm16Wav(new Blob(chunks, { type: recorder.mimeType || mime || "audio/webm" })), language);
+          const controller = new AbortController();
+          res.current.transcriptionController = controller;
+          const finalText = await transcribeAudio(await toPcm16Wav(new Blob(chunks, { type: recorder.mimeType || mime || "audio/webm" })), language, controller.signal);
           if (session.current === id) setHeard(finalText);
           resolve(finalText);
-        } catch (problem) { /^didn't catch/i.test(problem instanceof Error ? problem.message : "") ? resolve("") : reject(problem); }
+        } catch (problem) {
+          // If the server transcription provider fails, salvage the browser's recognized words before switching engines.
+          if (session.current === id && liveText.trim()) { setHeard(liveText); resolve(liveText); }
+          else if (/^didn't catch/i.test(problem instanceof Error ? problem.message : "")) resolve("");
+          else reject(problem);
+        } finally { res.current.transcriptionController = undefined; }
       };
       const finish = () => { if (done) return; done = true; window.clearInterval(res.current.timer); setLevel(0); try { liveRecognition?.stop(); } catch { /* already stopped */ } if (recorder.state !== "inactive") recorder.stop(); };
       res.current.finishListening = () => { spoke = spoke || chunks.length > 0 || performance.now() - started > 600; finish(); };
@@ -145,7 +155,6 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       let lastSpeechAt = 0;
       let finished = false;
       const startedAt = performance.now();
-      const localNoiseFloor = noiseFloor.current;
       recognition.lang = speechLocale(language);
       recognition.continuous = true;
       recognition.interimResults = true;
