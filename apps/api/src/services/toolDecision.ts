@@ -36,6 +36,7 @@ export function explicitBrowserAgentDecision(messages: ProviderMessage[]): ToolD
   const latestUser = [...messages].reverse().find((message) => message.role === "user" && !/^\[untrusted tool (?:result|error)/i.test(message.content));
   const text = latestUser?.content?.trim() ?? "";
   if (!/\b(?:run|use|start|launch|execute|activate)\s+(?:the\s+)?browser\s+agent\b/i.test(text)) return null;
+  if (process.env.BOBAI_TOOLS_ENABLED === "false") return { action: "clarify", calls: [], reason: "tools disabled", message: "The browser agent is disabled on this Jarvis deployment. No browser action was performed." };
   const match = text.match(/https?:\/\/[^\s<>"')\]]+/i);
   const url = match?.[0]?.replace(/[.,!?;:]+$/, "");
   if (!url) return { action: "clarify", calls: [], reason: "browser URL required", message: "I can run the browser agent. Which website should I open? Send its full URL, including https://. No browser action has been run yet." };

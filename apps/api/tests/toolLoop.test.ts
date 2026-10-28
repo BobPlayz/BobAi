@@ -148,3 +148,18 @@ test("tool loop treats explicit unavailable results as failures", async () => {
   assert.equal(result.status, "failed");
   assert.match(result.message, /did not return a verified successful result/i);
 });
+
+
+test("tool loop fails closed when the router returns an invalid decision", async () => {
+  let answered = false;
+  const result = await runToolLoop(
+    [{ role: "user", content: "research this" }],
+    { userId: "u", workspaceId: "w" },
+    async () => ({ action: "respond", calls: [], reason: "invalid router output" }),
+    async () => { answered = true; return { content: "I researched it successfully." }; },
+    async () => ({ value: "unused" }),
+  );
+  assert.equal(result.status, "failed");
+  assert.match(result.message, /did not run or verify/i);
+  assert.equal(answered, false);
+});
