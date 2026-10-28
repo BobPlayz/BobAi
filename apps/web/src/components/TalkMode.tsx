@@ -15,7 +15,7 @@ import { audioUrl, browserRecognition, getVoiceAvailability, speakable, speechLo
 type Phase = "starting" | "listening" | "thinking" | "speaking" | "error";
 type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void; minimized?: boolean; onMinimize?: () => void; onExpand?: () => void; /** Cancels the answer being worked out (you started talking again). */ onCancel?: () => void };
 
-const SILENCE_MS = 7_000;
+const SILENCE_MS = 5_000;
 const NO_SPEECH_MS = 10_000;
 const MAX_TURN_MS = 30_000;
 
