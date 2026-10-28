@@ -51,8 +51,8 @@ function toBase64(bytes: ArrayBuffer) {
   return btoa(binary);
 }
 
-export async function transcribeAudio(audio: Blob, language?: string) {
-  const res = await request("/voice/transcribe", { method: "POST", body: JSON.stringify({ audio: toBase64(await audio.arrayBuffer()), ...(language ? { options: { language } } : {}) }) });
+export async function transcribeAudio(audio: Blob, language?: string, signal?: AbortSignal) {
+  const res = await request("/voice/transcribe", { method: "POST", body: JSON.stringify({ audio: toBase64(await audio.arrayBuffer()), ...(language ? { options: { language } } : {}) }), signal });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Voice transcription failed");
   const text = typeof data.text === "string" ? data.text : typeof data.transcript === "string" ? data.transcript : typeof data.data?.text === "string" ? data.data.text : "";

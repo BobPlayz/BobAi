@@ -59,15 +59,42 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       const chunks: Blob[] = [];
       const samples = new Float32Array(analyser.fftSize);
       const started = performance.now();
-      let floor = 0, calibrated = 0, spoke = false, lastVoice = 0, done = false;
+      const calibration: number[] = [];
+      let floor = noiseFloor.current, spoke = false, lastVoice = 0, done = false;
+      let voicedMs = 0, quietMs = 0;
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      // Browser recognition provides live words on screen while the more noise-tolerant server
+      // transcription produces the final text. If browser recognition is unavailable, recording still works.
+      const Recognition = browserRecognition();
+      let liveRecognition: BrowserRecognition | undefined;
+      if (Recognition) {
+        try {
+          liveRecognition = new Recognition();
+          liveRecognition.lang = speechLocale(language);
+          liveRecognition.continuous = true;
+          liveRecognition.interimResults = true;
+          liveRecognition.onresult = (event) => {
+            if (session.current !== id) return;
+            let live = "";
+            for (let i = 0; i < event.results.length; i++) live += `${event.results[i][0].transcript} `;
+            if (live.trim()) setHeard(live.replace(/\\s+/g, " ").trim());
+          };
+          liveRecognition.onerror = () => undefined;
+          liveRecognition.onend = () => undefined;
+          liveRecognition.start();
+        } catch { liveRecognition = undefined; }
+      }
       recorder.onstop = async () => {
+        try { liveRecognition?.stop(); } catch { /* already stopped */ }
         if (session.current !== id) return resolve("");
         if (!spoke) return resolve("");
-        try { resolve(await transcribeAudio(await toPcm16Wav(new Blob(chunks, { type: recorder.mimeType || mime || "audio/webm" })), language)); }
-        catch (problem) { /^didn't catch/i.test(problem instanceof Error ? problem.message : "") ? resolve("") : reject(problem); }
+        try {
+          const finalText = await transcribeAudio(await toPcm16Wav(new Blob(chunks, { type: recorder.mimeType || mime || "audio/webm" })), language);
+          if (session.current === id) setHeard(finalText);
+          resolve(finalText);
+        } catch (problem) { /^didn't catch/i.test(problem instanceof Error ? problem.message : "") ? resolve("") : reject(problem); }
       };
-      const finish = () => { if (done) return; done = true; window.clearInterval(res.current.timer); setLevel(0); if (recorder.state !== "inactive") recorder.stop(); };
+      const finish = () => { if (done) return; done = true; window.clearInterval(res.current.timer); setLevel(0); try { liveRecognition?.stop(); } catch { /* already stopped */ } if (recorder.state !== "inactive") recorder.stop(); };
       res.current.finishListening = () => { spoke = spoke || chunks.length > 0 || performance.now() - started > 600; finish(); };
       recorder.start(250);
       res.current.timer = window.setInterval(() => {
@@ -77,11 +104,32 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
         for (const sample of samples) sum += sample * sample;
         const rms = Math.sqrt(sum / samples.length);
         const now = performance.now();
-        // The first moment calibrates to the room's background noise.
-        if (now - started < 350) { floor = (floor * calibrated + rms) / (calibrated + 1); calibrated += 1; noiseFloor.current = floor; return; }
-        const threshold = Math.max(0.015, floor * 3);
-        setLevel(Math.min(1, rms / (threshold * 4)));
-        if (rms > threshold) { spoke = true; lastVoice = now; }
+        // Calibrate longer and use the room's noise level instead of one fixed microphone threshold.
+        if (now - started < 800) {
+          calibration.push(rms);
+          if (calibration.length >= 8) {
+            const sorted = [...calibration].sort((x, y) => x - y);
+            floor = sorted[Math.floor(sorted.length * 0.35)] ?? rms;
+            floor = Math.min(0.12, Math.max(0.002, floor));
+            noiseFloor.current = floor;
+          }
+          return;
+        }
+        const threshold = Math.max(0.009, floor * 2.2);
+        const voiceDetected = rms > threshold;
+        setLevel(Math.min(1, Math.max(0, (rms - floor) / Math.max(0.025, threshold * 4))));
+        if (voiceDetected) {
+          voicedMs += 50; quietMs = 0;
+          if (voicedMs >= 150) { spoke = true; lastVoice = now; }
+        } else {
+          quietMs += 50;
+          voicedMs = Math.max(0, voicedMs - 75);
+          // Track slow room-noise changes only during quiet periods, never during detected speech.
+          if (!spoke || quietMs > 700) {
+            floor = Math.min(0.12, Math.max(0.002, floor * 0.985 + rms * 0.015));
+            noiseFloor.current = floor;
+          }
+        }
         if ((spoke && now - lastVoice > SILENCE_MS) || (!spoke && now - started > NO_SPEECH_MS) || now - started > MAX_TURN_MS) finish();
       }, 50);
     });
@@ -97,6 +145,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       let lastSpeechAt = 0;
       let finished = false;
       const startedAt = performance.now();
+      const localNoiseFloor = noiseFloor.current;
       recognition.lang = speechLocale(language);
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -108,6 +157,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       };
       res.current.timer = window.setInterval(() => {
         const elapsed = performance.now() - (lastSpeechAt || startedAt);
+        // SpeechRecognition itself handles acoustic filtering; this timer only closes a completed phrase.
         if (lastSpeechAt ? elapsed >= SILENCE_MS : elapsed >= NO_SPEECH_MS) finish();
       }, 100);
       recognition.onresult = (event) => {
@@ -207,15 +257,30 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
     const analyser = res.current.analyser;
     if (!analyser) return () => undefined;
     const samples = new Float32Array(analyser.fftSize);
-    let voiced = 0;
+    let voicedMs = 0;
+    let quietMs = 0;
+    let floor = noiseFloor.current;
     const timer = window.setInterval(() => {
       if (session.current !== id) { window.clearInterval(timer); return; }
       analyser.getFloatTimeDomainData(samples);
       let sum = 0;
       for (const sample of samples) sum += sample * sample;
       const rms = Math.sqrt(sum / samples.length);
-      voiced = rms > Math.max(0.05, noiseFloor.current * 6) ? voiced + 50 : Math.max(0, voiced - 50);
-      if (voiced >= 300) { window.clearInterval(timer); onSpeech(); }
+      const threshold = Math.max(0.012, Math.min(0.09, floor * 2.6));
+      if (rms > threshold) {
+        voicedMs += 50;
+        quietMs = 0;
+      } else {
+        quietMs += 50;
+        voicedMs = Math.max(0, voicedMs - 65);
+        // Slowly adapt to a changing room, but don't learn a loud interruption as background noise.
+        if (quietMs >= 500) {
+          floor = Math.min(0.12, Math.max(0.002, floor * 0.985 + rms * 0.015));
+          noiseFloor.current = floor;
+        }
+      }
+      // Require sustained speech to avoid reacting to a click or a short noise burst.
+      if (voicedMs >= 250) { window.clearInterval(timer); onSpeech(); }
     }, 50);
     return () => window.clearInterval(timer);
   }
@@ -283,8 +348,10 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       if (stream) {
         if (session.current !== id) { stream.getTracks().forEach((track) => track.stop()); return; }
         const context = new AudioContext();
+        if (context.state === "suspended") await context.resume().catch(() => undefined);
         const analyser = context.createAnalyser();
-        analyser.fftSize = 1024;
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.15;
         context.createMediaStreamSource(stream).connect(analyser);
         res.current = { ...res.current, stream, context, analyser };
       }
