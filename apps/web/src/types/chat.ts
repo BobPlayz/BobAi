@@ -43,6 +43,8 @@ export type ChatMessage = {
   images?: ChatImage[];
   /** Real pictures shown with the answer (visual learners), credited to their authors. */
   gallery?: Array<{ thumb: string; title: string; page: string; credit: string; license: string }>;
+  /** Topic-specific Google Images search link for the answer's reference pictures. */
+  googleImagesUrl?: string;
   /** True while the reply is still arriving. */
   streaming?: boolean;
   /** The reply stopped before it was finished (length limit or a dropped connection that couldn't be recovered). */

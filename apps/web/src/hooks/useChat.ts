@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { setAssistantActivity } from "@/lib/assistantState";
 import { loadPreferences } from "@/lib/preferences";
-import { explainPicturePrompt, ideaPicturePrompt, topicOf, visualKind } from "@/lib/visuals";
+import { topicOf, visualKind } from "@/lib/visuals";
 import { approveAndRunTool, autoTitleConversation, cancelGeneration, fetchSavedReply, searchPictures, shareConversation, unshareConversation, deleteRemoteMessage, deleteConversation as deleteRemoteConversation, generateImage, listConversations, saveConversation, sendMessage, updateConversation as updateRemoteConversation, uploadFile } from "@/lib/api";
 import type { Conversation, ChatMessage, ChatImage, ChatFile, LiveDataInfo, ToolApproval } from "@/types/chat";
 const STORAGE_KEY = "bobai.conversation-ui.v3";
@@ -226,21 +226,18 @@ export function useChat() {
     }
     return null;
   }
-  /** Pictures with answers (visual learners): real pictures for "ideas" questions, a drawn picture for "explain" ones. Runs after the text reply, so the answer is never slowed down. */
+  /** Add relevant reference pictures after explanatory or idea questions. Never generate artwork automatically. */
   async function addVisuals(conversationId: string, messageId: string, question: string) {
     if (!loadPreferences().visualAnswers) return;
     const kind = visualKind(question);
     if (!kind) return;
     const topic = topicOf(question);
+    const googleImagesUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(topic)}`;
     const patch = (changes: Partial<ChatMessage>) => updateConversation(conversationId, (c) => ({ ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, ...changes } : m) }));
-    patch({ visualPending: true });
+    patch({ visualPending: true, googleImagesUrl });
     try {
-      if (kind === "ideas") {
-        const pictures = await searchPictures(topic).catch(() => []);
-        if (pictures.length) { patch({ gallery: pictures.slice(0, 6), visualPending: false }); return; }
-      }
-      const generated = await generateImage(kind === "explain" ? explainPicturePrompt(topic) : ideaPicturePrompt(topic));
-      patch({ images: imageMessage(generated.images).images, visualPending: false });
+      const pictures = await searchPictures(topic).catch(() => []);
+      patch({ gallery: pictures.slice(0, 6), visualPending: false });
     } catch { patch({ visualPending: false }); }
   }
   /** Makes a read-only share link for a chat, copies it, and remembers that the chat is shared. */

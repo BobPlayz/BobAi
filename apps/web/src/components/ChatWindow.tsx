@@ -233,10 +233,10 @@ function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval
       {message.incomplete && !message.streaming && <p className="mt-3 rounded-xl border border-[var(--danger)]/40 px-3 py-2 text-sm text-[var(--danger)]" role="status">This answer got cut off before it finished. Tap “Try again” to get the full version.</p>}
 
       {message.visualPending && <p className="caption mt-4 animate-pulse normal-case tracking-normal" role="status">Finding a picture to help…</p>}
-      {message.gallery && message.gallery.length > 0 && (
+      {(message.gallery && message.gallery.length > 0 || message.googleImagesUrl) && (
         <div className="mt-5">
           <p className="caption mb-2">Pictures to help</p>
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {message.gallery && message.gallery.length > 0 && <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {message.gallery.map((picture) => (
               <li key={picture.page} className="overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--surface)]">
                 <a href={picture.page} target="_blank" rel="noopener noreferrer" className="block" title={`${picture.title}: open on Wikimedia Commons`}>
@@ -245,8 +245,9 @@ function AssistantMessage({ message, autoPlayId, browserVoice, onResolveApproval
                 <p className="truncate px-2.5 py-1.5 text-[11px] text-[var(--muted)]" title={`${picture.credit} · ${picture.license}`}>{picture.credit} · {picture.license}</p>
               </li>
             ))}
-          </ul>
-          <p className="mt-2 text-[11px] text-[var(--muted)]">From Wikimedia Commons. Tap a picture to see where it&apos;s from.</p>
+          </ul>}
+          {message.gallery && message.gallery.length > 0 && <p className="mt-2 text-[11px] text-[var(--muted)]">Reference pictures from Wikimedia Commons.</p>}
+          {message.googleImagesUrl && <a href={message.googleImagesUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex text-xs text-[var(--accent)] underline underline-offset-2">See more on Google Images</a>}
         </div>
       )}
       {message.images && message.images.length > 0 && (
