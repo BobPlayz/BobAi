@@ -106,10 +106,30 @@ export async function getLiveData(intent: LiveDataIntent, signal?: AbortSignal):
   const cached = fromCache(key);
   if (cached) return cached;
   if (intent.kind === "weather") {
-    const data = await fetchWeatherData(intent.city, signal);
-    const value = { kind: "weather" as const, provider: "Open-Meteo", fetchedAt: new Date().toISOString(), freshness: "live" as const, data, sources: [{ title: "Open-Meteo forecast API", url: "https://open-meteo.com/" }] };
-    remember(key, value, WEATHER_TTL_MS);
-    return { ...value, cached: false };
+    try {
+      const data = await fetchWeatherData(intent.city, signal);
+      const value = { kind: "weather" as const, provider: "Open-Meteo", fetchedAt: new Date().toISOString(), freshness: "live" as const, data, sources: [{ title: "Open-Meteo forecast API", url: "https://open-meteo.com/" }] };
+      remember(key, value, WEATHER_TTL_MS);
+      return { ...value, cached: false };
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      // If the structured weather API is temporarily unreachable, try recent search snippets
+      // rather than immediately giving up. This fallback is explicitly labelled as web search.
+      const monthYear = new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+      const result = await webSearch(`current weather temperature conditions in ${intent.city} today ${monthYear}`, { recency: "day" }, signal);
+      const sources = result.sources.slice(0, 5).map((source) => ({ title: source.title, url: source.url, snippet: source.snippet, publishedAt: source.publishedAt }));
+      if (!sources.length) throw error;
+      const value = {
+        kind: "weather" as const,
+        provider: process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim() ? "Brave Search" : "DuckDuckGo",
+        fetchedAt: new Date().toISOString(),
+        freshness: "web-search" as const,
+        data: { query: result.query, searchWindow: "past 24 hours", structuredWeatherUnavailable: true },
+        sources,
+      };
+      remember(key, value, Math.min(WEATHER_TTL_MS, 2 * 60_000));
+      return { ...value, cached: false };
+    }
   }
   if (intent.kind === "news") {
     // Recent pages only (past week, then past month): news from memory is never current.
@@ -159,7 +179,9 @@ export function liveDataContext(result: LiveDataResult): string {
   const rules = result.kind === "news"
     ? `These are recent news search results (titles and snippets) from the ${String((result.data as { searchWindow?: string }).searchWindow ?? "recent")} window. Today is ${new Date().toISOString().slice(0, 10)}. They were fetched just now, so they ARE current: answer from them and never say you cannot give news or mention a knowledge cutoff. Summarise only what these sources say, give dates where shown, and name the source of each point by its site or title. Never add events, numbers or quotes that are not in them. If they do not answer the question, say you could not find recent news on it.`
     : result.kind === "weather"
-    ? "Answer using only this weather data. Mention the location it resolved to, the observation time, and that it comes from Open-Meteo. If a value is missing, say so."
+    ? result.freshness === "live"
+      ? "Answer using only this structured weather data. Mention the resolved location, observation time, and Open-Meteo as the source. If a value is missing, say so."
+      : `Open-Meteo's structured weather API was unavailable, so these are recent web search snippets for ${String((result.data as { query?: string }).query ?? "the requested location")}, not verified sensor readings. Use only facts stated in the snippets, cite the source sites, and clearly say this is a search-based fallback. If the snippets do not contain an actual current condition or temperature, say that a precise live reading could not be verified instead of guessing.`
     : result.freshness === "live"
       ? "This is a live scoring feed with matches from the last 7 days. Report scores exactly as given with each match's date, say which match each score belongs to, and mention it comes from CricketData.org. Never invent a score."
       : "These are web search results (titles and snippets), not an official scoring feed. Today is " + new Date().toISOString().slice(0, 10) + ". The search only returned pages from the window shown in searchWindow, so these results are recent. scoresFound lists scores copied word for word from those results: if it is not empty, start your answer with that score, the match it belongs to and its source (say it may be a few minutes behind), and do not claim no score exists. Ignore anything that is clearly an older match, a preview or a season summary. Only if no result states a score, say you couldn't find the current score and suggest ESPNcricinfo or Cricbuzz. Never use scores from memory. Never invent a score.";
