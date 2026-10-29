@@ -1,4 +1,4 @@
-export type EmotionalSignal = "positive" | "frustrated" | "neutral";
+export type EmotionalSignal = "happy" | "excited" | "sad" | "curious" | "playful" | "frustrated" | "neutral";
 
 export type ConversationMood = {
   signal: EmotionalSignal;
@@ -6,14 +6,15 @@ export type ConversationMood = {
   context: string;
 };
 
-const POSITIVE = /\b(thank you|thanks|thank u|ty|great|awesome|nice|love it|perfect|good job|you're helpful|you are helpful)\b/i;
-const FRUSTRATED = /\b(you suck|useless|stupid|idiot|shut up|fuck you|fucking|damn it|this is trash|you're dumb|you are dumb)\b/i;
+const SIGNALS: Array<{ signal: Exclude<EmotionalSignal, "neutral">; pattern: RegExp; context: string }> = [
+  { signal: "frustrated", pattern: /\b(you suck|useless|stupid|idiot|shut up|fuck you|fucking|damn it|this is trash|you're dumb|you are dumb|this doesn't work|not working|broken|annoying)\b/i, context: "the user may be frustrated" },
+  { signal: "sad", pattern: /\b(sad|upset|lonely|hurt|heartbroken|depressed|rough day|bad day|feeling down|miss them|miss him|miss her|i'm crying|im crying)\b/i, context: "the user may be feeling down" },
+  { signal: "excited", pattern: /\b(lets go|let's go|so excited|can't wait|cant wait|amazing|incredible|won|we did it|this is awesome|hyped|finally)\b/i, context: "the conversation feels excited" },
+  { signal: "curious", pattern: /\b(how does|how do|why does|why do|what if|i wonder|curious|tell me more|that's interesting|that is interesting)\b/i, context: "the user seems curious" },
+  { signal: "playful", pattern: /\b(lol|lmao|rofl|jk|just kidding|bruh|bro what|no way|wild|thats crazy|that's crazy)\b/i, context: "the conversation feels playful" },
+  { signal: "happy", pattern: /\b(thank you|thanks|thank u|ty|great|nice|love it|perfect|good job|you're helpful|you are helpful|happy|glad|worked|that helped)\b/i, context: "the conversation feels positive" },
+];
 
-/**
- * Derive a lightweight, temporary conversational tone from recent user turns.
- * This is a style signal, not a claim that the model experiences emotions.
- * No mood is persisted or used to deny otherwise-allowed assistance.
- */
 export function getConversationMood(
   messages: Array<{ role?: unknown; content?: unknown }>,
 ): ConversationMood {
@@ -22,38 +23,29 @@ export function getConversationMood(
     .slice(-6)
     .map((message) => (message.content as string).slice(0, 2_000));
 
-  let score = 0;
-  for (const message of recent) {
-    if (FRUSTRATED.test(message)) score -= 2;
-    else if (POSITIVE.test(message)) score += 1;
+  const scores = new Map<EmotionalSignal, number>();
+  for (const [index, message] of recent.entries()) {
+    const recencyWeight = index >= recent.length - 2 ? 2 : 1;
+    for (const item of SIGNALS) {
+      if (item.pattern.test(message)) {
+        scores.set(item.signal, (scores.get(item.signal) ?? 0) + recencyWeight);
+        break;
+      }
+    }
   }
 
-  if (score <= -2) {
-    return {
-      signal: "frustrated",
-      intensity: Math.min(3, Math.abs(score)),
-      context: "the recent conversation has been tense",
-    };
-  }
-  if (score >= 1) {
-    return {
-      signal: "positive",
-      intensity: Math.min(3, score),
-      context: "the recent conversation has been friendly",
-    };
-  }
-  return { signal: "neutral", intensity: 0, context: "the recent conversation is neutral" };
+  const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]);
+  const [signal, score] = ranked[0] ?? ["neutral", 0];
+  if (score <= 0) return { signal: "neutral", intensity: 0, context: "the recent conversation is neutral" };
+
+  const context = SIGNALS.find((item) => item.signal === signal)?.context ?? "the conversation is neutral";
+  return { signal, intensity: Math.min(3, score), context };
 }
 
 export function describeEmotionalContext(
   messages: Array<{ role?: unknown; content?: unknown }>,
 ): string {
   const mood = getConversationMood(messages);
-  if (mood.signal === "frustrated") {
-    return `mildly tense (intensity ${mood.intensity}/3); ${mood.context}`;
-  }
-  if (mood.signal === "positive") {
-    return `friendly (intensity ${mood.intensity}/3); ${mood.context}`;
-  }
-  return "neutral; keep a steady, natural tone";
+  if (mood.signal === "neutral") return "neutral; keep a steady, natural tone";
+  return mood.signal + " (intensity " + mood.intensity + "/3); " + mood.context;
 }
