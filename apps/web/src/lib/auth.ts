@@ -74,6 +74,30 @@ export function refreshSession(): Promise<Session | null> { refreshInFlight ??= 
 // If another tab refreshed at the same moment, this request loses the race (401) but the winner has already set fresh
 // cookies, so one quick retry picks them up instead of signing the person out.
 const postRefresh = () => fetch(`${API}/auth/refresh`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } });
-async function performRefresh(): Promise<Session | null> { try { let res = await postRefresh(); if (res.status === 401) { await new Promise((resolve) => setTimeout(resolve, 400)); res = await postRefresh(); } if (!res.ok) { clearSession(); return null; } const next = await readJson<{ expiresIn?: number }>(res); if (typeof next.expiresIn !== "number") { clearSession(); return null; } session = { accessToken: "", expiresIn: next.expiresIn }; return session; } catch { return null; } }
+async function performRefresh(): Promise<Session | null> {
+  // A short production/API hiccup should not immediately make a returning user look signed out.
+  // Retry transient network/5xx failures, while treating an invalid cookie as signed out after one
+  // cross-tab race retry. Never persist tokens in browser storage.
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      res = await postRefresh();
+      if (res.ok || (res.status >= 400 && res.status < 500)) break;
+    } catch {
+      res = null;
+    }
+    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+  }
+  if (res?.status === 401) {
+    // Another tab may have rotated the cookie immediately before this request.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    try { res = await postRefresh(); } catch { res = null; }
+  }
+  if (!res?.ok) { clearSession(); return null; }
+  const next = await readJson<{ expiresIn?: number }>(res);
+  if (typeof next.expiresIn !== "number") { clearSession(); return null; }
+  session = { accessToken: "", expiresIn: next.expiresIn };
+  return session;
+}
 export function hasCompletedOnboarding() { if (typeof window === "undefined") return false; return localStorage.getItem(ONBOARDING_KEY) === "complete"; }
 export function saveOnboarding(_answers: unknown) { localStorage.setItem(ONBOARDING_KEY, "complete"); }
