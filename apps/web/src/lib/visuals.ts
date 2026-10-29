@@ -1,8 +1,5 @@
-/**
- * Pictures with answers (for visual learners): "ideas" questions get real pictures, "explain" questions get a simple
- * drawn picture. Decided from the question alone, so chit-chat and maths never trigger it.
- */
-export type VisualKind = "ideas" | "explain";
+/** Optional educational visuals for users who explicitly ask Jarvis to explain a topic. */
+export type VisualKind = "explain";
 
 const EXPLAIN = /\b(?:please\s+)?(?:explain|teach me|help me understand|walk me through|break down)\b/i;
 const MATHS = /^[\s\d+\-*/^().=x?]+$|\b(solve|calculate|equation)\b/i;
@@ -27,6 +24,3 @@ export function explainPicturePrompt(topic: string) {
   return `simple friendly educational illustration that explains ${topic} for a student, clean flat colors, clear shapes, diagram style, white background, no text, no letters, no words`;
 }
 
-export function ideaPicturePrompt(topic: string) {
-  return `beautiful example of ${topic}, clear, bright, high quality, no text`;
-}
