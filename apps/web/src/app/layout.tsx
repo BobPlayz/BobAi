@@ -7,6 +7,7 @@ import CookieConsent from "@/components/CookieConsent";
 import ServiceWorker from "@/components/ServiceWorker";
 import Toaster from "@/components/Toaster";
 import { siteUrl } from "@/lib/siteUrl";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Type system: a characterful grotesque for headlines, a calm sans for reading, a mono for labels.
 // next/font self-hosts these at build time, so no request goes to Google from the visitor's browser.
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </ThemeProvider>
           </div>
         </div>
+        <SpeedInsights />
       </body>
     </html>
   );
