@@ -4,18 +4,18 @@
  */
 export type VisualKind = "ideas" | "explain";
 
-const IDEAS = /\b(ideas?|designs?|examples?|inspiration|inspo|suggest(ions?)?|recommend|show me|pictures? of|photos? of|images? of|look like|types of|kinds of|styles? of|patterns?)\b/i;
-const EXPLAIN = /\b(explain|how does|how do|how is|how are|what is|what are|why does|why do|why is|teach me|help me understand|diagram|parts of|life cycle|process of)\b/i;
+const EXPLAIN = /\b(?:please\s+)?(?:explain|teach me|help me understand|walk me through|break down)\b/i;
 const MATHS = /^[\s\d+\-*/^().=x?]+$|\b(solve|calculate|equation)\b/i;
 const SOCIAL_CHAT = /^(?:(?:hello|hi|hey|yo|sup)[,!?. ]+)?(?:jarvis[,!?. ]+)?(?:(?:what'?s up|how are you(?: doing)?|how'?s it going|how have you been|what are you up to|you there|are you there)[^?!.]{0,30}[?!. ]*)+$/i;
 const FILLER = new Set(["recommend", "suggest", "suggestions", "suggestion", "me", "some", "any", "good", "cool", "nice", "best", "ideas", "idea", "give", "show", "can", "could", "you", "u", "please", "pls", "plz", "i", "want", "need", "for", "a", "an", "the", "of", "to", "my", "on", "about", "explain", "how", "does", "do", "is", "are", "what", "why", "teach", "help", "understand", "tell", "inspiration", "inspo", "examples", "example", "pictures", "picture", "photos", "photo", "images", "image", "look", "like", "with", "and", "in", "simple", "simply", "easy", "way", "it", "works", "work"]);
 
 export function visualKind(question: string): VisualKind | null {
   const text = question.trim();
-  if (text.length < 8 || SOCIAL_CHAT.test(text) || MATHS.test(text) || topicOf(text).split(" ").filter(Boolean).length === 0) return null;
-  if (IDEAS.test(text)) return "ideas";
-  if (EXPLAIN.test(text)) return "explain";
-  return null;
+  // Visuals are an opt-in learning aid, not decoration: only an explicit request to explain a topic qualifies.
+  if (text.length < 8 || SOCIAL_CHAT.test(text) || MATHS.test(text) || !EXPLAIN.test(text)) return null;
+  const topic = topicOf(text);
+  if (!topic || topic.split(" ").filter(Boolean).length === 0) return null;
+  return "explain";
 }
 
 /** The subject of a question: "recommend me muggulu ideas" -> "muggulu". */
