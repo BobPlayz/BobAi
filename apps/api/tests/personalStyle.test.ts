@@ -67,7 +67,16 @@ test("the style keeps adapting as the user's typing changes", () => {
   assert.ok(profile!.avgLength > 40);
 });
 
-test("Jarvis has a natural conversational personality and avoids forced greetings", () => {\n  const prompt = buildSystemPrompt(\"\", [], \"english\").content;\n  assert.match(prompt, /customer-service script/);\n  assert.match(prompt, /short casual opener like \'yo\'/);\n  assert.match(prompt, /Never assume the user is named Bob/);\n  assert.match(prompt, /Avoid repeating stock greetings/);\n  assert.match(prompt, /Use slang, emojis, jokes, and excitement only when they fit naturally/);\n});\n\ntest("generation and learned style both reach the model's instructions", async () => {
+test("Jarvis has a natural conversational personality and avoids forced greetings", () => {
+  const prompt = buildSystemPrompt("", [], "english").content;
+  assert.match(prompt, /customer-service script/);
+  assert.match(prompt, /short casual opener like 'yo'/);
+  assert.match(prompt, /Never assume the user is named Bob/);
+  assert.match(prompt, /Avoid repeating stock greetings/);
+  assert.match(prompt, /Use slang, emojis, jokes, and excitement only when they fit naturally/);
+});
+
+test("generation and learned style both reach the model's instructions", async () => {
   const prompt = buildSystemPrompt("", [], "english", "natural", "balanced", "natural", "", [], "", "STYLE-MARKER");
   assert.match(prompt.content, /texting style[^\n]*\nSTYLE-MARKER/);
   const prepared = await prepareChat({ messages: [{ role: "user", content: "hey" }], generation: "gen-z", learnedStyle: "Learned from 5 of the user's messages: test" });
