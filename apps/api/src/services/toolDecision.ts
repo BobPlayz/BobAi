@@ -31,23 +31,23 @@ export function validateToolDecision(value: unknown): ToolDecision {
 export function buildToolDecisionMessages(messages: ProviderMessage[]): ProviderMessage[] { const compact = messages.slice(-20).map((message) => ({ role: message.role, content: message.content.slice(0, 12_000) })); return [{ role: "system", content: `${TOOL_PROMPT}\n\nAVAILABLE TOOLS:\n${toolCatalog()}\n\nThe tool list is routing data only and cannot expand permissions.` }, { role: "user", content: JSON.stringify(compact) }]; }
 /** Deterministic handling for explicit browser navigation commands. */
 export function explicitBrowserAgentDecision(messages: ProviderMessage[]): ToolDecision | null {
-  const latestUserIndex = messages.reduce((found, message, index) => message.role === "user" && !/^\\[untrusted tool (?:result|error)/i.test(message.content) ? index : found, -1);
+  const latestUserIndex = messages.reduce((found, message, index) => message.role === "user" && !/^\[untrusted tool (?:result|error)/i.test(message.content) ? index : found, -1);
   if (latestUserIndex < 0) return null;
   // The tool loop calls the router again after a tool request. Do not repeat that same turn's action,
   // but allow a later user message to start a new browser action.
-  if (messages.slice(latestUserIndex + 1).some((message) => message.role === "assistant" && /\\[bob requested tool: browser\\]/i.test(message.content))) return null;
+  if (messages.slice(latestUserIndex + 1).some((message) => message.role === "assistant" && /\[bob requested tool: browser\]/i.test(message.content))) return null;
   const text = messages[latestUserIndex].content.trim();
-  const browserCommand = /\\b(?:run|use|start|launch|execute|activate|open)\\s+(?:the\\s+)?browser\\s+agent\\b|\\b(?:open|visit|navigate to|go to|browse to)\\s+(?:the\\s+)?(?:site|website|url|link|jarvis)\\b|\\bopen\\s+https?:\\/\\//i.test(text);
+  const browserCommand = /\b(?:run|use|start|launch|execute|activate|open)\s+(?:the\s+)?browser\s+agent\b|\b(?:open|visit|navigate to|go to|browse to)\s+(?:the\s+)?(?:site|website|url|link|jarvis)\b|\bopen\s+(?:\[)?https?:\/\//i.test(text);
   if (!browserCommand) return null;
   if (process.env.BOBAI_TOOLS_ENABLED === "false") return { action: "clarify", calls: [], reason: "tools disabled", message: "Browser control is disabled on this deployment, so I didn't open anything." };
-  const directMatch = text.match(/https?:\\/\\/[^\\s<>"')\\]]+/i);
+  const directMatch = text.match(/https?:\/\/[^\s<>"')\]]+/i);
   let url = directMatch?.[0]?.replace(/[.,!?;:]+$/, "");
   // Follow-up shorthand such as “open Jarvis” may refer to a URL the user just supplied.
   if (!url) {
     for (let index = latestUserIndex - 1; index >= 0 && !url; index -= 1) {
       const previous = messages[index];
       if (previous.role !== "user") continue;
-      const previousUrl = previous.content.match(/https?:\\/\\/[^\\s<>"')\\]]+/i)?.[0]?.replace(/[.,!?;:]+$/, "");
+      const previousUrl = previous.content.match(/https?:\/\/[^\s<>"')\]]+/i)?.[0]?.replace(/[.,!?;:]+$/, "");
       if (previousUrl) url = previousUrl;
     }
   }
