@@ -51,8 +51,8 @@ export function explicitBrowserAgentDecision(messages: ProviderMessage[]): ToolD
       if (previousUrl) url = previousUrl;
     }
   }
-  if (!url) return { action: "clarify", calls: [], reason: "browser URL required", message: "Which website should I open? Send its URL, or paste it here first and say “open Jarvis”." };
-  if (!toolProviderConfigured("browser")) return { action: "clarify", calls: [], reason: "browser provider not configured", message: "I can't control a browser from this deployment yet because its browser provider isn't configured. I haven't opened anything." };
+  if (!url) return { action: "clarify", calls: [], reason: "browser URL required", message: "Which website should I open? Send its full URL, including https://. No browser action has been run yet." };
+  if (!toolProviderConfigured("browser")) return { action: "clarify", calls: [], reason: "browser provider not configured", message: "The browser agent is not configured on this Jarvis deployment, so I cannot run it yet. No browser action was performed." };
   return validateToolDecision({ action: "use_tools", calls: [{ tool: "browser", arguments: { url } }] });
 }
 export async function decideTools(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal): Promise<ToolDecision> { if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); const explicitBrowser = explicitBrowserAgentDecision(messages); if (explicitBrowser) return explicitBrowser; const choice = routingChoice(modelId); const result = await bobModelProvider.chat(buildToolDecisionMessages(messages), "bob", choice.preferredModel, signal, "tool_decision"); if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); return validateToolDecision(extractJson(result.content)); }
