@@ -73,6 +73,37 @@ test("explicit browser-agent requests select the real browser tool when configur
   }
 });
 
+
+test("opening a URL directly routes to the browser agent", () => {
+  const previous = process.env.BOBAI_BROWSER_PROVIDER_URL;
+  process.env.BOBAI_BROWSER_PROVIDER_URL = "https://browser.example.test";
+  try {
+    const decision = explicitBrowserAgentDecision([{ role: "user", content: "open [https://jarvis-x-ai-two.vercel.app](https://jarvis-x-ai-two.vercel.app)" }]);
+    assert.equal(decision?.action, "use_tools");
+    assert.deepEqual(decision?.calls, [{ tool: "browser", arguments: { url: "https://jarvis-x-ai-two.vercel.app" } }]);
+  } finally {
+    if (previous === undefined) delete process.env.BOBAI_BROWSER_PROVIDER_URL;
+    else process.env.BOBAI_BROWSER_PROVIDER_URL = previous;
+  }
+});
+
+test("opening Jarvis reuses a URL supplied in the previous user message", () => {
+  const previous = process.env.BOBAI_BROWSER_PROVIDER_URL;
+  process.env.BOBAI_BROWSER_PROVIDER_URL = "https://browser.example.test";
+  try {
+    const decision = explicitBrowserAgentDecision([
+      { role: "user", content: "Use the browser agent on https://jarvis-x-ai-two.vercel.app" },
+      { role: "assistant", content: "Which page do you want me to open?" },
+      { role: "user", content: "open Jarvis" },
+    ]);
+    assert.equal(decision?.action, "use_tools");
+    assert.deepEqual(decision?.calls, [{ tool: "browser", arguments: { url: "https://jarvis-x-ai-two.vercel.app" } }]);
+  } finally {
+    if (previous === undefined) delete process.env.BOBAI_BROWSER_PROVIDER_URL;
+    else process.env.BOBAI_BROWSER_PROVIDER_URL = previous;
+  }
+});
+
 test("explicit browser routing does not repeat after a browser tool was requested", () => {
   const decision = explicitBrowserAgentDecision([
     { role: "user", content: "run browser agent on https://example.com" },
