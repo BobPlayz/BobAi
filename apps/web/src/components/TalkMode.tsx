@@ -127,7 +127,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
           }
           return;
         }
-        const threshold = Math.max(0.012, Math.min(0.08, floor * 2.2));
+        const threshold = Math.max(0.018, Math.min(0.18, floor * 2.4 + 0.008));
         const voiceDetected = rms > threshold;
         setLevel(Math.min(1, Math.max(0, (rms - floor) / Math.max(0.025, threshold * 4))));
         if (voiceDetected) {
@@ -277,7 +277,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       let sum = 0;
       for (const sample of samples) sum += sample * sample;
       const rms = Math.sqrt(sum / samples.length);
-      const threshold = Math.max(0.012, Math.min(0.09, floor * 2.6));
+      const threshold = Math.max(0.02, Math.min(0.2, floor * 2.8 + 0.01));
       if (rms > threshold) {
         voicedMs += 50;
         quietMs = 0;
