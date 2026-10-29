@@ -7,11 +7,12 @@ export type VisualKind = "ideas" | "explain";
 const IDEAS = /\b(ideas?|designs?|examples?|inspiration|inspo|suggest(ions?)?|recommend|show me|pictures? of|photos? of|images? of|look like|types of|kinds of|styles? of|patterns?)\b/i;
 const EXPLAIN = /\b(explain|how does|how do|how is|how are|what is|what are|why does|why do|why is|teach me|help me understand|diagram|parts of|life cycle|process of)\b/i;
 const MATHS = /^[\s\d+\-*/^().=x?]+$|\b(solve|calculate|equation)\b/i;
+const SOCIAL_CHAT = /^(?:(?:hello|hi|hey|yo|sup|good morning|good afternoon|good evening)[,!?. ]*)?(?:(?:jarvis)[,!?. ]*)?(?:(?:what's up|whats up|how are you|how are you doing|how's it going|hows it going|how have you been|what are you up to|you there|are you there)[?!. ]*)+$/i;
 const FILLER = new Set(["recommend", "suggest", "suggestions", "suggestion", "me", "some", "any", "good", "cool", "nice", "best", "ideas", "idea", "give", "show", "can", "could", "you", "u", "please", "pls", "plz", "i", "want", "need", "for", "a", "an", "the", "of", "to", "my", "on", "about", "explain", "how", "does", "do", "is", "are", "what", "why", "teach", "help", "understand", "tell", "inspiration", "inspo", "examples", "example", "pictures", "picture", "photos", "photo", "images", "image", "look", "like", "with", "and", "in", "simple", "simply", "easy", "way", "it", "works", "work"]);
 
 export function visualKind(question: string): VisualKind | null {
   const text = question.trim();
-  if (text.length < 8 || MATHS.test(text) || topicOf(text).split(" ").filter(Boolean).length === 0) return null;
+  if (text.length < 8 || SOCIAL_CHAT.test(text) || MATHS.test(text) || topicOf(text).split(" ").filter(Boolean).length === 0) return null;
   if (IDEAS.test(text)) return "ideas";
   if (EXPLAIN.test(text)) return "explain";
   return null;
