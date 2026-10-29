@@ -226,7 +226,7 @@ export function useChat() {
     }
     return null;
   }
-  /** Add relevant reference pictures after explanatory or idea questions. Never generate artwork automatically. */
+  /** Add reference pictures only after an explicit request to explain a topic. Never generate artwork automatically. */
   async function addVisuals(conversationId: string, messageId: string, question: string) {
     if (!loadPreferences().visualAnswers) return;
     const kind = visualKind(question);
