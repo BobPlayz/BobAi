@@ -42,7 +42,6 @@ export async function runConnectedAppAction(args: ActionArgs, context: { userId:
     }
     return { sent: true, provider: args.provider === "google" ? "Gmail" : "Outlook", recipient, subject };
   }
-  if (args.provider !== "microsoft") throw new Error("This document action requires a connected Microsoft 365 account.");
   const content = (args.content || "").trim();
   if (args.action === "create_pdf") {
     const title = (args.subject || args.filename || "Jarvis document").trim().slice(0, 160);
@@ -96,6 +95,7 @@ export async function runConnectedAppAction(args: ActionArgs, context: { userId:
     const item = await saved.json() as { name?: string; webUrl?: string };
     return { created: true, format: "PDF", name: item.name || pdfName, webUrl: item.webUrl || null, provider: "OneDrive" };
   }
+  if (args.provider !== "microsoft") throw new Error("This document action requires a connected Microsoft 365 account.");
   const filename = safeFilename(args.filename || args.subject || "Jarvis document", args.action === "create_word_document" ? ".doc" : args.action === "create_excel_csv" ? ".csv" : args.action === "create_onenote_page" ? ".html" : ".txt");
   if (!content || content.length > 100_000) throw new Error("Document content is required and must be under 100,000 characters.");
   if (args.action === "create_onenote_page") {
