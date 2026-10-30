@@ -3,7 +3,7 @@
 import AuthGate from "@/components/AuthGate";
 import { request } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 type Integration = { id: string; provider: string; displayName?: string | null; scopes?: unknown; createdAt: string };
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -14,7 +14,6 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 function IntegrationsContent() {
   const router = useRouter();
-  const params = useSearchParams();
   const [items, setItems] = useState<Integration[]>([]);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -25,6 +24,7 @@ function IntegrationsContent() {
   }, []);
   useEffect(() => { void refresh().catch(e => setError(e instanceof Error ? e.message : "Could not load connected apps")); }, [refresh]);
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
     const provider = params.get("provider");
@@ -36,7 +36,7 @@ function IntegrationsContent() {
       .catch(e => { if (active) setError(e instanceof Error ? e.message : "Connection failed"); })
       .finally(() => { if (active) setBusy(""); });
     return () => { active = false; };
-  }, [params, refresh, router]);
+  }, [refresh, router]);
   async function connect(provider: "google" | "microsoft") {
     setBusy(provider); setError(""); setNotice("");
     try {
