@@ -100,7 +100,7 @@ p, dd, li { text-wrap: pretty; }
 /* ---------- Motion primitives (all disabled under reduced motion) ---------- */
 .reveal { opacity: 0; transform: translateY(28px); transition: opacity 900ms var(--ease-out), transform 1100ms var(--ease-out); transition-delay: var(--delay, 0ms); }
 .reveal.is-in { opacity: 1; transform: none; }
-.split-word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.split-word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.18em; margin-bottom: -0.18em; }
 .split-word > span { display: inline-block; transform: translateY(105%); animation: wordUp 1100ms var(--ease-out) forwards; animation-delay: var(--delay, 0ms); }
 @keyframes wordUp { to { transform: translateY(0); } }
 .marquee { display: flex; overflow: hidden; user-select: none; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
