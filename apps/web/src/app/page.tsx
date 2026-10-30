@@ -102,7 +102,7 @@ export default function HomePage() {
           <h1 className="font-display mt-6 text-[clamp(3.4rem,9.5vw,9.4rem)] leading-[0.9]">
             <SplitWords text="An assistant," start={120} />
             <br />
-            <em className="text-[var(--accent)]"><SplitWords text="not an oracle." start={360} /></em>
+            <em className="text-[var(--accent)]"><SplitWords text="not a guru." start={360} /></em>
           </h1>
           <Reveal delay={700} className="mt-8 max-w-[34rem]">
             <p className="text-lg leading-8 text-[var(--muted)] sm:text-xl sm:leading-9">
