@@ -1,6 +1,6 @@
 import { getConnectedAccessToken } from "./oauth.js";
 
-type ActionArgs = { provider: "google" | "microsoft"; action: "search_email" | "send_email" | "create_word_document" | "create_excel_csv" | "create_onenote_page" | "create_pdf" | "save_file"; query?: string; recipient?: string; subject?: string; content?: string; filename?: string };
+type ActionArgs = { provider: "google" | "microsoft"; action: "search_email" | "send_email" | "create_word_document" | "create_excel_csv" | "create_onenote_page" | "create_pdf" | "list_calendar_events" | "create_calendar_event" | "list_tasks" | "create_task" | "save_file"; query?: string; recipient?: string; subject?: string; content?: string; filename?: string };
 function safeFilename(value: string, extension: string) { const base = value.trim().replace(/\.[a-z0-9]{1,8}$/i, "").replace(/[^a-z0-9 _-]/gi, "").replace(/\s+/g, "-").slice(0, 80) || "jarvis-document"; return base + extension; }
 async function requestJson(url: string, token: string, init?: RequestInit) {
   const headers = new Headers(init?.headers); headers.set("authorization", "Bearer " + token); headers.set("accept", "application/json");
@@ -94,6 +94,28 @@ export async function runConnectedAppAction(args: ActionArgs, context: { userId:
     if (!saved.ok) throw new Error("OneDrive could not save the generated PDF.");
     const item = await saved.json() as { name?: string; webUrl?: string };
     return { created: true, format: "PDF", name: item.name || pdfName, webUrl: item.webUrl || null, provider: "OneDrive" };
+  }
+  if (args.provider !== "microsoft" && ["list_calendar_events", "create_calendar_event", "list_tasks", "create_task"].includes(args.action)) throw new Error("This action requires a connected Microsoft 365 account.");
+  if (args.action === "list_calendar_events") {
+    const data = await requestJson("https://graph.microsoft.com/v1.0/me/events?$top=10&$orderby=start/dateTime&$select=id,subject,start,end,location,webLink", token);
+    return { app: "Outlook Calendar", events: Array.isArray(data.value) ? data.value : [] };
+  }
+  if (args.action === "create_calendar_event") {
+    const start = new Date(String(args.start)); const end = new Date(String(args.end));
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) throw new Error("A valid event start and later end time are required.");
+    const result = await requestJson("https://graph.microsoft.com/v1.0/me/events", token, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ subject: args.subject, body: { contentType: "Text", content: args.content || "" }, start: { dateTime: start.toISOString(), timeZone: "UTC" }, end: { dateTime: end.toISOString(), timeZone: "UTC" } }) });
+    return { created: true, app: "Outlook Calendar", subject: result.subject, start: result.start, end: result.end, webLink: result.webLink || null };
+  }
+  if (args.action === "list_tasks" || args.action === "create_task") {
+    const lists = await requestJson("https://graph.microsoft.com/v1.0/me/todo/lists", token);
+    const first = Array.isArray(lists.value) ? lists.value[0] as Record<string, unknown> | undefined : undefined;
+    if (!first || typeof first.id !== "string") throw new Error("No Microsoft To Do list was found.");
+    if (args.action === "list_tasks") {
+      const tasks = await requestJson("https://graph.microsoft.com/v1.0/me/todo/lists/" + encodeURIComponent(first.id) + "/tasks?$top=20", token);
+      return { app: "Microsoft To Do", list: first.displayName, tasks: Array.isArray(tasks.value) ? tasks.value : [] };
+    }
+    const created = await requestJson("https://graph.microsoft.com/v1.0/me/todo/lists/" + encodeURIComponent(first.id) + "/tasks", token, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: args.subject, body: { content: args.content || "" } }) });
+    return { created: true, app: "Microsoft To Do", title: created.title, id: created.id };
   }
   if (args.provider !== "microsoft") throw new Error("This document action requires a connected Microsoft 365 account.");
   const filename = safeFilename(args.filename || args.subject || "Jarvis document", args.action === "create_word_document" ? ".doc" : args.action === "create_excel_csv" ? ".csv" : args.action === "create_onenote_page" ? ".html" : ".txt");
