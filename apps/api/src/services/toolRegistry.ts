@@ -26,7 +26,6 @@ const tools: BobTool[] = [
   { id: "blender", name: "Blender 3D builder", description: "create, edit, render, export, and verify authorized 3D scenes and models in Blender", risk: "write", requiresUserApproval: true, permission: "write", timeoutMs: 600_000, maxResultBytes: 20 * 1024 * 1024, retryable: false, enabled: true, inputSchema: objectSchema({ operation: { type: "string", maxLength: 32, enum: ["create_model", "edit_model", "render", "export", "verify"] }, prompt: { type: "string", maxLength: 20_000 }, outputPath: { type: "string", maxLength: 1_000 }, format: { type: "string", maxLength: 24, enum: ["blend", "glb", "gltf", "obj", "fbx", "stl", "png"] } }, ["operation", "prompt"]) },
   { id: "coding", name: "coding workspace", description: "inspect and modify an authorized project workspace", risk: "write", requiresUserApproval: true, permission: "write", timeoutMs: 300_000, maxResultBytes: 2 * 1024 * 1024, retryable: false, enabled: true, inputSchema: objectSchema({ task: { type: "string", maxLength: 20_000 } }, ["task"]) },
   { id: "website-test", name: "website tester", description: "test an authorized web app for functional and accessibility issues", risk: "external", requiresUserApproval: true, permission: "external", timeoutMs: 120_000, maxResultBytes: 5 * 1024 * 1024, retryable: true, enabled: true, inputSchema: objectSchema({ url: { type: "string", maxLength: 4_000 } }, ["url"]) },
-  { id: "connected-apps", name: "connected apps", description: "use a user-connected Google or Microsoft account to search or send email, create Word-compatible documents, Excel-compatible CSV files, OneNote pages, PDFs, and files to OneDrive; sending or creating external content always requires explicit one-time user approval", risk: "external", requiresUserApproval: true, permission: "external", timeoutMs: 60_000, maxResultBytes: 2 * 1024 * 1024, retryable: false, enabled: true, inputSchema: objectSchema({ provider: { type: "string", enum: ["google", "microsoft"] }, action: { type: "string", enum: ["search_email", "send_email", "create_word_document", "create_excel_csv", "create_onenote_page", "create_pdf", "list_calendar_events", "create_calendar_event", "list_tasks", "create_task", "save_file"] }, query: { type: "string", maxLength: 500 }, recipient: { type: "string", maxLength: 320 }, subject: { type: "string", maxLength: 500 }, content: { type: "string", maxLength: 100000 }, filename: { type: "string", maxLength: 120 }, start: { type: "string", maxLength: 80 }, end: { type: "string", maxLength: 80 }, timeZone: { type: "string", maxLength: 80 } }, ["provider", "action"]) },
   { id: "documents", name: "document intelligence", description: "extract, OCR, compare, and answer questions from documents", risk: "read", requiresUserApproval: false, permission: "read", timeoutMs: 120_000, maxResultBytes: 10 * 1024 * 1024, retryable: true, enabled: true, inputSchema: objectSchema({ query: { type: "string", maxLength: 2_000 } }, ["query"]) },
   { id: "knowledge", name: "knowledge base", description: "retrieve relevant user-owned knowledge with source references", risk: "read", requiresUserApproval: false, permission: "read", timeoutMs: 30_000, maxResultBytes: 5 * 1024 * 1024, retryable: true, enabled: true, inputSchema: objectSchema({ query: { type: "string", maxLength: 2_000 } }, ["query"]) },
   { id: "diagrams", name: "diagram generator", description: "turn structured ideas into editable diagrams", risk: "write", requiresUserApproval: true, permission: "write", timeoutMs: 120_000, maxResultBytes: 5 * 1024 * 1024, retryable: true, enabled: true, inputSchema: objectSchema({ prompt: { type: "string", maxLength: 12_000 } }, ["prompt"]) },
@@ -46,22 +45,6 @@ export function validateToolInput(tool: BobTool, value: unknown): string | null 
   const input = value as Record<string, unknown>;
   for (const required of tool.inputSchema.required || []) if (!(required in input)) return `missing required argument: ${required}`;
   if (Object.keys(input).some((key) => !(key in tool.inputSchema.properties))) return "unknown tool argument";
-  if (tool.id === "connected-apps") {
-    const action = input.action;
-    const needs: Record<string, string[]> = {
-      search_email: ["query"], send_email: ["recipient", "subject", "content"],
-      create_word_document: ["subject", "content"], create_excel_csv: ["subject", "content"],
-      create_onenote_page: ["subject", "content"], create_pdf: ["subject", "content"],
-      create_calendar_event: ["subject", "start", "end"], create_task: ["subject"],
-    };
-    for (const field of needs[String(action)] || []) if (typeof input[field] !== "string" || !(input[field] as string).trim()) return "Jarvis needs " + field + " before it can safely continue";
-    if (action === "create_calendar_event") {
-      const start = Date.parse(String(input.start)); const end = Date.parse(String(input.end));
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return "calendar event needs valid start and end times, with the end after the start";
-    }
-    if (action !== "search_email" && action !== "list_calendar_events" && action !== "list_tasks" && action !== "create_task" && action !== "create_calendar_event" && action !== "send_email" && action !== "create_word_document" && action !== "create_excel_csv" && action !== "create_onenote_page" && action !== "create_pdf" && action !== "save_file") return "unknown connected app action";
-    if (action === "send_email" && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(input.recipient))) return "send_email needs a valid recipient email address";
-  }
   for (const [key, schema] of Object.entries(tool.inputSchema.properties)) {
     if (!(key in input)) continue;
     const item = input[key];
