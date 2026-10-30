@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Moon, Sun, Trash2, RefreshCw, Pencil, Check, X } from "lucide-react";
 import { useTheme } from "@/components/neural/ThemeProvider";
-import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, getTypingProfile, getUsage, type TypingProfile, exportAccountData, getModelStatus, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
+import { clearMemories, confirmAccountDeletion, deleteMemory, deleteSetting, getTypingProfile, getUsage, type TypingProfile, exportAccountData, listMemories, requestAccountDeletionCode, updateMemory } from "@/lib/api";
 import { isGuest, logout } from "@/lib/auth";
 import { deleteGuestAccount, logOutEverywhere } from "@/lib/api";
 
@@ -59,8 +59,6 @@ export default function SettingsPage() {
   const [memoryEditContent, setMemoryEditContent] = useState("");
   const [exportBusy, setExportBusy] = useState(false);
   const [exportMessage, setExportMessage] = useState("");
-  const [providerStatus, setProviderStatus] = useState<{ ready?: boolean; provider?: string; model?: string; modelId?: string; error?: string } | null>(null);
-  const [providerStatusError, setProviderStatusError] = useState("");
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
@@ -73,18 +71,6 @@ export default function SettingsPage() {
   function arm(action: "account" | "memories" | "guest") { setArmed(action); window.clearTimeout(armTimer.current); armTimer.current = window.setTimeout(() => setArmed(null), 6_000); }
 
   useEffect(() => setSettings(readSettings()), []);
-
-  useEffect(() => {
-    if (tab !== "about") return;
-    let cancelled = false;
-    setProviderStatusError("");
-    void getModelStatus().then((status) => {
-      if (!cancelled) setProviderStatus(status);
-    }).catch((error: unknown) => {
-      if (!cancelled) setProviderStatusError(error instanceof Error ? error.message : "Provider status is unavailable.");
-    });
-    return () => { cancelled = true; };
-  }, [tab]);
 
   useEffect(() => {
     if (tab !== "memory") return;
@@ -378,7 +364,7 @@ export default function SettingsPage() {
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
               <h2 className="font-display text-2xl">Privacy basics</h2>
               <ul className={`mt-4 list-disc space-y-3 pl-5 text-sm leading-6 ${colors.muted}`}>
-                <li>Chat requests are sent to the Jarvis API configured for this installation. The model provider depends on that server’s configuration.</li>
+                <li>Your messages are processed by Jarvis to generate replies and use the features you request. Avoid sharing passwords or other highly sensitive information in chat.</li>
                 <li>Your response style, generation and memory preferences are stored in this browser. If “Learn how I type” is on, Jarvis keeps a small texting-style profile (numbers and slang words only) with your account.</li>
                 <li>Do not enter secrets into chat or personalization instructions.</li>
                 <li>Use the export and account-deletion controls below for server-side account data. Account deletion has a 30-day grace period; per-category automatic retention controls are not available yet.</li>
@@ -547,21 +533,10 @@ export default function SettingsPage() {
           {tab === "about" && (
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
               <h2 className="font-display text-2xl">About Jarvis</h2>
-              <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>Jarvis is a work-in-progress AI chat workspace. Available features depend on the API and provider configured by the person running this installation.</p>
+              <p className={`mt-2 text-sm leading-6 ${colors.muted}`}>Jarvis brings conversation, research, voice, coding, files and creative tools together in one place. Its features are designed to make everyday tasks simpler.</p>
               <div className={`mt-5 rounded-xl border p-4 text-sm ${colors.field}`}>
-                <div className="font-medium">Current appearance</div>
+                <div className="font-medium">Your appearance</div>
                 <div className={`mt-1 ${colors.muted}`}>{light ? "Light mode" : "Dark mode"} · saved in this browser</div>
-              </div>
-              <div className={`mt-4 rounded-xl border p-4 text-sm ${colors.field}`}>
-                <div className="font-medium">Configured AI provider</div>
-                {providerStatus ? (
-                  <>
-                    <div className={`mt-2 ${colors.muted}`}>Provider: {providerStatus.provider || "reported by API"}</div>
-                    <div className={`mt-1 ${colors.muted}`}>Model: {providerStatus.model || providerStatus.modelId || "not reported"}</div>
-                    <div className={`mt-1 ${providerStatus.ready ? "text-emerald-600" : "text-amber-600"}`}>{providerStatus.ready ? "Ready" : providerStatus.error || "Not ready"}</div>
-                  </>
-                ) : <p className={`mt-2 ${colors.muted}`}>{providerStatusError || "Checking provider status…"}</p>}
-                <p className={`mt-2 text-xs ${colors.muted}`}>This reports server configuration only. It does not guarantee live provider availability or disclose API keys.</p>
               </div>
             </section>
           )}
