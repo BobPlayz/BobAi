@@ -13,7 +13,7 @@ function config(provider: string): OAuthProviderConfig {
   const env = (name: string) => process.env[name]?.trim() || "";
   const presets: Record<string, OAuthProviderConfig> = {
     google: { authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth", tokenUrl: "https://oauth2.googleapis.com/token", clientId: env("GOOGLE_CLIENT_ID"), clientSecret: env("GOOGLE_CLIENT_SECRET") || undefined, scopes: ["openid", "email", "profile", "https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/gmail.send", "https://www.googleapis.com/auth/drive.file"], authParams: { access_type: "offline", prompt: "consent" } },
-    microsoft: { authorizationUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token", clientId: env("MICROSOFT_CLIENT_ID"), clientSecret: env("MICROSOFT_CLIENT_SECRET") || undefined, scopes: ["openid", "profile", "email", "offline_access", "User.Read", "Mail.Read", "Mail.Send", "Files.ReadWrite.All", "Sites.ReadWrite.All"], authParams: { prompt: "select_account" } },
+    microsoft: { authorizationUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize", tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token", clientId: env("MICROSOFT_CLIENT_ID"), clientSecret: env("MICROSOFT_CLIENT_SECRET") || undefined, scopes: ["openid", "profile", "email", "offline_access", "User.Read", "Mail.Read", "Mail.Send", "Files.ReadWrite.All", "Sites.ReadWrite.All", "Notes.ReadWrite.All", "Calendars.ReadWrite", "Tasks.ReadWrite"], authParams: { prompt: "select_account" } },
   };
   const preset = presets[provider];
   if (!custom && !preset) throw new Error("OAuth provider is not configured");
