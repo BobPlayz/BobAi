@@ -20,14 +20,19 @@ export function nextOccurrence(date: Date, rule: string | null, now = new Date()
 
   // Advance by calendar months and clamp dates such as January 31 to the
   // final day of the target month instead of overflowing into the next month.
-  while (next <= now) {
-    const day = next.getUTCDate();
-    next.setUTCDate(1);
-    next.setUTCMonth(next.getUTCMonth() + 1);
-    const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
-    next.setUTCDate(Math.min(day, lastDay));
+  const anchorDay = next.getUTCDate();
+  const anchorMonth = next.getUTCFullYear() * 12 + next.getUTCMonth();
+  let monthsAhead = Math.max(1, (now.getUTCFullYear() * 12 + now.getUTCMonth()) - anchorMonth);
+  for (;;) {
+    const targetMonth = anchorMonth + monthsAhead;
+    const year = Math.floor(targetMonth / 12);
+    const month = targetMonth % 12;
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const candidate = new Date(next);
+    candidate.setUTCFullYear(year, month, Math.min(anchorDay, lastDay));
+    if (candidate > now) return candidate;
+    monthsAhead += 1;
   }
-  return next;
 }
 
 export async function runReminderSweep() {
