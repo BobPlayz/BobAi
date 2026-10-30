@@ -48,16 +48,17 @@ Codes are 6 digits, expire after 10 minutes, are single use, allow 5 attempts, a
 
 ## Frequent reminder scheduling on Vercel Hobby
 
-Vercel Hobby cron jobs are limited to one run per day. For more frequent reminder checks without upgrading Vercel, use a free external scheduler such as [cron-job.org](https://cron-job.org/):
+Vercel Hobby cron jobs are limited to one run per day. Jarvis now includes a separate free GitHub Actions scheduler that calls the reminder endpoint every five minutes, without using Vercel cron execution:
 
-1. In Vercel → Project → Settings → Environment Variables, add `CRON_SECRET` with a long random value for **Production**. Keep it private.
-2. Redeploy after the build quota is available.
-3. In cron-job.org, create a job for `https://jarvis-x-ai-two.vercel.app/api/cron/reminders`.
-4. Set the schedule to every minute and the request method to **GET**.
-5. Add the HTTP header `Authorization` with value `Bearer YOUR_CRON_SECRET` (replace the placeholder with the exact Vercel secret).
-6. Save the job and check its execution history. A successful request returns HTTP 200 with `{ "ok": true }`.
+1. In Vercel → Project → Settings → Environment Variables, add `CRON_SECRET` as a **Sensitive** Production variable with a long random value. Keep it private.
+2. In GitHub → repository Settings → Secrets and variables → Actions, add a repository secret with the exact same name, `CRON_SECRET`, and the exact same value.
+3. Redeploy the Vercel project after the build quota is available.
+4. In GitHub → Actions, enable workflows if prompted, then open **Jarvis reminder scheduler**. Use **Run workflow** once to test it.
+5. Check the workflow run. A successful endpoint response is HTTP 200 with `{ "ok": true }`.
 
-The endpoint is safe to call repeatedly: reminder rows are claimed transactionally before a notification is inserted. Keep the built-in Vercel daily cron as a backup if desired. The worker creates in-app notifications; it does not send email or push notifications.
+The workflow is `.github/workflows/reminder-scheduler.yml` and runs every five minutes on the default branch. GitHub may delay scheduled runs, so this is not an exact real-time guarantee. The built-in Vercel daily cron remains as a backup. The endpoint is safe to call repeatedly because reminder rows are claimed transactionally before a notification is inserted. It creates in-app notifications only; it does not send email or push notifications.
+
+If you prefer an external scheduler, cron-job.org can call `https://jarvis-x-ai-two.vercel.app/api/cron/reminders` with the same `Authorization: Bearer <CRON_SECRET>` header.
 
 ## Checking a deployment
 
