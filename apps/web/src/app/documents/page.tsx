@@ -45,7 +45,13 @@ function zipStore(files: Array<{ name: string; data: string }>) {
   const ev = new DataView(end.buffer);
   u32(ev, 0, 0x06054b50); u16(ev, 4, 0); u16(ev, 6, 0); u16(ev, 8, files.length); u16(ev, 10, files.length);
   u32(ev, 12, centralSize); u32(ev, 16, offset); u16(ev, 20, 0);
-  return new Blob([...locals, ...centrals, end], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  const chunks = [...locals, ...centrals, end];
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const buffer = new ArrayBuffer(totalLength);
+  const output = new Uint8Array(buffer);
+  let cursor = 0;
+  for (const chunk of chunks) { output.set(chunk, cursor); cursor += chunk.length; }
+  return new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 }
 function xmlEscape(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
