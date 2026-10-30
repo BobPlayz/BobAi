@@ -40,6 +40,7 @@ async function callConfiguredProvider(tool: BobTool, args: Record<string, unknow
 }
 
 const EXECUTORS: Record<string, Executor> = {
+  "connected-apps": async (args, context) => (await import("./connectedApps.js")).runConnectedAppAction(args as Parameters<typeof import("./connectedApps.js").runConnectedAppAction>[0], context),
   weather: async (args, context) => (await import("./toolExecution.js")).fetchWeatherData(String(args.city || ""), context.signal),
   cricket: async (args, context) => {
     const query = String(args.query || "").trim();
