@@ -271,7 +271,7 @@ export default function SettingsPage() {
           <header className="mb-7 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="font-display text-5xl leading-none">{tabs.find((item) => item.id === tab)?.label}</h1>
-              <p className={`mt-2 text-sm ${colors.muted}`}>Manage the preferences Jarvis currently supports.</p>
+              <p className={`mt-2 text-sm ${colors.muted}`}>Make Jarvis feel more like you.</p>
             </div>
             <Link href="/chat" className={`rounded-lg border px-3 py-2 text-sm ${colors.button}`}>Back to chat</Link>
           </header>
@@ -367,11 +367,11 @@ export default function SettingsPage() {
                 <li>Your messages are processed by Jarvis to generate replies and use the features you request. Avoid sharing passwords or other highly sensitive information in chat.</li>
                 <li>Your response style, generation and memory preferences are stored in this browser. If “Learn how I type” is on, Jarvis keeps a small texting-style profile (numbers and slang words only) with your account.</li>
                 <li>Do not enter secrets into chat or personalization instructions.</li>
-                <li>Use the export and account-deletion controls below for server-side account data. Account deletion has a 30-day grace period; per-category automatic retention controls are not available yet.</li>
+                <li>Use the export and account-deletion controls below to manage your account data. Account deletion has a 30-day grace period.</li>
               </ul>
               <div className={`mt-5 rounded-xl border p-4 ${colors.field}`}>
                 <h3 className="text-sm font-medium">Your account data</h3>
-                <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Download the account data currently available through the authenticated API. The export may contain private conversations and account information, so keep the file secure.</p>
+                <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Download a copy of the account information currently available to Jarvis. It may include private conversations and personal details, so keep the file secure.</p>
                 <button type="button" onClick={() => void downloadAccountExport()} disabled={exportBusy} className="mt-3 rounded-lg bg-[var(--ink)] px-3 py-2 text-sm font-semibold text-[var(--bg)] disabled:opacity-40">{exportBusy ? "Preparing export…" : "Export account data"}</button>
                 {exportMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{exportMessage}</p>}
               </div>
