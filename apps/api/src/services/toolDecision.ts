@@ -22,7 +22,7 @@ export function validateToolDecision(value: unknown): ToolDecision {
     const call = raw as Record<string, unknown>;
     if (typeof call.tool !== "string" || !call.tool.trim() || !call.arguments || typeof call.arguments !== "object" || Array.isArray(call.arguments)) return { action: "respond", calls: [], reason: "invalid tool call" };
     const tool = getTool(call.tool.trim()); if (!tool || !toolProviderConfigured(tool.id)) return { action: "respond", calls: [], reason: `unknown or disabled tool: ${call.tool}` };
-    const args = call.arguments as Record<string, unknown>; const validation = validateToolInput(tool, args); if (validation) return tool.id === "connected-apps" ? { action: "clarify", calls: [], message: `${validation}. What should I use?` } : { action: "respond", calls: [], reason: `${tool.id}: ${validation}` };
+    const args = call.arguments as Record<string, unknown>; const validation = validateToolInput(tool, args); if (validation) return { action: "respond", calls: [], reason: `${tool.id}: ${validation}` };
     calls.push({ tool: tool.id, arguments: args });
   }
   if (calls.filter((call) => getTool(call.tool)?.requiresUserApproval).length > 1) return { action: "respond", calls: [], reason: "multiple approval-required tools cannot be bundled into one decision" };
