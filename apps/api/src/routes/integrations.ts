@@ -21,7 +21,7 @@ router.delete("/:id", limit, async (req, res) => {
   try {
     const workspace = await resolveUserWorkspace(req.user!.id);
     if (!workspace) return res.status(403).json({ error: "workspace access denied" });
-    const [row] = await db.update(integrations).set({ isEnabled: false, deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(integrations.id, id), eq(integrations.workspaceId, workspace.id), eq(integrations.createdBy, req.user!.id), isNull(integrations.deletedAt))).returning({ id: integrations.id });
+    const [row] = await db.update(integrations).set({ isEnabled: false, encryptedCredentials: null, deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(integrations.id, id), eq(integrations.workspaceId, workspace.id), eq(integrations.createdBy, req.user!.id), isNull(integrations.deletedAt))).returning({ id: integrations.id });
     return row ? res.json({ disconnected: true }) : res.status(404).json({ error: "connected app not found" });
   } catch { return res.status(503).json({ error: "could not disconnect app" }); }
 });
