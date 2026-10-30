@@ -43,6 +43,7 @@ export async function runConnectedAppAction(args: ActionArgs, context: { userId:
     return { sent: true, provider: args.provider === "google" ? "Gmail" : "Outlook", recipient, subject };
   }
   if (args.provider !== "microsoft") throw new Error("This document action requires a connected Microsoft 365 account.");
+  const content = (args.content || "").trim();
   if (args.action === "create_pdf") {
     const title = (args.subject || args.filename || "Jarvis document").trim().slice(0, 160);
     const html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>" + title.replace(/[<>&"]/g, "") + "</title></head><body><h1>" + title.replace(/[<>&"]/g, "") + "</h1><pre style=\"white-space:pre-wrap;font:11pt Arial;line-height:1.5\">" + content.replace(/[<>&"]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[ch] || ch)) + "</pre></body></html>";
@@ -96,7 +97,6 @@ export async function runConnectedAppAction(args: ActionArgs, context: { userId:
     return { created: true, format: "PDF", name: item.name || pdfName, webUrl: item.webUrl || null, provider: "OneDrive" };
   }
   const filename = safeFilename(args.filename || args.subject || "Jarvis document", args.action === "create_word_document" ? ".doc" : args.action === "create_excel_csv" ? ".csv" : args.action === "create_onenote_page" ? ".html" : ".txt");
-  const content = (args.content || "").trim();
   if (!content || content.length > 100_000) throw new Error("Document content is required and must be under 100,000 characters.");
   if (args.action === "create_onenote_page") {
     const html = "<html><head><title>" + (args.subject || filename).replace(/[<>&"]/g, "") + "</title></head><body><h1>" + (args.subject || filename).replace(/[<>&"]/g, "") + "</h1><pre>" + content.replace(/[<>&"]/g, ch => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[ch] || ch)) + "</pre></body></html>";
