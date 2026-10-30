@@ -1,8 +1,8 @@
 # Jarvis
 
-> Jarvis is a free AI assistant at https://jarvis-x-ai-two.vercel.app. It chats, helps with homework and code, builds simple websites you can open straight away, finds live news and weather with real sources, reads files and photos, and talks back in a British voice. It asks before acting and never makes up live data or sources.
+> Jarvis is an AI assistant at https://jarvis-x-ai-two.vercel.app. It chats, helps with homework and code, builds simple websites you can open straight away, finds live news and weather with real sources, reads files and photos, and talks back in a British voice. It asks before acting and never makes up live data or sources.
 
-Made by BobPlayz (Origin Productions) as a school project. Answers come from open AI models through Ollama. You can try it without an account ("Just try it, no email needed") or sign in with an emailed code. No password.
+Built by Origin Productions. Jarvis combines AI models and useful tools in one website. You can try it without an account ("Just try it, no email needed") or sign in with an emailed code. No password.
 
 ## What it does
 
@@ -22,7 +22,7 @@ Made by BobPlayz (Origin Productions) as a school project. Answers come from ope
 - [Demo](https://jarvis-x-ai-two.vercel.app/demo): the interface with clearly labelled sample data, no account needed.
 - [About](https://jarvis-x-ai-two.vercel.app/about): the project and who builds it.
 - [FAQ](https://jarvis-x-ai-two.vercel.app/faq): common questions.
-- [Contact](https://jarvis-x-ai-two.vercel.app/contact): how to reach the developer.
+- [Contact](https://jarvis-x-ai-two.vercel.app/contact): how to get in touch.
 - [Privacy](https://jarvis-x-ai-two.vercel.app/privacy) and [Terms](https://jarvis-x-ai-two.vercel.app/terms).
 
 ## Accuracy
