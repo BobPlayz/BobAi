@@ -3,7 +3,8 @@ import { getConnectedAccessToken } from "./oauth.js";
 type ActionArgs = { provider: "google" | "microsoft"; action: "search_email" | "send_email" | "create_word_document" | "create_excel_csv" | "create_onenote_page" | "create_pdf" | "save_file"; query?: string; recipient?: string; subject?: string; content?: string; filename?: string };
 function safeFilename(value: string, extension: string) { const base = value.trim().replace(/\.[a-z0-9]{1,8}$/i, "").replace(/[^a-z0-9 _-]/gi, "").replace(/\s+/g, "-").slice(0, 80) || "jarvis-document"; return base + extension; }
 async function requestJson(url: string, token: string, init?: RequestInit) {
-  const headers = new Headers(init?.headers); headers.set("authorization", "Bearer " + token); headers.set("accept", "application/json");\n  const response = await fetch(url, { ...init, headers, redirect: "error", signal: AbortSignal.timeout(25_000) });
+  const headers = new Headers(init?.headers); headers.set("authorization", "Bearer " + token); headers.set("accept", "application/json");
+  const response = await fetch(url, { ...init, headers, redirect: "error", signal: AbortSignal.timeout(25_000) });
   const raw = await response.text();
   if (!response.ok) throw new Error("Connected app request failed (" + response.status + "). Check the account permissions and try reconnecting.");
   if (raw.length > 2_000_000) throw new Error("Connected app returned too much data.");
