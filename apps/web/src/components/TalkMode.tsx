@@ -83,7 +83,7 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
             // Recognition is a second speech signal: do not let a noisy-room RMS threshold discard words the browser heard.
             const changedSpeech = Array.from({ length: Math.max(0, event.results.length - event.resultIndex) }, (_, index) => event.results[event.resultIndex + index][0].transcript).some((text) => text.trim().length > 0);
             if (changedSpeech) { spoke = true; lastVoice = performance.now(); }
-            if (live.trim()) { liveText = live.replace(/\\s+/g, " ").trim(); setHeard(liveText); }
+            if (live.trim()) { liveText = live.replace(/\s+/g, " ").trim(); setHeard(liveText); }
           };
           liveRecognition.onerror = () => undefined;
           liveRecognition.onend = () => undefined;
