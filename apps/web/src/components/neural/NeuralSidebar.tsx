@@ -15,6 +15,7 @@ import {
   Link as LinkIcon,
   LogOut,
   Settings,
+  FolderKanban,
   Share2,
   Trash2,
   Pencil,
@@ -203,6 +204,10 @@ export default function NeuralSidebar({
       </div>
 
       <div className="border-t border-[var(--hairline)] p-3">
+        <Link href="/tools" className="convo-item">
+          <FolderKanban className="h-4 w-4" aria-hidden />
+          Tools & library
+        </Link>
         <Link href="/settings" className="convo-item">
           <Settings className="h-4 w-4" aria-hidden />
           Settings
