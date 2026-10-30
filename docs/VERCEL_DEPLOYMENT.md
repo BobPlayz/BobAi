@@ -44,6 +44,21 @@ Resend and most email APIs only deliver to other people from a domain you own, a
 
 Codes are 6 digits, expire after 10 minutes, are single use, allow 5 attempts, are stored hashed, and are never logged. One email per address per minute, 10 requests per address per 15 minutes.
 
+
+
+## Frequent reminder scheduling on Vercel Hobby
+
+Vercel Hobby cron jobs are limited to one run per day. For more frequent reminder checks without upgrading Vercel, use a free external scheduler such as [cron-job.org](https://cron-job.org/):
+
+1. In Vercel → Project → Settings → Environment Variables, add `CRON_SECRET` with a long random value for **Production**. Keep it private.
+2. Redeploy after the build quota is available.
+3. In cron-job.org, create a job for `https://jarvis-x-ai-two.vercel.app/api/cron/reminders`.
+4. Set the schedule to every minute and the request method to **GET**.
+5. Add the HTTP header `Authorization` with value `Bearer YOUR_CRON_SECRET` (replace the placeholder with the exact Vercel secret).
+6. Save the job and check its execution history. A successful request returns HTTP 200 with `{ "ok": true }`.
+
+The endpoint is safe to call repeatedly: reminder rows are claimed transactionally before a notification is inserted. Keep the built-in Vercel daily cron as a backup if desired. The worker creates in-app notifications; it does not send email or push notifications.
+
 ## Checking a deployment
 
 - `GET /api/health` → `{"status":"ok"}` when the API is running.
