@@ -10,7 +10,7 @@ const faqs = [
   ["How do I log out?", "Tap Log out at the bottom of the chat sidebar, or go to Settings → Privacy, where you can also log out on all your devices."],
   ["Can I talk to it?", "Yes. Tap Talk in the chat for a hands-free voice conversation: just speak, Jarvis answers out loud when you pause. It works best in Chrome, Edge or Safari."],
   ["Can it reply in my language?", "Yes. Pick a reply language when you set up, or any time in Settings. Jarvis sticks to it unless you ask for a translation."],
-  ["Can it build websites?", "Ask for something like \"a simple calculator website\" and press Preview to try it right in the chat, Open to run it full screen, or Download to keep it. You can preview the result in chat, open it full screen, or download it."],
+  ["Can it build websites?", "Ask for something like \"a simple calculator website\" and press Preview to try it right in the chat, Open to run it full screen, or Download to keep it."],
   ["Does it remember things?", "Only when you ask, for example \"remember that my cat is called Max\". You can see and delete everything it knows about you in Settings → What I know."],
   ["Is there a limit?", "Usage limits may apply to messages, pictures and voice. You can check your available message allowance in Settings."],
   ["Can I share a chat?", "Yes. Tap ⋯ next to a chat and choose Share link. Anyone with the link sees a read-only copy of the chat as it was then, never anything you say after. Choose Stop sharing to turn the link off."],
