@@ -16,7 +16,6 @@ import {
   LogOut,
   Settings,
   FolderKanban,
-  Plug,
   Share2,
   Trash2,
   Pencil,
@@ -209,9 +208,9 @@ export default function NeuralSidebar({
           <FolderKanban className="h-4 w-4" aria-hidden />
           Tools & library
         </Link>
-        <Link href="/integrations" className="convo-item">
-          <Plug className="h-4 w-4" aria-hidden />
-          Connected apps
+        <Link href="/documents" className="convo-item">
+          <Download className="h-4 w-4" aria-hidden />
+          Documents
         </Link>
         <Link href="/settings" className="convo-item">
           <Settings className="h-4 w-4" aria-hidden />
