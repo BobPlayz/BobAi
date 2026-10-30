@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import NeuralShell from "@/components/neural/NeuralShell";
 import NeuralTopbar from "@/components/neural/NeuralTopbar";
@@ -28,7 +29,7 @@ const SAMPLE: ChatMessage[] = [
 
 
 export default function DemoPage() {
-  const messages = SAMPLE;
+  const [messages, setMessages] = useState<ChatMessage[]>(SAMPLE);
 
   return (
     <NeuralShell
@@ -51,6 +52,9 @@ export default function DemoPage() {
       <ChatWindow
         messages={messages}
         loading={false}
+        onPinMessage={(id) => setMessages((current) => current.map((message) => message.id === id ? { ...message, pinned: !message.pinned } : message))}
+        onDeleteMessage={(id) => setMessages((current) => current.filter((message) => message.id !== id))}
+        onResolveApproval={() => undefined}
         browserVoice
       />
     </NeuralShell>
