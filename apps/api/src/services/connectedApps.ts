@@ -1,6 +1,6 @@
 import { getConnectedAccessToken } from "./oauth.js";
 
-type ActionArgs = { provider: "google" | "microsoft"; action: "search_email" | "send_email" | "create_word_document" | "create_excel_csv" | "create_onenote_page" | "create_pdf" | "list_calendar_events" | "create_calendar_event" | "list_tasks" | "create_task" | "save_file"; query?: string; recipient?: string; subject?: string; content?: string; filename?: string };
+type ActionArgs = { provider: "google" | "microsoft"; action: "search_email" | "send_email" | "create_word_document" | "create_excel_csv" | "create_onenote_page" | "create_pdf" | "list_calendar_events" | "create_calendar_event" | "list_tasks" | "create_task" | "save_file"; query?: string; recipient?: string; subject?: string; content?: string; filename?: string; start?: string; end?: string; timeZone?: string };
 function safeFilename(value: string, extension: string) { const base = value.trim().replace(/\.[a-z0-9]{1,8}$/i, "").replace(/[^a-z0-9 _-]/gi, "").replace(/\s+/g, "-").slice(0, 80) || "jarvis-document"; return base + extension; }
 async function requestJson(url: string, token: string, init?: RequestInit) {
   const headers = new Headers(init?.headers); headers.set("authorization", "Bearer " + token); headers.set("accept", "application/json");
