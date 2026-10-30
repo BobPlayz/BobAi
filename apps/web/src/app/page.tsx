@@ -96,10 +96,10 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto grid max-w-[1320px] gap-10 px-5 pb-16 pt-12 sm:px-8 lg:grid-cols-12 lg:gap-6 lg:pb-24 lg:pt-20">
+      <section className="mx-auto grid max-w-[1320px] gap-10 px-5 pb-16 pt-8 sm:px-8 lg:grid-cols-12 lg:gap-6 lg:pb-24 lg:pt-12">
         <div className="lg:col-span-7 lg:pt-6">
           <p className="caption reveal is-in">No. 01 — Your own AI sidekick</p>
-          <h1 className="font-display mt-6 pb-2 text-[clamp(3.4rem,9.5vw,9.4rem)] leading-[1.05]">
+          <h1 className="font-display mt-6 pb-2 text-[clamp(3rem,8vw,8rem)] leading-[0.96]">
             <SplitWords text="An assistant," start={120} />
             <br />
             <em className="text-[var(--accent)]"><SplitWords text="not a guru." start={360} /></em>
