@@ -14,7 +14,7 @@ function extractJson(value: string): unknown { const trimmed = value.trim(); if 
 export function validateToolDecision(value: unknown): ToolDecision {
   if (process.env.BOBAI_TOOLS_ENABLED === "false") return { action: "respond", calls: [], reason: "tools are disabled" };
   if (!value || typeof value !== "object" || Array.isArray(value)) return { action: "respond", calls: [], reason: "invalid router output" };
-  const record = value as Record<string, unknown>; if (record.action === "respond") return { action: "respond", calls: [] };
+  const record = value as Record<string, unknown>; if (record.action === "respond") return { action: "respond", calls: [] }; if (record.action === "clarify") { const message = typeof record.message === "string" ? record.message.trim().slice(0, 600) : ""; return message ? { action: "clarify", calls: [], message } : { action: "respond", calls: [], reason: "clarification message missing" }; }
   if (record.action !== "use_tools" || !Array.isArray(record.calls) || record.calls.length === 0 || record.calls.length > MAX_TOOL_CALLS) return { action: "respond", calls: [], reason: "invalid tool decision" };
   const calls: ToolCall[] = [];
   for (const raw of record.calls) {
