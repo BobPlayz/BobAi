@@ -36,7 +36,8 @@ export function nextOccurrence(date: Date, rule: string | null, now = new Date()
 }
 
 export async function runReminderSweep() {
-  if (running || !process.env.DATABASE_URL) return;
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not configured");
+  if (running) return;
   running = true;
   try {
     const now = new Date();
@@ -53,4 +54,10 @@ export async function runReminderSweep() {
     }
   } finally { running = false; }
 }
-export function startReminderWorker() { void runReminderSweep().catch(() => undefined); const timer = setInterval(() => { void runReminderSweep().catch(() => undefined); }, INTERVAL_MS); timer.unref(); return timer; }
+export function startReminderWorker() {
+  const run = () => { void runReminderSweep().catch((error) => console.error("reminder worker sweep failed", error)); };
+  run();
+  const timer = setInterval(run, INTERVAL_MS);
+  timer.unref();
+  return timer;
+}
