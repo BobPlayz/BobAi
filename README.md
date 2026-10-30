@@ -133,18 +133,3 @@ Vercel hosts the website and the API. For the AI, either use **Ollama Cloud** (s
 ## License
 
 All rights reserved © BobPlayz. Ask before reusing.
-
-## Connected apps (Google and Microsoft 365)
-
-Jarvis includes account linking at `/integrations`. It uses OAuth authorization-code flow with PKCE, one-time state, encrypted refresh-token storage, workspace/user isolation, and explicit approval before sending email or creating external files/events.
-
-Supported actions:
-- Google: Gmail message search, send email, create Google Docs content and export PDF to Drive.
-- Microsoft 365: Outlook mail search/send, Outlook Calendar event listing/creation, OneNote pages, Microsoft To Do tasks, Word-compatible documents, Excel-compatible CSV files, PDF export, and OneDrive files.
-
-To activate account linking on a deployment, configure these server-side Vercel environment variables for the API:
-- `BOBAI_CREDENTIAL_ENCRYPTION_KEY`: 64 hexadecimal characters (32 random bytes). This key is already provisioned for the Jarvis Vercel project.
-- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: credentials from a Google Cloud OAuth web application. Enable Gmail API and Google Drive API; add the exact redirect URI `https://YOUR-JARVIS-DOMAIN/integrations?provider=google`.
-- `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET`: credentials from a Microsoft Entra app registration. Add the exact redirect URI `https://YOUR-JARVIS-DOMAIN/integrations?provider=microsoft` and grant delegated Microsoft Graph permissions for User.Read, Mail.Read, Mail.Send, Files.ReadWrite.All, Sites.ReadWrite.All, Notes.ReadWrite.All, Calendars.ReadWrite, and Tasks.ReadWrite.
-
-After adding or changing environment variables, redeploy the project. Provider consent/verification and any tenant admin consent are controlled by Google and Microsoft. Jarvis never asks users to paste their provider passwords or OAuth secrets into chat.
