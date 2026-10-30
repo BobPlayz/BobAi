@@ -15,9 +15,8 @@ import { audioUrl, browserRecognition, getVoiceAvailability, speakable, speechLo
 type Phase = "starting" | "listening" | "thinking" | "speaking" | "error";
 type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void; minimized?: boolean; onMinimize?: () => void; onExpand?: () => void; /** Cancels the answer being worked out (you started talking again). */ onCancel?: () => void };
 
-// Keep the pause after a finished utterance short so voice replies start quickly.
-// 1.2s still leaves room for natural phrasing without adding a long dead-air delay.
-const SILENCE_MS = 1_200;
+// Wait for a full 5 seconds of silence so natural pauses do not cut the user off.
+const SILENCE_MS = 5_000;
 const NO_SPEECH_MS = 8_000;
 const MAX_TURN_MS = 30_000;
 
