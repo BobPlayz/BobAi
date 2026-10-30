@@ -3,11 +3,11 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 
 export const metadata = {
   title: "About",
-  description: "What Jarvis is, how it works, and who builds it.",
+  description: "Discover Jarvis, an AI assistant that brings useful tools together in one place.",
 };
 
 const parts = [
-  ["Open models", "Every answer comes from open AI models through Ollama. No secret third-party AI."],
+  ["One workspace", "Bring chat, research, voice, coding, files and creative tools together without constantly switching between websites."],
   ["Shows its sources", "Research, weather and cricket answers say where the facts came from and when they were fetched."],
   ["Asks first", "Anything that acts for you, like running a tool, waits for your approval."],
 ] as const;
@@ -19,7 +19,7 @@ export default function AboutPage() {
         <Breadcrumbs current="About" />
         <h1 className="font-display mt-6 text-6xl leading-none">About <em className="text-[var(--accent)]">Jarvis.</em></h1>
         <p className="mt-6 text-lg leading-8 text-[var(--muted)]">
-          Jarvis is a chill personal assistant for chat, research, voice, pictures, coding and files, in your language. It is a school project by a Class 8 student, built and published by Origin Productions.
+          Jarvis is an AI assistant for everyday tasks. Ask questions, explore topics, work with files and images, write code, use voice, and access useful tools from one website.
         </p>
         <div className="mt-12 grid gap-8 border-t border-[var(--hairline)] pt-8 sm:grid-cols-3">
           {parts.map(([title, text]) => (
