@@ -109,7 +109,7 @@ export default function LoginPage() {
         <Link href="/" className="atelier-wordmark" aria-label="Jarvis home"><JarvisMark />Jarvis</Link>
         <div>
           <p className="caption">Sign in</p>
-          <p className="font-display mt-4 text-6xl leading-[0.95]">An assistant,<br /><em className="text-[var(--accent)]">not an oracle.</em></p>
+          <p className="font-display mt-4 text-6xl leading-[0.95]">An assistant,<br /><em className="text-[var(--accent)]">not a guru.</em></p>
           <p className="mt-6 max-w-sm text-[var(--muted)]">No password to remember. We email you a 6-digit code each time you sign in.</p>
         </div>
         <Link href="/demo" className="caption hover:text-[var(--text)]">Just looking? Try the demo →</Link>
