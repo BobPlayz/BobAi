@@ -20,7 +20,7 @@ Built by Origin Productions. Jarvis combines AI models and useful tools in one w
 
 - [Home](https://jarvis-x-ai-two.vercel.app/): what Jarvis is and how it works.
 - [Demo](https://jarvis-x-ai-two.vercel.app/demo): the interface with clearly labelled sample data, no account needed.
-- [About](https://jarvis-x-ai-two.vercel.app/about): the project and who builds it.
+- [About](https://jarvis-x-ai-two.vercel.app/about): what Jarvis is and what it can do.
 - [FAQ](https://jarvis-x-ai-two.vercel.app/faq): common questions.
 - [Contact](https://jarvis-x-ai-two.vercel.app/contact): how to get in touch.
 - [Privacy](https://jarvis-x-ai-two.vercel.app/privacy) and [Terms](https://jarvis-x-ai-two.vercel.app/terms).
