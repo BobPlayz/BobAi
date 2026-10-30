@@ -4,7 +4,7 @@ import { runReminderSweep } from "../services/reminderWorker.js";
 
 const router = Router();
 
-router.post("/reminders", async (req, res) => {
+router.get("/reminders", async (req, res) => {
   const secret = process.env.CRON_SECRET;
   const authorization = req.header("authorization") || "";
   const expected = secret ? `Bearer ${secret}` : "";
