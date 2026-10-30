@@ -15,8 +15,8 @@ import { audioUrl, browserRecognition, getVoiceAvailability, speakable, speechLo
 type Phase = "starting" | "listening" | "thinking" | "speaking" | "error";
 type Props = { language: string; onUtterance: (text: string) => Promise<string | null>; onClose: () => void; minimized?: boolean; onMinimize?: () => void; onExpand?: () => void; /** Cancels the answer being worked out (you started talking again). */ onCancel?: () => void };
 
-// Wait for a full 5 seconds of silence so natural pauses do not cut the user off.
-const SILENCE_MS = 5_000;
+// Wait 2.5 seconds after speech ends before sending the turn.
+const SILENCE_MS = 2_500;
 const NO_SPEECH_MS = 8_000;
 const MAX_TURN_MS = 30_000;
 
