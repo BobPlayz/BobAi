@@ -12,6 +12,7 @@ import { isLightweightConversation } from "../services/lightweightConversation.j
 import { enrichMessagesWithVision } from "../services/visionChat.js";
 import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
+import { detectLiveDataIntent, getLiveData, liveDataContext } from "../services/liveData.js";
 const router = Router(); const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; const chatLimit = createUserRateLimit(20, 60_000); const MAX_SETTINGS_LOOKUP = 50; const MAX_PROJECT_INSTRUCTIONS = 12_000;
 function relevantMemories(memories: Array<Record<string, unknown>> | null) { if (!memories?.length) return []; return memories.slice(0, 12).map((memory) => `${typeof memory.category === "string" ? memory.category : "memory"}: ${typeof memory.content === "string" ? memory.content : ""}`); }
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
@@ -42,7 +43,21 @@ router.post("/", chatLimit, async (req, res) => {
     if (prepared.memoryRequest && prepared.latestUserMessage) { if (!memoryEnabled) return res.json({ reply: "memory is off, so i won't save that.", title: prepared.title, memoryStored: false, agent: selectedModelId }); if (isSensitiveMemory(prepared.latestUserMessage.content)) return res.json({ reply: "i won't store passwords, codes, keys, or other sensitive secrets in memory.", title: prepared.title, memoryStored: false, agent: selectedModelId }); const stored = await dbRemember({ workspaceId: workspace.id, userId: req.user!.id, projectId, key: "explicit memory", value: prepared.latestUserMessage.content.trim() }); if (!stored) return res.status(503).json({ error: "memory storage unavailable" }); return res.json({ reply: "got it. i will remember that for future conversations.", title: prepared.title, memoryStored: true, agent: selectedModelId, projectId: projectId ?? null }); }
     if (req.body?.conversationId !== undefined && (typeof req.body.conversationId !== "string" || !UUID.test(req.body.conversationId))) return res.status(400).json({ error: "invalid conversationId" });
     const conversationId = typeof req.body?.conversationId === "string" && req.body.conversationId.trim() ? req.body.conversationId.trim() : randomUUID(); const requestedMessages = Array.isArray(enrichedMessages) ? enrichedMessages : [];
-    const loop = await runToolLoop(prepared.providerMessages, { userId: req.user!.id, workspaceId: workspace.id, approvalToken: typeof req.body?.approvalToken === "string" ? req.body.approvalToken : undefined, modelId: selectedModelId, signal: controller.signal, mode: typeof req.body?.mode === "string" ? req.body.mode : undefined }, async (messages, _modelId, signal) => decideTools(messages as any, selectedModelId, signal), async (messages) => { const result = await runChat(messages as any, selectedModelId, controller.signal); return { content: result.message.content }; });
+    const recentUserContext = prepared.providerMessages.filter((message) => message.role === "user").slice(-4).map((message) => message.content).join("\n");
+    const liveIntent = detectLiveDataIntent(recentUserContext || prepared.latestUserMessage?.content || "");
+    let loop;
+    if (liveIntent) {
+      try {
+        const liveData = await getLiveData(liveIntent, controller.signal);
+        const result = await runChat([...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }], selectedModelId, controller.signal);
+        loop = { status: "completed" as const, message: result.message.content, toolCalls: 1, usedTools: [liveIntent.kind === "weather" ? "weather" : liveIntent.kind === "cricket" ? "cricket" : "research"], backgroundJobIds: [] as string[] };
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
+        loop = { status: "failed" as const, message: "I couldn't verify the live information just now. No current figure or condition has been confirmed, so I won't guess. Please try again shortly.", toolCalls: 1, usedTools: [liveIntent.kind === "weather" ? "weather" : liveIntent.kind === "cricket" ? "cricket" : "research"], backgroundJobIds: [] as string[] };
+      }
+    } else {
+      loop = await runToolLoop(prepared.providerMessages, { userId: req.user!.id, workspaceId: workspace.id, approvalToken: typeof req.body?.approvalToken === "string" ? req.body.approvalToken : undefined, modelId: selectedModelId, signal: controller.signal, mode: typeof req.body?.mode === "string" ? req.body.mode : undefined }, async (messages, _modelId, signal) => decideTools(messages as any, selectedModelId, signal), async (messages) => { const result = await runChat(messages as any, selectedModelId, controller.signal); return { content: result.message.content }; });
+    }
     if (controller.signal.aborted || res.destroyed) return;
     if (loop.status === "approval_required") return res.status(202).json({ reply: loop.message, title: prepared.title, agent: selectedModelId, conversationId, toolStatus: loop.status, toolCalls: loop.toolCalls, tools: loop.usedTools, projectId: projectId ?? null });
     if (loop.status !== "completed") return res.status(503).json({ error: loop.message, title: prepared.title, agent: selectedModelId, conversationId, toolStatus: loop.status, toolCalls: loop.toolCalls, tools: loop.usedTools, projectId: projectId ?? null });
