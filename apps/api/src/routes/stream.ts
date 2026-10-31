@@ -109,7 +109,15 @@ router.post("/", streamLimit, async (req, res) => {
     const liveIntent = detectLiveDataIntent(recentUserContext || prepared.latestUserMessage?.content || "");
     if (liveIntent) {
       try { liveData = await getLiveData(liveIntent, requestController.signal); providerMessages = [...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }]; }
-      catch (error) { if (requestController.signal.aborted) throw error; const reason = error instanceof Error ? error.message.slice(0, 200) : "unknown error"; console.error(JSON.stringify({ event: "live_data_lookup_failed", kind: liveIntent.kind, reason })); providerMessages = [...prepared.providerMessages, { role: "user", content: `[live ${liveIntent.kind} lookup failed: ${reason}]\nTell the user the live ${liveIntent.kind} data could not be fetched right now. Do not guess or use remembered values.` }]; }
+      catch (error) {
+        if (requestController.signal.aborted) throw error;
+        const reason = error instanceof Error ? error.message.slice(0, 200) : "unknown error";
+        console.error(JSON.stringify({ event: "live_data_lookup_failed", kind: liveIntent.kind, reason }));
+        const reply = "i couldn't verify the current information just now, so i won't guess. please try again shortly.";
+        const persisted = await saveTurn(reply, null);
+        if (!clientDisconnected && !res.writableEnded && !res.destroyed) send("done", { reply, title: prepared.title, conversationId, persisted, status: "completed", liveDataUnavailable: true });
+        return res.writableEnded || res.destroyed ? undefined : res.end();
+      }
     }
     if (!liveIntent && prepared.latestUserMessage && !wantsLocalSite(prepared.latestUserMessage.content) && !wantsToBuild(prepared.latestUserMessage.content) && !prepared.website && shouldRouteTools(prepared.latestUserMessage.content)) {
       const toolContext = { userId: req.user!.id, workspaceId: workspace.id, modelId: prepared.modelId, mode: "chat", signal: requestController.signal } as const;
