@@ -20,7 +20,7 @@ import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
 import { extractImagePrompt } from "../services/imagePrompt.js";
 import { isLightweightConversation } from "../services/lightweightConversation.js";
-import { detectLiveDataIntent, getLiveData, liveDataContext, type LiveDataResult } from "../services/liveData.js";
+import { detectLiveDataIntent, formatSportsEvidence, getLiveData, liveDataContext, type LiveDataResult } from "../services/liveData.js";
 import { calculatorCodeBlock, isCalculatorBuildRequest } from "../services/calculatorTemplate.js";
 import type { ProviderMessage } from "../services/modelProvider.js";
 const router = Router();
@@ -108,7 +108,16 @@ router.post("/", streamLimit, async (req, res) => {
     const recentUserContext = prepared.providerMessages.filter((message) => message.role === "user").slice(-4).map((message) => message.content).join("\n");
     const liveIntent = detectLiveDataIntent(recentUserContext || prepared.latestUserMessage?.content || "");
     if (liveIntent) {
-      try { liveData = await getLiveData(liveIntent, requestController.signal); providerMessages = [...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }]; }
+      try {
+        liveData = await getLiveData(liveIntent, requestController.signal);
+        if (liveData.kind === "sports") {
+          const reply = formatSportsEvidence(liveData);
+          const persisted = await saveTurn(reply, null);
+          if (!clientDisconnected && !res.writableEnded && !res.destroyed) send("done", { reply, title: prepared.title, conversationId, persisted, status: "completed", liveData: { kind: liveData.kind, provider: liveData.provider, fetchedAt: liveData.fetchedAt, cached: liveData.cached, freshness: liveData.freshness, sources: liveData.sources } });
+          return res.writableEnded || res.destroyed ? undefined : res.end();
+        }
+        providerMessages = [...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }];
+      }
       catch (error) {
         if (requestController.signal.aborted) throw error;
         const reason = error instanceof Error ? error.message.slice(0, 200) : "unknown error";
