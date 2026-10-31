@@ -409,6 +409,7 @@ export default function SettingsPage() {
           <LogoutWarning
             open={showLogoutWarning}
             busy={loggingOut}
+            guest={guest}
             allDevices={logoutEverywhere}
             onCancel={() => setShowLogoutWarning(false)}
             onConfirm={() => {
