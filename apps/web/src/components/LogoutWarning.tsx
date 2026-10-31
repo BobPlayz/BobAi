@@ -2,10 +2,11 @@
 
 import { AlertTriangle } from "lucide-react";
 
-export default function LogoutWarning({ open, busy, allDevices = false, onCancel, onConfirm }: {
+export default function LogoutWarning({ open, busy, allDevices = false, guest = false, onCancel, onConfirm }: {
   open: boolean;
   busy: boolean;
   allDevices?: boolean;
+  guest?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -18,9 +19,15 @@ export default function LogoutWarning({ open, busy, allDevices = false, onCancel
           <div>
             <h2 id="logout-warning-title" className="font-display text-2xl">Permanently clear your Jarvis data?</h2>
             <p id="logout-warning-description" className="mt-2 text-sm leading-6 text-[var(--muted)]">
-              Logging out will permanently delete your conversations, saved memories, uploaded files, projects, personal settings and other account data from Jarvis servers and this device. This cannot be undone.
+              {guest
+                ? "Logging out will permanently delete this guest account, its conversations, memories, uploads, projects and settings from Jarvis servers and this device. This cannot be undone."
+                : "Logging out will permanently delete your conversations, saved memories, uploaded files, projects, personal settings and other account data from Jarvis servers and this device. This cannot be undone."}
             </p>
-            <p className="mt-2 text-sm font-medium leading-6">Your login account, email, password and sign-in security settings will remain active. Limited security records needed to protect the service may also be retained. You can sign in again, but your old data will not return. Guest sessions cannot be recovered after logout.</p>
+            <p className="mt-2 text-sm font-medium leading-6">
+              {guest
+                ? "Your guest account itself will also be deleted. You can start a new guest session later, but this one cannot be recovered. Limited security records may be retained to protect the service."
+                : "Your login account and sign-in identity will remain active. Limited security records needed to protect the service may also be retained. You can sign in again, but your old data will not return."}
+            </p>
             {allDevices && <p className="mt-2 text-sm leading-6 text-[var(--muted)]">You will also be signed out on every other device.</p>}
           </div>
         </div>
