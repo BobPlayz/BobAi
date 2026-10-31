@@ -141,8 +141,9 @@ export async function getLiveData(intent: LiveDataIntent, signal?: AbortSignal):
     let result = await webSearch(query, { recency: "month" }, signal);
     if (!result.sources.length) result = await webSearch(query, {}, signal);
     const sources = result.sources.slice(0, 8).map((source) => ({ title: source.title, url: source.url, snippet: source.snippet, publishedAt: source.publishedAt }));
+    if (!sources.length) throw new Error("No reliable sources were found for this sports-statistics question.");
     const value = { kind: "sports" as const, provider: process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim() ? "Brave Search" : "DuckDuckGo", fetchedAt: new Date().toISOString(), freshness: "web-search" as const, data: { query: result.query, asOf: date }, sources };
-    if (sources.length) remember(key, value, 5 * 60_000);
+    remember(key, value, 5 * 60_000);
     return { ...value, cached: false };
   }
   if (intent.kind === "news") {
