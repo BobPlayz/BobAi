@@ -123,3 +123,18 @@ test("Bachupally weather uses the locality coordinates when the city geocoder ha
     globalThis.fetch = original;
   }
 });
+
+
+test("Ronaldo all-time goal-count questions are routed to sourced sports research", async () => {
+  const { detectLiveDataIntent, liveDataContext } = await import("../src/services/liveData.js");
+  assert.deepEqual(detectLiveDataIntent("ronaldo live goal count"), { kind: "sports", query: "ronaldo live goal count" });
+  assert.deepEqual(detectLiveDataIntent("ronaldo live goal count\nall time"), { kind: "sports", query: "ronaldo live goal count\nall time" });
+  const context = liveDataContext({
+    kind: "sports", provider: "DuckDuckGo", fetchedAt: "2026-10-31T00:00:00.000Z",
+    cached: false, freshness: "web-search",
+    data: { query: "Ronaldo career goals", asOf: "2026-10-31" },
+    sources: [{ title: "Example statistics", url: "https://example.com/stats", snippet: "The source reports a total." }],
+  });
+  assert.match(context, /Compare figures and definitions across sources/);
+  assert.match(context, /Never use a number from model memory/);
+});
