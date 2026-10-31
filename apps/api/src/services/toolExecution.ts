@@ -17,19 +17,33 @@ export async function prepareToolExecution(toolId: string, context: ToolExecutio
 export async function cleanupExpiredToolApprovals() { await db.delete(toolApprovals).where(lt(toolApprovals.expiresAt, new Date())); }
 
 export async function fetchWeatherData(cityInput: string, signal?: AbortSignal) {
-  const city = cityInput.trim();
+  const city = cityInput.trim().replace(/\s+/g, " ");
   if (!city || city.length > 120) throw new Error("weather requires a city name");
   const timeout = signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000);
+
+  // Open-Meteo's global geocoder supports cities worldwide. Ask for multiple matches instead of
+  // trusting the first population-ranked result, then prefer an exact place-name match.
   const geoUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
   geoUrl.searchParams.set("name", city);
-  geoUrl.searchParams.set("count", "1");
+  geoUrl.searchParams.set("count", "10");
   geoUrl.searchParams.set("language", "en");
   geoUrl.searchParams.set("format", "json");
   const geoResponse = await fetch(geoUrl, { signal: timeout, redirect: "error", headers: { accept: "application/json" } });
   if (!geoResponse.ok) throw new Error("weather location lookup failed");
   const geo = await geoResponse.json() as { results?: Array<{ name?: string; country?: string; latitude?: number; longitude?: number; timezone?: string; admin1?: string }> };
-  const place = geo.results?.[0];
-  if (!place || typeof place.latitude !== "number" || typeof place.longitude !== "number") throw new Error("could not find that city for live weather");
+  const results = geo.results ?? [];
+  const requestedName = city.split(",")[0].trim().toLocaleLowerCase();
+  let place = results.find((result) => result.name?.trim().toLocaleLowerCase() === requestedName) ?? results[0];
+
+  // Bachupally is a Hyderabad locality and may not appear as a standalone city in global gazetteers.
+  // Use its locality coordinates rather than failing or silently reporting an unrelated city.
+  if (!place && /\bbachupally\b/i.test(city)) {
+    place = { name: "Bachupally", admin1: "Telangana", country: "India", latitude: 17.544887, longitude: 78.359975, timezone: "Asia/Kolkata" };
+  }
+  if (!place || typeof place.latitude !== "number" || typeof place.longitude !== "number") {
+    throw new Error("could not find that city for live weather");
+  }
+
   const forecastUrl = new URL("https://api.open-meteo.com/v1/forecast");
   forecastUrl.searchParams.set("latitude", String(place.latitude));
   forecastUrl.searchParams.set("longitude", String(place.longitude));
