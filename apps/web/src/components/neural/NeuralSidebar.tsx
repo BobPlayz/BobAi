@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logout } from "@/lib/auth";
+import { isGuest, logout } from "@/lib/auth";
 import LogoutWarning from "@/components/LogoutWarning";
 import { toast } from "@/lib/toast";
 import { useEffect, useMemo, useState } from "react";
@@ -67,7 +67,10 @@ export default function NeuralSidebar({
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutWarning, setShowLogoutWarning] = useState(false);
+  const [guest, setGuest] = useState(false);
   const router = useRouter();
+
+  useEffect(() => { setGuest(isGuest()); }, []);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -231,6 +234,7 @@ export default function NeuralSidebar({
       <LogoutWarning
         open={showLogoutWarning}
         busy={loggingOut}
+        guest={guest}
         onCancel={() => setShowLogoutWarning(false)}
         onConfirm={() => {
           setLoggingOut(true);
