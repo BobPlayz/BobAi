@@ -60,10 +60,45 @@ export function isGuest() { if (typeof window === "undefined") return false; ret
 export function takeSignupName() { if (typeof window === "undefined") return ""; const name = localStorage.getItem(SIGNUP_NAME_KEY) || ""; localStorage.removeItem(SIGNUP_NAME_KEY); return name; }
 export function getPendingVerificationName() { if (typeof window === "undefined") return ""; return localStorage.getItem(PENDING_NAME_KEY) || ""; }
 /** Logs out of this device: ends the server session, clears the sign-in cookies and this browser's sign-in state. */
-// Personal data this browser keeps for the signed-in person: chat titles, onboarding answers and preferences. Cleared
-// on log out so the next person on a shared device sees none of it. Theme and cookie choices are device settings and stay.
-const PERSONAL_KEYS = ["jarvis.guest", "bobai.conversation-ui.v3", "bobai.conversations.v2", "jarvis.settings.v1", "bobai.settings.v1", "jarvis.voiceReplies"];
-export async function logout() { session = null; for (const key of PERSONAL_KEYS) localStorage.removeItem(key); localStorage.removeItem(LEGACY_SESSION_KEY); localStorage.removeItem(ONBOARDING_KEY); localStorage.removeItem(PENDING_EMAIL_KEY); localStorage.removeItem(PENDING_NAME_KEY); localStorage.removeItem(SIGNUP_NAME_KEY); await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include", keepalive: true, headers: { "X-CSRF-Protection": "1" } }).catch(() => undefined); }
+// Keep only device-level choices. All account-scoped browser state is discarded at logout.
+const DEVICE_KEYS = ["jarvis.theme", "bobai-analytics-consent"] as const;
+const LOGOUT_SIGNAL_KEY = "jarvis.logout.signal";
+let sessionGeneration = 0;
+
+function clearBrowserAccountState() {
+  if (typeof window === "undefined") return;
+  const deviceState = new Map<string, string>();
+  for (const key of DEVICE_KEYS) {
+    const value = window.localStorage.getItem(key);
+    if (value !== null) deviceState.set(key, value);
+  }
+  window.localStorage.clear();
+  for (const [key, value] of deviceState) window.localStorage.setItem(key, value);
+  window.sessionStorage.clear();
+  // Other open tabs receive this event and immediately leave the authenticated workspace.
+  window.localStorage.setItem(LOGOUT_SIGNAL_KEY, String(Date.now()));
+}
+
+/** Ends this device's server session and removes every account-specific browser cache.
+ * Account data in Neon is deliberately untouched and is restored on the next sign-in.
+ */
+export async function logout() {
+  sessionGeneration += 1;
+  session = null;
+  refreshInFlight = null;
+  try {
+    await fetch(`${API}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      keepalive: true,
+      headers: { "X-CSRF-Protection": "1" },
+    });
+  } catch {
+    // Always remove local account data even if the network is unavailable.
+  } finally {
+    clearBrowserAccountState();
+  }
+}
 export function getSession(): Session | null { if (typeof window !== "undefined") localStorage.removeItem(LEGACY_SESSION_KEY); return session; }
 export function clearSession() { session = null; }
 // Refresh tokens rotate on every use and the server revokes the whole session family when a rotated token is
@@ -75,6 +110,7 @@ export function refreshSession(): Promise<Session | null> { refreshInFlight ??= 
 // cookies, so one quick retry picks them up instead of signing the person out.
 const postRefresh = () => fetch(`${API}/auth/refresh`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } });
 async function performRefresh(): Promise<Session | null> {
+  const generationAtStart = sessionGeneration;
   // A short production/API hiccup should not immediately make a returning user look signed out.
   // Retry transient network/5xx failures, while treating an invalid cookie as signed out after one
   // cross-tab race retry. Never persist tokens in browser storage.
@@ -93,8 +129,10 @@ async function performRefresh(): Promise<Session | null> {
     await new Promise((resolve) => setTimeout(resolve, 400));
     try { res = await postRefresh(); } catch { res = null; }
   }
+  if (generationAtStart !== sessionGeneration) return null;
   if (!res?.ok) { clearSession(); return null; }
   const next = await readJson<{ expiresIn?: number }>(res);
+  if (generationAtStart !== sessionGeneration) return null;
   if (typeof next.expiresIn !== "number") { clearSession(); return null; }
   session = { accessToken: "", expiresIn: next.expiresIn };
   return session;
