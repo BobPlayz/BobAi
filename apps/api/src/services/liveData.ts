@@ -192,8 +192,8 @@ export function extractScores(sources: Array<{ title?: string; snippet?: string;
 export function formatSportsEvidence(result: LiveDataResult): string {
   if (result.kind !== "sports" || !result.sources.length) return "i couldn't verify a reliable sports-statistics answer from current sources, so i won't guess.";
   const entries = result.sources.slice(0, 6).map((source) => {
-    const title = source.title.replace(/[\\[\\]\\n\\r]/g, " ").slice(0, 180);
-    const snippet = (source.snippet || "").replace(/[\\n\\r]+/g, " ").trim().slice(0, 420);
+    const title = source.title.replace(/[\[\]\r\n]/g, " ").slice(0, 180);
+    const snippet = (source.snippet || "").replace(/[\r\n]+/g, " ").trim().slice(0, 420);
     return snippet ? `- [${title}](${source.url})\n  ${snippet}` : `- [${title}](${source.url})`;
   });
   return "i found these search results, but they do not establish one single verified career-goal total. counts can differ by competition and inclusion rules, so i won't invent or choose a number without an authoritative, clearly defined source.\n\n**sources checked**\n" + entries.join("\n") + "\n\nthese are search-result excerpts, not independently verified official statistics.";
