@@ -55,6 +55,29 @@ export function explicitBrowserAgentDecision(messages: ProviderMessage[]): ToolD
   if (!toolProviderConfigured("browser")) return { action: "clarify", calls: [], reason: "browser provider not configured", message: "The browser agent is not configured on this Jarvis deployment, so I cannot run it yet. No browser action was performed." };
   return validateToolDecision({ action: "use_tools", calls: [{ tool: "browser", arguments: { url } }] });
 }
-export async function decideTools(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal): Promise<ToolDecision> { if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); const explicitBrowser = explicitBrowserAgentDecision(messages); if (explicitBrowser) return explicitBrowser; const choice = routingChoice(modelId); const result = await bobModelProvider.chat(buildToolDecisionMessages(messages), "bob", choice.preferredModel, signal, "tool_decision"); if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); return validateToolDecision(extractJson(result.content)); }
+export async function decideTools(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal): Promise<ToolDecision> {
+  const throwIfAborted = () => { if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("tool decision cancelled"); };
+  throwIfAborted();
+  const explicitBrowser = explicitBrowserAgentDecision(messages);
+  if (explicitBrowser) return explicitBrowser;
+  const choice = routingChoice(modelId);
+  const routingMessages = buildToolDecisionMessages(messages);
+  const first = await bobModelProvider.chat(routingMessages, "bob", choice.preferredModel, signal, "tool_decision");
+  throwIfAborted();
+  const parsed = extractJson(first.content);
+  const decision = validateToolDecision(parsed);
+  // A malformed router response is a model-format failure, not proof that a tool is unavailable.
+  // Retry once with an explicit correction request, while keeping the same permission-checked catalog.
+  if (decision.action === "respond" && ["invalid router output", "invalid tool decision", "invalid tool call"].includes(decision.reason ?? "")) {
+    const retry = await bobModelProvider.chat([
+      ...routingMessages,
+      { role: "assistant", content: first.content.slice(0, MAX_DECISION_OUTPUT) },
+      { role: "user", content: "Your previous routing response was not valid JSON in the required schema. Return exactly one valid JSON object using only the documented action shapes and registered tool IDs. Do not add markdown, explanations, or extra keys." },
+    ], "bob", choice.preferredModel, signal, "tool_decision");
+    throwIfAborted();
+    return validateToolDecision(extractJson(retry.content));
+  }
+  return decision;
+}
 export function requiresApprovalForDecision(decision: ToolDecision): boolean { return decision.calls.some((call) => getTool(call.tool)?.requiresUserApproval ?? true); }
 export function getDecisionTools(decision: ToolDecision): BobTool[] { return decision.calls.map((call) => getTool(call.tool)).filter((tool): tool is BobTool => Boolean(tool)); }
