@@ -104,7 +104,7 @@ export async function logout() {
   }
 }
 export function getSession(): Session | null { if (typeof window !== "undefined") localStorage.removeItem(LEGACY_SESSION_KEY); return session; }
-export function clearSession() { session = null; }
+export function clearSession() { session = null; sessionGeneration += 1; }
 // Refresh tokens rotate on every use and the server revokes the whole session family when a rotated token is
 // replayed. Concurrent refreshes (parallel 401s, StrictMode double effects) would replay the same cookie, so all
 // callers share one in-flight refresh.
