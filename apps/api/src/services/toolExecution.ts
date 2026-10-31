@@ -33,7 +33,7 @@ export async function fetchWeatherData(cityInput: string, signal?: AbortSignal) 
   const geo = await geoResponse.json() as { results?: Array<{ name?: string; country?: string; latitude?: number; longitude?: number; timezone?: string; admin1?: string }> };
   const results = geo.results ?? [];
   const requestedName = city.split(",")[0].trim().toLocaleLowerCase();
-  let place = results.find((result) => result.name?.trim().toLocaleLowerCase() === requestedName) ?? (/\\bbachupally\\b/i.test(city) ? undefined : results[0]);
+  let place = results.find((result) => result.name?.trim().toLocaleLowerCase() === requestedName) ?? (/\bbachupally\b/i.test(city) ? undefined : results[0]);
 
   // Bachupally is a Hyderabad locality and may not appear as a standalone city in global gazetteers.
   // Use its locality coordinates rather than failing or silently reporting an unrelated city.
