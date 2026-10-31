@@ -20,7 +20,7 @@ export default function LogoutWarning({ open, busy, allDevices = false, onCancel
             <p id="logout-warning-description" className="mt-2 text-sm leading-6 text-[var(--muted)]">
               Logging out will permanently delete your conversations, saved memories, uploaded files, projects, personal settings and other account data from Jarvis servers and this device. This cannot be undone.
             </p>
-            <p className="mt-2 text-sm font-medium leading-6">Your login account, email, password and sign-in security settings will remain active. Limited security records needed to protect the service may also be retained. You can sign in again, but your old data will not return.</p>
+            <p className="mt-2 text-sm font-medium leading-6">Your login account, email, password and sign-in security settings will remain active. Limited security records needed to protect the service may also be retained. You can sign in again, but your old data will not return. Guest sessions cannot be recovered after logout.</p>
             {allDevices && <p className="mt-2 text-sm leading-6 text-[var(--muted)]">You will also be signed out on every other device.</p>}
           </div>
         </div>
