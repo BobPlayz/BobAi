@@ -71,8 +71,31 @@ router.post("/guest", async (req, res) => {
   const termsVersion = typeof req.body?.termsVersion === "string" ? req.body.termsVersion : "";
   if (req.body?.termsAccepted !== true || termsVersion !== currentTermsVersion()) return res.status(400).json({ error: "acceptance of the current Terms of Service and Privacy Policy is required" });
   const displayName = typeof req.body?.name === "string" && req.body.name.trim() ? req.body.name.trim().replace(/\s+/g, " ").slice(0, 40) : "Guest";
-  if (limited(req, "guest")) return res.status(429).json({ error: "too many guest sign-ins. try again later." });
   try {
+    // Reuse an active guest session rather than creating another anonymous account.
+    let activeUser = null;
+    const accessToken = readCookie(req, ACCESS_COOKIE);
+    if (accessToken) activeUser = await authenticateAccessToken(accessToken);
+    if (!activeUser) {
+      const refreshToken = readCookie(req, REFRESH_COOKIE);
+      if (refreshToken) {
+        const rotated = await refresh(refreshToken);
+        if (rotated) {
+          setSessionCookies(res, rotated);
+          activeUser = await authenticateAccessToken(rotated.accessToken);
+        } else {
+          clearSessionCookies(res);
+        }
+      }
+    }
+    if (activeUser) {
+      const [existing] = await db.select({ email: users.email }).from(users).where(eq(users.id, activeUser.id)).limit(1);
+      if (existing && existing.email.toLowerCase().endsWith("@" + GUEST_EMAIL_DOMAIN)) {
+        return res.json({ expiresIn: 900, guest: true, existing: true });
+      }
+      return res.status(409).json({ error: "You are already signed in. Log out before starting a guest session.", alreadySignedIn: true });
+    }
+    if (limited(req, "guest")) return res.status(429).json({ error: "too many guest sign-ins. try again later." });
     const quota = await consumeQuota("guest_accounts_ip", hashedKey(req.ip || "unknown"));
     if (!quota.allowed) return res.status(429).json({ error: "too many guest accounts from this network today. sign in with your email instead." });
     const id = randomBytes(9).toString("hex");
