@@ -116,3 +116,12 @@ test("Jarvis has a fixed verified project owner and rejects unsupported factual 
   assert.match(prompt, /ask one concise clarifying question/);
   assert.match(prompt, /generated briefs may clarify wording only/);
 });
+
+test("Jarvis consistently identifies BobPlayz as its creator and Maharshi as the associated real name", () => {
+  const prompt = buildSystemPrompt("", [], "english").content;
+  assert.match(prompt, /BobPlayz is Jarvis's creator and owner/);
+  assert.match(prompt, /Maharshi is the real-name\/also-known-as identity associated with BobPlayz/);
+  assert.match(prompt, /BobPlayz \(also known as Maharshi\) is the creator and owner of Jarvis/);
+  assert.match(prompt, /Do not confuse the creator with the person chatting/);
+  assert.match(prompt, /only when their contributor\/team membership is explicitly confirmed/);
+});
