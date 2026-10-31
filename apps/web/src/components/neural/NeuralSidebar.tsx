@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { isGuest, logout } from "@/lib/auth";
+import { logout } from "@/lib/auth";
+import LogoutWarning from "@/components/LogoutWarning";
 import { toast } from "@/lib/toast";
 import { useEffect, useMemo, useState } from "react";
 import type { Conversation } from "@/types/chat";
@@ -65,7 +66,7 @@ export default function NeuralSidebar({
   const [renaming, setRenaming] = useState<{ id: string; title: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [confirmGuestLogout, setConfirmGuestLogout] = useState(false);
+  const [showLogoutWarning, setShowLogoutWarning] = useState(false);
   const router = useRouter();
 
   const filtered = useMemo(() => {
@@ -218,19 +219,27 @@ export default function NeuralSidebar({
         </Link>
         <button
           type="button"
-          onClick={async () => {
-            // A guest can't sign back into the same account, so the first tap only warns.
-            if (isGuest() && !confirmGuestLogout) { setConfirmGuestLogout(true); window.setTimeout(() => setConfirmGuestLogout(false), 6_000); return; }
-            setLoggingOut(true); await logout(); router.replace("/login");
-          }}
+          onClick={() => setShowLogoutWarning(true)}
           disabled={loggingOut}
-          className={`convo-item w-full text-left disabled:opacity-60 ${confirmGuestLogout ? "!text-[var(--danger)]" : ""}`}
+          className="convo-item w-full text-left disabled:opacity-60"
         >
           <LogOut className="h-4 w-4" aria-hidden />
-          {loggingOut ? "Logging out…" : confirmGuestLogout ? "Tap again: guest chats will be gone" : "Log out"}
+          {loggingOut ? "Clearing data…" : "Log out"}
         </button>
       </div>
 
+      <LogoutWarning
+        open={showLogoutWarning}
+        busy={loggingOut}
+        onCancel={() => setShowLogoutWarning(false)}
+        onConfirm={() => {
+          setLoggingOut(true);
+          void logout().then(() => router.replace("/login")).catch((error: unknown) => {
+            toast(error instanceof Error ? error.message : "Could not clear your data. You are still signed in.");
+            setLoggingOut(false);
+          });
+        }}
+      />
       {deleteTarget && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(21,19,15,0.45)] p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="delete-chat-title" className="w-full max-w-sm rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow)]">
