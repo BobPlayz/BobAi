@@ -61,3 +61,65 @@ test("scores are pulled out of search result titles and snippets, dates are not"
   assert.deepEqual(found.map((item) => item.source), ["news18.com", "cricbuzz.com"]);
   assert.match(found[0].text, /230\/6 in 19\.4 Overs/);
 });
+
+
+test("weather intent extracts city names globally and supports common location phrasing", async () => {
+  const { detectLiveDataIntent } = await import("../src/services/liveData.js");
+  assert.deepEqual(detectLiveDataIntent("what is the weather in Bachupally?"), { kind: "weather", city: "Bachupally" });
+  assert.deepEqual(detectLiveDataIntent("forecast for Tokyo tomorrow"), { kind: "weather", city: "Tokyo" });
+  assert.deepEqual(detectLiveDataIntent("weather around New York, NY"), { kind: "weather", city: "New York, NY" });
+  assert.equal(detectLiveDataIntent("what is the weather today"), null);
+});
+
+test("weather geocoding prefers an exact city result and asks for multiple matches", async () => {
+  const { fetchWeatherData } = await import("../src/services/toolExecution.js");
+  const original = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    urls.push(url.toString());
+    if (url.hostname === "geocoding-api.open-meteo.com") {
+      return Response.json({ results: [
+        { name: "Springfield", latitude: 1, longitude: 1, country: "Elsewhere", timezone: "UTC" },
+        { name: "Tokyo", latitude: 35.6762, longitude: 139.6503, country: "Japan", timezone: "Asia/Tokyo" },
+      ] });
+    }
+    return Response.json({
+      current: { time: "2026-10-31T12:00", weather_code: 1, temperature_2m: 20, apparent_temperature: 20 },
+      current_units: { temperature_2m: "°C" },
+      daily: { temperature_2m_max: [22], temperature_2m_min: [15], precipitation_probability_max: [10] },
+    });
+  }) as typeof fetch;
+  try {
+    const result = await fetchWeatherData("Tokyo");
+    assert.equal(result.location, "Tokyo, Japan");
+    assert.ok(urls[0].includes("count=10"));
+    assert.ok(urls[1].includes("latitude=35.6762"));
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("Bachupally weather uses the locality coordinates when the city geocoder has no result", async () => {
+  const { fetchWeatherData } = await import("../src/services/toolExecution.js");
+  const original = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    urls.push(url.toString());
+    if (url.hostname === "geocoding-api.open-meteo.com") return Response.json({ results: [] });
+    return Response.json({
+      current: { time: "2026-10-31T12:00", weather_code: 2, temperature_2m: 26, apparent_temperature: 27 },
+      current_units: { temperature_2m: "°C" },
+      daily: { temperature_2m_max: [30], temperature_2m_min: [21], precipitation_probability_max: [55] },
+    });
+  }) as typeof fetch;
+  try {
+    const result = await fetchWeatherData("Bachupally");
+    assert.equal(result.location, "Bachupally, Telangana, India");
+    assert.ok(urls[1].includes("latitude=17.544887"));
+    assert.ok(urls[1].includes("longitude=78.359975"));
+  } finally {
+    globalThis.fetch = original;
+  }
+});
