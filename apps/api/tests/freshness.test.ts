@@ -138,3 +138,42 @@ test("Ronaldo all-time goal-count questions are routed to sourced sports researc
   assert.match(context, /Compare figures and definitions across sources/);
   assert.match(context, /Never use a number from model memory/);
 });
+
+ 
+test("sports statistics are returned as source excerpts, never model-invented totals", async () => {
+  const { formatSportsEvidence } = await import("../src/services/liveData.js");
+  const result = formatSportsEvidence({
+    kind: "sports",
+    provider: "DuckDuckGo",
+    fetchedAt: "2026-10-31T00:00:00.000Z",
+    cached: false,
+    freshness: "web-search",
+    data: { query: "Ronaldo career goals", asOf: "2026-10-31" },
+    sources: [
+      { title: "Source A", url: "https://example.com/a", snippet: "A source excerpt with a reported total of 900." },
+      { title: "Source B", url: "https://example.com/b", snippet: "A different source uses another counting method." },
+    ],
+  });
+  assert.match(result, /do not establish one single verified career-goal total/i);
+  assert.match(result, /Source A/);
+  assert.match(result, /https:\/\/example\.com\/a/);
+  assert.doesNotMatch(result, /\b380\b|\b792\b/);
+  assert.match(result, /search-result excerpts, not independently verified official statistics/i);
+});
+
+test("sports statistics with no sources fail closed", async () => {
+  const { getLiveData } = await import("../src/services/liveData.js");
+  const originalFetch = globalThis.fetch;
+  const originalBrave = process.env.BOBAI_BRAVE_SEARCH_API_KEY;
+  const originalResearch = process.env.BOBAI_RESEARCH_PROVIDER_URL;
+  delete process.env.BOBAI_BRAVE_SEARCH_API_KEY;
+  delete process.env.BOBAI_RESEARCH_PROVIDER_URL;
+  globalThis.fetch = (async () => new Response("no results", { status: 503 })) as typeof fetch;
+  try {
+    await assert.rejects(getLiveData({ kind: "sports", query: "ronaldo all time goals test no source" }), /No reliable sources/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalBrave === undefined) delete process.env.BOBAI_BRAVE_SEARCH_API_KEY; else process.env.BOBAI_BRAVE_SEARCH_API_KEY = originalBrave;
+    if (originalResearch === undefined) delete process.env.BOBAI_RESEARCH_PROVIDER_URL; else process.env.BOBAI_RESEARCH_PROVIDER_URL = originalResearch;
+  }
+});
