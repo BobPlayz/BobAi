@@ -80,9 +80,8 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
             if (session.current !== id) return;
             let live = "";
             for (let i = 0; i < event.results.length; i++) live += `${event.results[i][0].transcript} `;
-            // Recognition is a second speech signal: do not let a noisy-room RMS threshold discard words the browser heard.
-            const changedSpeech = Array.from({ length: Math.max(0, event.results.length - event.resultIndex) }, (_, index) => event.results[event.resultIndex + index][0].transcript).some((text) => text.trim().length > 0);
-            if (changedSpeech) { spoke = true; lastVoice = performance.now(); }
+            // Browser recognition is display-only here. It must never open the voice gate:
+            // background conversations can be transcribed by the browser too.
             if (live.trim()) { liveText = live.replace(/\s+/g, " ").trim(); setHeard(liveText); }
           };
           liveRecognition.onerror = () => undefined;
@@ -129,7 +128,9 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
           }
           return;
         }
-        const threshold = Math.max(0.018, Math.min(0.18, floor * 2.4 + 0.008));
+        // Require a clearer near-field signal above the learned room floor. A sustained
+        // threshold crossing is needed below, so short clicks and distant noise do not open the gate.
+        const threshold = Math.max(0.022, Math.min(0.22, floor * 2.8 + 0.012));
         const voiceDetected = rms > threshold;
         setLevel(Math.min(1, Math.max(0, (rms - floor) / Math.max(0.025, threshold * 4))));
         if (voiceDetected) {
@@ -357,7 +358,16 @@ export default function TalkMode({ language, onUtterance, onClose, minimized = f
       setBrowserVoice(hear === "browser" || speakWith === "browser");
       // The mic stays open for the whole conversation (echo-cancelled) so you can talk over Jarvis to interrupt it.
       // With the browser's recognition it is only used for that; if it is refused there, tapping still interrupts.
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).catch((problem: unknown) => { if (hear === "server") throw problem; return null; });
+      // Ask the device/browser for voice-focused capture and mono input. These are best-effort:
+      // actual background-voice rejection is handled by the adaptive near-field voice gate below.
+      const voiceCapture: MediaTrackConstraints & { voiceIsolation?: ConstrainBoolean } = {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
+        channelCount: { ideal: 1 },
+        voiceIsolation: { ideal: true },
+      };
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: voiceCapture }).catch((problem: unknown) => { if (hear === "server") throw problem; return null; });
       if (stream) {
         if (session.current !== id) { stream.getTracks().forEach((track) => track.stop()); return; }
         const context = new AudioContext();
