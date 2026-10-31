@@ -9,11 +9,10 @@ const STORAGE_KEY = "bobai.conversation-ui.v3";
 const LEGACY_STORAGE_KEY = "bobai.conversations.v2";
 type GeneratedImage = { id?: string; url: string; prompt?: string };
 type ChatSettings = { personality: string; memory?: boolean };
-function safeUserFacingError(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : "";
-  if (!message) return fallback;
-  if (/stack|trace|sql|postgres|database|provider|endpoint|token|secret|environment|internal|tool.?routing|function.?invocation|exception| at [\w./\\-]+:\d+/i.test(message)) return fallback;
-  return message.slice(0, 240);
+function safeUserFacingError(_error: unknown, fallback: string) {
+  // Tool/provider failures can contain internal diagnostics, hostnames, identifiers or secrets.
+  // Keep the UI deliberately generic; detailed diagnostics belong in server-side logs only.
+  return fallback;
 }
 
 function readImageDataUrl(file: File): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("The image could not be read.")); reader.onerror = () => reject(new Error("The image could not be read.")); reader.readAsDataURL(file); }); }
