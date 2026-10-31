@@ -17,7 +17,9 @@ export function sanitizePromptBrief(value: unknown): string {
 
 export async function generatePromptBrief(messages: ProviderMessage[], modelId?: string, signal?: AbortSignal): Promise<string> {
   const latest = [...messages].reverse().find((message) => message.role === "user");
-  if (!latest?.content.trim() || latest.content.length > 30_000) return "";
+  // A one-word or very short prompt has too little intent to safely summarize. Let the answer model
+  // respond to the original message or ask for clarification instead of inventing a hidden task.
+  if (!latest?.content.trim() || latest.content.trim().length < 24 || latest.content.length > 30_000) return "";
   const context = messages.slice(-7).map((message) => ({ role: message.role, content: message.content.slice(0, 3_000) }));
   const controller = new AbortController();
   const abort = () => controller.abort(signal?.reason);
