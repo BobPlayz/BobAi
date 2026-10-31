@@ -83,10 +83,12 @@ function clearBrowserAccountState() {
   try { window.sessionStorage.clear(); } catch { /* Storage may be unavailable. */ }
 }
 
-/** Ends this device's server session and removes every account-specific browser cache.
- * Account data in Neon is deliberately untouched and is restored on the next sign-in.
- */
-export async function logout() {
+/** Clears this account's server-side workspace data, retains its login identity, then signs out this device. */
+export async function logout(options: { clearData?: boolean } = {}) {
+  if (options.clearData !== false) {
+    const cleared = await fetch(`${API}/account/data/clear`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } });
+    if (!cleared.ok) { const data = await readJson<{ error?: string }>(cleared); throw new Error(data.error || "Jarvis could not clear your account data. You are still signed in."); }
+  }
   sessionGeneration += 1;
   session = null;
   refreshInFlight = null;
