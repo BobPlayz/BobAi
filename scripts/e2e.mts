@@ -182,9 +182,18 @@ const guestChats = await (await guest.call("/conversations")).json() as { items?
 ok("guest sees none of anyone else's chats", (guestChats.items ?? []).length === 0);
 const guestNoTerms = await new Client().call("/auth/guest", { method: "POST", body: JSON.stringify({}) });
 ok("guest sign-in still requires accepting the terms", guestNoTerms.status === 400);
-const guestDelete = await guest.call("/account/delete/guest", { method: "POST" });
-ok("guest can delete their own account without a code", guestDelete.status === 202);
-ok("deleted guest is signed out everywhere", (await guest.call("/auth/refresh", { method: "POST" })).status === 401);
+const guestAgain = await guest.call("/auth/guest", { method: "POST", body: JSON.stringify({ name: "Friend", termsAccepted: true, termsVersion: TERMS }) });
+const guestAgainBody = await guestAgain.json() as { guest?: boolean; existing?: boolean };
+ok("repeated guest sign-in reuses the active guest session", guestAgain.status === 200 && guestAgainBody.guest === true && guestAgainBody.existing === true);
+const guestClear = await guest.call("/account/data/clear", { method: "POST" });
+const guestClearBody = await guestClear.json() as { accountDeleted?: boolean; accountPreserved?: boolean };
+ok("guest logout immediately deletes the guest account and its data", guestClear.status === 200 && guestClearBody.accountDeleted === true && guestClearBody.accountPreserved === false);
+ok("guest data clear revokes the guest session", (await guest.call("/auth/refresh", { method: "POST" })).status === 401);
+const guestForDelete = new Client();
+await guestForDelete.call("/auth/guest", { method: "POST", body: JSON.stringify({ name: "Friend", termsAccepted: true, termsVersion: TERMS }) });
+const guestDelete = await guestForDelete.call("/account/delete/guest", { method: "POST" });
+ok("guest can immediately delete their own account without a code", guestDelete.status === 200);
+ok("deleted guest is signed out everywhere", (await guestForDelete.call("/auth/refresh", { method: "POST" })).status === 401);
 ok("a normal account can't use the no-code delete", (await alice.call("/account/delete/guest", { method: "POST" })).status === 403);
 
 // Logout revokes the session.
