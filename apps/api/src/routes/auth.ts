@@ -73,7 +73,7 @@ router.post("/guest", async (req, res) => {
   const displayName = typeof req.body?.name === "string" && req.body.name.trim() ? req.body.name.trim().replace(/\s+/g, " ").slice(0, 40) : "Guest";
   try {
     // Reuse an active guest session rather than creating another anonymous account.
-    let activeUser = null;
+    let activeUser: { id: string } | null = null;
     const accessToken = readCookie(req, ACCESS_COOKIE);
     if (accessToken) activeUser = await authenticateAccessToken(accessToken);
     if (!activeUser) {
