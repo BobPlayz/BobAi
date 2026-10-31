@@ -160,7 +160,7 @@ test("tool loop fails closed when the router returns an invalid decision", async
     async () => ({ value: "unused" }),
   );
   assert.equal(result.status, "failed");
-  assert.match(result.message, /did not run or verify/i);
+  assert.match(result.message, /couldn’t safely complete/i);
   assert.equal(answered, false);
 });
 
