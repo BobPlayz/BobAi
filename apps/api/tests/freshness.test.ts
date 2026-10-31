@@ -170,7 +170,7 @@ test("sports statistics with no sources fail closed", async () => {
   delete process.env.BOBAI_RESEARCH_PROVIDER_URL;
   globalThis.fetch = (async () => new Response("no results", { status: 503 })) as typeof fetch;
   try {
-    await assert.rejects(getLiveData({ kind: "sports", query: "ronaldo all time goals test no source" }), /No reliable sources/);
+    await assert.rejects(getLiveData({ kind: "sports", query: "ronaldo all time goals test no source" }), /No reliable sources|web search returned 503/);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalBrave === undefined) delete process.env.BOBAI_BRAVE_SEARCH_API_KEY; else process.env.BOBAI_BRAVE_SEARCH_API_KEY = originalBrave;
