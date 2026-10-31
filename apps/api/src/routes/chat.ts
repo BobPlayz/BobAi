@@ -12,7 +12,7 @@ import { isLightweightConversation } from "../services/lightweightConversation.j
 import { enrichMessagesWithVision } from "../services/visionChat.js";
 import { decideTools } from "../services/toolDecision.js";
 import { runToolLoop } from "../services/toolLoop.js";
-import { detectLiveDataIntent, getLiveData, liveDataContext } from "../services/liveData.js";
+import { detectLiveDataIntent, formatSportsEvidence, getLiveData, liveDataContext } from "../services/liveData.js";
 const router = Router(); const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i; const chatLimit = createUserRateLimit(20, 60_000); const MAX_SETTINGS_LOOKUP = 50; const MAX_PROJECT_INSTRUCTIONS = 12_000;
 function relevantMemories(memories: Array<Record<string, unknown>> | null) { if (!memories?.length) return []; return memories.slice(0, 12).map((memory) => `${typeof memory.category === "string" ? memory.category : "memory"}: ${typeof memory.content === "string" ? memory.content : ""}`); }
 function settingValue(rows: Array<{ key: string; value: unknown }>, key: string) { return rows.find((row) => row.key === key)?.value; }
@@ -49,8 +49,12 @@ router.post("/", chatLimit, async (req, res) => {
     if (liveIntent) {
       try {
         const liveData = await getLiveData(liveIntent, controller.signal);
-        const result = await runChat([...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }], selectedModelId, controller.signal);
-        loop = { status: "completed" as const, message: result.message.content, toolCalls: 1, usedTools: [liveIntent.kind === "weather" ? "weather" : liveIntent.kind === "cricket" ? "cricket" : "research"], backgroundJobIds: [] as string[] };
+        if (liveData.kind === "sports") {
+          loop = { status: "completed" as const, message: formatSportsEvidence(liveData), toolCalls: 1, usedTools: ["research"], backgroundJobIds: [] as string[] };
+        } else {
+          const result = await runChat([...prepared.providerMessages, { role: "user", content: liveDataContext(liveData) }], selectedModelId, controller.signal);
+          loop = { status: "completed" as const, message: result.message.content, toolCalls: 1, usedTools: [liveIntent.kind === "weather" ? "weather" : "cricket"], backgroundJobIds: [] as string[] };
+        }
       } catch (error) {
         if (controller.signal.aborted) throw error;
         loop = { status: "failed" as const, message: "I couldn't verify the live information just now. No current figure or condition has been confirmed, so I won't guess. Please try again shortly.", toolCalls: 1, usedTools: [liveIntent.kind === "weather" ? "weather" : liveIntent.kind === "cricket" ? "cricket" : "research"], backgroundJobIds: [] as string[] };
