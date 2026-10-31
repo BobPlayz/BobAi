@@ -4,9 +4,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import { hasCompletedOnboarding, saveOnboarding, takeSignupName } from "@/lib/auth";
-import { savePreferences } from "@/lib/preferences";
+import { loadPreferences, savePreferences } from "@/lib/preferences";
 import { generationForYear, type GenerationId } from "@/lib/generation";
-import { LANGUAGES, isLanguageId, languageLabel, type LanguageId } from "@/lib/language";
+import { LANGUAGES, languageLabel, type LanguageId } from "@/lib/language";
 
 const QUESTIONS = {
   usage: { title: "What'll you mostly use Jarvis for?", options: ["Learning and homework", "Coding and building projects", "Creative work", "Research and exploring ideas", "Everyday help"] },
@@ -42,13 +42,6 @@ function toPersonality(answers: Answers) {
   return lines.filter(Boolean).join("\n");
 }
 
-/** The browser's language if Jarvis supports it, otherwise English. */
-function browserLanguage(): LanguageId {
-  if (typeof navigator === "undefined") return "en";
-  const code = (navigator.language || "en").slice(0, 2).toLowerCase();
-  return isLanguageId(code) ? code : "en";
-}
-
 function Chip({ selected, children, onClick }: { selected: boolean; children: ReactNode; onClick: () => void }) {
   return <button type="button" aria-pressed={selected} onClick={onClick} className="atelier-chip !min-h-12 !px-5 text-[15px]">{children}</button>;
 }
@@ -67,9 +60,9 @@ function Onboarding() {
 
   useEffect(() => { if (hasCompletedOnboarding()) router.replace("/chat"); }, [router]);
   useEffect(() => {
-    // Start from what we already know: the name typed at sign-in and the browser's language.
+    // Keep an explicitly saved language; if none exists, loadPreferences() defaults to English.
     const known = takeSignupName();
-    setAnswers((current) => ({ ...current, language: browserLanguage(), name: current.name || known }));
+    setAnswers((current) => ({ ...current, language: loadPreferences().language, name: current.name || known }));
   }, []);
   // Each new question takes focus: its text box if it has one, otherwise its heading (for screen readers).
   useEffect(() => {
