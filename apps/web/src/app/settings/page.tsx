@@ -114,7 +114,7 @@ export default function SettingsPage() {
     setDeleteMessage("");
     try {
       const result = await confirmAccountDeletion(deleteCode);
-      logout();
+      void logout({ clearData: false });
       router.replace("/");
       setDeleteMessage(result.status || "Account deletion scheduled.");
     } catch (error) {
@@ -385,7 +385,7 @@ export default function SettingsPage() {
                 <button type="button" disabled={deleteBusy} onClick={async () => {
                   if (armed !== "guest") { arm("guest"); return; }
                   setArmed(null); setDeleteBusy(true);
-                  try { await deleteGuestAccount(); await logout(); router.replace("/"); } catch (error) { setDeleteMessage(error instanceof Error ? error.message : "Could not delete the guest account."); } finally { setDeleteBusy(false); }
+                  try { await deleteGuestAccount(); await logout({ clearData: false }); router.replace("/"); } catch (error) { setDeleteMessage(error instanceof Error ? error.message : "Could not delete the guest account."); } finally { setDeleteBusy(false); }
                 }} className="mt-3 btn-danger">{armed === "guest" ? "Tap again to delete everything" : "Delete guest account"}</button>
                 {deleteMessage && <p role="status" className={`mt-2 text-xs ${colors.muted}`}>{deleteMessage}</p>}
               </div>
