@@ -68,11 +68,11 @@ export async function decideTools(messages: ProviderMessage[], modelId?: string,
   const decision = validateToolDecision(parsed);
   // A malformed router response is a model-format failure, not proof that a tool is unavailable.
   // Retry once with an explicit correction request, while keeping the same permission-checked catalog.
-  if (decision.action === "respond" && ["invalid router output", "invalid tool decision", "invalid tool call"].includes(decision.reason ?? "")) {
+  if (decision.action === "respond" && decision.reason && decision.reason !== "tools are disabled") {
     const retry = await bobModelProvider.chat([
       ...routingMessages,
       { role: "assistant", content: first.content.slice(0, MAX_DECISION_OUTPUT) },
-      { role: "user", content: "Your previous routing response was not valid JSON in the required schema. Return exactly one valid JSON object using only the documented action shapes and registered tool IDs. Do not add markdown, explanations, or extra keys." },
+      { role: "user", content: "Your previous routing response was rejected. Correct the issue and return exactly one valid JSON object using only the documented action shapes, registered tool IDs, and their required argument schemas. If no available tool can safely do the task, return {"action":"clarify","message":"one concise user-facing question or limitation"}. Do not add markdown, explanations, internal errors, or extra keys." },
     ], "bob", choice.preferredModel, signal, "tool_decision");
     throwIfAborted();
     return validateToolDecision(extractJson(retry.content));
