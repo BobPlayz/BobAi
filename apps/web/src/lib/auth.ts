@@ -67,16 +67,20 @@ let sessionGeneration = 0;
 
 function clearBrowserAccountState() {
   if (typeof window === "undefined") return;
-  const deviceState = new Map<string, string>();
-  for (const key of DEVICE_KEYS) {
-    const value = window.localStorage.getItem(key);
-    if (value !== null) deviceState.set(key, value);
+  try {
+    const deviceState = new Map<string, string>();
+    for (const key of DEVICE_KEYS) {
+      const value = window.localStorage.getItem(key);
+      if (value !== null) deviceState.set(key, value);
+    }
+    window.localStorage.clear();
+    for (const [key, value] of deviceState) window.localStorage.setItem(key, value);
+    // Other open tabs receive this event and immediately leave the authenticated workspace.
+    window.localStorage.setItem(LOGOUT_SIGNAL_KEY, String(Date.now()));
+  } catch {
+    // Storage may be disabled or full; do not block logout.
   }
-  window.localStorage.clear();
-  for (const [key, value] of deviceState) window.localStorage.setItem(key, value);
-  window.sessionStorage.clear();
-  // Other open tabs receive this event and immediately leave the authenticated workspace.
-  window.localStorage.setItem(LOGOUT_SIGNAL_KEY, String(Date.now()));
+  try { window.sessionStorage.clear(); } catch { /* Storage may be unavailable. */ }
 }
 
 /** Ends this device's server session and removes every account-specific browser cache.
