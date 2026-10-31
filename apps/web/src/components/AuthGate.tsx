@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { hasCompletedOnboarding, refreshSession } from "@/lib/auth";
+import { clearSession, hasCompletedOnboarding, refreshSession } from "@/lib/auth";
 
 /**
  * Restores the HttpOnly-cookie session once per page load before showing a signed-in page.
@@ -11,6 +11,16 @@ import { hasCompletedOnboarding, refreshSession } from "@/lib/auth";
 export default function AuthGate({ children, requireOnboarding = true }: { children: ReactNode; requireOnboarding?: boolean }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== "jarvis.logout.signal" || !event.newValue) return;
+      clearSession();
+      router.replace("/login");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
