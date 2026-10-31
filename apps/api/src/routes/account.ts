@@ -23,11 +23,18 @@ router.post("/data/clear", async (req, res) => {
   const userId = req.user!.id;
   if (limited(req, `clear-account-data:${userId}`)) return res.status(429).json({ error: "too many data-clear requests", retryAfterSeconds: 900 });
   try {
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+    const [user] = await db.select({ id: users.id, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
     if (!user) return res.status(404).json({ error: "account not found" });
+    if (isGuestEmail(user.email)) {
+      // Guest accounts have no reusable login identity. Remove the user row and every owned record now,
+      // rather than preserving an anonymous account that can become a stale "already signed in" session.
+      await recordAudit({ action: "guest_account_deleted", resourceType: "user", resourceId: userId, userId, metadata: { source: "logout" } });
+      await purgeUserOwnedData(userId);
+      return res.json({ success: true, accountPreserved: false, accountDeleted: true });
+    }
     await purgeUserOwnedData(userId, { preserveAccount: true });
     await recordAudit({ action: "account_data_cleared", resourceType: "user", resourceId: userId, userId });
-    return res.json({ success: true, accountPreserved: true });
+    return res.json({ success: true, accountPreserved: true, accountDeleted: false });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("[ACCOUNT] data clear failed", error);
     return res.status(503).json({ error: "account data could not be completely cleared. you are still signed in; please try again." });
@@ -52,11 +59,10 @@ router.post("/delete/guest", async (req, res) => {
   try {
     const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, req.user!.id)).limit(1);
     if (!user || !isGuestEmail(user.email)) return res.status(403).json({ error: "only guest accounts can be deleted without an email code" });
-    const now = new Date();
+    await recordAudit({ action: "guest_account_deleted", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id, metadata: { source: "settings" } });
     await revokeAllSessions(req.user!.id);
-    await db.update(users).set({ displayName: null, avatarUrl: null, deletedAt: now, updatedAt: now }).where(eq(users.id, req.user!.id));
-    await recordAudit({ action: "account_deletion_requested", resourceType: "user", resourceId: req.user!.id, userId: req.user!.id, metadata: { guest: true } });
-    return res.status(202).json({ status: "guest account deleted" });
+    await purgeUserOwnedData(req.user!.id);
+    return res.status(200).json({ status: "guest account deleted", deleted: true });
   } catch {
     return res.status(503).json({ error: "account deletion could not be scheduled" });
   }
