@@ -163,3 +163,17 @@ test("tool loop fails closed when the router returns an invalid decision", async
   assert.match(result.message, /did not run or verify/i);
   assert.equal(answered, false);
 });
+
+
+test("invalid tool routing gives a user-safe message without exposing internal diagnostics", async () => {
+  const result = await runToolLoop(
+    [{ role: "user", content: "run the requested action" }],
+    { userId: "u", workspaceId: "w" },
+    async () => ({ action: "respond", calls: [], reason: "unknown or disabled tool: private-provider-name" }),
+    async () => ({ content: "This should not run." }),
+    async () => ({ value: "unused" }),
+  );
+  assert.equal(result.status, "failed");
+  assert.match(result.message, /couldn’t safely complete/i);
+  assert.doesNotMatch(result.message, /private-provider-name|routing|configuration|stack|error/i);
+});
