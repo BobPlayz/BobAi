@@ -9,7 +9,7 @@ import { webSearch } from "./research.js";
  * three or more serial CPU inferences on a laptop. These two intents are recognisable without a model, so the
  * stream route fetches the data directly and makes a single streamed model call that explains it.
  */
-export type LiveDataIntent = { kind: "weather"; city: string } | { kind: "cricket"; query: string } | { kind: "news"; query: string };
+export type LiveDataIntent = { kind: "weather"; city: string } | { kind: "cricket"; query: string } | { kind: "sports"; query: string } | { kind: "news"; query: string };
 export type LiveSource = { title: string; url: string; snippet?: string; publishedAt?: string };
 export type LiveDataResult = {
   kind: LiveDataIntent["kind"];
@@ -32,6 +32,7 @@ const cache = new Map<string, { expiresAt: number; value: Omit<LiveDataResult, "
 const WEATHER_WORDS = /\b(weather|forecast|temperature|humidity|how (?:hot|cold|warm) is it|will it (?:rain|snow)|is it (?:raining|snowing))\b/i;
 const CITY_AFTER_PREPOSITION = /\b(?:in|at|for|near|around|of)\s+([\p{L}][\p{L}, .'-]{1,80}?)(?:\s+(?:today|tonight|tomorrow|now|right now|currently|this (?:morning|afternoon|evening|week)))?\s*[?.!]*$/iu;
 // A cricket term alone ("explain the LBW rule in cricket") is a normal question; only score/result questions are live.
+const SPORTS_STATS_WORDS = /\b(?:ronaldo|cristiano ronaldo|messi|lionel messi|mbappe|haaland|neymar|lewandowski|kane|salah|virat kohli|rohit sharma|lebron|curry)\b(?=.*\b(?:goal|goals|scor(?:e|es|ed)|career|stat(?:s|istics)?|record|all[- ]time|total|count|appearances?)\b)|\b(?:career goals|all[- ]time goals|total goals|goal tally|player stats)\b/i;
 const CRICKET_WORDS = /\b(?:cricket|ipl|odi|t20i?|test match|bbl|psl|wpl|ranji|india|australia|england|pakistan|south africa|new zealand|sri lanka|bangladesh|afghanistan|west indies|ireland|zimbabwe)\b(?=.*\b(?:score|scores|scorecard|live|result|results|who won|winning|match status)\b)|\b(?:score|scores|scorecard|live|result|who won)\b(?=.*\b(?:cricket|ipl|odi|t20i?|test match|bbl|psl|wpl|ranji)\b)/i;
 
 export function detectLiveDataIntent(text: string): LiveDataIntent | null {
@@ -45,6 +46,7 @@ export function detectLiveDataIntent(text: string): LiveDataIntent | null {
     }
     return null;
   }
+  if (SPORTS_STATS_WORDS.test(value)) return { kind: "sports", query: value.replace(/[?!.]+$/, "") };
   if (CRICKET_WORDS.test(value)) return { kind: "cricket", query: value.replace(/[?!.]+$/, "") };
   if (NEWS_WORDS.test(value)) return { kind: "news", query: value.replace(/[?!.]+$/, "") };
   return null;
@@ -133,6 +135,16 @@ export async function getLiveData(intent: LiveDataIntent, signal?: AbortSignal):
       return { ...value, cached: false };
     }
   }
+  if (intent.kind === "sports") {
+    const date = new Date().toISOString().slice(0, 10);
+    const query = `${intent.query} official senior career statistics total goals all competitions as of ${date}`;
+    let result = await webSearch(query, { recency: "month" }, signal);
+    if (!result.sources.length) result = await webSearch(query, {}, signal);
+    const sources = result.sources.slice(0, 8).map((source) => ({ title: source.title, url: source.url, snippet: source.snippet, publishedAt: source.publishedAt }));
+    const value = { kind: "sports" as const, provider: process.env.BOBAI_BRAVE_SEARCH_API_KEY?.trim() ? "Brave Search" : "DuckDuckGo", fetchedAt: new Date().toISOString(), freshness: "web-search" as const, data: { query: result.query, asOf: date }, sources };
+    if (sources.length) remember(key, value, 5 * 60_000);
+    return { ...value, cached: false };
+  }
   if (intent.kind === "news") {
     // Recent pages only (past week, then past month): news from memory is never current.
     const monthYear = new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -178,7 +190,9 @@ export function extractScores(sources: Array<{ title?: string; snippet?: string;
 /** Untrusted context handed to the model; the instructions make it cite sources and admit missing data. */
 export function liveDataContext(result: LiveDataResult): string {
   const origin = result.cached ? `cached from ${result.fetchedAt}` : `fetched live at ${result.fetchedAt}`;
-  const rules = result.kind === "news"
+  const rules = result.kind === "sports"
+    ? `These are web search results for a current sports-statistics question, not a single official database. The as-of date is ${String((result.data as { asOf?: string }).asOf ?? new Date().toISOString().slice(0, 10))}. Compare figures and definitions across sources. Distinguish official senior competitive goals from friendlies, youth matches, and unofficial matches. If reputable sources disagree, explain the counting difference instead of choosing an unsupported exact number. Cite the source for every number. If sources do not support a figure, say it could not be verified. Never use a number from model memory.`
+    : result.kind === "news"
     ? `These are recent news search results (titles and snippets) from the ${String((result.data as { searchWindow?: string }).searchWindow ?? "recent")} window. Today is ${new Date().toISOString().slice(0, 10)}. They were fetched just now, so they ARE current: answer from them and never say you cannot give news or mention a knowledge cutoff. Summarise only what these sources say, give dates where shown, and name the source of each point by its site or title. Never add events, numbers or quotes that are not in them. If they do not answer the question, say you could not find recent news on it.`
     : result.kind === "weather"
     ? result.freshness === "live"
