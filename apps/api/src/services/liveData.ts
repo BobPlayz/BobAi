@@ -30,7 +30,7 @@ const MAX_CACHE_ENTRIES = 200;
 const cache = new Map<string, { expiresAt: number; value: Omit<LiveDataResult, "cached"> }>();
 
 const WEATHER_WORDS = /\b(weather|forecast|temperature|humidity|how (?:hot|cold|warm) is it|will it (?:rain|snow)|is it (?:raining|snowing))\b/i;
-const CITY_AFTER_PREPOSITION = /\b(?:in|at|for|near)\s+([\p{L}][\p{L} .'-]{1,60}?)(?:\s+(?:today|tonight|tomorrow|now|right now|currently|this (?:morning|afternoon|evening|week)))?\s*[?.!]*$/iu;
+const CITY_AFTER_PREPOSITION = /\b(?:in|at|for|near|around|of)\s+([\p{L}][\p{L} .'-]{1,80}?)(?:\s+(?:today|tonight|tomorrow|now|right now|currently|this (?:morning|afternoon|evening|week)))?\s*[?.!]*$/iu;
 // A cricket term alone ("explain the LBW rule in cricket") is a normal question; only score/result questions are live.
 const CRICKET_WORDS = /\b(?:cricket|ipl|odi|t20i?|test match|bbl|psl|wpl|ranji|india|australia|england|pakistan|south africa|new zealand|sri lanka|bangladesh|afghanistan|west indies|ireland|zimbabwe)\b(?=.*\b(?:score|scores|scorecard|live|result|results|who won|winning|match status)\b)|\b(?:score|scores|scorecard|live|result|who won)\b(?=.*\b(?:cricket|ipl|odi|t20i?|test match|bbl|psl|wpl|ranji)\b)/i;
 
@@ -40,7 +40,9 @@ export function detectLiveDataIntent(text: string): LiveDataIntent | null {
   if (WEATHER_WORDS.test(value)) {
     const city = CITY_AFTER_PREPOSITION.exec(value)?.[1]?.trim().replace(/\s+/g, " ");
     // Without a named place the general router (or the model) asks the user where; never guess a location.
-    if (city && city.length >= 2) return { kind: "weather", city };
+    if (city && city.length >= 2 && !/^(?:today|tonight|tomorrow|now|right now|currently|this week)$/i.test(city)) {
+      return { kind: "weather", city };
+    }
     return null;
   }
   if (CRICKET_WORDS.test(value)) return { kind: "cricket", query: value.replace(/[?!.]+$/, "") };
