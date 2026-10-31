@@ -13,6 +13,7 @@ import { loadPreferences, savePreferences, type Preferences } from "@/lib/prefer
 import { GENERATIONS } from "@/lib/generation";
 import { LANGUAGES, languageLabel, type LanguageId } from "@/lib/language";
 import JarvisMark from "@/components/JarvisMark";
+import LogoutWarning from "@/components/LogoutWarning";
 
 type SettingsState = Preferences;
 type Tab = "personalization" | "privacy" | "memory" | "research" | "about";
@@ -63,6 +64,8 @@ export default function SettingsPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutWarning, setShowLogoutWarning] = useState(false);
+  const [logoutEverywhere, setLogoutEverywhere] = useState(false);
   // Two-tap confirmation for destructive buttons (in-app browsers often block window.confirm).
   const [armed, setArmed] = useState<"account" | "memories" | "guest" | null>(null);
   const [guest, setGuest] = useState(false);
@@ -355,10 +358,10 @@ export default function SettingsPage() {
             <>
             <section className={`mb-5 rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
               <h2 className="font-display text-2xl">Log out</h2>
-              <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Log out here, or everywhere you&apos;re signed in (handy if you used Jarvis on someone else&apos;s phone). Your chats stay saved.</p>
+              <p className={`mt-1 text-sm leading-6 ${colors.muted}`}>Log out here, or everywhere you&apos;re signed in. Your Jarvis data will be permanently cleared before you leave.</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <button type="button" disabled={loggingOut} onClick={async () => { setLoggingOut(true); await logout(); router.replace("/login"); }} className="btn-ink !min-h-11 text-sm disabled:opacity-60">Log out</button>
-                <button type="button" disabled={loggingOut} onClick={async () => { setLoggingOut(true); await logOutEverywhere(); router.replace("/login"); }} className="btn-line !min-h-11 text-sm disabled:opacity-60">Log out on all devices</button>
+                <button type="button" disabled={loggingOut} onClick={() => { setLogoutEverywhere(false); setShowLogoutWarning(true); }} className="btn-ink !min-h-11 text-sm disabled:opacity-60">Log out</button>
+                <button type="button" disabled={loggingOut} onClick={() => { setLogoutEverywhere(true); setShowLogoutWarning(true); }} className="btn-line !min-h-11 text-sm disabled:opacity-60">Log out on all devices</button>
               </div>
             </section>
             <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
@@ -403,6 +406,19 @@ export default function SettingsPage() {
             </>
           )}
 
+          <LogoutWarning
+            open={showLogoutWarning}
+            busy={loggingOut}
+            allDevices={logoutEverywhere}
+            onCancel={() => setShowLogoutWarning(false)}
+            onConfirm={() => {
+              setLoggingOut(true);
+              void (logoutEverywhere ? logOutEverywhere() : logout()).then(() => router.replace("/login")).catch((error: unknown) => {
+                setDeleteMessage(error instanceof Error ? error.message : "Could not clear your data. You are still signed in.");
+                setLoggingOut(false);
+              });
+            }}
+          />
           {tab === "memory" && (
             <div className="space-y-5">
               <section className={`rounded-2xl border p-5 sm:p-6 ${colors.card}`}>
