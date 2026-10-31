@@ -4,6 +4,7 @@ import { issueToolApproval, prepareToolExecution } from "../services/toolExecuti
 import { executeApprovedTool, serializeToolResult } from "../services/toolLoop.js";
 import { validateToolInput } from "../services/toolRegistry.js";
 import { createUserRateLimit } from "../middleware/rateLimit.js";
+function logToolFailure(event: string, error: unknown) { console.error(JSON.stringify({ event, errorType: error instanceof Error ? error.name : "unknown" })); }
 
 const router = Router();
 const executeLimit = createUserRateLimit(10, 60_000);
@@ -34,7 +35,7 @@ router.post("/:id/prepare", async (req, res) => {
     const result = await prepareToolExecution(tool.id, { userId: req.user!.id, workspaceId, approvalToken });
     if (result.status === "unauthorized") return res.status(403).json({ error: "workspace access denied" });
     if (result.status === "approval_required") return res.status(409).json(result);
-    if (result.status === "unavailable") return res.status(503).json(result);
+    if (result.status === "unavailable") return res.status(503).json({ status: "unavailable", error: "This tool is temporarily unavailable. No action was performed." });
     return res.json(result);
   } catch { return res.status(400).json({ error: "tool execution could not be prepared" }); }
 });
@@ -58,11 +59,12 @@ router.post("/:id/execute", executeLimit, async (req, res) => {
     if (result && typeof result === "object" && "status" in result && typeof (result as { status?: unknown }).status === "string" && ["approval_required", "unauthorized", "unavailable", "invalid_arguments"].includes((result as { status: string }).status)) {
       const status = (result as { status: string }).status;
       const reason = (result as { reason?: unknown }).reason;
-      return res.status(status === "unauthorized" ? 403 : status === "approval_required" ? 409 : status === "unavailable" ? 503 : 400).json({ status, error: typeof reason === "string" ? reason : status === "approval_required" ? "approval expired or was already used" : status.replace(/_/g, " ") });
+      return res.status(status === "unauthorized" ? 403 : status === "approval_required" ? 409 : status === "unavailable" ? 503 : 400).json({ status, error: status === "unauthorized" ? "Workspace access denied." : status === "approval_required" ? "Approval expired or was already used. Please request approval again." : status === "unavailable" ? "This tool is temporarily unavailable. No action was performed." : "The request could not be validated. No action was performed." });
     }
     return res.json({ status: "completed", tool: tool.id, result: serializeToolResult(result) });
   } catch (error) {
-    return res.status(502).json({ status: "failed", error: error instanceof Error ? error.message.slice(0, 300) : "tool execution failed" });
+    logToolFailure("tool_execute_failed", error);
+    return res.status(502).json({ status: "failed", error: "The tool could not complete the request. No successful result was confirmed." });
   }
 });
 
