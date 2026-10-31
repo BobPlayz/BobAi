@@ -30,7 +30,7 @@ const MAX_CACHE_ENTRIES = 200;
 const cache = new Map<string, { expiresAt: number; value: Omit<LiveDataResult, "cached"> }>();
 
 const WEATHER_WORDS = /\b(weather|forecast|temperature|humidity|how (?:hot|cold|warm) is it|will it (?:rain|snow)|is it (?:raining|snowing))\b/i;
-const CITY_AFTER_PREPOSITION = /\b(?:in|at|for|near|around|of)\s+([\p{L}][\p{L} .'-]{1,80}?)(?:\s+(?:today|tonight|tomorrow|now|right now|currently|this (?:morning|afternoon|evening|week)))?\s*[?.!]*$/iu;
+const CITY_AFTER_PREPOSITION = /\b(?:in|at|for|near|around|of)\s+([\p{L}][\p{L}, .'-]{1,80}?)(?:\s+(?:today|tonight|tomorrow|now|right now|currently|this (?:morning|afternoon|evening|week)))?\s*[?.!]*$/iu;
 // A cricket term alone ("explain the LBW rule in cricket") is a normal question; only score/result questions are live.
 const CRICKET_WORDS = /\b(?:cricket|ipl|odi|t20i?|test match|bbl|psl|wpl|ranji|india|australia|england|pakistan|south africa|new zealand|sri lanka|bangladesh|afghanistan|west indies|ireland|zimbabwe)\b(?=.*\b(?:score|scores|scorecard|live|result|results|who won|winning|match status)\b)|\b(?:score|scores|scorecard|live|result|who won)\b(?=.*\b(?:cricket|ipl|odi|t20i?|test match|bbl|psl|wpl|ranji)\b)/i;
 
