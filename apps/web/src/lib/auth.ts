@@ -86,8 +86,18 @@ function clearBrowserAccountState() {
 /** Clears this account's server-side workspace data, retains its login identity, then signs out this device. */
 export async function logout(options: { clearData?: boolean } = {}) {
   if (options.clearData !== false) {
-    const cleared = await fetch(`${API}/account/data/clear`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } });
-    if (!cleared.ok) { const data = await readJson<{ error?: string }>(cleared); throw new Error(data.error || "Jarvis could not clear your account data. You are still signed in."); }
+    const clearAccountData = () => fetch(`${API}/account/data/clear`, { method: "POST", credentials: "include", headers: { "X-CSRF-Protection": "1" } });
+    let cleared = await clearAccountData();
+    // Access cookies last 15 minutes while refresh cookies last 30 days. Restore the session once
+    // before treating an expired access cookie as a data-clear failure.
+    if (cleared.status === 401) {
+      const restored = await refreshSession();
+      if (restored) cleared = await clearAccountData();
+    }
+    if (!cleared.ok) {
+      const data = await readJson<{ error?: string }>(cleared);
+      throw new Error(data.error || "Jarvis could not clear your account data. You are still signed in.");
+    }
   }
   sessionGeneration += 1;
   session = null;
