@@ -107,3 +107,12 @@ test("a system prompt that doesn't fit is cut in the middle, so the person's det
   assert.match(fitted, /my cat is Max/);
   assert.equal(fitSystemPrompt("short", 2_000), "short");
 });
+
+test("Jarvis has a fixed verified project owner and rejects unsupported factual premises", () => {
+  const prompt = buildSystemPrompt("", [], "english").content;
+  assert.match(prompt, /created and owned by BobPlayz/);
+  assert.match(prompt, /never invent team members/);
+  assert.match(prompt, /FACT CHECKING AND ENTITY ACCURACY/);
+  assert.match(prompt, /ask one concise clarifying question/);
+  assert.match(prompt, /generated briefs may clarify wording only/);
+});
