@@ -58,7 +58,6 @@ router.post("/:id/execute", executeLimit, async (req, res) => {
     const result = await executeApprovedTool(tool.id, args, { userId: req.user!.id, workspaceId, approvalToken });
     if (result && typeof result === "object" && "status" in result && typeof (result as { status?: unknown }).status === "string" && ["approval_required", "unauthorized", "unavailable", "invalid_arguments"].includes((result as { status: string }).status)) {
       const status = (result as { status: string }).status;
-      const reason = (result as { reason?: unknown }).reason;
       return res.status(status === "unauthorized" ? 403 : status === "approval_required" ? 409 : status === "unavailable" ? 503 : 400).json({ status, error: status === "unauthorized" ? "Workspace access denied." : status === "approval_required" ? "Approval expired or was already used. Please request approval again." : status === "unavailable" ? "This tool is temporarily unavailable. No action was performed." : "The request could not be validated. No action was performed." });
     }
     return res.json({ status: "completed", tool: tool.id, result: serializeToolResult(result) });
