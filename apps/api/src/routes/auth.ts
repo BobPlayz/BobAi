@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, users } from "@bobai/db";
 import { Router, type Request, type Response } from "express";
-import { completeMfaLogin, createUser, issueSession, login, loginWithEmailOtp, refresh, revoke } from "../services/auth.js";
+import { authenticateAccessToken, completeMfaLogin, createUser, issueSession, login, loginWithEmailOtp, refresh, revoke } from "../services/auth.js";
 import { completeSocialLogin, beginSocialLogin, socialProviders, type SocialProvider } from "../services/socialAuth.js";
 import { requestEmailOtp, verifyEmailOtp } from "../services/otp.js";
 import { resetPassword, requestPasswordReset } from "../services/passwordReset.js";
