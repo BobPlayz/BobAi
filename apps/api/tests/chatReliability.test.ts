@@ -113,3 +113,13 @@ test("an unreachable Ollama gives a clear, user-safe error", async () => {
     if (previous === undefined) delete process.env.BOBAI_OLLAMA_BASE_URL; else process.env.BOBAI_OLLAMA_BASE_URL = previous;
   }
 });
+
+
+test("the final system prompt explicitly forbids hallucinations and developer error leakage", async () => {
+  const prepared = await prepareChat({ messages: [{ role: "user", content: "What is the current score?" }] });
+  const system = prepared.providerMessages.find((message) => message.role === "system")?.content ?? "";
+  assert.match(system, /NO HALLUCINATIONS/);
+  assert.match(system, /never invent facts, numbers, statistics/);
+  assert.match(system, /DEVELOPER-MODE PRIVACY/);
+  assert.match(system, /stack traces, raw provider or database errors/);
+});
