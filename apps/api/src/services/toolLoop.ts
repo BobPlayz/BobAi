@@ -142,7 +142,7 @@ export async function runToolLoop(initialMessages: ToolLoopMessage[], context: T
     if (process.env.BOBAI_TOOLS_ENABLED === "false") return { status: "failed", message: "Tools are disabled on this Jarvis deployment, so I could not perform or verify the requested action. No tool was run.", toolCalls, usedTools, backgroundJobIds };
     const decision = await decide(messages, context.modelId, context.signal); throwIfAborted();
     if (decision.action === "clarify") return { status: "completed", message: decision.message || "I need one more detail before I can safely continue.", toolCalls, usedTools, backgroundJobIds };
-    if (decision.action === "respond" && decision.reason) return { status: "failed", message: "Tool routing could not be validated, so Jarvis did not run or verify the requested action. Please check tool configuration and try again.", toolCalls, usedTools, backgroundJobIds };
+    if (decision.action === "respond" && decision.reason) { console.warn(JSON.stringify({ event: "tool_routing_rejected", reason: decision.reason.slice(0, 240), modelId: context.modelId ?? null })); return { status: "failed", message: "i couldn’t safely complete that request just now, so no action was run. please try again in a moment.", toolCalls, usedTools, backgroundJobIds }; }
     if (decision.action === "respond") { const response = await respond(messages, context.modelId); throwIfAborted(); return { status: "completed", message: response.content, toolCalls, usedTools, backgroundJobIds }; }
     if (decision.calls.length > MAX_TOOL_CALLS - toolCalls) return { status: "limit_reached", message: "BobAI reached the maximum number of tool calls for this request.", toolCalls, usedTools, backgroundJobIds };
     for (const call of decision.calls) {
